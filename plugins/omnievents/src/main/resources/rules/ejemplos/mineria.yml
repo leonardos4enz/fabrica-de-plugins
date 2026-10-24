@@ -1,0 +1,46 @@
+# Ejemplos de OmniEvents: bloques, variables por jugador, azar ponderado y enfriamientos.
+
+diamantes_contados:
+  trigger: block_break
+  worlds: [world]
+  conditions:
+    - "block.type in ['DIAMOND_ORE', 'DEEPSLATE_DIAMOND_ORE']"
+    - "player.gamemode == 'survival'"
+  actions:
+    - set: "pvar.diamantes += 1"
+    - if: "pvar.diamantes % 10 == 0"
+      then:
+        - broadcast: "<aqua>{player.name}</aqua> <gray>ya minó <aqua>{pvar.diamantes}</aqua> diamantes."
+        - particle: TOTEM_OF_UNDYING;40;0.5;1;0.5;0.3
+    - actionbar: "<aqua>Diamantes: {pvar.diamantes}"
+
+# Paréntesis, ||, && y ! en una sola condición: imposible en una línea de ConditionalEvents.
+bloque_protegido:
+  trigger: block_break
+  conditions: "block.type == 'BEDROCK' || (block.y < -60 && !player.hasPermission('omnievents.mineria.fondo'))"
+  actions:
+    - cancel
+    - message: "<red>No puedes romper ese bloque aquí."
+
+suerte_minera:
+  trigger: block_break
+  conditions: "block.type ~= 'stone' && chance(2)"
+  cooldown: 30s
+  actions:
+    - random:
+        - weight: 70
+          do:
+            - give_item: IRON_INGOT;2
+            - message: "<gray>¡Encontraste hierro escondido!"
+        - weight: 25
+          do:
+            - give_item: GOLD_INGOT;1
+            - message: "<gold>¡Una pepita de oro!"
+        - weight: 5
+          do:
+            - give_item:
+                material: DIAMOND
+                name: "<aqua>Diamante de la suerte"
+                lore: ["<gray>Minado por {player.name}"]
+                glow: true
+            - broadcast: "<aqua>{player.name}</aqua> <gray>encontró un diamante de la suerte."

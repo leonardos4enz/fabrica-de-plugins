@@ -1,0 +1,35 @@
+# Ejemplos de OmniEvents: temporizadores, horas del día y arranque del servidor.
+
+anuncio:
+  trigger: timer
+  every: 10m
+  per_player: false
+  conditions: "online > 0"
+  actions:
+    - random:
+        - do: [{broadcast: "<gold>Consejo:</gold> <gray>usa <yellow>/monedas</yellow> para ver tus monedas."}]
+        - do: [{broadcast: "<gold>Consejo:</gold> <gray>cada 10 diamantes se anuncia en el chat."}]
+
+mensaje_noche:
+  trigger: clock
+  at: ["22:00"]
+  actions:
+    - broadcast: "<dark_aqua>Son las 22:00. ¡No olvides descansar!"
+
+# timer con per_player (por defecto): una ejecución por cada jugador conectado.
+sol_del_desierto:
+  trigger: timer
+  every: 5s
+  conditions:
+    - "player.location.biome == 'DESERT'"
+    - "player.gamemode == 'survival'"
+    - "world.day"
+  actions:
+    - effect: HUNGER;6;1;false
+    - actionbar: "<gold>El sol del desierto te agota..."
+
+arranque:
+  trigger: server_start
+  actions:
+    - set: "gvar.arranques += 1"
+    - log: "OmniEvents listo. Arranque número {gvar.arranques}."

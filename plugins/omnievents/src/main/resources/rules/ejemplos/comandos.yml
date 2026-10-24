@@ -1,0 +1,64 @@
+# Ejemplos de OmniEvents: comandos reales con alias, permiso y autocompletado; reglas que llaman a otras.
+
+spawn_vip:
+  trigger: command
+  command:
+    name: spawnvip
+    aliases: [svip]
+    permission: omnievents.cmd.spawnvip
+    description: Ir al spawn VIP
+    usage: /spawnvip
+  cooldown: 1m
+  on_cooldown:
+    - message: "<red>Espera {var.cooldown_left}s para volver a usarlo."
+  actions:
+    - if: "player == null"
+      then:
+        - message: "Solo los jugadores pueden usar este comando."
+        - stop
+    - message: "<green>Teletransportando en 3 segundos..."
+    - delay: 3s
+    - teleport: "world;0.5;100;0.5"
+    - sound: ENTITY_ENDERMAN_TELEPORT
+
+monedas:
+  trigger: command
+  command:
+    name: monedas
+    description: Ver o dar monedas
+    usage: /monedas [ver | dar <jugador> <cantidad>]
+    tab: [["ver", "dar"], ["{players}"]]
+  actions:
+    - if: "player == null"
+      then:
+        - message: "Solo los jugadores tienen monedas."
+        - stop
+    - if: "args.size == 0 || args[0] == 'ver'"
+      then:
+        - message: "<yellow>Tienes {default(pvar.monedas, 0)} monedas."
+        - stop
+    - if: "args[0] == 'dar' && args.size >= 3"
+      then:
+        - if: "!online(args[1]) || args[1] ~= player.name"
+          then:
+            - message: "<red>{args[1]} no está conectado (o eres tú)."
+            - stop
+        - if: "num(args[2]) <= 0 || num(args[2]) > default(pvar.monedas, 0)"
+          then:
+            - message: "<red>Cantidad inválida: tienes {default(pvar.monedas, 0)} monedas."
+            - stop
+        - set: "pvar.monedas -= num(args[2])"
+        - call: "sumar_monedas; jugador=args[1]; cantidad=num(args[2])"
+        - message: "<green>Diste {args[2]} monedas a {args[1]}."
+      else:
+        - message: "<gray>Uso: /monedas [ver | dar <jugador> <cantidad>]"
+
+# trigger: call solo corre cuando otra regla la llama (o con /omni call). Sus argumentos llegan como var.<nombre>.
+sumar_monedas:
+  trigger: call
+  args: [jugador, cantidad]
+  actions:
+    - for_each: "player(var.jugador)"
+      do:
+        - set: "pvar.monedas += var.cantidad"
+        - message: "<green>Recibiste {var.cantidad} monedas de {source.name}."

@@ -1,0 +1,32 @@
+# Ejemplos de OmniEvents: entrada y salida de jugadores.
+# Cada clave de primer nivel es una regla. Los nombres son únicos en todo el plugin.
+
+bienvenida:
+  trigger: player_join
+  actions:
+    - set_join_message: "<gray>[<green>+</green>] {player.name}"
+    - if: "first_join"
+      then:
+        - broadcast: "<gold>¡Démosle la bienvenida a <yellow>{player.name}</yellow>, es su primera vez!"
+        - give_item: "BREAD;8;<yellow>Pan de bienvenida;<gray>Para el primer día"
+        - set: "pvar.monedas = 100"
+      else:
+        - message: "<green>¡Hola de nuevo, {player.name}! Tienes <yellow>{default(pvar.monedas, 0)}</yellow> monedas."
+    - delay: 2s
+    - title: "<gold>Bienvenido;<gray>{online} jugadores en línea"
+    - sound: ENTITY_PLAYER_LEVELUP;1;1.2
+
+despedida:
+  trigger: player_quit
+  actions:
+    - set_quit_message: "<gray>[<red>-</red>] {player.name}"
+
+# Un uso por jugador por día: limit + limit_reset (el one_time de ConditionalEvents es limit: 1).
+recompensa_diaria:
+  trigger: player_join
+  limit: 1
+  limit_reset: daily
+  actions:
+    - delay: 5s
+    - set: "pvar.monedas += 25"
+    - message: "<green>Recompensa diaria: <yellow>+25 monedas</yellow> <gray>(total {pvar.monedas})."

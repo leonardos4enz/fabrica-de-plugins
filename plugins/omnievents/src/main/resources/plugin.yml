@@ -1,0 +1,55 @@
+name: OmniEvents
+version: '${version}'
+main: dev.leo.omnievents.OmniEvents
+api-version: '1.21'
+author: Leo
+description: Eventos condicionales declarados en YAML, con lenguaje de expresiones, control de flujo y variables persistentes.
+softdepend: [PlaceholderAPI]
+commands:
+  omni:
+    description: Administración de OmniEvents
+    usage: /omni help
+    aliases: [oe, omnievents]
+permissions:
+  omnievents.command.*:
+    description: Todos los subcomandos de /omni
+    default: op
+    children:
+      omnievents.command.help: true
+      omnievents.command.reload: true
+      omnievents.command.validate: true
+      omnievents.command.list: true
+      omnievents.command.info: true
+      omnievents.command.enable: true
+      omnievents.command.disable: true
+      omnievents.command.debug: true
+      omnievents.command.eval: true
+      omnievents.command.call: true
+      omnievents.command.var: true
+      omnievents.command.cooldown: true
+      omnievents.command.limit: true
+      omnievents.command.stats: true
+      omnievents.command.triggers: true
+      omnievents.command.actions: true
+      omnievents.command.item: true
+      omnievents.command.import: true
+      omnievents.command.selftest: true
+  omnievents.command.help: {default: op}
+  omnievents.command.reload: {default: op}
+  omnievents.command.validate: {default: op}
+  omnievents.command.list: {default: op}
+  omnievents.command.info: {default: op}
+  omnievents.command.enable: {default: op}
+  omnievents.command.disable: {default: op}
+  omnievents.command.debug: {default: op}
+  omnievents.command.eval: {default: op}
+  omnievents.command.call: {default: op}
+  omnievents.command.var: {default: op}
+  omnievents.command.cooldown: {default: op}
+  omnievents.command.limit: {default: op}
+  omnievents.command.stats: {default: op}
+  omnievents.command.triggers: {default: op}
+  omnievents.command.actions: {default: op}
+  omnievents.command.item: {default: op}
+  omnievents.command.import: {default: op}
+  omnievents.command.selftest: {default: op}

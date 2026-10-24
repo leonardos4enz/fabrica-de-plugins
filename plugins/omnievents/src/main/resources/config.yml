@@ -1,0 +1,22 @@
+# OmniEvents — configuración general.
+# Las reglas van en la carpeta rules/ (puedes usar subcarpetas). Guía completa: README del plugin.
+config-version: 1
+
+# ¿Los OP se saltan los enfriamientos? (en ConditionalEvents siempre; aquí, solo si lo pides)
+cooldown-bypass-op: false
+
+expressions:
+  # Solo se pueden llamar métodos de lectura (get*, is*, has*, can*). Ponerlo en true permite cualquier método:
+  # entonces una regla podría, por ejemplo, ejecutar player.setOp(true). Déjalo en false salvo que sepas lo que haces.
+  allow-unsafe-methods: false
+  # Tope de vueltas de repeat/while/for_each por ejecución (evita congelar el servidor con un bucle infinito).
+  max-loop-iterations: 1000
+  # Tope de 'call' anidados (evita reglas que se llaman a sí mismas sin fin).
+  max-call-depth: 16
+
+storage:
+  # Cada cuánto se guardan variables, enfriamientos y usos (además de al salir un jugador y al apagar).
+  autosave-minutes: 5
+
+# Registra los placeholders %omni_var_x%, %omni_gvar_x%, %omni_cooldown_regla% y %omni_uses_regla%.
+placeholderapi: true

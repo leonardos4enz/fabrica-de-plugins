@@ -1,0 +1,24 @@
+# Ejemplos de OmniEvents: chat (evento asíncrono). cancel, message y set corren en el hilo del chat; lo demás
+# pasa solo al hilo principal. El texto del jugador ({message}) nunca se interpreta como MiniMessage.
+
+filtro_palabras:
+  trigger: player_chat
+  conditions: "lower(message) matches '.*\\b(tonto|idiota)\\b.*'"
+  actions:
+    - cancel
+    - message: "<red>Cuida tu lenguaje, {player.name}."
+    - set: "pvar.avisos += 1"
+    - if: "pvar.avisos >= 3"
+      then:
+        - console: "kick {player.name} Lenguaje inapropiado"
+        - set: "pvar.avisos = 0"
+
+menciones:
+  trigger: player_chat
+  actions:
+    - for_each: all
+      do:
+        - if: "player.name != source.name && lower(message) contains lower(player.name)"
+          then:
+            - sound: BLOCK_NOTE_BLOCK_PLING;1;2
+            - actionbar: "<yellow>{source.name} te mencionó: <white>{message}"
