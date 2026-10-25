@@ -36,9 +36,11 @@ Las specs se numeran en una sola secuencia para toda la fábrica (`001`, `002`, 
 Cada spec se trabaja en **su propia sesión de IA, nueva**, de principio a fin (SPECIFY → VERIFY → commit).
 Al cerrar la spec:
 1. `verify.md` completo y compuertas en verde.
-2. Revisión de secretos y artefactos, commit (y push cuando el repositorio tenga remoto).
+2. Actualizar los README: el del plugin (capacidades y sección **Compatibilidad** con las versiones de Paper
+   verificadas y sin verificar) y el raíz (tabla de plugins). Ver [CLAUDE.md](../../CLAUDE.md).
 3. Actualizar el estado en el índice de abajo y en [roadmap.md](roadmap.md).
-4. La siguiente spec se abre en una sesión nueva, que arranca leyendo [CLAUDE.md](../../CLAUDE.md).
+4. Revisión de secretos y artefactos, commit y push.
+5. La siguiente spec se abre en una sesión nueva, que arranca leyendo [CLAUDE.md](../../CLAUDE.md).
 
 ## Reglas para agentes de IA
 - Leer `constitution.md` y el `spec.md` vigente antes de escribir código.

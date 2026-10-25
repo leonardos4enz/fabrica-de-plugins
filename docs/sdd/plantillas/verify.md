@@ -6,7 +6,9 @@
 |---|---|
 | Unitarias | |
 | Servidor real (carga, validate, selftest, reload) | |
-| Revisión exploratoria | |
+| En el juego (3a) | |
+| Revisión exploratoria (3b) | |
+| README (capacidades, Compatibilidad, tabla raíz) | |
 
 ## Cobertura
 | Criterio | Prueba |

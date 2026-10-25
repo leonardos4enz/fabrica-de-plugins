@@ -1,5 +1,6 @@
-# Crea un plugin nuevo en la fábrica: proyecto Gradle + carpeta de spec con las plantillas SDD.
+﻿# Crea un plugin nuevo en la fábrica: proyecto Gradle + carpeta de spec con las plantillas SDD.
 # Uso: powershell -File tools/nuevo-plugin.ps1 -Nombre MiPlugin -Spec 002 [-Titulo "núcleo"]
+# Guardado en UTF-8 con BOM: Windows PowerShell 5.1 lee como ANSI un script sin BOM y corrompe los acentos.
 param(
     [Parameter(Mandatory = $true)][ValidatePattern('^[A-Z][A-Za-z0-9]{2,30}$')][string]$Nombre,
     [Parameter(Mandatory = $true)][ValidatePattern('^\d{3}$')][string]$Spec,
@@ -51,6 +52,24 @@ author: Leo
 
 Escribir (Join-Path $dir "src\main\resources\config.yml") "# Configuración de $Nombre`n"
 
+# El README se actualiza al cerrar cada spec (CLAUDE.md); la tabla de Compatibilidad solo dice «Verificada» con evidencia.
+Escribir (Join-Path $dir "README.md") @"
+# $Nombre
+
+Qué hace, en una frase. Spec: [$Spec](../../docs/sdd/specs/$Spec-$id-$Titulo/spec.md).
+
+## Compatibilidad
+| Servidor | Estado | Evidencia |
+|---|---|---|
+| Paper 1.21.4 | Sin verificar | Pendiente de las compuertas 2 y 3a |
+
+- **Java:** 21 o más.
+- **Opcional:** —
+
+## Instalación
+1. Copia ``$Nombre-x.y.z.jar`` a ``plugins/``.
+"@
+
 $specDir = Join-Path $raiz "docs\sdd\specs\$Spec-$id-$Titulo"
 foreach ($doc in 'spec', 'plan', 'tasks', 'verify') {
     $texto = [IO.File]::ReadAllText((Join-Path $raiz "docs\sdd\plantillas\$doc.md"), $utf8)
@@ -59,4 +78,4 @@ foreach ($doc in 'spec', 'plan', 'tasks', 'verify') {
 }
 
 Write-Host "Plugin creado en plugins\$id y spec en docs\sdd\specs\$Spec-$id-$Titulo"
-Write-Host "Siguiente paso: SPECIFY (spec.md) y agregarla al índice de docs\sdd\README.md"
+Write-Host "Siguiente paso: SPECIFY (spec.md), agregarla al índice de docs\sdd\README.md y la fila del plugin al README raíz"

@@ -32,7 +32,8 @@ con `--release 21`.
 
 ## Lecciones aprendidas (no repetir)
 - **PowerShell 5.1 corrompe UTF-8** con `Get-Content`/`Set-Content`. Usar las herramientas de edición,
-  `[IO.File]::WriteAllText(..., UTF8 sin BOM)` o Bash.
+  `[IO.File]::WriteAllText(..., UTF8 sin BOM)` o Bash. Y lee como ANSI un `.ps1` sin BOM: los scripts con acentos
+  (`tools/nuevo-plugin.ps1`) se guardan en UTF-8 **con** BOM.
 - En Git Bash, `python` puede ser el alias de la Microsoft Store y **colgarse** esperando: no usarlo en scripts.
 - Los eventos asíncronos de Paper (`AsyncChatEvent`, `AsyncPlayerPreLoginEvent`) no pueden tocar el mundo: el motor
   pasa al hilo principal la parte de las acciones que no es segura (ver plan 001 §3).
@@ -51,6 +52,17 @@ con `--release 21`.
 - Un plugin que copia ejemplos solo si su carpeta no existe deja ejemplos viejos en `run/`: la suite los copia del
   código fuente. En 26.1 los datos del jugador viven en `world/players/` (002 F-05).
 - Paper 26.x necesita Java 25 (`--java-servidor`); el bot usa `--version-bot 26.1` (mismo protocolo que 26.1.2).
+
+## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
+Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.
+- **README del plugin** (`plugins/<nombre>/README.md`): cada capacidad nueva o cambiada con su ejemplo, y la sección
+  **Compatibilidad** al día: versiones de Paper **verificadas** (build, Java del servidor, compuertas que pasaron y
+  fecha), versiones **sin verificar**, Java mínimo, dependencias opcionales y lo que no se soporta (Spigot, Folia).
+  Solo se escribe «verificada» si la suite pasó en esa versión; lo demás va como «sin verificar».
+- **README raíz**: la fila del plugin en la tabla (versión del plugin, versiones de Paper verificadas, estado) y la
+  estructura del repositorio si cambió.
+- Si la spec es de la fábrica (herramientas, arnés), el README raíz explica cómo usarla.
+- En `verify.md`, la fila «README» dice qué se actualizó.
 
 ## Antes de cada commit
 - Sin secretos: tokens, contraseñas, claves.

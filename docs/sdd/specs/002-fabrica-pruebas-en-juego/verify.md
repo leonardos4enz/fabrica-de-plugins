@@ -7,6 +7,7 @@
 | Unitarias | Arnés: **4/4** (`node --test lib/*.test.mjs`). OmniEvents: `gradlew build` en verde (38/38) con los arreglos F-01 y F-02 |
 | Servidor real | Compuerta 2 de OmniEvents repetida tras los arreglos: carga 0/0, `validate` 0/0, `selftest` 12/12, `reload` ×2 sin fugas (9 oyentes, 3 temporizadores, 2 comandos), sin errores |
 | En el juego (3a, esta spec) | `npm --prefix tests-e2e test`: **21/21 dos veces seguidas** en Paper 1.21.4 build 232 (≈46 s cada una, compilando), log sin errores; **21/21 dos veces** en Paper 26.1.2 build 74 (Java 25, bot 26.1) |
+| README | OmniEvents: sección **Compatibilidad** (1.21.4 y 26.1.2 verificadas, el resto sin verificar). Raíz: columnas de versión, Paper verificado y Java, y sección «Probar». `CLAUDE.md`, metodología y plantillas exigen actualizar los README al cerrar cada spec; `nuevo-plugin.ps1` crea el README con esa sección |
 | Exploratoria | Las corridas con fallos durante el desarrollo de la suite sirvieron de revisión: cinco hallazgos, abajo |
 
 ## Cobertura

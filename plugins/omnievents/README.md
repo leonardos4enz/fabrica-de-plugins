@@ -1,8 +1,24 @@
 # OmniEvents
 
-Eventos condicionales para **Paper 1.21.4+**: «cuando pase X, si se cumple Y, haz Z», declarado en YAML.
+Eventos condicionales para **Paper 1.21.4 y 26.1** (ver [Compatibilidad](#compatibilidad)): «cuando pase X, si se cumple Y, haz Z», declarado en YAML.
 Es la versión propia de la fábrica de *ConditionalEvents*, con un lenguaje de expresiones real, control de flujo,
 variables persistentes y herramientas de diagnóstico. Spec: [001](../../docs/sdd/specs/001-omnievents-nucleo/spec.md).
+
+## Compatibilidad
+| Servidor | Estado | Evidencia |
+|---|---|---|
+| **Paper 1.21.4** (build 232, Java 24) | Verificada | Compuertas 1, 2 y 3a: unitarias, servidor real y 21/21 escenarios en el juego (2026-10-24, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md) y [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md)) |
+| **Paper 26.1.2** (build 74, Java 25) | Verificada | 21/21 escenarios en el juego con el mismo jar (2026-10-24, spec [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md)) |
+| Paper 1.21.5 – 1.21.11 | Sin verificar | Debería funcionar (misma API, sin NMS), pero no se probó |
+| Paper 26.2 y 26.3 | Sin verificar | El bot de pruebas (mineflayer 4.39) llega hasta 26.1 |
+| Paper 1.21.3 o anterior | No soportada | Se compila contra la API de 1.21.4 |
+| Spigot, CraftBukkit | No soportada | Usa la API Adventure de Paper |
+| Folia | No soportada | Planificada para una spec futura |
+
+- **Java:** el jar necesita Java 21 o más; usa el Java que pida tu versión de Paper (las pruebas en 26.x usaron Java 25).
+- **Opcional:** PlaceholderAPI 2.11+ (sin verificar en el juego todavía).
+- Para verificar otra versión: `npm --prefix tests-e2e test -- --paper <versión> --version-bot <versión> --java-servidor <JDK>`
+  (ver [verificacion.md](../../docs/sdd/verificacion.md#3a-en-el-juego-automática)).
 
 ## Instalación
 1. Copia `OmniEvents-x.y.z.jar` a `plugins/` (opcional: PlaceholderAPI).
