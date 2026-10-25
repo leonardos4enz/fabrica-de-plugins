@@ -11,8 +11,9 @@ Cada plugin vive en `plugins/<nombre>/`. Idioma del proyecto: **español** (cód
    lenguaje de expresiones).
 
 ## Reglas de trabajo
-- **Una spec por sesión.** Esta sesión trabaja solo su spec, de SPECIFY a VERIFY y commit. La siguiente spec se abre
-  en una sesión nueva.
+- **Una sesión por spec (pedido del dueño).** Cada spec se trabaja en su propia sesión de IA, nueva, de SPECIFY a
+  VERIFY, commit y push; esa sesión no toca otra spec. Al cerrar una spec, la siguiente **no** se continúa en la misma
+  conversación: se abre una sesión nueva que arranca leyendo este archivo y el roadmap.
 - Flujo: `spec.md` → `plan.md` (contrato de configuración y STRIDE) → `tasks.md` → implementar → `verify.md`.
 - Toda capacidad nueva es **genérica** y se ejerce con configuración (un ejemplo en `src/main/resources/`).
 - Cada bug encontrado se vuelve prueba **y se verifica que la prueba falla con el código anterior**.
