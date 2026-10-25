@@ -1,0 +1,111 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
+# Menús de inventario (spec 013): una entrada con menu: en vez de trigger:. Se abre con open_menu y cada clic es un
+# cuerpo de regla (conditions, cost, cooldown, limit, actions, tests…). Con Geyser y Floodgate, a un jugador de Bedrock
+# se le muestra como un formulario de botones, sin declararlo dos veces. Los ítems del menú no se pueden sacar.
+
+# /tienda abre la tienda.
+abrir_tienda:
+  trigger: command
+  command:
+    name: tienda
+    description: Abre la tienda
+  actions:
+    - open_menu: tienda
+  tests:
+    - given: { player.name: Ana }
+      expect: { actions: ["open_menu: tienda"] }
+
+tienda:
+  menu:
+    title: "<dark_green>Tienda de {player.name}"
+    rows: 3
+    fill: GRAY_STAINED_GLASS_PANE
+    on_open:
+      - sound: UI_BUTTON_CLICK
+    bedrock:
+      content: "Elige qué comprar. Se paga con esmeraldas."
+    items:
+      espada:
+        slot: 11
+        item: "DIAMOND_SWORD;1;<aqua>Espada de diamante;<gray>Cuesta 5 esmeraldas|<gray>Clic derecho: el precio"
+        bedrock: { button: "Espada de diamante (5 esmeraldas)" }
+        # Clic izquierdo (y el botón de Bedrock): compra, todo o nada (cost de la spec 012).
+        left_click:
+          cost: { items: "EMERALD;5" }
+          actions:
+            - give_item: "DIAMOND_SWORD;1;<aqua>Espada de la tienda"
+            - message: "<green>Compraste la espada."
+          on_cost_fail:
+            - message: "<red>Te falta: {var.cost_missing}"
+          tests:
+            - name: con esmeraldas la compra
+              given: { click: left, inventory: { EMERALD: 6 } }
+              expect: { branch: actions, actions: [give_item], messages: ["Compraste la espada"] }
+            - name: sin esmeraldas no se cobra nada
+              given: { click: left, inventory: { EMERALD: 2 } }
+              expect: { branch: on_cost_fail, messages: ["Te falta: 3 × EMERALD"] }
+        right_click:
+          actions:
+            - message: "<gray>La espada cuesta 5 esmeraldas."
+      pan:
+        slot: 13
+        item: "BREAD;8;<gold>8 panes;<gray>Gratis, una vez por hora"
+        click:
+          cooldown: 1h
+          actions:
+            - give_item: "BREAD;8"
+          on_cooldown:
+            - message: "<red>Vuelve en {var.cooldown_left} s."
+          tests:
+            - given: { click: left }
+              expect: { fired: true, actions: [give_item] }
+      cerrar:
+        slot: 22
+        item: "BARRIER;1;<red>Cerrar"
+        click:
+          close: true
+
+# /elegirkit: un selector donde el kit VIP se ve distinto según el permiso (view: el primero visible de la casilla).
+abrir_kits:
+  trigger: command
+  command: elegirkit
+  actions:
+    - open_menu: kits
+
+kits:
+  menu:
+    title: "<gold>Kits"
+    rows: 1
+    items:
+      basico:
+        slot: 2
+        item: "STONE_SWORD;1;<white>Kit básico;<gray>Cada 10 minutos"
+        click:
+          cooldown: 10m
+          actions:
+            - give_item: "STONE_SWORD"
+            - give_item: "COOKED_BEEF;4"
+          on_cooldown:
+            - message: "<red>Espera {var.cooldown_left} s para el kit básico."
+          close: true
+      vip_bloqueado:
+        slot: 6
+        view: "!perm('omnievents.ejemplo.vip')"
+        item: "BARRIER;1;<red>Kit VIP;<gray>Necesitas el rango VIP"
+        click:
+          actions:
+            - message: "<red>Ese kit es solo para VIP."
+      vip:
+        slot: 6
+        item: "NETHER_STAR;1;<light_purple>Kit VIP;<gray>Una vez al día"
+        click:
+          limit: 1
+          limit_reset: daily
+          actions:
+            - give_item: "GOLDEN_APPLE;3"
+            - message: "<light_purple>¡Kit VIP entregado!"
+          on_limit:
+            - message: "<red>Ya usaste el kit VIP hoy."
+          tests:
+            - given: { click: left }
+              expect: { fired: true, actions: [give_item], messages: ["Kit VIP entregado"] }

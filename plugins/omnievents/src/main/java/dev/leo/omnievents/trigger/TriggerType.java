@@ -16,7 +16,7 @@ import java.util.function.Predicate;
 
 /** Un disparador: qué evento escucha, de dónde sale el jugador y qué raíces ofrece a las expresiones. */
 public final class TriggerType {
-    public enum Kind { EVENT, TIMER, CLOCK, CALL, COMMAND, SERVER_START, SERVER_STOP, CUSTOM, STATE, VAR_EXPIRE, REGION }
+    public enum Kind { EVENT, TIMER, CLOCK, CALL, COMMAND, SERVER_START, SERVER_STOP, CUSTOM, STATE, VAR_EXPIRE, REGION, MENU }
 
     private final String name;
     private final Kind kind;

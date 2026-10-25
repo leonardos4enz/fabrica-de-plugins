@@ -9,7 +9,8 @@ import { fileURLToPath } from 'node:url'
 import { Servidor, dormir, jarMasNuevo, copiarCarpeta } from './lib/servidor.mjs'
 import { conectar } from './lib/bot.mjs'
 import { prepararPaper } from './lib/paper.mjs'
-import { instalarPluginsExtra, configurarEssentials } from './lib/plugins-extra.mjs'
+import { instalarPluginsExtra, configurarEssentials, configurarGeyser } from './lib/plugins-extra.mjs'
+import { conectarBedrock, VERSION_BEDROCK } from './lib/bedrock.mjs'
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url))
 const RAIZ = path.resolve(AQUI, '..')
@@ -67,6 +68,10 @@ async function principal () {
   if (suite.pluginsExtra) {
     await instalarPluginsExtra(o.paper ?? suite.versionPorDefecto, pluginsDir, path.join(AQUI, '.cache', 'plugins'))
     configurarEssentials(pluginsDir, suite.comandosDeMinecraft ?? [])
+    // Spec 013: Geyser + Floodgate para los jugadores de Bedrock (solo 127.0.0.1).
+    if (suite.puertoBedrock && !configurarGeyser(pluginsDir, suite.puertoBedrock)) {
+      console.log('  (Geyser aún no generó su configuración: los escenarios de Bedrock fallarán en esta corrida; la siguiente ya la tiene)')
+    }
   }
   // Configuración que se copia en cada corrida (origen relativo a la raíz del repositorio, destino a run/): los
   // ejemplos del plugin tal como están en el código fuente y las reglas propias de la suite.
@@ -96,6 +101,14 @@ async function principal () {
       async entrar (nombre) {
         if (bots[nombre]) await bots[nombre].salir()
         bots[nombre] = await conectar(nombre, { puerto: suite.puerto, version: versionBot })
+        return bots[nombre]
+      },
+      /** Conecta un jugador de Bedrock por Geyser (spec 013); en el servidor se llama con el prefijo de Floodgate. */
+      async entrarBedrock (nombre) {
+        if (bots[nombre]) await bots[nombre].salir()
+        const version = VERSION_BEDROCK[o.paper ?? suite.versionPorDefecto]
+        if (!version) throw new Error(`sin versión de Bedrock para Paper ${o.paper ?? suite.versionPorDefecto}`)
+        bots[nombre] = await conectarBedrock(nombre, { puerto: suite.puertoBedrock, version })
         return bots[nombre]
       },
       async salir (nombre) {

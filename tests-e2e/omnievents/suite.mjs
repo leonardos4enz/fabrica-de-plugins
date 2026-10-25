@@ -6,12 +6,19 @@ import { dormir } from '../lib/servidor.mjs'
 
 const ANA = 'Ana_e2e'
 const BETO = 'Beto_e2e'
+// Spec 013: jugador de Bedrock (bedrock-protocol por Geyser); Floodgate le pone el prefijo «.» en el servidor.
+const BEB = 'Beb_e2e'
+const BEB_SERVIDOR = '.' + BEB
 const PUNTO = '12.5 -60 12.5' // punto de trabajo en el mundo plano (suelo en y = -61)
 
 const cerca = (pos, x, y, z, d = 1.2) => Math.abs(pos.x - x) < d && Math.abs(pos.y - y) < d && Math.abs(pos.z - z) < d
 const bloque = (bot, x, y, z) => bot.blockAt(new bot.entity.position.constructor(x, y, z))?.name
 const esperarVar = (srv, jugador, nombre, valor) =>
   srv.consola(`omni var get ${jugador} ${nombre}`, { espera: new RegExp(`${jugador}\\.${nombre} = ${valor}(\\.0)?\\s*$`) })
+
+/** pvar.e2e_clics del jugador de Bedrock (el «.» del nombre no deja usar esperarVar). */
+const clicsDeBeb = (srv, n) =>
+  srv.consola(`omni var get ${BEB_SERVIDOR} e2e_clics`, { espera: new RegExp(`Beb_e2e\\.e2e_clics = ${n}(\\.0)?\\s*$`) })
 
 /** Deja a un jugador en el punto de trabajo, en el modo pedido, sin efectos, con vida y hambre completas. */
 async function prepararJugador ({ srv, bots }, nombre, modo = 'survival') {
@@ -49,6 +56,8 @@ export default {
   datosDeJugador: ['plugins/OmniEvents/data/players/{uuid}.yml'],
   bots: [ANA, BETO],
   puerto: 25599,
+  // Spec 013: Geyser escucha a los jugadores de Bedrock aquí (UDP, solo 127.0.0.1).
+  puertoBedrock: 19199,
   versionPorDefecto: '1.21.4',
   // Ruido conocido de Paper que no es del plugin.
   ruidoDelServidor: [/No key layers/],
@@ -985,6 +994,116 @@ export default {
         ana.bot.attack(npc)
         await ana.esperar('chat', /^e2e npc golpe E2eGuia$/, { desde: m })
         await srv.consola('npc remove all')
+      }
+    },
+    {
+      id: '013 H1 CA1 · H1 CA4 · H1 CA5 · H2 CA1 · H2 CA2',
+      nombre: 'menú en Java: título, ítems y view; compra con cost, falta, clic derecho, redibujo, nada sale del menú, close y on_close',
+      timeoutMs: 45000,
+      async fn (ctx) {
+        const { srv } = ctx
+        await prepararJugador(ctx, ANA)
+        const ana = ctx.bots[ANA]
+        await srv.consola(`omni var del ${ANA} e2e_clics`)
+        await srv.consola(`give ${ANA} emerald 6`)
+        await srv.sincronizar() // la consola no espera (002 F-03)
+        await ana.hasta('tener 6 esmeraldas', () => ana.cantidad('emerald') === 6)
+        let m = ana.marca()
+        ana.comando('e2emenu')
+        await ana.esperar('chat', /^e2e menú abierto, bedrock false$/, { desde: m })
+        const w = () => ana.bot.currentWindow
+        await ana.hasta('ver la tienda con su título', () => w() && /e2e tienda Ana_e2e/.test(ana.tituloVentana()))
+        await ana.hasta('ver los ítems y el relleno', () => w().slots[11]?.name === 'diamond_sword' && w().slots[13]?.name === 'paper' &&
+          w().slots[0]?.name === 'gray_stained_glass_pane' && w().slots[22]?.name === 'barrier')
+        if (ana.nombreDe(w().slots[11]) !== 'e2e espada') throw new Error(`nombre de la espada: ${ana.nombreDe(w().slots[11])}`)
+        // view: false oculta la TNT y la casilla la toma el siguiente ítem visible.
+        if (w().slots[15]?.name !== 'emerald_block') throw new Error(`casilla 15: ${w().slots[15]?.name} (se esperaba el visible, no la TNT)`)
+        // Clic izquierdo: cobra 5 esmeraldas (cost de la 012) y entrega.
+        m = ana.marca()
+        await ana.bot.clickWindow(11, 0, 0)
+        await ana.esperar('chat', /^e2e comprada por 5, clic left$/, { desde: m })
+        await ana.hasta('tener la espada y 1 esmeralda', () => ana.cantidadEnVentana('diamond_sword') === 1 && ana.cantidadEnVentana('emerald') === 1)
+        // Ya no alcanza: no se cobra nada.
+        m = ana.marca()
+        await ana.bot.clickWindow(11, 0, 0)
+        await ana.esperar('chat', /^e2e falta 4 × EMERALD$/, { desde: m })
+        // Clic derecho: otro cuerpo, con click y slot.
+        m = ana.marca()
+        await ana.bot.clickWindow(11, 1, 0)
+        await ana.esperar('chat', /^e2e precio 5 clic right casilla 11$/, { desde: m })
+        // Después de un clic el menú se vuelve a dibujar con los valores nuevos.
+        await ana.bot.clickWindow(13, 0, 0)
+        await ana.hasta('ver el contador en 1', () => ana.nombreDe(w().slots[13]) === 'e2e clics 1')
+        await esperarVar(srv, ANA, 'e2e_clics', 1)
+        // Shift-clic y tomar el relleno: el servidor lo cancela y nada sale del menú.
+        await ana.bot.clickWindow(11, 0, 1)
+        await ana.bot.clickWindow(0, 0, 0)
+        await ana.bot.clickWindow(15, 0, 0)
+        await dormir(600)
+        if (w().slots[11]?.name !== 'diamond_sword' || w().slots[0]?.name !== 'gray_stained_glass_pane' || w().slots[15]?.name !== 'emerald_block') {
+          throw new Error('el menú perdió un ítem: ' + [11, 0, 15].map(i => w().slots[i]?.name).join(', '))
+        }
+        // close: true cierra después de las acciones y corre on_close.
+        m = ana.marca()
+        await ana.bot.clickWindow(22, 0, 0)
+        await ana.esperar('chat', /^e2e cerrar$/, { desde: m })
+        await ana.esperar('chat', /^e2e menú cerrado$/, { desde: m })
+        await ana.hasta('cerrar la ventana', b => !b.currentWindow)
+        await dormir(300)
+        for (const n of ['gray_stained_glass_pane', 'barrier', 'emerald_block', 'paper']) {
+          if (ana.cantidad(n) > 0) throw new Error(`Ana se llevó ${n} del menú`)
+        }
+        if (ana.cantidad('diamond_sword') !== 1) throw new Error(`espadas: ${ana.cantidad('diamond_sword')} (se esperaba 1: shift-clic no copia)`)
+        await srv.consola(`omni var del ${ANA} e2e_clics`)
+      }
+    },
+    {
+      id: '013 H3 CA1 · H3 CA2 · H3 CA4',
+      nombre: 'Bedrock (Geyser + Floodgate): el menú llega como formulario de botones; un botón corre su clic y vuelve con el valor nuevo; una respuesta vieja no vale; cerrar corre on_close',
+      timeoutMs: 45000,
+      async fn (ctx) {
+        const { srv } = ctx
+        const be = await ctx.entrarBedrock(BEB)
+        await srv.consola('list', { espera: new RegExp(BEB_SERVIDOR.replace('.', '\\.')) })
+        await srv.consola(`omni var del ${BEB_SERVIDOR} e2e_clics`)
+        await srv.sincronizar()
+        // La regla abre el menú con sus args (precio 5); a un jugador de Bedrock se le manda el formulario.
+        let m = be.marca()
+        await srv.consola(`omni run e2e_abrir_menu ${BEB_SERVIDOR}`)
+        const f1 = await be.esperarFormulario(x => x.type === 'form' && /e2e tienda \.Beb_e2e/.test(x.title), { desde: m })
+        const textos = f => f.form.buttons.map(b => b.text)
+        if (JSON.stringify(textos(f1)) !== JSON.stringify(['e2e espada', 'e2e contar (0)', 'e2e cerrar'])) {
+          throw new Error(`botones: ${JSON.stringify(textos(f1))} (solo los ítems visibles con clic, en orden de casilla)`)
+        }
+        if (f1.form.content !== 'e2e elige, precio 5') throw new Error(`contenido: ${JSON.stringify(f1.form.content)}`)
+        await be.esperarChat(/e2e menú abierto, bedrock true/)
+        // El botón del contador corre su clic y el formulario vuelve con el valor nuevo.
+        m = be.marca()
+        be.responder(f1, 1)
+        const f2 = await be.esperarFormulario(x => x.buttons?.[1]?.text === 'e2e contar (1)', { desde: m })
+        await clicsDeBeb(srv, 1)
+        // Una respuesta al formulario viejo no corre nada (H3 CA4).
+        m = be.marca()
+        be.responder(f1, 1)
+        await dormir(800)
+        await clicsDeBeb(srv, 1)
+        if (be.formularios.length > m) throw new Error('una respuesta vieja volvió a mandar el formulario')
+        // El botón cerrar (close: true) corre su clic y on_close; no vuelve el formulario.
+        const chat = be.chat.length
+        be.responder(f2, 2)
+        await be.esperarChat(/e2e cerrar/, { desde: chat })
+        await be.esperarChat(/e2e menú cerrado/, { desde: chat })
+        await dormir(500)
+        if (be.formularios.length > m) throw new Error('el formulario volvió después de close: true')
+        // Cerrar el formulario (la X) también corre on_close.
+        m = be.marca()
+        await srv.consola(`omni menu open ${BEB_SERVIDOR} e2e_menu_tienda`, { espera: /formulario de Bedrock/ })
+        const f3 = await be.esperarFormulario(x => x.type === 'form', { desde: m })
+        const chat2 = be.chat.length
+        be.responder(f3, null)
+        await be.esperarChat(/e2e menú cerrado/, { desde: chat2 })
+        await srv.consola(`omni var del ${BEB_SERVIDOR} e2e_clics`)
+        await ctx.salir(BEB)
       }
     },
     {

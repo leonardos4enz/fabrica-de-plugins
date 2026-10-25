@@ -46,7 +46,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
     private static final List<String> EXAMPLES = List.of(
             "rules/ejemplos/bienvenida.yml", "rules/ejemplos/mineria.yml", "rules/ejemplos/comandos.yml",
             "rules/ejemplos/combate.yml", "rules/ejemplos/chat.yml", "rules/ejemplos/temporizadores.yml",
-            "rules/ejemplos/herramientas.yml", "rules/ejemplos/estados.yml", "rules/ejemplos/variables.yml", "rules/ejemplos/integraciones.yml",
+            "rules/ejemplos/herramientas.yml", "rules/ejemplos/estados.yml", "rules/ejemplos/variables.yml", "rules/ejemplos/integraciones.yml", "rules/ejemplos/menus.yml",
             "rules/ejemplos/recompensas/pack.yml", "rules/ejemplos/recompensas/reglas.yml");
 
     private Settings settings;
@@ -69,6 +69,9 @@ public final class OmniEvents extends JavaPlugin implements Listener {
     private dev.leo.omnievents.trigger.RegionService regionService;
     private Economy economy = Economy.NONE;
     private Regions regions = Regions.NONE;
+    /** Spec 013: menús abiertos y formularios de Bedrock (Floodgate). */
+    private dev.leo.omnievents.menu.MenuService menuService;
+    private dev.leo.omnievents.hook.Forms forms = dev.leo.omnievents.hook.Forms.NONE;
     /** Spec 012: Vault, WorldGuard y Citizens, si están instalados. */
     private java.util.Set<String> integrations = java.util.Set.of();
     private BukkitTask autosave;
@@ -98,6 +101,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
         states = new StateService(this);
         ruleCommands = new RuleCommands(this);
         regionService = new dev.leo.omnievents.trigger.RegionService(this);
+        menuService = new dev.leo.omnievents.menu.MenuService(this);
         loadSettings();
 
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
@@ -145,6 +149,9 @@ public final class OmniEvents extends JavaPlugin implements Listener {
             });
             step("regiones", () -> {
                 if (regionService != null) regionService.unregister();
+            });
+            step("menús", () -> {
+                if (menuService != null) menuService.unregister();
             });
             step("comandos", () -> {
                 if (ruleCommands != null) ruleCommands.unregister();
@@ -197,6 +204,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
         guarded(p, "temporizadores", timers::start);
         guarded(p, "estados", () -> states.register(rules.all()));
         guarded(p, "regiones", () -> regionService.register(rules.all()));
+        guarded(p, "menús", () -> menuService.set(loader.menus()));
         guarded(p, "comandos", ruleCommands::register);
         guarded(p, "datos de bloques", () -> blockCleaner.update(rules.all()));
         lastProblems = p;
@@ -381,6 +389,16 @@ public final class OmniEvents extends JavaPlugin implements Listener {
             }
         }
         if (pm.getPlugin("Citizens") != null) found.add("Citizens");
+        // Spec 013: formularios de Bedrock con Floodgate (por reflexión: sin dependencia de compilación).
+        org.bukkit.plugin.Plugin floodgate = pm.getPlugin("floodgate");
+        if (floodgate != null) {
+            try {
+                forms = new dev.leo.omnievents.hook.FloodgateForms(floodgate);
+                found.add("Floodgate");
+            } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
+                getLogger().warning("Floodgate está pero no se pudo usar su API de formularios: " + e);
+            }
+        }
         integrations = java.util.Collections.unmodifiableSet(found);
         if (!found.isEmpty()) getLogger().info("Integraciones detectadas: " + String.join(", ", found));
     }
@@ -393,13 +411,21 @@ public final class OmniEvents extends JavaPlugin implements Listener {
         return regions;
     }
 
+    public dev.leo.omnievents.menu.MenuService menus() {
+        return menuService;
+    }
+
+    public dev.leo.omnievents.hook.Forms forms() {
+        return forms;
+    }
+
     public dev.leo.omnievents.trigger.RegionService regionService() {
         return regionService;
     }
 
     /** /omni stats: lo detectado y, con Vault, el plugin de economía de ahora. */
     public String integrationsLine() {
-        if (integrations.isEmpty()) return "ninguna (Vault, WorldGuard y Citizens son opcionales)";
+        if (integrations.isEmpty()) return "ninguna (Vault, WorldGuard, Citizens y Floodgate son opcionales)";
         List<String> out = new java.util.ArrayList<>();
         for (String i : integrations) {
             if (i.equals("Vault")) out.add("Vault (" + (economy.available() ? economy.provider() : "sin economía") + ")");

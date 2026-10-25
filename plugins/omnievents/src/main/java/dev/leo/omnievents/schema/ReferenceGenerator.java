@@ -28,7 +28,7 @@ public final class ReferenceGenerator {
         sb.append("```yaml\n# yaml-language-server: $schema=").append(SchemaGenerator.URL).append("\n```\n\n");
         sb.append("El editor revisa opciones, disparadores, acciones y la forma de las condiciones; las expresiones, los materiales, ")
                 .append("los sonidos y los efectos se revisan con `/omni validate`. Los nombres van en minúsculas.\n\n");
-        sb.append("Contenido: [opciones de una regla](#opciones-de-una-regla) · [paquetes y plantillas](#paquetes-y-plantillas) · [condiciones](#condiciones) · ")
+        sb.append("Contenido: [opciones de una regla](#opciones-de-una-regla) · [menús](#menús) · [paquetes y plantillas](#paquetes-y-plantillas) · [condiciones](#condiciones) · ")
                 .append("[disparadores](#disparadores) · [acciones](#acciones) · [funciones](#funciones)\n\n");
 
         sb.append("## Opciones de una regla\n| Opción | Valor | Disparador | Qué hace |\n|---|---|---|---|\n");
@@ -44,6 +44,19 @@ public final class ReferenceGenerator {
         RuleOptions.TEST_KEYS.forEach((k, d) -> sb.append("| `").append(k).append("` | ").append(cell(d)).append(" |\n"));
         sb.append("\nClaves de `expect` (además, variables: `pvar.x`, `gvar.x`, `var.x`, `block.data.x`; `null` = que no exista):\n\n| Clave | Qué hace |\n|---|---|\n");
         RuleOptions.EXPECT_KEYS.forEach((k, d) -> sb.append("| `").append(k).append("` | ").append(cell(d)).append(" |\n"));
+
+        // Spec 013: menús de inventario y formularios de Bedrock.
+        sb.append("\n## Menús\nUna entrada con `menu:` (en vez de `trigger:`) es un menú de inventario (spec 013). Se abre con la acción ")
+                .append("`open_menu` y cada clic es un cuerpo de regla (`conditions`, `cost`, `cooldown`, `actions`, `tests`…) con el disparador ")
+                .append("`menu_click`: se llama como su ruta (`tienda.menu.items.espada.click`). Con Floodgate, a un jugador de Bedrock se le muestra ")
+                .append("como un formulario de botones.\n\n| Clave de `menu` | Qué hace |\n|---|---|\n");
+        RuleOptions.MENU_KEYS.forEach((k, d) -> sb.append("| `").append(k).append("` | ").append(cell(d)).append(" |\n"));
+        sb.append("\n| Clave de un ítem (`menu.items.<nombre>`) | Qué hace |\n|---|---|\n");
+        RuleOptions.MENU_ITEM_KEYS.forEach((k, d) -> sb.append("| `").append(k).append("` | ").append(cell(d)).append(" |\n"));
+        RuleOptions.CLICK_KEYS.forEach((k, d) -> sb.append("| `<clic>.").append(k).append("` | ").append(cell(d)).append(" |\n"));
+        sb.append("\n| Clave de `bedrock` | Dónde | Qué hace |\n|---|---|---|\n");
+        RuleOptions.MENU_BEDROCK_KEYS.forEach((k, d) -> sb.append("| `").append(k).append("` | menú | ").append(cell(d)).append(" |\n"));
+        RuleOptions.ITEM_BEDROCK_KEYS.forEach((k, d) -> sb.append("| `").append(k).append("` | ítem | ").append(cell(d)).append(" |\n"));
 
         sb.append("\n## Paquetes y plantillas\nUna carpeta de `rules/` con un `pack.yml` es un paquete (spec 011): sus reglas se llaman ")
                 .append("`paquete:regla` y, desde ellas, un nombre sin paquete (`call`, `cooldown()`, `uses()`, `in_state()`, `extends`) se busca ")
@@ -170,6 +183,7 @@ public final class ReferenceGenerator {
             case TESTS -> "lista de casos";
             case PARAMS -> "mapa nombre: valor";
             case COST -> "mapa (ver abajo)";
+            case MENU -> "mapa (ver [menús](#menús))";
         };
         return o.aliasOf() == null ? k : k + " (sinónimo de `" + o.aliasOf() + "`)";
     }

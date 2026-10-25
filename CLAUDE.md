@@ -83,6 +83,10 @@ con `--release 21`.
   parche de cada versión: 1.21.4 usa WorldEdit 7.3.19 y Citizens b3760 (012 F-04).
 - Bukkit lee `pvar.x: 1` dentro de un mapa como una sección anidada (`pvar` → `x`): volver a juntar (012 F-01). YAML se
   queda en silencio con la última de dos claves iguales: el cargador avisa de reglas repetidas en un archivo (012 F-02).
+- **Jugador de Bedrock en la suite (spec 013):** Geyser sigue a una sola versión de Java (2.6.2 para 1.21.4, 2.10.1 para
+  26.1) y acepta el cliente sin Xbox de `bedrock-protocol` solo con `enable-proxy-connections: true` (2.6) o
+  `advanced.bedrock.validate-bedrock-login: false` (2.10): lo pone `configurarGeyser`. El cliente necesita el RakNet
+  nativo (con `jsp-raknet` no conecta) y Floodgate le pone «.» delante del nombre (`.Beb_e2e`: escapar el punto en regex).
 - En 26.x las reglas de juego van en snake_case (`natural_health_regeneration`, `advance_time`…): los nombres de
   1.21.4 fallan con «Incorrect argument» y el servidor sigue como si nada. La suite manda las dos formas (008 F-02).
 

@@ -81,6 +81,9 @@
             "region_leave",
             "npc_click",
             "npc_left_click",
+            "menu_open",
+            "menu_click",
+            "menu_close",
             "player_kill_entity",
             "player_leave",
             "repetitive",
@@ -153,6 +156,9 @@
             "El jugador sale de una región de WorldGuard (region.id); cancel lo deja dentro. Necesita WorldGuard.",
             "Un jugador hace clic derecho en un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
             "Un jugador golpea (clic izquierdo) un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
+            "Abrir un menú (open_menu): su permission, conditions y cost son el requisito y on_open las acciones. Lo compila el menú; no se escribe a mano.",
+            "Un clic en un ítem de un menú (click, left_click, right_click, shift_click). click: left, right, shift_left, shift_right, middle, number, drop o bedrock. Lo compila el menú; no se escribe a mano.",
+            "Cerrar un menú (on_close). Lo compila el menú; no se escribe a mano.",
             "Alias de player_kill (ConditionalEvents).",
             "Alias de player_quit (ConditionalEvents).",
             "Alias de timer (ConditionalEvents).",
@@ -225,6 +231,9 @@
             "El jugador sale de una región de WorldGuard (region.id); cancel lo deja dentro. Necesita WorldGuard.",
             "Un jugador hace clic derecho en un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
             "Un jugador golpea (clic izquierdo) un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
+            "Abrir un menú (open_menu): su permission, conditions y cost son el requisito y on_open las acciones. Lo compila el menú; no se escribe a mano.",
+            "Un clic en un ítem de un menú (click, left_click, right_click, shift_click). click: left, right, shift_left, shift_right, middle, number, drop o bedrock. Lo compila el menú; no se escribe a mano.",
+            "Cerrar un menú (on_close). Lo compila el menú; no se escribe a mano.",
             "Alias de player_kill (ConditionalEvents).",
             "Alias de player_quit (ConditionalEvents).",
             "Alias de timer (ConditionalEvents).",
@@ -301,6 +310,9 @@
             "region_leave",
             "npc_click",
             "npc_left_click",
+            "menu_open",
+            "menu_click",
+            "menu_close",
             "player_kill_entity",
             "player_leave",
             "repetitive",
@@ -373,6 +385,9 @@
             "El jugador sale de una región de WorldGuard (region.id); cancel lo deja dentro. Necesita WorldGuard.",
             "Un jugador hace clic derecho en un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
             "Un jugador golpea (clic izquierdo) un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
+            "Abrir un menú (open_menu): su permission, conditions y cost son el requisito y on_open las acciones. Lo compila el menú; no se escribe a mano.",
+            "Un clic en un ítem de un menú (click, left_click, right_click, shift_click). click: left, right, shift_left, shift_right, middle, number, drop o bedrock. Lo compila el menú; no se escribe a mano.",
+            "Cerrar un menú (on_close). Lo compila el menú; no se escribe a mano.",
             "Alias de player_kill (ConditionalEvents).",
             "Alias de player_quit (ConditionalEvents).",
             "Alias de timer (ConditionalEvents).",
@@ -445,6 +460,9 @@
             "El jugador sale de una región de WorldGuard (region.id); cancel lo deja dentro. Necesita WorldGuard.",
             "Un jugador hace clic derecho en un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
             "Un jugador golpea (clic izquierdo) un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
+            "Abrir un menú (open_menu): su permission, conditions y cost son el requisito y on_open las acciones. Lo compila el menú; no se escribe a mano.",
+            "Un clic en un ítem de un menú (click, left_click, right_click, shift_click). click: left, right, shift_left, shift_right, middle, number, drop o bedrock. Lo compila el menú; no se escribe a mano.",
+            "Cerrar un menú (on_close). Lo compila el menú; no se escribe a mano.",
             "Alias de player_kill (ConditionalEvents).",
             "Alias de player_quit (ConditionalEvents).",
             "Alias de timer (ConditionalEvents).",
@@ -754,6 +772,14 @@
           ],
           "description": "Acciones si el costo no alcanza o un cobro falla (lo cobrado se devuelve). var.cost_missing dice qué falta; var.cost_missing_list, las claves."
         },
+        "menu": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/menu"
+            }
+          ],
+          "description": "Esta entrada es un menú de inventario (spec 013) en vez de una regla: title, rows, items con sus clics… Se abre con open_menu; a Bedrock, con Floodgate, como formulario de botones."
+        },
         "tests": {
           "type": "array",
           "items": {
@@ -1005,6 +1031,11 @@
           ]
         },
         {
+          "required": [
+            "menu"
+          ]
+        },
+        {
           "properties": {
             "template": {
               "const": true
@@ -1180,7 +1211,900 @@
         "number",
         "boolean"
       ],
-      "description": "Expresión de OmniEvents (el editor no la revisa: usa /omni validate). Operadores: && || ! == != < <= > >= ~= contains startsWith endsWith matches in, + - * / %, c ? a : b. Variables: var.x, pvar.x, gvar.x. Funciones: abs(x), bool(x), ceil(x), chance(p), clamp(x, min, max), cooldown(regla), date([patrón]), default(x, otro), distance(a, b), floor(x), format(x[, decimales]), has_item(material[, n]), hour(), if(condición, a, b), in_area(mundo, x1, y1, z1, x2, y2, z2), in_region(id), in_state(regla), int(x), is_npc(entidad), join(lista[, separador]), len(x), lower(t), max(a, b, …), min(a, b, …), minute(), money(), money_format(n), now(), num(x), online(nombre), papi(texto[, jugador]), perm(permiso[, jugador]), player(nombre), players(), pow(x, y), pvar_of(jugador, nombre), random(a, b), randomf(a, b), regions(), replace(t, buscar, poner), round(x[, decimales]), size(x), split(t, separador), sqrt(x), str(x), strip(t), substr(t, desde[, hasta]), trim(t), ttl(variable), upper(t), uses(regla), weekday()."
+      "description": "Expresión de OmniEvents (el editor no la revisa: usa /omni validate). Operadores: && || ! == != < <= > >= ~= contains startsWith endsWith matches in, + - * / %, c ? a : b. Variables: var.x, pvar.x, gvar.x. Funciones: abs(x), bool(x), ceil(x), chance(p), clamp(x, min, max), cooldown(regla), date([patrón]), default(x, otro), distance(a, b), floor(x), format(x[, decimales]), has_item(material[, n]), hour(), if(condición, a, b), in_area(mundo, x1, y1, z1, x2, y2, z2), in_region(id), in_state(regla), int(x), is_bedrock(), is_npc(entidad), join(lista[, separador]), len(x), lower(t), max(a, b, …), min(a, b, …), minute(), money(), money_format(n), now(), num(x), online(nombre), papi(texto[, jugador]), perm(permiso[, jugador]), player(nombre), players(), pow(x, y), pvar_of(jugador, nombre), random(a, b), randomf(a, b), regions(), replace(t, buscar, poner), round(x[, decimales]), size(x), split(t, separador), sqrt(x), str(x), strip(t), substr(t, desde[, hasta]), trim(t), ttl(variable), upper(t), uses(regla), weekday()."
+    },
+    "menu": {
+      "type": "object",
+      "description": "Esta entrada es un menú de inventario (spec 013) en vez de una regla: title, rows, items con sus clics… Se abre con open_menu; a Bedrock, con Floodgate, como formulario de botones.",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Título (MiniMessage, & y {expresiones}); se evalúa al abrir (los ítems, además, después de cada clic)."
+        },
+        "rows": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
+          "description": "Filas del inventario, de 1 a 6 (3 por defecto)."
+        },
+        "fill": {
+          "type": "string",
+          "description": "Material para las casillas vacías (p. ej. GRAY_STAINED_GLASS_PANE), sin nombre."
+        },
+        "permission": {
+          "type": "string",
+          "description": "Permiso para abrirlo; sin él no se abre."
+        },
+        "conditions": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/conditions"
+            }
+          ],
+          "description": "Requisito para abrirlo, como las conditions de una regla (con su deny); si falla, no se abre."
+        },
+        "else": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Acciones si falla una condición sin deny (el menú no se abre)."
+        },
+        "cost": {
+          "type": "object",
+          "properties": {
+            "money": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "$ref": "#/definitions/expression"
+                }
+              ],
+              "description": "Dinero de la economía de Vault (expresión, > 0). Necesita Vault y un plugin de economía."
+            },
+            "levels": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "$ref": "#/definitions/expression"
+                }
+              ],
+              "description": "Niveles de experiencia (entero > 0)."
+            },
+            "exp": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "$ref": "#/definitions/expression"
+                }
+              ],
+              "description": "Puntos de experiencia (entero > 0)."
+            },
+            "items": {
+              "description": "Ítems por material, tengan o no nombre: \"MATERIAL;cantidad\" o una lista de esos (sin la armadura). Al devolver, vuelven las mismas pilas.",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[^;]+(;.+)?$"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[^;]+(;.+)?$"
+                  }
+                }
+              ]
+            }
+          },
+          "patternProperties": {
+            "^(pvar|gvar)\\.[A-Za-z0-9_\\-]+$": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "$ref": "#/definitions/expression"
+                }
+              ],
+              "description": "Variable numérica del jugador (expresión, > 0); nula cuenta como 0."
+            }
+          },
+          "additionalProperties": false,
+          "minProperties": 1,
+          "description": "Lo que cuesta abrirlo, todo o nada (spec 012); on_cost_fail si no alcanza."
+        },
+        "on_cost_fail": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Acciones si el costo de abrir no alcanza."
+        },
+        "cooldown": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/duration"
+            }
+          ],
+          "description": "Enfriamiento entre aperturas."
+        },
+        "on_cooldown": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Acciones si se intenta abrir en enfriamiento."
+        },
+        "on_open": {
+          "$ref": "#/definitions/actions",
+          "description": "Acciones al abrirse (después del requisito)."
+        },
+        "on_close": {
+          "$ref": "#/definitions/actions",
+          "description": "Acciones al cerrarse (el jugador lo cierra, close_menu o close: true; no al recargar)."
+        },
+        "bedrock": {
+          "type": "object",
+          "properties": {
+            "content": {
+              "type": "string",
+              "description": "Texto bajo el título del formulario ({expresiones})."
+            },
+            "enabled": {
+              "type": "boolean",
+              "description": "false: a Bedrock también se le muestra el inventario (Geyser lo traduce)."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Cómo se ve en Bedrock con Floodgate: content (texto del formulario) y enabled (false: el inventario)."
+        },
+        "items": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/menu_item"
+          },
+          "description": "Los ítems: nombre → slot, item, view y sus clics. Si dos comparten casilla se ve el primero visible."
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/test"
+          },
+          "description": "Pruebas de la apertura (given y expect, como en una regla); las de cada clic van en el clic."
+        }
+      },
+      "additionalProperties": false
+    },
+    "menu_item": {
+      "type": "object",
+      "description": "Un ítem del menú: dónde va (slot), cómo se ve (item), cuándo (view) y qué hace cada clic.",
+      "properties": {
+        "slot": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 53
+            },
+            {
+              "type": "string",
+              "pattern": "^\\s*\\d+\\s*(-\\s*\\d+\\s*)?$"
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 53
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^\\s*\\d+\\s*(-\\s*\\d+\\s*)?$"
+                  }
+                ]
+              }
+            }
+          ],
+          "description": "Casilla (desde 0): un número, una lista o un rango \"0-8\"."
+        },
+        "slots": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 53
+            },
+            {
+              "type": "string",
+              "pattern": "^\\s*\\d+\\s*(-\\s*\\d+\\s*)?$"
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 53
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^\\s*\\d+\\s*(-\\s*\\d+\\s*)?$"
+                  }
+                ]
+              }
+            }
+          ],
+          "description": "Sinónimo de slot."
+        },
+        "item": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "material": {
+                  "description": "Material (DIAMOND, IRON_SWORD…)."
+                },
+                "id": {
+                  "description": "Sinónimo de material."
+                },
+                "amount": {
+                  "description": "Cantidad."
+                },
+                "name": {
+                  "description": "Nombre (MiniMessage, & y {expresiones})."
+                },
+                "lore": {
+                  "description": "Líneas de descripción: una lista, o un texto con |."
+                },
+                "model": {
+                  "description": "custom_model_data."
+                },
+                "enchants": {
+                  "description": "Encantamientos: mapa encantamiento: nivel, o lista \"SHARPNESS:2\"."
+                },
+                "glow": {
+                  "description": "Brillo de encantado sin encantamientos."
+                },
+                "unbreakable": {
+                  "description": "Irrompible."
+                },
+                "hide_flags": {
+                  "description": "Oculta los atributos."
+                },
+                "saved": {
+                  "description": "Ítem guardado con /omni item save."
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "El ítem, como en give_item: \"MATERIAL;cantidad;nombre;lore1|lore2\" o un mapa con material, name, lore, amount, glow… Acepta {expresiones}."
+        },
+        "view": {
+          "$ref": "#/definitions/expression",
+          "description": "Expresión: el ítem solo se ve si da verdadero (se revisa al abrir y después de cada clic)."
+        },
+        "click": {
+          "$ref": "#/definitions/menu_click",
+          "description": "Lo que hace cualquier clic: un cuerpo de regla (conditions, cost, cooldown, actions, tests…) sin trigger."
+        },
+        "left_click": {
+          "$ref": "#/definitions/menu_click",
+          "description": "Clic izquierdo (gana a click). En Bedrock, si no hay click."
+        },
+        "right_click": {
+          "$ref": "#/definitions/menu_click",
+          "description": "Clic derecho (gana a click)."
+        },
+        "shift_click": {
+          "$ref": "#/definitions/menu_click",
+          "description": "Shift + clic, izquierdo o derecho (gana a click)."
+        },
+        "bedrock": {
+          "type": "object",
+          "properties": {
+            "button": {
+              "type": "string",
+              "description": "Texto del botón ({expresiones}); por defecto, el nombre del ítem sin formato."
+            },
+            "image": {
+              "type": "string",
+              "description": "Imagen del botón: una URL (http…) o una ruta de textura (textures/items/diamond)."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Su botón en Bedrock: button (texto) e image (URL o ruta de textura)."
+        },
+        "material": {
+          "description": "Material (DIAMOND, IRON_SWORD…)."
+        },
+        "id": {
+          "description": "Sinónimo de material."
+        },
+        "amount": {
+          "description": "Cantidad."
+        },
+        "name": {
+          "description": "Nombre (MiniMessage, & y {expresiones})."
+        },
+        "lore": {
+          "description": "Líneas de descripción: una lista, o un texto con |."
+        },
+        "model": {
+          "description": "custom_model_data."
+        },
+        "enchants": {
+          "description": "Encantamientos: mapa encantamiento: nivel, o lista \"SHARPNESS:2\"."
+        },
+        "glow": {
+          "description": "Brillo de encantado sin encantamientos."
+        },
+        "unbreakable": {
+          "description": "Irrompible."
+        },
+        "hide_flags": {
+          "description": "Oculta los atributos."
+        },
+        "saved": {
+          "description": "Ítem guardado con /omni item save."
+        }
+      },
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "slot"
+          ]
+        },
+        {
+          "required": [
+            "slots"
+          ]
+        }
+      ]
+    },
+    "menu_click": {
+      "type": "object",
+      "description": "Un clic: un cuerpo de regla sin trigger (conditions, cost, cooldown, actions, tests…).",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Nota libre para quien lee la regla; el plugin no la usa."
+        },
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
+          "description": "false apaga la regla sin borrarla."
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "lowest",
+            "low",
+            "normal",
+            "high",
+            "highest",
+            "monitor",
+            "LOWEST",
+            "LOW",
+            "NORMAL",
+            "HIGH",
+            "HIGHEST",
+            "MONITOR"
+          ],
+          "description": "Prioridad del oyente de Bukkit (normal por defecto)."
+        },
+        "ignore_cancelled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
+          "description": "true: no corre si otro plugin ya canceló el evento."
+        },
+        "worlds": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/texts"
+            }
+          ],
+          "description": "Mundo o lista de mundos donde corre la regla (sin la opción, en todos)."
+        },
+        "permission": {
+          "type": "string",
+          "description": "Permiso que necesita el jugador para que la regla corra."
+        },
+        "bypass_permission": {
+          "type": "string",
+          "description": "Con este permiso, la regla ignora al jugador (no corre para él)."
+        },
+        "ignore_with_permission": {
+          "type": "string",
+          "description": "Sinónimo de bypass_permission. Con este permiso, la regla ignora al jugador (no corre para él)."
+        },
+        "conditions": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/conditions"
+            }
+          ],
+          "description": "Una condición o una lista (todas deben cumplirse). Cada una es una expresión, o un mapa con expr o any + of y su propio deny."
+        },
+        "if": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/conditions"
+            }
+          ],
+          "description": "Sinónimo de conditions. Una condición o una lista (todas deben cumplirse). Cada una es una expresión, o un mapa con expr o any + of y su propio deny."
+        },
+        "actions": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Acciones que corren si se cumplen las condiciones."
+        },
+        "then": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Sinónimo de actions. Acciones que corren si se cumplen las condiciones."
+        },
+        "else": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Acciones que corren si falla una condición sin deny."
+        },
+        "cooldown": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/duration"
+            }
+          ],
+          "description": "Enfriamiento entre usos: 30s, 5m, 1h30m, 2d, 20t (ticks) o un número de segundos."
+        },
+        "cooldown_scope": {
+          "type": "string",
+          "enum": [
+            "player",
+            "jugador",
+            "global",
+            "server",
+            "servidor",
+            "PLAYER",
+            "JUGADOR",
+            "GLOBAL",
+            "SERVER",
+            "SERVIDOR"
+          ],
+          "description": "player (por jugador, por defecto) o global (uno para todo el servidor)."
+        },
+        "on_cooldown": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Acciones si la regla está en enfriamiento (var.cooldown_left tiene los segundos que faltan)."
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
+          "description": "Usos máximos (0 = sin límite)."
+        },
+        "one_time": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
+          "description": "true equivale a limit: 1 (el one_time de ConditionalEvents)."
+        },
+        "limit_scope": {
+          "type": "string",
+          "enum": [
+            "player",
+            "jugador",
+            "global",
+            "server",
+            "servidor",
+            "PLAYER",
+            "JUGADOR",
+            "GLOBAL",
+            "SERVER",
+            "SERVIDOR"
+          ],
+          "description": "player (por jugador, por defecto) o global."
+        },
+        "limit_reset": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "never",
+                "nunca",
+                "daily",
+                "diario",
+                "weekly",
+                "semanal",
+                "monthly",
+                "mensual",
+                "NEVER",
+                "NUNCA",
+                "DAILY",
+                "DIARIO",
+                "WEEKLY",
+                "SEMANAL",
+                "MONTHLY",
+                "MENSUAL"
+              ]
+            },
+            {
+              "$ref": "#/definitions/duration"
+            }
+          ],
+          "description": "Cuándo se reinician los usos: never, daily, weekly, monthly o una duración (12h)."
+        },
+        "on_limit": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Acciones si ya no quedan usos."
+        },
+        "cost": {
+          "type": "object",
+          "properties": {
+            "money": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "$ref": "#/definitions/expression"
+                }
+              ],
+              "description": "Dinero de la economía de Vault (expresión, > 0). Necesita Vault y un plugin de economía."
+            },
+            "levels": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "$ref": "#/definitions/expression"
+                }
+              ],
+              "description": "Niveles de experiencia (entero > 0)."
+            },
+            "exp": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "$ref": "#/definitions/expression"
+                }
+              ],
+              "description": "Puntos de experiencia (entero > 0)."
+            },
+            "items": {
+              "description": "Ítems por material, tengan o no nombre: \"MATERIAL;cantidad\" o una lista de esos (sin la armadura). Al devolver, vuelven las mismas pilas.",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[^;]+(;.+)?$"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[^;]+(;.+)?$"
+                  }
+                }
+              ]
+            }
+          },
+          "patternProperties": {
+            "^(pvar|gvar)\\.[A-Za-z0-9_\\-]+$": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "$ref": "#/definitions/expression"
+                }
+              ],
+              "description": "Variable numérica del jugador (expresión, > 0); nula cuenta como 0."
+            }
+          },
+          "additionalProperties": false,
+          "minProperties": 1,
+          "description": "Lo que cuesta la regla, todo o nada: money (Vault), levels, exp, items y variables pvar.x o gvar.x. Se cobra después de las condiciones, el límite y el enfriamiento; si algo no alcanza no se cobra nada ni cuenta el uso."
+        },
+        "on_cost_fail": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Acciones si el costo no alcanza o un cobro falla (lo cobrado se devuelve). var.cost_missing dice qué falta; var.cost_missing_list, las claves."
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/test"
+          },
+          "description": "Pruebas de la regla: casos con given (el contexto falso) y expect (lo esperado). Corren con /omni test y al cargar, sin efectos."
+        },
+        "budget": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/budget"
+            }
+          ],
+          "description": "Presupuesto de tiempo por disparo: 0.5ms o 200us. Avisa en consola si el promedio reciente lo pasa."
+        },
+        "every": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/duration"
+            }
+          ],
+          "description": "Cada cuánto corre el timer (10s, 5m; mínimo 1 tick). (para trigger: timer)"
+        },
+        "repetitive_time": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
+          "description": "Ticks entre ejecuciones (forma de ConditionalEvents; mejor every). (para trigger: timer)"
+        },
+        "per_player": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
+          "description": "true (por defecto): una ejecución (o un estado) por cada jugador conectado; false: una sola, sin jugador. (para trigger: timer, state)"
+        },
+        "at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^([01]?\\d|2[0-3]):[0-5]\\d$"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^([01]?\\d|2[0-3]):[0-5]\\d$"
+              }
+            }
+          ],
+          "description": "Hora u horas del día, HH:mm (\"08:00\" o [\"08:00\", \"20:30\"]). (para trigger: clock)"
+        },
+        "timezone": {
+          "type": "string",
+          "description": "Zona horaria de at (p. ej. America/Mexico_City); por defecto, la del servidor. (para trigger: clock)"
+        },
+        "command": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-]{1,32}$"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_\\-]{1,32}$",
+                  "description": "Nombre del comando, sin la barra (letras, números, _ y -)."
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Otros nombres del comando."
+                },
+                "permission": {
+                  "type": "string",
+                  "description": "Permiso para usarlo (sin él, no aparece en el autocompletado)."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Descripción que muestra /help."
+                },
+                "usage": {
+                  "type": "string",
+                  "description": "Uso que se muestra al equivocarse."
+                },
+                "tab": {
+                  "type": "array",
+                  "description": "Autocompletado: una lista por argumento; \"{players}\" son los jugadores conectados."
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "additionalProperties": false
+            }
+          ],
+          "description": "El comando real que registra la regla: un nombre, o un mapa con name, aliases, permission, description, usage y tab. (para trigger: command)"
+        },
+        "when": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/conditions"
+            }
+          ],
+          "description": "El estado: una expresión o una lista de condiciones (todas). Se revisa solo cuando puede haber cambiado. (para trigger: state)"
+        },
+        "on_enter": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Acciones cuando when pasa a ser verdad (una vez; pasan por permiso, límite y enfriamiento). (para trigger: state)"
+        },
+        "on_exit": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Acciones cuando when deja de ser verdad, si corrió su on_enter (var.state_seconds: cuánto duró). (para trigger: state)"
+        },
+        "check_every": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/duration"
+            }
+          ],
+          "description": "Respaldo por intervalo para lo que no se puede deducir (placeholders, perm(), la hora): 5s, 1m. (para trigger: state)"
+        },
+        "watch": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/texts"
+            }
+          ],
+          "description": "Disparadores extra que hacen revisar el estado (p. ej. [player_interact]). (para trigger: state)"
+        },
+        "initial": {
+          "type": "string",
+          "enum": [
+            "enter",
+            "silent",
+            "ENTER",
+            "SILENT"
+          ],
+          "description": "Al entrar al servidor con el estado ya verdadero: enter (corre on_enter, por defecto) o silent. (para trigger: state)"
+        },
+        "variables": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/texts"
+            }
+          ],
+          "description": "Variables que hacen correr la regla (p. ej. [racha, bono]); sin la opción, todas. (para trigger: var_expire)"
+        },
+        "event": {
+          "type": "string",
+          "description": "Nombre completo de la clase del evento (p. ej. org.bukkit.event.player.PlayerEggThrowEvent). (para trigger: custom)"
+        },
+        "player_from": {
+          "type": "string",
+          "description": "Ruta al jugador dentro del evento (p. ej. getPlayer o entity); por defecto player o entity. (para trigger: custom)"
+        },
+        "move_mode": {
+          "type": "string",
+          "enum": [
+            "block",
+            "chunk",
+            "any",
+            "BLOCK",
+            "CHUNK",
+            "ANY"
+          ],
+          "description": "Cuándo cuenta un movimiento: block (cambia de bloque, por defecto), chunk o any. (para trigger: player_move)"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Parámetros de la regla call; llegan como var.<nombre>. (para trigger: call)"
+        },
+        "close": {
+          "type": "boolean",
+          "description": "true: cierra el menú después de las acciones del clic."
+        }
+      },
+      "additionalProperties": false
     },
     "duration": {
       "description": "Duración: 10s, 5m, 1h30m, 2d, 1w, 20t (ticks), 500ms, o un número de segundos.",
@@ -1412,7 +2336,7 @@
       "anyOf": [
         {
           "type": "string",
-          "pattern": "^\\s*(?:(?:to_all|to_target)\\s*:\\s*|(?:to_player|to_range|to_world)\\s*:[^:]*:\\s*)?(?:actionbar|bossbar|broadcast|call|cancel|cancel_drops|chat|clear_inventory|close_inventory|command|console|console_message|damage|delay|deny_join|drop_item|effect|explosion|feed|fire|fly|for_each|freeze|gamemode|give_exp|give_item|give_level|give_money|heal|if|keep_inventory|kick|launch|lightning|log|message|no_cooldown|particle|random|remove_effect|remove_item|repeat|reset_cooldown|send_to_server|set|set_block|set_damage|set_death_message|set_event|set_food|set_join_message|set_message|set_quit_message|sound|stop|stop_sound|summon|take_money|teleport|title|unset|velocity|wait_ticks|while|bc|call_event|cancel_event|centered_message|console_command|execute|give_potion_effect|json_message|lightning_strike|mini_message|msg|player_command|player_send_chat|playsound|potion|prevent_join|remove_potion_effect|set_on_fire|stopsound|tp|wait)\\s*(?::[\\s\\S]*)?$",
+          "pattern": "^\\s*(?:(?:to_all|to_target)\\s*:\\s*|(?:to_player|to_range|to_world)\\s*:[^:]*:\\s*)?(?:actionbar|bossbar|broadcast|call|cancel|cancel_drops|chat|clear_inventory|close_inventory|close_menu|command|console|console_message|damage|delay|deny_join|drop_item|effect|explosion|feed|fire|fly|for_each|freeze|gamemode|give_exp|give_item|give_level|give_money|heal|if|keep_inventory|kick|launch|lightning|log|message|no_cooldown|open_menu|particle|random|remove_effect|remove_item|repeat|reset_cooldown|send_to_server|set|set_block|set_damage|set_death_message|set_event|set_food|set_join_message|set_message|set_quit_message|sound|stop|stop_sound|summon|take_money|teleport|title|unset|velocity|wait_ticks|while|bc|call_event|cancel_event|centered_message|console_command|execute|give_potion_effect|json_message|lightning_strike|mini_message|msg|player_command|player_send_chat|playsound|potion|prevent_join|remove_potion_effect|set_on_fire|stopsound|tp|wait)\\s*(?::[\\s\\S]*)?$",
           "description": "Forma corta: \"tipo: valor\" (p. ej. \"message: hola\" o \"cancel\")."
         },
         {
@@ -1702,6 +2626,36 @@
           },
           "required": [
             "close_inventory"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "close_menu": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Cierra el menú de OmniEvents que tenga abierto el jugador (otro inventario no lo toca); corre su on_close. Valor: (sin valor)."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "close_menu"
           ],
           "additionalProperties": false
         },
@@ -2654,6 +3608,56 @@
           },
           "required": [
             "no_cooldown"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "open_menu": {
+              "anyOf": [
+                {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "menu": {
+                      "description": "Menú que se abre (en un paquete, primero el del paquete)."
+                    },
+                    "args": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "$ref": "#/definitions/expression"
+                      },
+                      "description": "Mapa nombre: expresión; en el menú y sus clics, var.<nombre>."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "description": "Abre un menú (una entrada con menu:) al jugador; a uno de Bedrock con Floodgate se le muestra como formulario de botones. Los args llegan al menú y a sus clics como var.<nombre>. Valor: nombre del menú, o un mapa con menu y args."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "open_menu"
           ],
           "additionalProperties": false
         },

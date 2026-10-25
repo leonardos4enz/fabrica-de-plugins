@@ -11,7 +11,7 @@ import java.util.Set;
  */
 public final class RuleOptions {
     /** Qué tipo de valor lleva una opción (decide su forma en el esquema). */
-    public enum Kind { TRIGGER, BOOLEAN, INTEGER, TEXT, TEXTS, ENUM, DURATION, RESET, TIMES, CONDITIONS, ACTIONS, COMMAND, BUDGET, LIST, TESTS, PARAMS, COST }
+    public enum Kind { TRIGGER, BOOLEAN, INTEGER, TEXT, TEXTS, ENUM, DURATION, RESET, TIMES, CONDITIONS, ACTIONS, COMMAND, BUDGET, LIST, TESTS, PARAMS, COST, MENU }
 
     /**
      * @param values  valores permitidos (ENUM y RESET)
@@ -32,6 +32,15 @@ public final class RuleOptions {
     public static final Map<String, String> COMMAND_KEYS = new LinkedHashMap<>();
     /** Claves de cost (spec 012); además pvar.x y gvar.x. */
     public static final Map<String, String> COST_KEYS = new LinkedHashMap<>();
+    /** Claves de un menú (spec 013); las de una regla que acepta salen de RuleOptions (permission, conditions…). */
+    public static final Map<String, String> MENU_KEYS = new LinkedHashMap<>();
+    /** Claves de un ítem de un menú (spec 013). */
+    public static final Map<String, String> MENU_ITEM_KEYS = new LinkedHashMap<>();
+    /** Claves de bedrock en un menú y en un ítem (spec 013). */
+    public static final Map<String, String> MENU_BEDROCK_KEYS = new LinkedHashMap<>();
+    public static final Map<String, String> ITEM_BEDROCK_KEYS = new LinkedHashMap<>();
+    /** Claves de un clic además de las de una regla (spec 013). */
+    public static final Map<String, String> CLICK_KEYS = new LinkedHashMap<>();
     /** Claves de pack.yml (spec 011). */
     public static final Map<String, String> PACK_KEYS = new LinkedHashMap<>();
     /** Claves de requires en pack.yml (spec 011). */
@@ -83,6 +92,7 @@ public final class RuleOptions {
         add("on_limit", Kind.ACTIONS, "Acciones si ya no quedan usos.");
         add("cost", Kind.COST, "Lo que cuesta la regla, todo o nada: money (Vault), levels, exp, items y variables pvar.x o gvar.x. Se cobra después de las condiciones, el límite y el enfriamiento; si algo no alcanza no se cobra nada ni cuenta el uso.");
         add("on_cost_fail", Kind.ACTIONS, "Acciones si el costo no alcanza o un cobro falla (lo cobrado se devuelve). var.cost_missing dice qué falta; var.cost_missing_list, las claves.");
+        add("menu", Kind.MENU, "Esta entrada es un menú de inventario (spec 013) en vez de una regla: title, rows, items con sus clics… Se abre con open_menu; a Bedrock, con Floodgate, como formulario de botones.");
         add("tests", Kind.TESTS, "Pruebas de la regla: casos con given (el contexto falso) y expect (lo esperado). Corren con /omni test y al cargar, sin efectos.");
         add("template", Kind.BOOLEAN, "true: la regla es una plantilla; no corre sola (no necesita trigger) y otras la usan con extends.");
         add("extends", Kind.TEXT, "Plantilla de la que hereda (template: true): copia sus claves y las que escribe esta regla las reemplazan enteras. En un paquete busca primero en el paquete; paquete:plantilla es absoluto.");
@@ -130,6 +140,36 @@ public final class RuleOptions {
         COST_KEYS.put("items", "Ítems por material, tengan o no nombre: \"MATERIAL;cantidad\" o una lista de esos (sin la armadura). Al devolver, vuelven las mismas pilas.");
         COST_KEYS.put("pvar.<nombre>", "Variable numérica del jugador (expresión, > 0); nula cuenta como 0.");
         COST_KEYS.put("gvar.<nombre>", "Variable numérica global (expresión, > 0); sirve también sin jugador.");
+
+        MENU_KEYS.put("title", "Título (MiniMessage, & y {expresiones}); se evalúa al abrir (los ítems, además, después de cada clic).");
+        MENU_KEYS.put("rows", "Filas del inventario, de 1 a 6 (3 por defecto).");
+        MENU_KEYS.put("fill", "Material para las casillas vacías (p. ej. GRAY_STAINED_GLASS_PANE), sin nombre.");
+        MENU_KEYS.put("permission", "Permiso para abrirlo; sin él no se abre.");
+        MENU_KEYS.put("conditions", "Requisito para abrirlo, como las conditions de una regla (con su deny); si falla, no se abre.");
+        MENU_KEYS.put("else", "Acciones si falla una condición sin deny (el menú no se abre).");
+        MENU_KEYS.put("cost", "Lo que cuesta abrirlo, todo o nada (spec 012); on_cost_fail si no alcanza.");
+        MENU_KEYS.put("on_cost_fail", "Acciones si el costo de abrir no alcanza.");
+        MENU_KEYS.put("cooldown", "Enfriamiento entre aperturas.");
+        MENU_KEYS.put("on_cooldown", "Acciones si se intenta abrir en enfriamiento.");
+        MENU_KEYS.put("on_open", "Acciones al abrirse (después del requisito).");
+        MENU_KEYS.put("on_close", "Acciones al cerrarse (el jugador lo cierra, close_menu o close: true; no al recargar).");
+        MENU_KEYS.put("bedrock", "Cómo se ve en Bedrock con Floodgate: content (texto del formulario) y enabled (false: el inventario).");
+        MENU_KEYS.put("items", "Los ítems: nombre → slot, item, view y sus clics. Si dos comparten casilla se ve el primero visible.");
+        MENU_KEYS.put("tests", "Pruebas de la apertura (given y expect, como en una regla); las de cada clic van en el clic.");
+        MENU_ITEM_KEYS.put("slot", "Casilla (desde 0): un número, una lista o un rango \"0-8\".");
+        MENU_ITEM_KEYS.put("slots", "Sinónimo de slot.");
+        MENU_ITEM_KEYS.put("item", "El ítem, como en give_item: \"MATERIAL;cantidad;nombre;lore1|lore2\" o un mapa con material, name, lore, amount, glow… Acepta {expresiones}.");
+        MENU_ITEM_KEYS.put("view", "Expresión: el ítem solo se ve si da verdadero (se revisa al abrir y después de cada clic).");
+        MENU_ITEM_KEYS.put("click", "Lo que hace cualquier clic: un cuerpo de regla (conditions, cost, cooldown, actions, tests…) sin trigger.");
+        MENU_ITEM_KEYS.put("left_click", "Clic izquierdo (gana a click). En Bedrock, si no hay click.");
+        MENU_ITEM_KEYS.put("right_click", "Clic derecho (gana a click).");
+        MENU_ITEM_KEYS.put("shift_click", "Shift + clic, izquierdo o derecho (gana a click).");
+        MENU_ITEM_KEYS.put("bedrock", "Su botón en Bedrock: button (texto) e image (URL o ruta de textura).");
+        MENU_BEDROCK_KEYS.put("content", "Texto bajo el título del formulario ({expresiones}).");
+        MENU_BEDROCK_KEYS.put("enabled", "false: a Bedrock también se le muestra el inventario (Geyser lo traduce).");
+        ITEM_BEDROCK_KEYS.put("button", "Texto del botón ({expresiones}); por defecto, el nombre del ítem sin formato.");
+        ITEM_BEDROCK_KEYS.put("image", "Imagen del botón: una URL (http…) o una ruta de textura (textures/items/diamond).");
+        CLICK_KEYS.put("close", "true: cierra el menú después de las acciones del clic.");
 
         COMMAND_KEYS.put("name", "Nombre del comando, sin la barra (letras, números, _ y -).");
         COMMAND_KEYS.put("aliases", "Otros nombres del comando.");

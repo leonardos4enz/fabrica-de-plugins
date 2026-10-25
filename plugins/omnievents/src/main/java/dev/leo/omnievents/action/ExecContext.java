@@ -269,6 +269,7 @@ public final class ExecContext implements EvalContext {
                 case "money_format" -> Values.formatNumber(Values.round(Values.num(args[0]), 2));
                 case "in_region" -> sandbox.regions().stream().anyMatch(r -> r.equalsIgnoreCase(String.valueOf(args[0])));
                 case "regions" -> new java.util.ArrayList<Object>(sandbox.regions());
+                case "is_bedrock" -> sandbox.bedrock();
                 case "ttl" -> sandbox.ttl((Scope) args[0], String.valueOf(args[1]));
                 case "ttl_data" -> Sandbox.isObject(Values.raw(args[0])) && sandbox.objectGet(Values.raw(args[0]), String.valueOf(args[1])) != null ? -1.0 : null;
                 default -> null;
@@ -301,6 +302,7 @@ public final class ExecContext implements EvalContext {
                 if (at != null) for (var r : plugin.regions().at(at)) ids.add(r.id());
                 yield ids;
             }
+            case "is_bedrock" -> p != null && plugin.forms().isBedrock(p);
             case "pvar_of" -> {
                 Object target = Values.raw(args[0]);
                 OfflinePlayer op = target instanceof OfflinePlayer o ? o : Bukkit.getPlayerExact(Values.str(target));

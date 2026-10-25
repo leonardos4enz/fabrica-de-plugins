@@ -1,0 +1,57 @@
+# Reglas de la suite para los menús (spec 013): un menú con cost, clic derecho, view, redibujo, close y on_close, que
+# abren Ana (Java, un inventario) y Beb_e2e (Bedrock por Geyser y Floodgate, un formulario de botones).
+e2e_abrir_menu:
+  trigger: command
+  command: e2emenu
+  actions:
+    - open_menu: { menu: e2e_menu_tienda, args: { precio: 5 } }
+
+e2e_menu_tienda:
+  menu:
+    title: "<dark_green>e2e tienda {player.name}"
+    rows: 3
+    fill: GRAY_STAINED_GLASS_PANE
+    on_open:
+      - message: "e2e menú abierto, bedrock {is_bedrock()}"
+    on_close:
+      - message: "e2e menú cerrado"
+    bedrock:
+      content: "e2e elige, precio {var.precio}"
+    items:
+      espada:
+        slot: 11
+        item: "DIAMOND_SWORD;1;<aqua>e2e espada;<gray>precio {var.precio}"
+        left_click:
+          cost: { items: "EMERALD;{var.precio}" }
+          actions:
+            - give_item: "DIAMOND_SWORD"
+            - message: "e2e comprada por {var.precio}, clic {click}"
+          on_cost_fail:
+            - message: "e2e falta {var.cost_missing}"
+        right_click:
+          actions:
+            - message: "e2e precio {var.precio} clic {click} casilla {slot}"
+      contador:
+        slot: 13
+        item: "PAPER;1;e2e clics {default(pvar.e2e_clics, 0)}"
+        bedrock: { button: "e2e contar ({default(pvar.e2e_clics, 0)})" }
+        click:
+          actions:
+            - set: "pvar.e2e_clics = default(pvar.e2e_clics, 0) + 1"
+      oculto:
+        slot: 15
+        view: "false"
+        item: "TNT;1;e2e oculto"
+        click:
+          actions:
+            - message: "e2e no debía verse"
+      visible:
+        slot: 15
+        item: "EMERALD_BLOCK;1;e2e visible"
+      cerrar:
+        slot: 22
+        item: "BARRIER;1;<red>e2e cerrar"
+        click:
+          close: true
+          actions:
+            - message: "e2e cerrar"

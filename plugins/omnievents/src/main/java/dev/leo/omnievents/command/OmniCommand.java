@@ -58,6 +58,7 @@ public final class OmniCommand implements TabExecutor {
         SUBS.put("check", "Revisa una regla ahora, sin efectos: <regla> [jugador]");
         SUBS.put("test", "Corre las pruebas (tests:) de las reglas, sin efectos: [regla]");
         SUBS.put("pack", "Paquetes de reglas: list|info|enable|disable <paquete>");
+        SUBS.put("menu", "Menús: list | open <jugador> <menú> | close <jugador>");
         SUBS.put("run", "Dispara una regla: <regla> <jugador> [--simular]");
         SUBS.put("state", "Quién está en el estado de una regla state: <regla>");
         SUBS.put("eval", "Evalúa una expresión con tu contexto");
@@ -122,6 +123,7 @@ public final class OmniCommand implements TabExecutor {
                 case "check" -> check(s, a);
                 case "test" -> test(s, a);
                 case "pack" -> pack(s, a);
+                case "menu" -> menu(s, a);
                 case "run" -> runRule(s, a);
                 case "state" -> state(s, a);
                 case "cpu" -> cpu(s, a);
@@ -242,6 +244,43 @@ public final class OmniCommand implements TabExecutor {
     }
 
     // ------------------------------------------------------------------ paquetes (spec 011, H4)
+
+    /** Spec 013, H1 CA2: /omni menu list | open <jugador> <menú> | close <jugador>. */
+    private void menu(CommandSender s, String[] a) {
+        String what = a.length == 0 ? "list" : a[0].toLowerCase(Locale.ROOT);
+        var service = plugin.menus();
+        switch (what) {
+            case "list" -> {
+                List<dev.leo.omnievents.menu.Menu> ms = new ArrayList<>(service.all());
+                if (ms.isEmpty()) {
+                    raw(s, "<gray>No hay menús (una entrada con menu: en rules/).");
+                    return;
+                }
+                ms.sort((x, y) -> x.name().compareToIgnoreCase(y.name()));
+                raw(s, "<gold>Menús</gold> <gray>(" + ms.size() + ", " + service.openCount() + " abiertos)");
+                for (var m : ms) {
+                    long clicks = m.items().stream().mapToLong(it -> it.clicks().size()).sum();
+                    raw(s, "<white>" + esc(m.name()) + "</white> <dark_gray>·</dark_gray> <gray>" + m.rows() + " filas · " + m.items().size() + " ítems · "
+                            + clicks + " clics · " + esc(m.file()) + (m.bedrock() ? "" : " · sin formulario de Bedrock"));
+                }
+            }
+            case "open" -> {
+                if (a.length < 3) throw new IllegalArgumentException("uso: /omni menu open <jugador> <menú>");
+                Player p = onlinePlayer(a[1]);
+                var m = service.get(a[2], null);
+                if (m == null) throw new IllegalArgumentException("no existe el menú '" + a[2] + "'" + dev.leo.omnievents.util.Suggest.hint(a[2], service.all().stream().map(dev.leo.omnievents.menu.Menu::name).toList()));
+                service.open(p, m, java.util.Map.of());
+                raw(s, "<green>Menú " + esc(m.name()) + " abierto a " + esc(p.getName()) + (plugin.forms().isBedrock(p) && m.bedrock() ? " (formulario de Bedrock)" : ""));
+            }
+            case "close" -> {
+                if (a.length < 2) throw new IllegalArgumentException("uso: /omni menu close <jugador>");
+                Player p = onlinePlayer(a[1]);
+                service.close(p);
+                raw(s, "<green>Menú de " + esc(p.getName()) + " cerrado");
+            }
+            default -> throw new IllegalArgumentException("uso: /omni menu list | open <jugador> <menú> | close <jugador>" + dev.leo.omnievents.util.Suggest.hint(what, List.of("list", "open", "close")));
+        }
+    }
 
     private void pack(CommandSender s, String[] a) {
         String what = a.length == 0 ? "list" : a[0].toLowerCase(Locale.ROOT);
@@ -521,7 +560,8 @@ public final class OmniCommand implements TabExecutor {
 
     private void stats(CommandSender s) {
         raw(s, "<gold>Rendimiento</gold> <gray>· " + plugin.listeners().count() + " oyentes · " + plugin.timers().count()
-                + " temporizadores · " + plugin.states().listenerCount() + " oyentes y " + plugin.states().taskCount() + " tareas de estado · " + plugin.ruleCommands().count() + " comandos · " + plugin.regionService().count() + " oyentes de regiones · " + plugin.data().loadedPlayers().size() + " jugadores en memoria");
+                + " temporizadores · " + plugin.states().listenerCount() + " oyentes y " + plugin.states().taskCount() + " tareas de estado · " + plugin.ruleCommands().count() + " comandos · " + plugin.regionService().count() + " oyentes de regiones · " + plugin.menus().listenerCount() + " oyentes de menús · " + plugin.data().loadedPlayers().size() + " jugadores en memoria");
+        raw(s, "<dark_gray>  menús: " + plugin.menus().all().size() + " (" + plugin.menus().openCount() + " abiertos)");
         raw(s, "<dark_gray>  integraciones: " + esc(plugin.integrationsLine()));
         for (String l : plugin.listeners().describe()) raw(s, "<dark_gray>  " + esc(l));
         raw(s, "<dark_gray>  variables: " + plugin.data().pendingExpiries() + " caducidades en cola · limpieza de datos de bloques " + (plugin.blockCleaner().registered() ? "activa" : "apagada"));
@@ -869,6 +909,11 @@ public final class OmniCommand implements TabExecutor {
                 }
                 case "cpu" -> {
                     if (i == 1) opts.addAll(List.of("on", "off", "reset"));
+                }
+                case "menu" -> {
+                    if (i == 1) opts.addAll(List.of("list", "open", "close"));
+                    if (i == 2 && !args[1].equalsIgnoreCase("list")) Bukkit.getOnlinePlayers().forEach(p -> opts.add(p.getName()));
+                    if (i == 3 && args[1].equalsIgnoreCase("open")) for (var m : plugin.menus().all()) opts.add(m.name());
                 }
                 case "pack" -> {
                     if (i == 1) opts.addAll(List.of("list", "info", "enable", "disable"));

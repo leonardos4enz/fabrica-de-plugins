@@ -8,8 +8,9 @@ variables persistentes y herramientas de diagnóstico. Specs: [001](../../docs/s
 [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/spec.md) (disparador de estado, sin sondeo),
 [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/spec.md) (variables que caducan y variables en bloques, entidades e ítems),
 [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/spec.md) (pruebas de reglas en el YAML: `tests:` y `/omni test`),
-[011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/spec.md) (paquetes, plantillas y versión) y
-[012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/spec.md) (costos todo o nada, Vault, WorldGuard y Citizens).
+[011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/spec.md) (paquetes, plantillas y versión),
+[012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/spec.md) (costos todo o nada, Vault, WorldGuard y Citizens) y
+[013](../../docs/sdd/specs/013-omnievents-menus-y-formularios-bedrock/spec.md) (menús de inventario y formularios de Bedrock).
 
 **[Referencia completa](../../docs/omnievents/referencia.md)**: cada opción, disparador, acción y función, generada del
 código (nunca queda desactualizada). **[Autocompletado en VS Code](#editor-autocompletado-y-errores-en-vs-code)** con
@@ -24,8 +25,8 @@ Minecraft 1.21.4 ([spec 004](../../docs/sdd/specs/004-fabrica-capturas-en-juego/
 ## Compatibilidad
 | Servidor | Estado | Evidencia |
 |---|---|---|
-| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.7.0) | Compuertas 1, 2 y 3a: 155 unitarias, servidor real y 42/42 escenarios en el juego dos veces (2026-10-25, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md), [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md) y [012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/verify.md)) |
-| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.7.0) | 42/42 escenarios en el juego dos veces con el mismo jar (2026-10-25, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md), [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md) y [012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/verify.md)) |
+| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.8.0) | Compuertas 1, 2 y 3a: 169 unitarias, servidor real y 44/44 escenarios en el juego dos veces (2026-10-25, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md), [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md), [012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/verify.md) y [013](../../docs/sdd/specs/013-omnievents-menus-y-formularios-bedrock/verify.md)) |
+| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.8.0) | 44/44 escenarios en el juego dos veces con el mismo jar (2026-10-25, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md), [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md), [012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/verify.md) y [013](../../docs/sdd/specs/013-omnievents-menus-y-formularios-bedrock/verify.md)) |
 | Paper 1.21.5 – 1.21.11 | Sin verificar | Debería funcionar (misma API, sin NMS), pero no se probó |
 | Paper 26.2 y 26.3 | Sin verificar | El bot de pruebas (mineflayer 4.39) llega hasta 26.1 |
 | Paper 1.21.3 o anterior | No soportada | Se compila contra la API de 1.21.4 |
@@ -40,6 +41,7 @@ Minecraft 1.21.4 ([spec 004](../../docs/sdd/specs/004-fabrica-capturas-en-juego/
   | Vault + una economía | `cost.money`, `give_money`, `take_money`, `money()` | Vault 1.7.3 con EssentialsX 2.21.0 (Paper 1.21.4) y 2.22.0 (26.1.2) |
   | WorldGuard (con WorldEdit) | `region_enter`, `region_leave`, `in_region()`, `regions()` | WorldGuard 7.0.13 + WorldEdit 7.3.19 (1.21.4); WorldGuard 7.0.18 + WorldEdit 7.4.6 (26.1.2) |
   | Citizens | `npc_click`, `npc_left_click`, `is_npc()` | Citizens 2.0.37-b3760 (1.21.4) y 2.0.44-b4268 (26.1.2) |
+  | Floodgate (con Geyser) | Menús como formulario de botones para Bedrock, `is_bedrock()` | Floodgate 2.2.5-b141 con Geyser-Spigot 2.6.2-b796 (1.21.4) y 2.10.1-b1184 (26.1.2), con un cliente de Bedrock 1.21.70 y 26.30 (bedrock-protocol) |
   | PlaceholderAPI | `%placeholders%` y la expansión `%omni_…%` | Probada a mano con la 2.12.3 en Paper 1.21.4: `%omni_state_<regla>%` y `%omni_var_<n>%` responden; no está en la suite |
 
   Otras economías de Vault (CMI…) y otras versiones de estos plugins: sin verificar.
@@ -47,8 +49,8 @@ Minecraft 1.21.4 ([spec 004](../../docs/sdd/specs/004-fabrica-capturas-en-juego/
   (ver [verificacion.md](../../docs/sdd/verificacion.md#3a-en-el-juego-automática)).
 
 ## Instalación
-1. Copia `OmniEvents-x.y.z.jar` a `plugins/` (opcionales: PlaceholderAPI, Vault con un plugin de economía, WorldGuard y
-   Citizens; ver [Integraciones](#integraciones-costos-vault-worldguard-y-citizens)).
+1. Copia `OmniEvents-x.y.z.jar` a `plugins/` (opcionales: PlaceholderAPI, Vault con un plugin de economía, WorldGuard,
+   Citizens y Floodgate; ver [Integraciones](#integraciones-costos-vault-worldguard-y-citizens) y [Menús](#menús-de-inventario-y-formularios-de-bedrock)).
 2. Arranca el servidor: se crean `config.yml`, `messages.yml` y ejemplos en `plugins/OmniEvents/rules/ejemplos/`.
 3. Edita o agrega archivos en `rules/` y usa `/omni reload`.
 
@@ -436,6 +438,69 @@ guia:
 ```
 Ejemplo completo: `rules/ejemplos/integraciones.yml`.
 
+## Menús de inventario y formularios de Bedrock
+Desde la 1.8.0 ([spec 013](../../docs/sdd/specs/013-omnievents-menus-y-formularios-bedrock/spec.md)). Una entrada de
+`rules/` con `menu:` (en vez de `trigger:`) es un menú; se abre con la acción `open_menu` desde cualquier regla.
+**Cada clic es un cuerpo de regla**: `conditions` con `deny`, `cost` todo o nada, `cooldown`, `limit`, `actions` y
+`tests:`, sin aprender otro lenguaje. Los ítems del menú no se pueden sacar (todo clic y arrastre se cancela, también
+el shift-clic y las teclas de número), y el menú se reconoce por dentro, no por su título.
+```yaml
+abrir_tienda:
+  trigger: command
+  command: tienda
+  actions:
+    - open_menu: tienda              # o { menu: tienda, args: { descuento: 10 } } → var.descuento
+
+tienda:
+  menu:
+    title: "<dark_green>Tienda de {player.name}"
+    rows: 3                          # 1 a 6
+    fill: GRAY_STAINED_GLASS_PANE    # casillas vacías
+    permission: tienda.usar          # requisito para abrir: permission, conditions (con deny), cost…
+    on_open: ["sound: UI_BUTTON_CLICK"]
+    on_close: []
+    bedrock: { content: "Elige qué comprar" }
+    items:
+      espada:
+        slot: 11                     # o [11, 12] o "0-8"
+        item: "DIAMOND_SWORD;1;<aqua>Espada;<gray>5 esmeraldas"    # como give_item, con {expresiones}
+        left_click:                  # también click, right_click, shift_click (gana el más específico)
+          cost: { items: "EMERALD;5" }
+          actions: ["give_item: DIAMOND_SWORD"]
+          on_cost_fail: ["message: <red>Te falta {var.cost_missing}"]
+          close: true                # cierra el menú después de las acciones
+          tests:
+            - given: { click: left, inventory: { EMERALD: 6 } }
+              expect: { branch: actions, actions: [give_item] }
+        right_click:
+          actions: ["message: Cuesta 5 esmeraldas"]
+      vip_bloqueado:                 # dos ítems en la misma casilla: se ve el primero visible
+        slot: 15
+        view: "!perm('rango.vip')"
+        item: "BARRIER;1;<red>Solo VIP"
+      vip:
+        slot: 15
+        item: "NETHER_STAR;1;<gold>Kit VIP"
+        click: { limit: 1, limit_reset: daily, actions: ["give_item: GOLDEN_APPLE;3"] }
+```
+- En un clic, `menu` es el nombre del menú, `slot` la casilla, `click` el tipo (`left`, `right`, `shift_left`,
+  `shift_right`, `middle`, `number`, `drop` o `bedrock`) y `item` el ítem; los `args` de `open_menu` son `var.<nombre>`.
+- El título se evalúa al abrir; nombre, lore y `view` de los ítems, al abrir y otra vez **después de cada clic** (un
+  contador o un saldo se ven al día). `close_menu` cierra el menú; `/omni menu open <jugador> <menú>` lo abre desde la consola.
+- Cada clic es una regla con el nombre de su ruta (`tienda.menu.items.espada.left_click`): sale en `/omni list`,
+  `/omni stats`, `/omni debug` y `/omni test`. Un `open_menu` a un menú que no existe es un error al cargar.
+- `/omni reload` cierra los menús abiertos (sin `on_close`). Sin menús no hay oyentes de inventario.
+
+**Bedrock (Geyser + Floodgate).** Con Floodgate instalado, a un jugador de Bedrock el mismo menú le llega como un
+**formulario de botones** nativo: el título, `bedrock.content` y un botón por cada ítem visible con clic, en orden de
+casilla (texto: el nombre del ítem sin formato, o `bedrock.button`; imagen: `bedrock.image`, una URL o una ruta de
+textura). Pulsar un botón corre `click` (o `left_click`) con `click == 'bedrock'` y el formulario vuelve con los
+valores nuevos, salvo con `close: true` o si las acciones abren o cierran otro menú; cerrarlo corre `on_close`. Solo
+vale la respuesta del último formulario enviado. `bedrock: { enabled: false }` les muestra el inventario (Geyser lo
+traduce) e `is_bedrock()` dice si el jugador es de Bedrock. Sin Floodgate todo funciona igual y sin avisos.
+
+Ejemplo completo: `rules/ejemplos/menus.yml` (una tienda con `cost` y un selector de kits con `view`).
+
 ## Paquetes, plantillas y versión
 Desde la 1.6.0 ([spec 011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/spec.md)). Una carpeta de
 `rules/` con un `pack.yml` es un **paquete**: sus reglas se llaman `paquete:regla`, así que se puede copiar la carpeta
@@ -500,7 +565,7 @@ avisar:
 
 ## Comandos (`/omni`, alias `/oe`)
 `reload` · `validate` · `list [filtro]` · `info <regla>` · `enable|disable <regla>` · `debug <regla|all|off|export>` ·
-`check <regla> [jugador]` · `test [regla]` · `pack list|info|enable|disable [paquete]` · `run <regla> <jugador> [--simular]` · `state <regla>` · `cpu [on|off|reset]` ·
+`check <regla> [jugador]` · `test [regla]` · `pack list|info|enable|disable [paquete]` · `menu list|open <jugador> <menú>|close <jugador>` · `run <regla> <jugador> [--simular]` · `state <regla>` · `cpu [on|off|reset]` ·
 `eval <expr>` · `call <regla> [jugador] [k=v…]` · `var get|set|del|list <jugador|global> [nombre] [valor] [--expire 10m]` ·
 `data [bloque|entidad|mano]` ·
 `cooldown reset <regla> [jugador|global]` · `limit reset <regla> [jugador|global]` · `stats` · `triggers` · `actions` ·

@@ -140,6 +140,21 @@ export class Jugador {
     try { return ChatMessage.fromNotch(c).toString() } catch { return texto(c) }
   }
 
+  /** Título de la ventana abierta (un menú, spec 013), en texto plano; null si no hay una. */
+  tituloVentana () {
+    const t = this.bot.currentWindow?.title
+    if (t == null) return null
+    const ChatMessage = require('prismarine-chat')(this.bot.registry)
+    try { return ChatMessage.fromNotch(t).toString() } catch { return texto(t) }
+  }
+
+  /** Cuántos ítems de ese material tiene en su parte de la ventana abierta (o del inventario si no hay ventana). */
+  cantidadEnVentana (nombre) {
+    const w = this.bot.currentWindow
+    if (!w) return this.cantidad(nombre)
+    return w.slots.slice(w.inventoryStart).filter(i => i && i.name === nombre).reduce((n, i) => n + i.count, 0)
+  }
+
   async salir () {
     if (this.expulsion != null || !this.bot._client.socket || this.bot._client.socket.destroyed) return
     const fin = new Promise(resolve => this.bot.once('end', resolve))

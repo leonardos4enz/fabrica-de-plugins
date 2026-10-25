@@ -55,6 +55,17 @@ public final class ActionParser {
         return declared;
     }
 
+    /** Spec 013: menús que abre open_menu con un nombre fijo (nombre, ruta), para validarlos al terminar la carpeta. */
+    private final List<String[]> menuRefs = new java.util.ArrayList<>();
+
+    public void referMenu(String name, String path) {
+        menuRefs.add(new String[]{name, path});
+    }
+
+    public List<String[]> menuRefs() {
+        return menuRefs;
+    }
+
     private boolean writesObjectData;
 
     /** Una acción escribe variables de objetos (spec 009): hace falta limpiar las de bloques rotos. */

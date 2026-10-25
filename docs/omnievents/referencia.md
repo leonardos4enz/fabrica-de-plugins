@@ -11,7 +11,7 @@ Autocompletado y errores en VS Code (extensión YAML de Red Hat): pon esta líne
 
 El editor revisa opciones, disparadores, acciones y la forma de las condiciones; las expresiones, los materiales, los sonidos y los efectos se revisan con `/omni validate`. Los nombres van en minúsculas.
 
-Contenido: [opciones de una regla](#opciones-de-una-regla) · [paquetes y plantillas](#paquetes-y-plantillas) · [condiciones](#condiciones) · [disparadores](#disparadores) · [acciones](#acciones) · [funciones](#funciones)
+Contenido: [opciones de una regla](#opciones-de-una-regla) · [menús](#menús) · [paquetes y plantillas](#paquetes-y-plantillas) · [condiciones](#condiciones) · [disparadores](#disparadores) · [acciones](#acciones) · [funciones](#funciones)
 
 ## Opciones de una regla
 | Opción | Valor | Disparador | Qué hace |
@@ -41,6 +41,7 @@ Contenido: [opciones de una regla](#opciones-de-una-regla) · [paquetes y planti
 | `on_limit` | acciones | todos | Acciones si ya no quedan usos. |
 | `cost` | mapa (ver abajo) | todos | Lo que cuesta la regla, todo o nada: money (Vault), levels, exp, items y variables pvar.x o gvar.x. Se cobra después de las condiciones, el límite y el enfriamiento; si algo no alcanza no se cobra nada ni cuenta el uso. |
 | `on_cost_fail` | acciones | todos | Acciones si el costo no alcanza o un cobro falla (lo cobrado se devuelve). var.cost_missing dice qué falta; var.cost_missing_list, las claves. |
+| `menu` | mapa (ver [menús](#menús)) | todos | Esta entrada es un menú de inventario (spec 013) en vez de una regla: title, rows, items con sus clics… Se abre con open_menu; a Bedrock, con Floodgate, como formulario de botones. |
 | `tests` | lista de casos | todos | Pruebas de la regla: casos con given (el contexto falso) y expect (lo esperado). Corren con /omni test y al cargar, sin efectos. |
 | `template` | `true` / `false` | todos | true: la regla es una plantilla; no corre sola (no necesita trigger) y otras la usan con extends. |
 | `extends` | texto | todos | Plantilla de la que hereda (template: true): copia sus claves y las que escribe esta regla las reemplazan enteras. En un paquete busca primero en el paquete; paquete:plantilla es absoluto. |
@@ -107,6 +108,47 @@ Claves de `expect` (además, variables: `pvar.x`, `gvar.x`, `var.x`, `block.data
 | `actions` | Acciones que correría, en orden: el tipo (give_item) o el tipo y un texto ("sound: LEVELUP"). |
 | `cancelled` | true si cancela el evento. |
 | `assert` | Expresión o lista de expresiones que deben dar verdadero al terminar ("pvar.d >= 10"). |
+
+## Menús
+Una entrada con `menu:` (en vez de `trigger:`) es un menú de inventario (spec 013). Se abre con la acción `open_menu` y cada clic es un cuerpo de regla (`conditions`, `cost`, `cooldown`, `actions`, `tests`…) con el disparador `menu_click`: se llama como su ruta (`tienda.menu.items.espada.click`). Con Floodgate, a un jugador de Bedrock se le muestra como un formulario de botones.
+
+| Clave de `menu` | Qué hace |
+|---|---|
+| `title` | Título (MiniMessage, & y {expresiones}); se evalúa al abrir (los ítems, además, después de cada clic). |
+| `rows` | Filas del inventario, de 1 a 6 (3 por defecto). |
+| `fill` | Material para las casillas vacías (p. ej. GRAY_STAINED_GLASS_PANE), sin nombre. |
+| `permission` | Permiso para abrirlo; sin él no se abre. |
+| `conditions` | Requisito para abrirlo, como las conditions de una regla (con su deny); si falla, no se abre. |
+| `else` | Acciones si falla una condición sin deny (el menú no se abre). |
+| `cost` | Lo que cuesta abrirlo, todo o nada (spec 012); on_cost_fail si no alcanza. |
+| `on_cost_fail` | Acciones si el costo de abrir no alcanza. |
+| `cooldown` | Enfriamiento entre aperturas. |
+| `on_cooldown` | Acciones si se intenta abrir en enfriamiento. |
+| `on_open` | Acciones al abrirse (después del requisito). |
+| `on_close` | Acciones al cerrarse (el jugador lo cierra, close_menu o close: true; no al recargar). |
+| `bedrock` | Cómo se ve en Bedrock con Floodgate: content (texto del formulario) y enabled (false: el inventario). |
+| `items` | Los ítems: nombre → slot, item, view y sus clics. Si dos comparten casilla se ve el primero visible. |
+| `tests` | Pruebas de la apertura (given y expect, como en una regla); las de cada clic van en el clic. |
+
+| Clave de un ítem (`menu.items.<nombre>`) | Qué hace |
+|---|---|
+| `slot` | Casilla (desde 0): un número, una lista o un rango "0-8". |
+| `slots` | Sinónimo de slot. |
+| `item` | El ítem, como en give_item: "MATERIAL;cantidad;nombre;lore1\|lore2" o un mapa con material, name, lore, amount, glow… Acepta {expresiones}. |
+| `view` | Expresión: el ítem solo se ve si da verdadero (se revisa al abrir y después de cada clic). |
+| `click` | Lo que hace cualquier clic: un cuerpo de regla (conditions, cost, cooldown, actions, tests…) sin trigger. |
+| `left_click` | Clic izquierdo (gana a click). En Bedrock, si no hay click. |
+| `right_click` | Clic derecho (gana a click). |
+| `shift_click` | Shift + clic, izquierdo o derecho (gana a click). |
+| `bedrock` | Su botón en Bedrock: button (texto) e image (URL o ruta de textura). |
+| `<clic>.close` | true: cierra el menú después de las acciones del clic. |
+
+| Clave de `bedrock` | Dónde | Qué hace |
+|---|---|---|
+| `content` | menú | Texto bajo el título del formulario ({expresiones}). |
+| `enabled` | menú | false: a Bedrock también se le muestra el inventario (Geyser lo traduce). |
+| `button` | ítem | Texto del botón ({expresiones}); por defecto, el nombre del ítem sin formato. |
+| `image` | ítem | Imagen del botón: una URL (http…) o una ruta de textura (textures/items/diamond). |
 
 ## Paquetes y plantillas
 Una carpeta de `rules/` con un `pack.yml` es un paquete (spec 011): sus reglas se llaman `paquete:regla` y, desde ellas, un nombre sin paquete (`call`, `cooldown()`, `uses()`, `in_state()`, `extends`) se busca primero en el paquete y luego entre las globales. `${nombre}` en los textos de una regla de un paquete, que usa `extends` o que declara `params` se reemplaza al cargar con `with`, `params` de la regla y de sus plantillas, y `params` del paquete, en ese orden; `\${` deja `${`. Esquema de `pack.yml`: `https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents-pack.schema.json`.
@@ -269,6 +311,13 @@ Raíces que todos ofrecen además de las suyas: `server` `rule` `online` `source
 | `region_leave` | `player` `world` `location` `region` `event` | El jugador sale de una región de WorldGuard (region.id); cancel lo deja dentro. Necesita WorldGuard. |
 | `npc_click` | `event` `world` `location` `player` `npc` `target` `item` | Un jugador hace clic derecho en un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens. *(se puede cancelar)* |
 | `npc_left_click` | `event` `world` `location` `player` `npc` `target` `item` | Un jugador golpea (clic izquierdo) un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens. *(se puede cancelar)* |
+
+### Menús
+| Disparador | Raíces | Qué es |
+|---|---|---|
+| `menu_open` | `player` `world` `location` `menu` | Abrir un menú (open_menu): su permission, conditions y cost son el requisito y on_open las acciones. Lo compila el menú; no se escribe a mano. |
+| `menu_click` | `player` `world` `location` `menu` `slot` `click` `item` | Un clic en un ítem de un menú (click, left_click, right_click, shift_click). click: left, right, shift_left, shift_right, middle, number, drop o bedrock. Lo compila el menú; no se escribe a mano. |
+| `menu_close` | `player` `world` `location` `menu` | Cerrar un menú (on_close). Lo compila el menú; no se escribe a mano. |
 
 Alias: `player_kill_entity` → `player_kill`, `player_leave` → `player_quit`, `repetitive` → `timer`, `repetitive_server` → `timer`.
 
@@ -587,6 +636,15 @@ Valor: (sin valor).
 - close_inventory
 ```
 
+#### `close_menu`
+Cierra el menú de OmniEvents que tenga abierto el jugador (otro inventario no lo toca); corre su on_close.
+
+Valor: (sin valor).
+
+```yaml
+- close_menu
+```
+
 #### `damage`
 Hace daño.
 
@@ -750,6 +808,19 @@ Valor: expresión (fuerza).
 
 ```yaml
 - launch: 2
+```
+
+#### `open_menu`
+Abre un menú (una entrada con menu:) al jugador; a uno de Bedrock con Floodgate se le muestra como formulario de botones. Los args llegan al menú y a sus clics como var.&lt;nombre>.
+
+Valor: nombre del menú, o un mapa con menu y args.
+
+En forma de mapa:
+- `menu`: Menú que se abre (en un paquete, primero el del paquete).
+- `args`: Mapa nombre: expresión; en el menú y sus clics, var.&lt;nombre>.
+
+```yaml
+- open_menu: tienda
 ```
 
 #### `remove_effect`
@@ -970,6 +1041,7 @@ Operadores: `&&` `||` `!` (`and` `or` `not`), `==` `!=` `<` `<=` `>` `>=`, `~=` 
 | `in_region(id)` | true si el jugador está en esa región de WorldGuard (sin WorldGuard, false). En tests:, given.regions. |
 | `in_state(regla)` | true si el jugador está en el estado de esa regla state (o si el estado del servidor está activo). |
 | `int(x)` | Convierte a entero, sin decimales (0 si no se puede). |
+| `is_bedrock()` | true si el jugador entró desde Bedrock (Geyser + Floodgate); sin Floodgate, false. En tests:, given.bedrock. |
 | `is_npc(entidad)` | true si la entidad es un NPC de Citizens. En tests:, un objeto de given con npc: true. |
 | `join(lista[, separador])` | Une una lista en un texto (", " por defecto). |
 | `len(x)` | Largo de un texto, o tamaño de una lista o un mapa. |

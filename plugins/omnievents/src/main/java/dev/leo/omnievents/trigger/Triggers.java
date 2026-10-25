@@ -82,6 +82,7 @@ public final class Triggers {
         entities();
         server();
         integrations();
+        menus();
     }
 
     public void register(TriggerType t) {
@@ -382,6 +383,17 @@ public final class Triggers {
     static Block blockOf(Object o) {
         return o instanceof Block b ? b : null;
     }
+    /**
+     * Spec 013: las reglas que compila un menú (apertura, clic y cierre). No escuchan eventos: las corre el menú; una
+     * regla suelta con estos disparadores es un error al cargar.
+     */
+    private void menus() {
+        String g = "menús";
+        register(TriggerType.special("menu_open", TriggerType.Kind.MENU, g, "player", "world", "location", "menu").doc("Abrir un menú (open_menu): su permission, conditions y cost son el requisito y on_open las acciones. Lo compila el menú; no se escribe a mano."));
+        register(TriggerType.special("menu_click", TriggerType.Kind.MENU, g, "player", "world", "location", "menu", "slot", "click", "item").doc("Un clic en un ítem de un menú (click, left_click, right_click, shift_click). click: left, right, shift_left, shift_right, middle, number, drop o bedrock. Lo compila el menú; no se escribe a mano."));
+        register(TriggerType.special("menu_close", TriggerType.Kind.MENU, g, "player", "world", "location", "menu").doc("Cerrar un menú (on_close). Lo compila el menú; no se escribe a mano."));
+    }
+
     /** Spec 012: WorldGuard y Citizens. Se registran siempre; sin el plugin, la regla avisa al cargar y nunca corre. */
     private void integrations() {
         String g = "integraciones";

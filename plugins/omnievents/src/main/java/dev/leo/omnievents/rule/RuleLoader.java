@@ -54,6 +54,11 @@ public final class RuleLoader {
     /** Versión de OmniEvents para requires de los paquetes (null: no se comprueba, p. ej. en unitarias sin plugin). */
     private final String pluginVersion;
     private final List<Pack> packs = new ArrayList<>();
+    /** Spec 013: los menús de la última carga (nombre en minúsculas → menú) y los open_menu fijos de cada regla. */
+    private final Map<String, dev.leo.omnievents.menu.Menu> menus = new LinkedHashMap<>();
+    private final List<String[]> menuRefs = new ArrayList<>();
+    /** Spec 013: true mientras MenuLoader compila las reglas de un menú (solo ahí valen los disparadores menu_*). */
+    boolean compilingMenu;
 
     public RuleLoader(Actions actions, Triggers triggers) {
         this(actions, triggers, null);
@@ -80,6 +85,19 @@ public final class RuleLoader {
         }
     }
 
+    /** Los menús de la última carga (spec 013), en orden de archivo. */
+    public Map<String, dev.leo.omnievents.menu.Menu> menus() {
+        return java.util.Collections.unmodifiableMap(menus);
+    }
+
+    Actions actions() {
+        return actions;
+    }
+
+    Triggers triggers() {
+        return triggers;
+    }
+
     /** Los paquetes de la última carga, también los que no cargaron (con su error). */
     public List<Pack> packs() {
         return List.copyOf(packs);
@@ -95,6 +113,8 @@ public final class RuleLoader {
      */
     public Map<String, Rule> loadFolder(File folder, Problems problems) {
         packs.clear();
+        menus.clear();
+        menuRefs.clear();
         List<File> files = new ArrayList<>();
         collect(folder, files);
         files.sort(null);
@@ -158,11 +178,21 @@ public final class RuleLoader {
             Map<String, Object> m = Templates.expand(e, n -> entries.get(n.toLowerCase(Locale.ROOT)), templateNames, problems);
             if (m == null) continue;
             problems.file(e.file());
+            // Spec 013: una entrada con menu: es un menú; sus reglas (apertura, clics, cierre) van con las demás.
+            if (m.containsKey("menu")) {
+                dev.leo.omnievents.menu.Menu menu = new MenuLoader(this).parse(e.name(), e.file(), e.pack(), m, problems);
+                if (menu != null) {
+                    menus.put(me.getKey(), menu);
+                    for (Rule r : menu.rules()) out.put(r.name().toLowerCase(Locale.ROOT), r);
+                }
+                continue;
+            }
             ConfigurationSection s = m == e.map() ? e.section() : section(m);
             Rule r = parse(e.name(), e.file(), s, problems, e.pack());
             if (r != null) out.put(me.getKey(), r);
         }
         checkStateRefs(out, problems);
+        checkMenuRefs(out, problems);
         for (Rule r : out.values()) {
             Pack p = r.pack == null ? null : byDir.values().stream().filter(x -> x != SKIP && x.name.equals(r.pack)).findFirst().orElse(null);
             if (p == null) continue;
@@ -192,7 +222,7 @@ public final class RuleLoader {
 
     /** Un mapa como sección, con los mapas anidados como secciones (como al leer el YAML). */
     @SuppressWarnings("unchecked")
-    private static ConfigurationSection section(Map<String, Object> m) {
+    static ConfigurationSection section(Map<String, Object> m) {
         org.bukkit.configuration.MemoryConfiguration c = new org.bukkit.configuration.MemoryConfiguration();
         m.forEach((k, v) -> {
             if (v instanceof Map<?, ?> map) c.createSection(k, (Map<String, Object>) map);
@@ -386,6 +416,37 @@ public final class RuleLoader {
         }
     }
 
+    /**
+     * Spec 013, H4 CA1: cada open_menu con un nombre fijo apunta a un menú (con la búsqueda relativa al paquete de la
+     * 011). Si no, la regla no carga; si era de un menú, el menú entero tampoco.
+     */
+    private void checkMenuRefs(Map<String, Rule> out, Problems problems) {
+        for (String[] ref : menuRefs) {
+            Rule r = out.get(ref[0].toLowerCase(Locale.ROOT));
+            if (r == null) continue;
+            if (resolveMenu(ref[1], r.pack, menus) != null) continue;
+            problems.file(r.file()).error(ref[2], "open_menu: no hay un menú '" + ref[1] + "'" + Suggest.hint(ref[1], menus.values().stream().map(dev.leo.omnievents.menu.Menu::name).toList()));
+            out.remove(ref[0].toLowerCase(Locale.ROOT));
+            dev.leo.omnievents.menu.Menu owner = menus.values().stream().filter(mn -> mn.rules().contains(r)).findFirst().orElse(null);
+            if (owner != null) {
+                menus.values().remove(owner);
+                for (Rule x : owner.rules()) out.remove(x.name().toLowerCase(Locale.ROOT));
+            }
+        }
+        menuRefs.clear();
+    }
+
+    /** Un menú por nombre, primero en el paquete de quien lo pide (como Rule.resolve). */
+    public static dev.leo.omnievents.menu.Menu resolveMenu(String name, String pack, Map<String, dev.leo.omnievents.menu.Menu> byLowerName) {
+        if (name == null) return null;
+        String n = name.trim().toLowerCase(Locale.ROOT);
+        if (pack != null && n.indexOf(':') < 0) {
+            dev.leo.omnievents.menu.Menu m = byLowerName.get(pack.toLowerCase(Locale.ROOT) + ":" + n);
+            if (m != null) return m;
+        }
+        return byLowerName.get(n);
+    }
+
     /** Cada in_state('x') con un nombre fijo apunta a una regla state; un estado del servidor solo lee otros del servidor. */
     private void checkStateRefs(Map<String, Rule> out, Problems problems) {
         List<String> stateNames = new ArrayList<>();
@@ -431,11 +492,8 @@ public final class RuleLoader {
         return parse(name, file, s, problems, null);
     }
 
-    private Rule parse(String name, String file, ConfigurationSection s, Problems problems, Pack pack) {
+    Rule parse(String name, String file, ConfigurationSection s, Problems problems, Pack pack) {
         int mark = problems.size();
-        for (String k : s.getKeys(false)) {
-            if (!KNOWN_KEYS.contains(k)) problems.warn(name + "." + k, "opción desconocida" + Suggest.hint(k, KNOWN_KEYS));
-        }
         String triggerName = s.getString("trigger", s.getString("type"));
         if (triggerName == null) {
             problems.error(name, "falta 'trigger' (p. ej. trigger: block_break)");
@@ -445,6 +503,17 @@ public final class RuleLoader {
         if (trigger == null) {
             problems.error(name + ".trigger", "disparador desconocido '" + triggerName + "'" + Suggest.hint(triggerName, triggers.names()) + " (lista: /omni triggers)");
             return null;
+        }
+        // Spec 013: las reglas menu_* solo las compila un menú; la apertura y el cierre llevan claves de menú (las revisa MenuLoader).
+        boolean menuRule = trigger.kind() == TriggerType.Kind.MENU;
+        if (menuRule && !compilingMenu) {
+            problems.error(name + ".trigger", "el disparador " + trigger.name() + " va dentro de un menú (menu: con items y sus clics), no en una regla suelta");
+            return null;
+        }
+        if (!menuRule || trigger.name().equals("menu_click")) {
+            for (String k : s.getKeys(false)) {
+                if (!KNOWN_KEYS.contains(k) || menuRule && k.equals("menu")) problems.warn(name + "." + k, "opción desconocida" + Suggest.hint(k, KNOWN_KEYS));
+            }
         }
         Predicate<Event> filter = null;
         if (trigger.kind() == TriggerType.Kind.CUSTOM) {
@@ -486,7 +555,10 @@ public final class RuleLoader {
                 Condition c = condition(condList.get(i), path, parser, problems, true);
                 if (c != null) conditions.add(c);
             }
-            act = parser.parseList(isState ? s.get("on_enter") : s.get("actions", s.get("then")), name + (isState ? ".on_enter" : ".actions"));
+            // Spec 013: la apertura de un menú corre on_open y el cierre on_close (la ruta del cierre ya termina en on_close).
+            String menuKey = trigger.name().equals("menu_open") ? "on_open" : trigger.name().equals("menu_close") ? "on_close" : null;
+            act = menuKey != null ? parser.parseList(s.get(menuKey), menuKey.equals("on_close") ? name : name + "." + menuKey)
+                    : parser.parseList(isState ? s.get("on_enter") : s.get("actions", s.get("then")), name + (isState ? ".on_enter" : ".actions"));
             els = isState ? List.of() : parser.parseList(s.get("else"), name + ".else");
             onExit = isState ? parser.parseList(s.get("on_exit"), name + ".on_exit") : List.of();
             onCd = parser.parseList(s.get("on_cooldown"), name + ".on_cooldown");
@@ -498,11 +570,12 @@ public final class RuleLoader {
             collected = Expression.stopCollecting();
             validateRoots(name, trigger, parser, collected, problems);
         }
+        for (String[] ref : parser.menuRefs()) menuRefs.add(new String[]{name, ref[0], ref[1]});
         Set<String> refs = StateDeps.analyze(collected).states();
         if (!refs.isEmpty()) stateRefs.put(name.toLowerCase(Locale.ROOT), Set.copyOf(refs));
         if (isState) {
             if (act.isEmpty() && onExit.isEmpty() && !problems.hasErrorsSince(mark)) problems.error(name, "una regla state necesita on_enter, on_exit o ambos");
-        } else if (act.isEmpty() && els.isEmpty() && !problems.hasErrorsSince(mark)) {
+        } else if (act.isEmpty() && els.isEmpty() && !menuRule && !problems.hasErrorsSince(mark)) {
             problems.warn(name, "la regla no tiene acciones");
         }
 
@@ -636,7 +709,7 @@ public final class RuleLoader {
     private static final java.util.regex.Pattern TEST_DATA = java.util.regex.Pattern.compile("^(.+?)\\.data\\.([\\p{L}0-9_]+)$");
     private static final Set<String> BRANCHES = Set.of("actions", "else", "deny", "none", "on_enter", "on_cost_fail");
     /** Claves de given que no son rutas (spec 012): saldo, inventario (material: cantidad) y regiones. */
-    public static final Set<String> GIVEN_SPECIAL = Set.of("money", "inventory", "regions");
+    public static final Set<String> GIVEN_SPECIAL = Set.of("money", "inventory", "regions", "bedrock");
 
     private List<RuleTest> tests(String rule, Object raw, TriggerType trigger, Problems problems) {
         String base = rule + ".tests";
@@ -682,6 +755,9 @@ public final class RuleLoader {
                         }
                         case "regions" -> {
                             if (!(gv instanceof List<?>) && !(gv instanceof String)) problems.error(path + ".given.regions", "regions es una lista de ids (p. ej. [spawn, mina])");
+                        }
+                        case "bedrock" -> {
+                            if (!(gv instanceof Boolean)) problems.error(path + ".given.bedrock", "bedrock va true o false (si el jugador es de Bedrock, para is_bedrock())");
                         }
                         default -> { }
                     }
@@ -971,7 +1047,7 @@ public final class RuleLoader {
         return out;
     }
 
-    private void validateRoots(String rule, TriggerType trigger, ActionParser parser, List<Expression> exprs, Problems problems) {
+    void validateRoots(String rule, TriggerType trigger, ActionParser parser, List<Expression> exprs, Problems problems) {
         Set<String> allowed = new HashSet<>(trigger.roots());
         allowed.addAll(Triggers.COMMON_ROOTS);
         allowed.addAll(parser.declared());

@@ -48,6 +48,9 @@ public final class SchemaGenerator {
         Map<String, Object> defs = new LinkedHashMap<>();
         defs.put("rule", rule(triggers));
         defs.put("expression", expression());
+        defs.put("menu", menu(triggers));
+        defs.put("menu_item", menuItem());
+        defs.put("menu_click", menuClick(triggers));
         defs.put("duration", map("description", "Duración: 10s, 5m, 1h30m, 2d, 1w, 20t (ticks), 500ms, o un número de segundos.",
                 "anyOf", List.of(map("type", "number", "minimum", 0), map("type", "string", "pattern", DURATION), param())));
         defs.put("budget", map("description", "Presupuesto de tiempo: 0.5ms, 200us o 200µs.",
@@ -74,12 +77,18 @@ public final class SchemaGenerator {
 
     // ------------------------------------------------------------------ reglas
 
-    private static Map<String, Object> rule(Triggers triggers) {
+    /** Las opciones de una regla como propiedades del esquema. */
+    private static Map<String, Object> ruleProps(Triggers triggers) {
         Map<String, Object> props = new LinkedHashMap<>();
         for (RuleOptions.Option o : RuleOptions.all().values()) {
             String desc = o.description() + (o.trigger() == null ? "" : " (para trigger: " + o.trigger() + ")");
             props.put(o.name(), with(option(o, triggers), desc));
         }
+        return props;
+    }
+
+    private static Map<String, Object> rule(Triggers triggers) {
+        Map<String, Object> props = ruleProps(triggers);
         List<Object> conditional = new ArrayList<>();
         conditional.add(requires(List.of("timer", "repetitive", "repetitive_server"), map("anyOf", List.of(map("required", List.of("every")), map("required", List.of("repetitive_time"))))));
         conditional.add(requires(List.of("clock"), map("required", List.of("at"))));
@@ -88,9 +97,77 @@ public final class SchemaGenerator {
         conditional.add(requires(List.of("state"), map("required", List.of("when"))));
         return map("type", "object", "description", "Una regla: cuando pase trigger, si se cumplen conditions, corre actions.",
                 "properties", props, "additionalProperties", false,
-                "anyOf", List.of(map("required", List.of("trigger")), map("required", List.of("type")), map("required", List.of("extends")),
+                "anyOf", List.of(map("required", List.of("trigger")), map("required", List.of("type")), map("required", List.of("extends")), map("required", List.of("menu")),
                         map("properties", map("template", map("const", true)), "required", List.of("template"))),
                 "allOf", conditional);
+    }
+
+    // ------------------------------------------------------------------ menús (spec 013)
+
+    private static Map<String, Object> menu(Triggers triggers) {
+        Map<String, String> k = RuleOptions.MENU_KEYS;
+        Map<String, Object> rule = ruleProps(triggers);
+        Map<String, Object> props = new LinkedHashMap<>();
+        k.forEach((key, d) -> {
+            Map<String, Object> p = switch (key) {
+                case "title" -> map("type", "string");
+                case "rows" -> map("anyOf", List.of(map("type", "integer", "minimum", 1, "maximum", 6), param()));
+                case "fill" -> map("type", "string");
+                case "on_open", "on_close" -> ref("actions");
+                case "bedrock" -> map("type", "object", "properties", map(
+                                "content", map("type", "string", "description", RuleOptions.MENU_BEDROCK_KEYS.get("content")),
+                                "enabled", map("type", "boolean", "description", RuleOptions.MENU_BEDROCK_KEYS.get("enabled"))),
+                        "additionalProperties", false);
+                case "items" -> map("type", "object", "additionalProperties", ref("menu_item"));
+                default -> new LinkedHashMap<>(castMap(rule.get(key)));
+            };
+            p.put("description", d);
+            props.put(key, p);
+        });
+        return map("type", "object", "description", RuleOptions.all().get("menu").description(), "properties", props, "additionalProperties", false);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> castMap(Object o) {
+        return (Map<String, Object>) o;
+    }
+
+    private static Map<String, Object> menuItem() {
+        Map<String, String> k = RuleOptions.MENU_ITEM_KEYS;
+        Map<String, Object> slot = map("anyOf", List.of(map("type", "integer", "minimum", 0, "maximum", 53),
+                map("type", "string", "pattern", "^\\s*\\d+\\s*(-\\s*\\d+\\s*)?$"),
+                map("type", "array", "items", map("anyOf", List.of(map("type", "integer", "minimum", 0, "maximum", 53),
+                        map("type", "string", "pattern", "^\\s*\\d+\\s*(-\\s*\\d+\\s*)?$"))))));
+        Map<String, Object> itemKeys = new LinkedHashMap<>();
+        for (int i = 0; i < Actions.ITEM_KEYS.length; i += 2) itemKeys.put(Actions.ITEM_KEYS[i], map("description", Actions.ITEM_KEYS[i + 1]));
+        Map<String, Object> props = new LinkedHashMap<>();
+        k.forEach((key, d) -> {
+            Map<String, Object> p = switch (key) {
+                case "slot", "slots" -> new LinkedHashMap<>(slot);
+                case "item" -> map("anyOf", List.of(map("type", "string"), map("type", "object", "properties", itemKeys, "additionalProperties", false)));
+                case "view" -> ref("expression");
+                case "click", "left_click", "right_click", "shift_click" -> ref("menu_click");
+                case "bedrock" -> map("type", "object", "properties", map(
+                                "button", map("type", "string", "description", RuleOptions.ITEM_BEDROCK_KEYS.get("button")),
+                                "image", map("type", "string", "description", RuleOptions.ITEM_BEDROCK_KEYS.get("image"))),
+                        "additionalProperties", false);
+                default -> map();
+            };
+            p.put("description", d);
+            props.put(key, p);
+        });
+        // El ítem también se puede escribir suelto (material, name, lore… en el ítem del menú).
+        itemKeys.forEach(props::putIfAbsent);
+        return map("type", "object", "description", "Un ítem del menú: dónde va (slot), cómo se ve (item), cuándo (view) y qué hace cada clic.",
+                "properties", props, "additionalProperties", false, "anyOf", List.of(map("required", List.of("slot")), map("required", List.of("slots"))));
+    }
+
+    private static Map<String, Object> menuClick(Triggers triggers) {
+        Map<String, Object> props = ruleProps(triggers);
+        for (String k : List.of("trigger", "type", "menu", "template", "extends", "with", "params")) props.remove(k);
+        RuleOptions.CLICK_KEYS.forEach((k, d) -> props.put(k, map("type", "boolean", "description", d)));
+        return map("type", "object", "description", "Un clic: un cuerpo de regla sin trigger (conditions, cost, cooldown, actions, tests…).",
+                "properties", props, "additionalProperties", false);
     }
 
     /** Esquema de pack.yml (spec 011, H5 CA1), del registro PACK_KEYS. */
@@ -194,6 +271,7 @@ public final class SchemaGenerator {
                         "patternProperties", map("^(pvar|gvar)\\.[A-Za-z0-9_\\-]+$", with(amount, k.get("pvar.<nombre>"))),
                         "additionalProperties", false, "minProperties", 1);
             }
+            case MENU -> ref("menu");
         };
     }
 

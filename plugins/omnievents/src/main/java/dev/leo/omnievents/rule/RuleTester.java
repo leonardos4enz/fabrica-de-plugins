@@ -143,6 +143,11 @@ public final class RuleTester {
                     sb.regions(Values.list(e.getValue()).stream().map(Values::str).toList());
                     continue;
                 }
+                // Spec 013: si el jugador es de Bedrock (is_bedrock()).
+                case "bedrock" -> {
+                    sb.bedrock(Values.truthy(value));
+                    continue;
+                }
                 default -> { }
             }
             Matcher sc = SCOPED.matcher(key);

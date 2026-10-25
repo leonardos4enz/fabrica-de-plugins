@@ -19,7 +19,7 @@ import java.util.Locale;
 import java.util.Map;
 
 /** Ítem declarado: MATERIAL;cantidad;nombre;lore1|lore2, mapa con propiedades, o saved:nombre. */
-final class ItemSpec {
+public final class ItemSpec {
     private Template material;
     private Template amount;
     private Template name;
@@ -31,6 +31,30 @@ final class ItemSpec {
     private boolean hideFlags;
     private String saved;
     private OmniEvents plugin;
+
+    /** Un ítem fuera de una acción (spec 013: los ítems de un menú), con el mismo formato que give_item. */
+    public static ItemSpec parse(Object value, String path, OmniEvents plugin) {
+        return parse(new Args("item", value, Map.of(), path, null), plugin);
+    }
+
+    /** El material (null si es un ítem guardado). */
+    public Template material() {
+        return material;
+    }
+
+    /** El nombre (null si no tiene). */
+    public Template name() {
+        return name;
+    }
+
+    /** Las plantillas del ítem (material, cantidad, nombre, lore, modelo, encantamientos), para validar sus raíces. */
+    public List<Template> templates() {
+        List<Template> out = new ArrayList<>();
+        for (Template t : new Template[]{material, amount, name, model}) if (t != null) out.add(t);
+        out.addAll(lore);
+        out.addAll(enchants.values());
+        return out;
+    }
 
     static ItemSpec parse(Args a, OmniEvents plugin) {
         ItemSpec s = new ItemSpec();
@@ -75,7 +99,7 @@ final class ItemSpec {
         s.enchants.put(kv[0].trim(), Template.compile(kv.length > 1 ? kv[1].trim() : "1"));
     }
 
-    ItemStack build(ExecContext ctx) {
+    public ItemStack build(ExecContext ctx) {
         if (saved != null) {
             ItemStack it = plugin.savedItems().get(saved);
             if (it == null) throw new ActionException("no hay un ítem guardado con el nombre '" + saved + "' (/omni item save " + saved + ")");

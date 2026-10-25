@@ -146,6 +146,17 @@ public final class Sandbox {
         inventory.put(material.toUpperCase(java.util.Locale.ROOT), amount);
     }
 
+    /** Spec 013: given.bedrock, para is_bedrock(). */
+    private boolean bedrock;
+
+    public void bedrock(boolean value) {
+        bedrock = value;
+    }
+
+    public boolean bedrock() {
+        return bedrock;
+    }
+
     public void regions(List<String> ids) {
         regions = List.copyOf(ids);
     }

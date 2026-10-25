@@ -105,7 +105,8 @@ public final class Actions {
     public static final Doc EXTERNAL = new Doc("otros plugins", "Acción registrada por otro plugin.", "texto", Shape.SCALAR,
             Map.of(), Map.of(), "");
 
-    private static final String[] ITEM_KEYS = {
+    /** Claves de un ítem en forma de mapa (give_item, drop_item y los ítems de un menú, spec 013). */
+    public static final String[] ITEM_KEYS = {
             "material", "Material (DIAMOND, IRON_SWORD…).", "id", "Sinónimo de material.", "amount", "Cantidad.",
             "name", "Nombre (MiniMessage, & y {expresiones}).", "lore", "Líneas de descripción: una lista, o un texto con |.",
             "model", "custom_model_data.", "enchants", "Encantamientos: mapa encantamiento: nivel, o lista \"SHARPNESS:2\".",
@@ -133,6 +134,11 @@ public final class Actions {
         registerWorld();
         group = "evento";
         registerEvent();
+    }
+
+    /** El plugin (null en las unitarias). */
+    public OmniEvents plugin() {
+        return plugin;
     }
 
     public void register(String name, Factory f) {
@@ -673,6 +679,28 @@ public final class Actions {
         });
         register("clear_inventory", doc("Vacía el inventario.", "(sin valor)", "clear_inventory"), a -> Action.of(ctx -> ctx.requirePlayer().getInventory().clear()));
         register("close_inventory", doc("Cierra el inventario abierto.", "(sin valor)", "close_inventory"), a -> Action.of(ctx -> ctx.requirePlayer().closeInventory()));
+        // Spec 013: menús de inventario (y formularios de Bedrock con Floodgate).
+        register("open_menu", doc("Abre un menú (una entrada con menu:) al jugador; a uno de Bedrock con Floodgate se le muestra como formulario de botones. Los args llegan al menú y a sus clics como var.<nombre>.",
+                "nombre del menú, o un mapa con menu y args", "open_menu: tienda").shape(Shape.CALL, "menu", "Menú que se abre (en un paquete, primero el del paquete).", "args", "Mapa nombre: expresión; en el menú y sus clics, var.<nombre>."), a -> {
+            Template menu = Template.compile(a.isMap() ? Values.str(a.map().get("menu")) : a.text());
+            Map<String, Expression> params = new LinkedHashMap<>();
+            if (a.isMap() && a.map().get("args") instanceof Map<?, ?> m) {
+                for (Map.Entry<?, ?> e : m.entrySet()) params.put(String.valueOf(e.getKey()), Expression.compile(Values.str(e.getValue())));
+            }
+            if (menu.source().isBlank()) throw new IllegalArgumentException("open_menu necesita el nombre de un menú (open_menu: tienda)");
+            if (menu.isConstant() && a.parser() != null) a.parser().referMenu(menu.source().trim(), a.path());
+            return Action.of(ctx -> {
+                Player p = ctx.requirePlayer();
+                String name = menu.render(ctx, Template.Mode.RAW).trim();
+                dev.leo.omnievents.menu.Menu m = ctx.plugin().menus().get(name, ctx.rule() == null ? null : ctx.rule().pack());
+                if (m == null) throw new ActionException("no hay un menú '" + name + "' (/omni menu list)");
+                Map<String, Object> args = new LinkedHashMap<>();
+                params.forEach((k, e) -> args.put(k, e.eval(ctx)));
+                ctx.plugin().menus().open(p, m, args);
+            });
+        });
+        register("close_menu", doc("Cierra el menú de OmniEvents que tenga abierto el jugador (otro inventario no lo toca); corre su on_close.", "(sin valor)", "close_menu"),
+                a -> Action.of(ctx -> ctx.plugin().menus().close(ctx.requirePlayer())));
         register("give_exp", doc("Da puntos de experiencia.", "expresión", "give_exp: 100"), a -> {
             Expression n = a.expr();
             return Action.of(ctx -> ctx.requirePlayer().giveExp((int) Values.num(n.eval(ctx))));
