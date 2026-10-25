@@ -26,8 +26,7 @@ Cada plugin vive en `plugins/<nombre>/`. Idioma del proyecto: **español** (cód
 bash tools/compuerta-servidor.sh omnievents "omni selftest"   # Paper real (el EULA lo acepta el dueño)
 npm --prefix tests-e2e test          # compuerta 3a: bots de mineflayer en el Paper de prueba (spec 002)
 npm --prefix tests-e2e test -- --sin-build --solo "H5 CA3"     # un subconjunto
-npm --prefix tests-e2e run capturas  # galería: una imagen por capacidad en docs/img/<plugin>/ (spec 004)
-npm --prefix tests-e2e run capturas -- --sin-build --solo "accion-title"   # algunas escenas
+npm --prefix tests-e2e run capturas -- --sin-build --solo "accion-title"   # capturas puntuales (spec 004)
 ```
 Las capturas usan la fuente y el HUD del Minecraft Java 1.21.4 instalado del dueño (`%APPDATA%\.minecraft`) y Chrome
 o Edge; los assets se extraen a `tests-e2e/.cache/` y **nunca se copian al repositorio**.
@@ -56,6 +55,10 @@ con `--release 21`.
 - Un plugin que copia ejemplos solo si su carpeta no existe deja ejemplos viejos en `run/`: la suite los copia del
   código fuente. En 26.1 los datos del jugador viven en `world/players/` (002 F-05).
 - Paper 26.x necesita Java 25 (`--java-servidor`); el bot usa `--version-bot 26.1` (mismo protocolo que 26.1.2).
+- **Proporción costo/valor (lección del dueño, spec 004):** la galería con una imagen para *cada* capacidad (147
+  escenas, 9 corridas completas para estabilizarla) tomó horas y no valió la pena. Antes de una spec de alcance «todo»,
+  estimar el costo y proponer el subconjunto que más valor da (las 5–10 capacidades más visibles); el resto, texto.
+  Lo mismo para cualquier criterio «cada X tiene Y»: confirmar con el dueño si de verdad es cada uno.
 - En 1.21.4, `spawn-monsters=false` borra al instante hasta los monstruos **invocados** (las capturas lo activan). Con
   mineflayer 4.39 en 1.21.4, `setControlState('sneak')` no agacha (manda un número donde va el nombre de la acción) y
   en creativo el bot no aplica la corrección del servidor tras una rotura cancelada (004).
@@ -73,10 +76,9 @@ Los README son lo que lee el dueño de un servidor; si no dicen algo, para él n
 - **README raíz**: la fila del plugin en la tabla (versión del plugin, versiones de Paper verificadas, estado) y la
   estructura del repositorio si cambió.
 - Si la spec es de la fábrica (herramientas, arnés), el README raíz explica cómo usarla.
-- **Capturas** (spec 004): si la spec agrega o cambia algo que se ve en el juego (un mensaje, una acción, un
-  disparador, un subcomando, un ejemplo), se le agrega su escena en `tests-e2e/<plugin>/capturas.mjs` y se regeneran
-  con `npm --prefix tests-e2e run capturas`. El comando falla si una capacidad del servidor vivo no tiene escena.
-  Revisar que las imágenes `cambió` sean las esperadas antes del commit.
+- **Capturas: solo puntuales** (spec 004). Una imagen nueva solo para lo que el dueño pida o para la capacidad
+  estrella de la spec (una o pocas escenas en `tests-e2e/<plugin>/capturas.mjs`, generadas con `--solo`). **No** se
+  regenera la galería completa al cerrar cada spec ni se busca una imagen por capacidad.
 - En `verify.md`, la fila «README» dice qué se actualizó (y si se regeneraron las capturas).
 
 ## Antes de cada commit

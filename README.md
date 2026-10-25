@@ -51,5 +51,5 @@ Un bot entra al Paper de prueba, vive cada capacidad del plugin y se guarda un r
 acción, títulos, HUD, inventarios y una vista 3D del mundo) en `docs/img/<plugin>/`, con la galería en
 `docs/<plugin>/galeria.md`. No son capturas del cliente oficial: el render usa la fuente, los sprites y el idioma del
 **Minecraft Java 1.21.4 instalado** en la PC (se extraen a `tests-e2e/.cache/`, nunca al repositorio) y necesita Chrome
-o Edge. Cada imagen se compara por píxeles con la anterior y solo se reescribe si cambió; el comando falla si alguna
-capacidad del plugin no tiene escena. Diseño: [spec 004](docs/sdd/specs/004-fabrica-capturas-en-juego/spec.md).
+o Edge. Cada imagen se compara por píxeles con la anterior y solo se reescribe si cambió; las capacidades sin escena se
+listan como aviso. Se usa para capturas puntuales (`--solo`), no para regenerar todo en cada spec. Diseño: [spec 004](docs/sdd/specs/004-fabrica-capturas-en-juego/spec.md).

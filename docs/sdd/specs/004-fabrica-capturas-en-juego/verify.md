@@ -65,6 +65,12 @@ Las escenas marcadas `varía` (y por qué): `ejemplo-spawn_vip` (segundos de enf
 | F-05 | Baja | Imágenes que cambiaban entre corridas sin motivo visible: orbes de experiencia, animación de muerte, agua, flecha en vuelo, anuncios de progreso del juego en los recortes | Comparación por píxeles (corridas 3–5) | `sinRestos`, `announceAdvancements` solo en su escena, `varía` donde es natural | Resuelto |
 | F-06 | Baja | Reglas de demostración mal escritas que la galería habría mostrado: `for_each` sobre una lista de textos (solo recorre jugadores o entidades), `stop` con un permiso que un OP siempre tiene, `RIGHT_CLICK_AIR` (la acción se llama `RIGHT_CLICK`) | Escenas sin respuesta | Reglas corregidas; la escena falla si la regla no responde | Resuelto |
 
+## Lección del dueño (después del cierre)
+«No me gustó, tardamos horas en terminar, no vale la pena hacer la galería para todo, solo para cosas puntuales.»
+Consecuencias: la regla de cierre de `CLAUDE.md` pasa a «capturas solo puntuales»; la cobertura de la galería es un
+aviso (`--cobertura` la vuelve a exigir); las 133 imágenes ya generadas se quedan y no se mantienen al día salvo que
+se pidan. Para specs futuras: estimar el costo de un alcance «todo» y proponer el subconjunto de más valor.
+
 ## Riesgos residuales
 - Solo 1.21.4: prismarine-viewer 1.33 no soporta versiones más nuevas. Las capturas muestran la versión verificada.
 - El visor no dibuja bloques con entidad (cofres, camas, carteles, mesas), ítems tirados, relámpagos ni partículas, y

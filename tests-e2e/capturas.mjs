@@ -3,6 +3,7 @@
 // generada. Uso:
 //   npm --prefix tests-e2e run capturas [-- --plugin omnievents] [--sin-build] [--solo "accion-title"]
 //   npm --prefix tests-e2e run capturas -- --solo-galeria      (solo reescribe la galería, sin servidor)
+//   --cobertura: falla si una capacidad del servidor vivo no tiene escena (por defecto es solo un aviso)
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -22,12 +23,13 @@ const AQUI = path.dirname(fileURLToPath(import.meta.url))
 const RAIZ = path.resolve(AQUI, '..')
 
 function opciones (argv) {
-  const o = { plugin: 'omnievents', build: true, solo: null, soloGaleria: false }
+  const o = { plugin: 'omnievents', build: true, solo: null, soloGaleria: false, cobertura: false }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--plugin') o.plugin = argv[++i]
     else if (a === '--sin-build') o.build = false
     else if (a === '--solo-galeria') o.soloGaleria = true
+    else if (a === '--cobertura') o.cobertura = true
     else if (a === '--solo') o.solo = new RegExp(argv[++i], 'i')
     else throw new Error(`Opción desconocida: ${a}`)
   }
@@ -313,8 +315,9 @@ async function principal () {
     `${cuenta('cambió')} cambiaron (${inesperadas.length} inesperadas), ${cuenta('nueva')} nuevas, ${cuenta('texto')} solo texto, ` +
     `${cuenta('falló')} fallaron · galería: ${cfg.galeria.archivo}`)
   if (inesperadas.length) console.log('  Cambiaron sin estar marcadas como «varía»: ' + inesperadas.map(r => r.e.id).join(', '))
-  if (faltan.length) console.log(`✘ Sin escena en la galería (H3 CA3): ${faltan.join(', ')}`)
-  process.exitCode = cuenta('falló') || faltan.length ? 1 : 0
+  // Capturas solo puntuales (lección de la 004): una capacidad sin escena es un aviso; --cobertura la vuelve a exigir.
+  if (faltan.length) console.log(`${o.cobertura ? '✘' : '·'} Sin escena en la galería: ${faltan.join(', ')}`)
+  process.exitCode = cuenta('falló') || (o.cobertura && faltan.length) ? 1 : 0
 }
 
 principal().catch(err => {
