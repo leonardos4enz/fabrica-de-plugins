@@ -29,12 +29,23 @@ los siguientes plugins de la fábrica.
 | — | Importador de configuraciones de ConditionalEvents | 001 |
 
 ## Siguientes specs (propuestas, en orden)
+Elegidas por el dueño tras la [investigación de plugins exitosos](../investigacion/plugins-exitosos.md) (§6; todas
+menos el editor visual), una por sesión. El número de cada una se asigna al abrirla:
+1. **OmniEvents: herramientas de autor**: ramas `deny` por condición y «N de M» (P1), `/omni check`, simulación y traza exportable (P2), `/omni cpu` y `budget` (P4).
+2. **OmniEvents: esquema JSON y referencia generada** (P3).
+3. **OmniEvents: disparador de estado** `trigger: state` con `on_enter` y `on_exit`, sin sondeo (P6).
+4. **OmniEvents: variables con caducidad y en bloques, entidades e ítems** (P5).
+5. **OmniEvents: pruebas de reglas en el YAML** `tests:` y `/omni test` (P7).
+6. **OmniEvents: paquetes, plantillas y versión** (P8).
+7. **OmniEvents: integraciones con costos**: Vault, `cost:` todo o nada (P9), WorldGuard y Citizens (abajo).
+8. **OmniEvents: menús de inventario y formularios de Bedrock** (P10).
+
+Otras pendientes:
 - **Fábrica: servidor simulado** — MockBukkit para probar en unitarias lo que hoy solo se ve en el servidor real (F-04, F-05 de la 001).
   Con la suite en el juego (002) es menos urgente: queda para la persistencia y los casos de bordes.
 - **Fábrica: más escenarios en el juego** — las acciones y disparadores sin escenario (riesgos de la 002) y
   PlaceholderAPI con su jar en el servidor de prueba.
-- **OmniEvents: integraciones** — Vault (economía como funciones `money()` y acciones `give_money`), WorldGuard
-  (disparadores de región sin plugins extra), Citizens (NPC).
+- **OmniEvents: integraciones** — WorldGuard (disparadores de región sin plugins extra) y Citizens (NPC); Vault va en la n.º 7.
 - **OmniEvents: editor en el juego** — inventario para ver, activar y probar reglas sin editar YAML.
 - **OmniEvents: almacenamiento SQL** — MySQL/MariaDB para redes con varios servidores (variables compartidas).
 - Después: el siguiente plugin de la fábrica, reutilizando el motor de expresiones de OmniEvents como biblioteca

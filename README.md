@@ -17,6 +17,7 @@ el README de cada plugin.
 CLAUDE.md                 guía para sesiones de IA (leer primero)
 docs/sdd/                 constitución, metodología, verificación, roadmap, plantillas y specs
 docs/adr/                 decisiones de arquitectura
+docs/investigacion/       investigaciones para decidir specs (p. ej. plugins exitosos y propuestas)
 docs/<plugin>/galeria.md  una imagen por capacidad, generada en el juego (spec 004); imágenes en docs/img/<plugin>/
 plugins/<nombre>/         un proyecto Gradle por plugin
 tools/nuevo-plugin.ps1    crea un plugin nuevo con su spec
