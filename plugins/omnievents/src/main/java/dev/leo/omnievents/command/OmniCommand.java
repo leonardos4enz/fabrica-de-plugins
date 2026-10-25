@@ -8,12 +8,14 @@ import dev.leo.omnievents.debug.Stats;
 import dev.leo.omnievents.expr.ExprException;
 import dev.leo.omnievents.expr.Expression;
 import dev.leo.omnievents.expr.Node;
+import dev.leo.omnievents.expr.Scope;
 import dev.leo.omnievents.expr.Values;
 import dev.leo.omnievents.importer.ConditionalEventsImporter;
 import dev.leo.omnievents.rule.Condition;
 import dev.leo.omnievents.rule.Problems;
 import dev.leo.omnievents.rule.Rule;
 import dev.leo.omnievents.text.TextFormat;
+import dev.leo.omnievents.trigger.StateService;
 import dev.leo.omnievents.trigger.TriggerType;
 import dev.leo.omnievents.util.Durations;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -53,6 +55,7 @@ public final class OmniCommand implements TabExecutor {
         SUBS.put("debug", "Traza en vivo: <regla|all|off|export>");
         SUBS.put("check", "Revisa una regla ahora, sin efectos: <regla> [jugador]");
         SUBS.put("run", "Dispara una regla: <regla> <jugador> [--simular]");
+        SUBS.put("state", "Quién está en el estado de una regla state: <regla>");
         SUBS.put("eval", "Evalúa una expresión con tu contexto");
         SUBS.put("call", "Ejecuta una regla call: <regla> [jugador] [k=v…]");
         SUBS.put("var", "Variables: get|set|del|list <jugador|global> [nombre] [valor]");
@@ -113,6 +116,7 @@ public final class OmniCommand implements TabExecutor {
                 case "debug" -> debug(s, a);
                 case "check" -> check(s, a);
                 case "run" -> runRule(s, a);
+                case "state" -> state(s, a);
                 case "cpu" -> cpu(s, a);
                 case "eval" -> eval(s, a);
                 case "call" -> call(s, a);
@@ -202,6 +206,7 @@ public final class OmniCommand implements TabExecutor {
         for (Condition c : r.conditions()) {
             raw(s, "<gray>  si <white>" + esc(c.source()) + (c.deny().isEmpty() ? "" : "</white> <dark_gray>·</dark_gray> deny: " + c.deny().size() + " acciones"));
         }
+        if (r.state() != null) for (String line : StateService.deps(r.state())) raw(s, "<gray>" + esc(line));
         if (r.budgetNanos() > 0) raw(s, "<gray>Presupuesto: <white>" + Values.formatNumber(r.budgetNanos() / 1e6) + " ms");
         if (r.cooldownMs() > 0) raw(s, "<gray>Enfriamiento: <white>" + Durations.format(r.cooldownMs()) + (r.cooldownGlobal() ? " (global)" : " (por jugador)"));
         if (r.limit() > 0) raw(s, "<gray>Límite: <white>" + r.limit() + " usos " + (r.limitGlobal() ? "globales" : "por jugador") + ", reinicio " + r.limitReset().name().toLowerCase(Locale.ROOT));
@@ -216,6 +221,7 @@ public final class OmniCommand implements TabExecutor {
         // Re-registrar: una regla activada necesita su oyente, una desactivada lo libera (H6 CA5).
         plugin.listeners().register(plugin.rules().all(), new Problems());
         plugin.timers().start();
+        plugin.states().register(plugin.rules().all());
         // Solo registra si cambió el conjunto de comandos; si no, como mucho reenvía el árbol una vez (spec 005).
         plugin.ruleCommands().refresh();
         send(s, on ? "rule-enabled" : "rule-disabled", "rule", r.name());
@@ -335,6 +341,7 @@ public final class OmniCommand implements TabExecutor {
                 Object v = Expression.compile(src).eval(senderContext(s));
                 h.vars().put(n, DataStore.storable(v));
                 h.markDirty();
+                plugin.states().varChanged(global ? Scope.GLOBAL : Scope.PLAYER, id, n);
                 if (!loaded) plugin.data().writeOffline(h);
                 plugin.getLogger().info(s.getName() + " asignó " + who + "." + n + " = " + Values.str(v));
                 send(s, "var-set", "target", who, "name", n, "value", Node.show(v));
@@ -343,6 +350,7 @@ public final class OmniCommand implements TabExecutor {
                 String n = need(a, 2, "nombre");
                 boolean had = h.vars().remove(n) != null;
                 h.markDirty();
+                plugin.states().varChanged(global ? Scope.GLOBAL : Scope.PLAYER, id, n);
                 if (!loaded) plugin.data().writeOffline(h);
                 plugin.getLogger().info(s.getName() + " borró " + who + "." + n);
                 send(s, had ? "var-deleted" : "var-missing", "target", who, "name", n);
@@ -369,7 +377,7 @@ public final class OmniCommand implements TabExecutor {
 
     private void stats(CommandSender s) {
         raw(s, "<gold>Rendimiento</gold> <gray>· " + plugin.listeners().count() + " oyentes · " + plugin.timers().count()
-                + " temporizadores · " + plugin.ruleCommands().count() + " comandos · " + plugin.data().loadedPlayers().size() + " jugadores en memoria");
+                + " temporizadores · " + plugin.states().listenerCount() + " oyentes y " + plugin.states().taskCount() + " tareas de estado · " + plugin.ruleCommands().count() + " comandos · " + plugin.data().loadedPlayers().size() + " jugadores en memoria");
         for (String l : plugin.listeners().describe()) raw(s, "<dark_gray>  " + esc(l));
         List<Rule> rs = new ArrayList<>(plugin.rules().all());
         rs.sort((x, y) -> Double.compare(y.stats().totalMillis(), x.stats().totalMillis()));
@@ -382,6 +390,8 @@ public final class OmniCommand implements TabExecutor {
                     + (st.errorCount() > 0 ? "<red>" + st.errorCount() + " errores</red> · " : "")
                     + "prom <white>" + Values.formatNumber(Values.round(st.avgMillis(), 3)) + " ms</white> · máx " + Values.formatNumber(Values.round(st.maxMillis(), 3)) + " ms");
         }
+        plugin.states().counters().forEach((name, c) -> raw(s, "<white>" + esc(name) + "</white> <gray>· estado · " + c[0] + " revisiones · "
+                + c[1] + " cambios · " + c[2] + " dentro"));
     }
 
     private void triggers(CommandSender s) {
@@ -448,7 +458,16 @@ public final class OmniCommand implements TabExecutor {
         raw(s, "<gold>Revisión de <white>" + esc(r.name()) + "</white></gold> <gray>· " + esc(r.trigger().name())
                 + (p == null ? " · sin jugador" : " · para " + esc(p.getName())) + (r.enabled() ? "" : " · <red>regla inactiva</red>")
                 + " <dark_gray>(no se ejecuta nada)");
-        for (String line : plugin.rules().check(r, playerContext(s, p))) traceLine(s, line);
+        List<String> lines = r.state() != null ? plugin.states().check(r, playerContext(s, p)) : plugin.rules().check(r, playerContext(s, p));
+        for (String line : lines) traceLine(s, line);
+    }
+
+    /** /omni state <regla> (spec 008, H5 CA4). */
+    private void state(CommandSender s, String[] a) {
+        Rule r = rule(s, a, 0);
+        if (r.state() == null) throw new IllegalArgumentException("'" + r.name() + "' no es una regla con trigger: state");
+        raw(s, "<gold>Estado de <white>" + esc(r.name()) + "</white></gold>");
+        for (String line : plugin.states().describe(r)) traceLine(s, line);
     }
 
     /** /omni run (H4): dispara la regla para un jugador, o la simula con --simular. */
@@ -651,6 +670,9 @@ public final class OmniCommand implements TabExecutor {
                     if (i == 1) opts.addAll(plugin.rules().names());
                     if (i == 2) Bukkit.getOnlinePlayers().forEach(p -> opts.add(p.getName()));
                     if (i == 3 && sub.equals("run")) opts.add("--simular");
+                }
+                case "state" -> {
+                    if (i == 1) for (Rule r : plugin.rules().byKind(TriggerType.Kind.STATE)) opts.add(r.name());
                 }
                 case "cpu" -> {
                     if (i == 1) opts.addAll(List.of("on", "off", "reset"));

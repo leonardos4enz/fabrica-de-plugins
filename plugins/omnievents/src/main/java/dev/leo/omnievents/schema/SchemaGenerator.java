@@ -78,6 +78,7 @@ public final class SchemaGenerator {
         conditional.add(requires(List.of("clock"), map("required", List.of("at"))));
         conditional.add(requires(List.of("command"), map("required", List.of("command"))));
         conditional.add(requires(List.of("custom"), map("required", List.of("event"))));
+        conditional.add(requires(List.of("state"), map("required", List.of("when"))));
         return map("type", "object", "description", "Una regla: cuando pase trigger, si se cumplen conditions, corre actions.",
                 "properties", props, "additionalProperties", false,
                 "anyOf", List.of(map("required", List.of("trigger")), map("required", List.of("type"))),

@@ -25,6 +25,7 @@ permissions:
       omnievents.command.debug: true
       omnievents.command.check: true
       omnievents.command.run: true
+      omnievents.command.state: true
       omnievents.command.eval: true
       omnievents.command.call: true
       omnievents.command.var: true
@@ -48,6 +49,7 @@ permissions:
   omnievents.command.debug: {default: op}
   omnievents.command.check: {default: op}
   omnievents.command.run: {default: op}
+  omnievents.command.state: {default: op}
   omnievents.command.eval: {default: op}
   omnievents.command.call: {default: op}
   omnievents.command.var: {default: op}

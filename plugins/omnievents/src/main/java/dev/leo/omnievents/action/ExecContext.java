@@ -174,7 +174,12 @@ public final class ExecContext implements EvalContext {
         Map<String, Object> target = holder == null ? locals : holder.vars();
         if (value == null) target.remove(name);
         else target.put(name, DataStore.storable(value));
-        if (holder != null) holder.markDirty();
+        if (holder != null) {
+            holder.markDirty();
+            // Spec 008: los estados que leen esta variable se revisan al final del tick.
+            Player p = scope == Scope.PLAYER ? playerOrNull() : null;
+            plugin.states().varChanged(scope, p == null ? null : p.getUniqueId(), name);
+        }
     }
 
     @Override
@@ -190,6 +195,7 @@ public final class ExecContext implements EvalContext {
         return switch (name) {
             case "cooldown" -> plugin.rules().cooldownLeftSeconds(String.valueOf(args[0]), id);
             case "uses" -> (double) plugin.rules().uses(String.valueOf(args[0]), id);
+            case "in_state" -> plugin.states().isIn(String.valueOf(args[0]), id);
             case "pvar_of" -> {
                 Object target = Values.raw(args[0]);
                 OfflinePlayer op = target instanceof OfflinePlayer o ? o : Bukkit.getPlayerExact(Values.str(target));

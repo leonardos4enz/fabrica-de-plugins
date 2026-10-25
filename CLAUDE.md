@@ -75,6 +75,8 @@ con `--release 21`.
 - `/omni debug` y `/omni check` intercalan los valores en cada condición (`player.level (10) >= 3 → true`): un
   escenario que lee esas líneas busca ese texto, no la expresión sola (006 F-03). Otro proyecto de la máquina puede
   ocupar el puerto 25599 de la suite: mirar `netstat -ano | grep :25599` antes de culpar al plugin (006).
+- En 26.x las reglas de juego van en snake_case (`natural_health_regeneration`, `advance_time`…): los nombres de
+  1.21.4 fallan con «Incorrect argument» y el servidor sigue como si nada. La suite manda las dos formas (008 F-02).
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

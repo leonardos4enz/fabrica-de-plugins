@@ -74,10 +74,16 @@ public final class RuleOptions {
         add("budget", Kind.BUDGET, "Presupuesto de tiempo por disparo: 0.5ms o 200us. Avisa en consola si el promedio reciente lo pasa.");
         only("timer", "every", Kind.DURATION, "Cada cuánto corre el timer (10s, 5m; mínimo 1 tick).");
         only("timer", "repetitive_time", Kind.INTEGER, "Ticks entre ejecuciones (forma de ConditionalEvents; mejor every).");
-        only("timer", "per_player", Kind.BOOLEAN, "true (por defecto): una ejecución por cada jugador conectado; false: una sola, sin jugador.");
+        only("timer, state", "per_player", Kind.BOOLEAN, "true (por defecto): una ejecución (o un estado) por cada jugador conectado; false: una sola, sin jugador.");
         only("clock", "at", Kind.TIMES, "Hora u horas del día, HH:mm (\"08:00\" o [\"08:00\", \"20:30\"]).");
         only("clock", "timezone", Kind.TEXT, "Zona horaria de at (p. ej. America/Mexico_City); por defecto, la del servidor.");
         only("command", "command", Kind.COMMAND, "El comando real que registra la regla: un nombre, o un mapa con name, aliases, permission, description, usage y tab.");
+        only("state", "when", Kind.CONDITIONS, "El estado: una expresión o una lista de condiciones (todas). Se revisa solo cuando puede haber cambiado.");
+        only("state", "on_enter", Kind.ACTIONS, "Acciones cuando when pasa a ser verdad (una vez; pasan por permiso, límite y enfriamiento).");
+        only("state", "on_exit", Kind.ACTIONS, "Acciones cuando when deja de ser verdad, si corrió su on_enter (var.state_seconds: cuánto duró).");
+        only("state", "check_every", Kind.DURATION, "Respaldo por intervalo para lo que no se puede deducir (placeholders, perm(), la hora): 5s, 1m.");
+        only("state", "watch", Kind.TEXTS, "Disparadores extra que hacen revisar el estado (p. ej. [player_interact]).");
+        only("state", "initial", Kind.ENUM, "Al entrar al servidor con el estado ya verdadero: enter (corre on_enter, por defecto) o silent.", "enter", "silent");
         only("custom", "event", Kind.TEXT, "Nombre completo de la clase del evento (p. ej. org.bukkit.event.player.PlayerEggThrowEvent).");
         only("custom", "player_from", Kind.TEXT, "Ruta al jugador dentro del evento (p. ej. getPlayer o entity); por defecto player o entity.");
         only("player_move", "move_mode", Kind.ENUM, "Cuándo cuenta un movimiento: block (cambia de bloque, por defecto), chunk o any.", "block", "chunk", "any");

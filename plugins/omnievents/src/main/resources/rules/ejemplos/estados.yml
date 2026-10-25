@@ -1,0 +1,64 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
+# Ejemplos de OmniEvents: disparador de estado (spec 008).
+# - trigger: state corre on_enter cuando when PASA a ser verdad y on_exit cuando deja de serlo (una vez, sin repetir).
+# - Sin sondeo: el motor deduce de qué eventos depende when (vida → daño y curación; ubicación → moverse de bloque;
+#   pvar/gvar → cuando una acción las cambia) y solo lo revisa ahí. Míralo con /omni info vida_baja.
+# - Lo que no se puede deducir (placeholders, perm(), la hora) pide check_every.
+# - in_state('regla') pregunta el estado desde cualquier regla. /omni state <regla> dice quién está dentro.
+
+vida_baja:
+  trigger: state
+  when: "player.health <= 6"
+  cooldown: 20s                      # frena on_enter; si no corrió, tampoco corre su on_exit
+  on_enter:
+    - title: "<red>¡Peligro!;<gray>Te quedan {round(player.health / 2, 1)} corazones"
+    - sound: BLOCK_NOTE_BLOCK_BASS;1;0.6
+  on_exit:
+    - actionbar: "<green>A salvo tras {var.state_seconds}s"
+
+en_la_plaza:
+  trigger: state
+  when: "in_area('world', 100, -64, 100, 120, 320, 120)"
+  on_enter:
+    - actionbar: "<gold>Entraste a la plaza"
+  on_exit:
+    - actionbar: "<gray>Saliste de la plaza"
+
+racha_de_fuego:
+  trigger: state
+  when: "default(pvar.racha, 0) >= 10"      # se revisa cuando una acción o /omni var cambian pvar.racha
+  on_enter:
+    - broadcast: "<gold>{player.name}</gold> <red>está en racha de fuego"
+  on_exit:
+    - message: "<gray>Se acabó tu racha."
+
+de_noche:
+  trigger: state
+  when: "!world.day"                 # la hora del mundo no tiene evento: se revisa cada 10 s
+  check_every: 10s
+  initial: silent                    # al entrar de noche no avisa; solo cuando anochece
+  on_enter:
+    - actionbar: "<dark_aqua>Anochece: cuidado con los monstruos"
+
+evento_activo:
+  trigger: state
+  per_player: false                  # un estado para todo el servidor, sin jugador
+  when: "gvar.evento == true && online >= 2"
+  on_enter:
+    - broadcast: "<gold>¡Empieza el evento!"
+  on_exit:
+    - broadcast: "<gray>Terminó el evento (duró {var.state_seconds}s)."
+
+curar_si_peligro:
+  trigger: command
+  command:
+    name: curarme
+    description: Te cura solo si estás en peligro
+  conditions:
+    - expr: "in_state('vida_baja')"
+      deny:
+        - message: "<gray>No estás en peligro."
+  cooldown: 5m
+  actions:
+    - effect: REGENERATION;5;1
+    - message: "<green>Te estás curando."

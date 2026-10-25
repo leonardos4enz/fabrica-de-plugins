@@ -53,7 +53,13 @@ export default {
   preparar: [
     'gamerule doDaylightCycle false', 'gamerule doWeatherCycle false', 'gamerule doMobSpawning false',
     'gamerule naturalRegeneration false', 'gamerule doImmediateRespawn true', 'gamerule sendCommandFeedback true',
-    'gamerule spawnRadius 0', 'setworldspawn 12 -60 12', 'time set noon', 'weather clear', 'difficulty easy'
+    'gamerule spawnRadius 0',
+    // Regresión (spec 008, F-02): en 26.x las reglas de juego se llaman en snake_case y las de arriba fallan con
+    // «Incorrect argument» (el jugador se regeneraba solo). Cada versión rechaza los nombres de la otra, sin efecto.
+    'gamerule advance_time false', 'gamerule advance_weather false', 'gamerule spawn_mobs false',
+    'gamerule natural_health_regeneration false', 'gamerule immediate_respawn true', 'gamerule send_command_feedback true',
+    'gamerule respawn_radius 0',
+    'setworldspawn 12 -60 12', 'time set noon', 'weather clear', 'difficulty easy'
   ],
 
   /** Comandos de consola al terminar, antes de apagar: el servidor de prueba queda como estaba (H1 CA4). */
@@ -562,6 +568,158 @@ export default {
         await srv.esperarLog(/e2e_presupuesto · [\d.]+ ms de 0\.001 ms · ✘ lo pasa/, { desde: mc, timeoutMs: 2000 })
         await srv.consola('omni cpu off', { espera: /Perfilador apagado/ })
         await srv.consola('omni cpu reset', { espera: /Perfilador reiniciado/ })
+      }
+    },
+    {
+      id: '008 H1 CA1 · H1 CA2 · H1 CA4 · H2 CA1 · H2 CA2',
+      nombre: 'state: la vida baja dispara on_enter una vez (sin repetir con más daño) y la curación on_exit con los segundos',
+      timeoutMs: 30000,
+      async fn (ctx) {
+        const { srv } = ctx
+        await prepararJugador(ctx, ANA)
+        const ana = ctx.bots[ANA]
+        await srv.consola(`omni var set ${ANA} e2e_estado_on 1`)
+        await srv.sincronizar()
+        let m = ana.marca()
+        await srv.consola(`damage ${ANA} 12 minecraft:generic`)
+        await ana.esperar('chat', /^e2e vida entra 8$/, { desde: m })
+        await dormir(800) // pasa la invulnerabilidad tras un golpe
+        const m2 = ana.marca()
+        await srv.consola(`damage ${ANA} 1 minecraft:generic`)
+        await ana.hasta('perder otro medio corazón', b => b.health <= 7.5)
+        await ana.nunca('chat', /^e2e vida entra/, { desde: m2, ms: 800 })
+        m = ana.marca()
+        await srv.consola(`effect give ${ANA} instant_health 1 10 true`)
+        await ana.esperar('chat', /^e2e vida sale tras \d+(\.\d)?s$/, { desde: m })
+        await srv.consola(`omni var del ${ANA} e2e_estado_on`)
+      }
+    },
+    {
+      id: '008 H2 CA1 · H3 CA1',
+      nombre: 'state: entrar y salir de una zona (in_area) con teletransporte',
+      async fn (ctx) {
+        const { srv } = ctx
+        const ana = ctx.bots[ANA]
+        let m = ana.marca()
+        await srv.consola(`tp ${ANA} 32 -60 32`)
+        await ana.esperar('chat', /^e2e zona entra$/, { desde: m })
+        m = ana.marca()
+        await srv.consola(`tp ${ANA} ${PUNTO}`)
+        await ana.esperar('chat', /^e2e zona sale$/, { desde: m })
+      }
+    },
+    {
+      id: '008 H2 CA1 · H4 CA1 · H4 CA2 · H5 CA1 · H5 CA4',
+      nombre: 'state: pvar por acción y por /omni var; debug, check, info, /omni state e in_state',
+      timeoutMs: 25000,
+      async fn (ctx) {
+        const { srv } = ctx
+        const ana = ctx.bots[ANA]
+        await srv.consola(`omni var del ${ANA} e2e_nivel`)
+        await srv.consola('omni info e2e_estado_var', { espera: /Depende de: pvar\.e2e_nivel/ })
+        await srv.consola(`omni check e2e_estado_var ${ANA}`, { espera: /→ correría: nada \(el estado no cambia\)/ })
+        await srv.consola('omni debug e2e_estado_var', { espera: /Depurando e2e_estado_var/ })
+        let m = ana.marca()
+        const ml = srv.marca()
+        await srv.consola(`omni call e2e_estado_subir ${ANA}`)
+        await ana.esperar('chat', /^e2e var entra$/, { desde: m })
+        await srv.esperarLog(/✔ Ana_e2e entra en el estado → on_enter/, { desde: ml })
+        await srv.consola('omni debug off', { espera: /Depuración apagada/ })
+        m = ana.marca()
+        await srv.consola(`omni call e2e_estado_pregunta ${ANA}`)
+        await ana.esperar('chat', /^e2e in_state true$/, { desde: m })
+        await srv.consola('omni state e2e_estado_var', { espera: /Ana_e2e desde hace/ })
+        await srv.consola(`omni check e2e_estado_var ${ANA}`, { espera: /estado guardado: dentro desde hace/ })
+        m = ana.marca()
+        await srv.consola(`omni var set ${ANA} e2e_nivel 0`)
+        await ana.esperar('chat', /^e2e var sale$/, { desde: m })
+        m = ana.marca()
+        await srv.consola(`omni call e2e_estado_pregunta ${ANA}`)
+        await ana.esperar('chat', /^e2e in_state false$/, { desde: m })
+        await srv.consola('omni state e2e_estado_var', { espera: /0 jugador\(es\) en el estado/ })
+      }
+    },
+    {
+      id: '008 H2 CA3',
+      nombre: 'state con check_every: la noche (world.day) se nota sin evento',
+      timeoutMs: 20000,
+      async fn (ctx) {
+        const { srv } = ctx
+        const ana = ctx.bots[ANA]
+        await srv.consola(`omni var set ${ANA} e2e_estado_on 1`)
+        let m = ana.marca()
+        try {
+          await srv.consola('time set midnight')
+          await ana.esperar('chat', /^e2e noche entra$/, { desde: m, timeoutMs: 4000 })
+          m = ana.marca()
+        } finally {
+          await srv.consola('time set noon')
+        }
+        await ana.esperar('chat', /^e2e noche sale$/, { desde: m, timeoutMs: 4000 })
+        await srv.consola(`omni var del ${ANA} e2e_estado_on`)
+      }
+    },
+    {
+      id: '008 H6 CA1 · H6 CA2 · H5 CA4',
+      nombre: 'state del servidor (per_player: false) con gvar: on_enter y on_exit una vez para todos',
+      async fn (ctx) {
+        const { srv } = ctx
+        const ana = ctx.bots[ANA]
+        const beto = ctx.bots[BETO]
+        let ma = ana.marca()
+        let mb = beto.marca()
+        await srv.consola('omni var set global e2e_evento 1')
+        await ana.esperar('chat', /^e2e servidor entra$/, { desde: ma })
+        await beto.esperar('chat', /^e2e servidor entra$/, { desde: mb })
+        await srv.consola('omni state e2e_estado_servidor', { espera: /estado del servidor activo desde hace/ })
+        ma = ana.marca()
+        await srv.consola('omni var set global e2e_evento 1') // mismo valor: no se repite
+        await ana.nunca('chat', /^e2e servidor entra$/, { desde: ma, ms: 600 })
+        ma = ana.marca()
+        mb = beto.marca()
+        await srv.consola('omni var del global e2e_evento')
+        await ana.esperar('chat', /^e2e servidor sale$/, { desde: ma })
+        await beto.esperar('chat', /^e2e servidor sale$/, { desde: mb })
+      }
+    },
+    {
+      id: '008 H1 CA3',
+      nombre: 'state con cooldown: si on_enter no corre, su on_exit tampoco (van en pareja)',
+      async fn (ctx) {
+        const { srv } = ctx
+        const ana = ctx.bots[ANA]
+        let m = ana.marca()
+        await srv.consola(`omni var set ${ANA} e2e_pareja 1`)
+        await ana.esperar('chat', /^e2e pareja entra$/, { desde: m })
+        m = ana.marca()
+        await srv.consola(`omni var set ${ANA} e2e_pareja 0`)
+        await ana.esperar('chat', /^e2e pareja sale$/, { desde: m })
+        m = ana.marca()
+        await srv.consola(`omni var set ${ANA} e2e_pareja 1`) // en enfriamiento: on_enter no corre
+        await srv.sincronizar()
+        await srv.consola(`omni var set ${ANA} e2e_pareja 0`)
+        await ana.nunca('chat', /^e2e pareja (entra|sale)$/, { desde: m, ms: 1000 })
+        await srv.consola(`omni var del ${ANA} e2e_pareja`)
+      }
+    },
+    {
+      id: '008 H3 CA1',
+      nombre: 'state al entrar al servidor: on_enter si ya es verdad; initial: silent no avisa',
+      timeoutMs: 30000,
+      async fn (ctx) {
+        const { srv } = ctx
+        let beto = ctx.bots[BETO]
+        const m = beto.marca()
+        await srv.consola(`omni var set ${BETO} e2e_inicial 1`)
+        await beto.esperar('chat', /^e2e inicial entra$/, { desde: m })
+        await beto.esperar('chat', /^e2e silencio entra$/, { desde: m })
+        await ctx.salir(BETO)
+        await dormir(1000)
+        beto = await ctx.entrar(BETO)
+        await beto.esperar('chat', /^e2e inicial entra$/, { timeoutMs: 8000 })
+        await beto.nunca('chat', /^e2e silencio entra$/, { desde: 0, ms: 1000 })
+        await srv.consola(`omni var del ${BETO} e2e_inicial`)
+        await srv.consola(`op ${BETO}`, { espera: /Made Beto_e2e a server operator|Nothing changed/ })
       }
     },
     {

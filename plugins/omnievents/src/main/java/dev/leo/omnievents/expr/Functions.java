@@ -173,6 +173,7 @@ public final class Functions {
         // Datos de OmniEvents
         doc("cooldown(regla)", "Segundos de enfriamiento que le quedan al jugador en esa regla.", 1, 1, (c, a) -> c.service("cooldown", s(a, 0)));
         doc("uses(regla)", "Usos que lleva el jugador en esa regla.", 1, 1, (c, a) -> c.service("uses", s(a, 0)));
+        doc("in_state(regla)", "true si el jugador está en el estado de esa regla state (o si el estado del servidor está activo).", 1, 1, (c, a) -> c.service("in_state", s(a, 0)));
         doc("pvar_of(jugador, nombre)", "Variable pvar de otro jugador (por nombre).", 2, 2, (c, a) -> c.service("pvar_of", a[0], s(a, 1)));
     }
 

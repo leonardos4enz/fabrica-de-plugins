@@ -40,6 +40,7 @@ public final class Rule {
     final ConfigurationSection section;
     final List<String> declaredArgs;
     final long budgetNanos;
+    final StateSpec state;
     private final Stats stats = new Stats();
     private final Budget budget = new Budget();
 
@@ -47,7 +48,7 @@ public final class Rule {
          Set<String> worlds, String permission, String bypassPermission, List<Condition> conditions, long cooldownMs,
          boolean cooldownGlobal, int limit, boolean limitGlobal, Reset limitReset, long limitResetMs,
          List<ActionNode> actions, List<ActionNode> elseActions, List<ActionNode> onCooldown, List<ActionNode> onLimit,
-         Predicate<Event> filter, ConfigurationSection section, List<String> declaredArgs, long budgetNanos) {
+         Predicate<Event> filter, ConfigurationSection section, List<String> declaredArgs, long budgetNanos, StateSpec state) {
         this.name = name;
         this.file = file;
         this.trigger = trigger;
@@ -72,6 +73,7 @@ public final class Rule {
         this.section = section;
         this.declaredArgs = declaredArgs;
         this.budgetNanos = budgetNanos;
+        this.state = state;
     }
 
     public String name() {
@@ -102,6 +104,11 @@ public final class Rule {
         return ignoreCancelled;
     }
 
+    /** Mundos de la regla, en minúsculas (vacío = todos). */
+    public Set<String> worlds() {
+        return worlds;
+    }
+
     public List<Condition> conditions() {
         return conditions;
     }
@@ -129,6 +136,7 @@ public final class Rule {
     public int actionCount() {
         int n = actions.size() + elseActions.size() + onCooldown.size() + onLimit.size();
         for (Condition c : conditions) n += c.deny().size();
+        if (state != null) n += state.onExit().size();
         return n;
     }
 
@@ -147,6 +155,11 @@ public final class Rule {
     /** Presupuesto declarado con budget (spec 006, H7), en nanosegundos; 0 = sin presupuesto. */
     public long budgetNanos() {
         return budgetNanos;
+    }
+
+    /** Lo propio de una regla state (spec 008); null en las demás. */
+    public StateSpec state() {
+        return state;
     }
 
     public Budget budget() {

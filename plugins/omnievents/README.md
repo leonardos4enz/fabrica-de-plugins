@@ -3,8 +3,9 @@
 Eventos condicionales para **Paper 1.21.4 y 26.1** (ver [Compatibilidad](#compatibilidad)): «cuando pase X, si se cumple Y, haz Z», declarado en YAML.
 Es la versión propia de la fábrica de *ConditionalEvents*, con un lenguaje de expresiones real, control de flujo,
 variables persistentes y herramientas de diagnóstico. Specs: [001](../../docs/sdd/specs/001-omnievents-nucleo/spec.md) (núcleo) y
-[006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/spec.md) (herramientas de autor) y
-[007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/spec.md) (esquema para el editor y referencia generada).
+[006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/spec.md) (herramientas de autor),
+[007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/spec.md) (esquema para el editor y referencia generada) y
+[008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/spec.md) (disparador de estado, sin sondeo).
 
 **[Referencia completa](../../docs/omnievents/referencia.md)**: cada opción, disparador, acción y función, generada del
 código (nunca queda desactualizada). **[Autocompletado en VS Code](#editor-autocompletado-y-errores-en-vs-code)** con
@@ -19,8 +20,8 @@ Minecraft 1.21.4 ([spec 004](../../docs/sdd/specs/004-fabrica-capturas-en-juego/
 ## Compatibilidad
 | Servidor | Estado | Evidencia |
 |---|---|---|
-| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.2.0) | Compuertas 1, 2 y 3a: 73 unitarias, servidor real (con `/omni schema`) y 27/27 escenarios en el juego dos veces (2026-10-24, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md) y [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md)) |
-| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.2.0) | 27/27 escenarios en el juego dos veces con el mismo jar (2026-10-24, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md) y [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md)) |
+| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.3.0) | Compuertas 1, 2 y 3a: 94 unitarias, servidor real y 34/34 escenarios en el juego dos veces (2026-10-25, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md) y [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md)) |
+| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.3.0) | 34/34 escenarios en el juego dos veces con el mismo jar (2026-10-25, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md) y [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md)) |
 | Paper 1.21.5 – 1.21.11 | Sin verificar | Debería funcionar (misma API, sin NMS), pero no se probó |
 | Paper 26.2 y 26.3 | Sin verificar | El bot de pruebas (mineflayer 4.39) llega hasta 26.1 |
 | Paper 1.21.3 o anterior | No soportada | Se compila contra la API de 1.21.4 |
@@ -101,6 +102,7 @@ Imágenes de `cooldown`, `on_cooldown`, `limit` y `on_limit`: [galería](../../d
 | `event`, `player_from` | Para `custom`: clase del evento y ruta al jugador |
 | `move_mode` | Para `player_move`: `block` (defecto), `chunk` o `any` |
 | `args` | Para `call`: parámetros (llegan como `var.<nombre>`) |
+| `when`, `on_enter`, `on_exit`, `check_every`, `watch`, `initial`, `per_player` | Para `state` ([abajo](#disparador-de-estado-trigger-state)) |
 | `budget` | Presupuesto de tiempo: `0.5ms` o `200us`; avisa en consola si el promedio reciente lo pasa ([abajo](#rendimiento-omni-cpu-y-budget)) |
 
 ## Condiciones con deny y «N de M»
@@ -127,6 +129,48 @@ tienda_espada:
 `any` debe ser un entero entre 1 y el número de condiciones de `of`; un `deny` dentro de `of` no se usa (aviso al
 cargar).
 
+## Disparador de estado (`trigger: state`)
+«Cuando X **pasa a ser** verdad» en lugar de «cada X segundos, revisa». `on_enter` corre una vez cuando `when` pasa a
+ser verdad para un jugador, y `on_exit` una vez cuando deja de serlo; mientras no cambie, no corre nada. No hace
+falta una variable de «ya avisé». Ejemplos completos: [`rules/ejemplos/estados.yml`](src/main/resources/rules/ejemplos/estados.yml).
+```yaml
+vida_baja:
+  trigger: state
+  when: "player.health <= 6"          # o una lista de condiciones (todas)
+  cooldown: 20s                       # frena on_enter, y entonces tampoco corre su on_exit
+  on_enter:
+    - title: "<red>¡Peligro!;<gray>Busca refugio"
+  on_exit:
+    - actionbar: "<green>A salvo tras {var.state_seconds}s"
+```
+- **Sin sondeo.** Al cargar, el motor deduce de qué depende `when` y solo lo revisa con esos eventos: vida → daño,
+  curación y reaparición; hambre; ubicación, bloque, bioma, mundo e `in_area()` → moverse **de bloque**,
+  teletransporte y cambio de mundo; nivel y experiencia; modo de juego; agacharse, correr, volar; armadura; ítem en
+  mano e inventario (`has_item()`); conectados (`online`); clima (`world.storm`); `pvar.x` y `gvar.x` cuando una
+  acción o `/omni var` las cambian; e `in_state('otra')` cuando cambia la otra. Varios eventos del mismo jugador en
+  un tick se juntan en **una** revisión, al final del tick (el daño ya restó la vida). `/omni info vida_baja` dice
+  qué dedujo y qué eventos escucha.
+- **Lo que no se puede deducir** (placeholders, `perm()`, la hora, `world.time`/`world.day`, `player.op`, métodos,
+  funciones de otros plugins) hace que la regla **no cargue** hasta que declares `check_every: 5s`: el costo del
+  sondeo queda a la vista. `watch: [player_interact]` agrega disparadores a los deducidos. El azar (`chance`,
+  `random`) en `when` es error.
+- Los cambios hechos por comandos de otros plugins o por `/give`, `/clear` no lanzan eventos: para el inventario
+  y lo que cambie así, agrega `check_every` o `watch`.
+- **Al entrar al servidor** con el estado ya verdadero, corre `on_enter`; `initial: silent` no avisa (y entonces
+  tampoco su `on_exit`). Al salir se olvida, sin `on_exit`. `/omni reload` conserva el estado de las reglas cuyo
+  `when`, `worlds` y `per_player` no cambiaron; una regla nueva o cambiada toma el estado actual sin disparar.
+- `permission`, `bypass_permission`, `limit` y `cooldown` frenan `on_enter` como en cualquier regla; `on_exit`
+  solo corre si corrió el `on_enter` de esa entrada. `worlds` es parte del estado (fuera de esos mundos es falso).
+- **Estado del servidor:** `per_player: false` lleva un solo estado sin jugador (`gvar`, `online`, clima o
+  `in_state` de otro estado del servidor), p. ej. `when: "gvar.evento == true && online >= 2"` con
+  `on_enter: [broadcast: ...]`. Toma su valor al cargar, sin disparar.
+- **Desde otras reglas:** `in_state('vida_baja')` (y `%omni_state_vida_baja%`) dice si el jugador está en el estado.
+  Un nombre fijo que no es una regla `state` es error al cargar.
+- **Diagnóstico:** `/omni debug vida_baja` muestra cada entrada o salida con los valores de `when`; `/omni check
+  vida_baja Ana` da el valor ahora, el estado guardado y qué correría; `/omni state vida_baja` lista quién está dentro
+  y desde cuándo; `/omni stats` cuenta revisiones y cambios. `/omni run vida_baja Ana [--simular]` corre su `on_enter`.
+- El estado vive en memoria (una entrada por jugador dentro): no se guarda en disco ni cambia tus datos.
+
 ## Expresiones
 - Lógica: `&&` `and`, `||` `or`, `!` `not`, paréntesis, `c ? a : b`.
 - Comparación: `==` `!=` `<` `<=` `>` `>=`, `~=` (igual sin mayúsculas), `contains`, `startsWith`, `endsWith`,
@@ -141,7 +185,7 @@ cargar).
   `lower` `upper` `trim` `replace` `substr` `split` `join` `str` `num` `int` `bool` `strip` `format` `default(a,b)`
   `if(c,a,b)` `papi(t[,jugador])` `online(n)` `player(n)` `players()` `perm(p)` `now()` `hour()` `minute()`
   `weekday()` `date(patrón)` `cooldown(regla)` `uses(regla)` `distance(a,b)` `in_area(mundo,x1,y1,z1,x2,y2,z2)`
-  `has_item(material[,n])` `pvar_of(jugador,nombre)` `size(x)`.
+  `has_item(material[,n])` `pvar_of(jugador,nombre)` `in_state(regla)` `size(x)`.
 
 Firma y descripción de cada función: [referencia](../../docs/omnievents/referencia.md#funciones). Prueba cualquier expresión en el juego: `/omni eval player.location.biome`.
 
@@ -190,14 +234,14 @@ Descripción, forma del valor, claves y un ejemplo de cada acción: [referencia]
 | [Ítems](../../docs/omnievents/galeria.md#disparadores--ítems) | `player_interact` `item_interact` `item_consume` `item_craft` `item_drop` `item_pickup` `item_held` `item_enchant` `item_break` |
 | [Inventario](../../docs/omnievents/galeria.md#disparadores--inventario) | `inventory_open` `inventory_close` `inventory_click` (`slot`, `click`, `title`, `cursor`) |
 | [Entidades](../../docs/omnievents/galeria.md#disparadores--entidades) | `entity_interact` `entity_spawn` `entity_death` |
-| [Servidor](../../docs/omnievents/galeria.md#disparadores--servidor) | `console_command` `server_start` `server_stop` `timer` `clock` `call` `command` `custom` |
+| [Servidor](../../docs/omnievents/galeria.md#disparadores--servidor) | `console_command` `server_start` `server_stop` `timer` `clock` `call` `command` `custom` `state` ([arriba](#disparador-de-estado-trigger-state)) |
 
 Siempre disponibles: `player`, `event`, `world`, `location`, `item` (mano principal), `server`, `online`, `rule`.
 Las raíces de cada disparador y si se puede cancelar: [referencia](../../docs/omnievents/referencia.md#disparadores).
 
 ## Comandos (`/omni`, alias `/oe`)
 `reload` · `validate` · `list [filtro]` · `info <regla>` · `enable|disable <regla>` · `debug <regla|all|off|export>` ·
-`check <regla> [jugador]` · `run <regla> <jugador> [--simular]` · `cpu [on|off|reset]` ·
+`check <regla> [jugador]` · `run <regla> <jugador> [--simular]` · `state <regla>` · `cpu [on|off|reset]` ·
 `eval <expr>` · `call <regla> [jugador] [k=v…]` · `var get|set|del|list <jugador|global> [nombre] [valor]` ·
 `cooldown reset <regla> [jugador|global]` · `limit reset <regla> [jugador|global]` · `stats` · `triggers` · `actions` ·
 `item save|delete|list` · `import conditionalevents` · `selftest` · `schema` (esquema JSON y referencia, [arriba](#editor-autocompletado-y-errores-en-vs-code)).
@@ -224,7 +268,8 @@ autocompletado y deja de funcionar («comando desconocido») sin desregistrarse,
 - `/omni debug export`: guarda las últimas trazas de `debug` y simulaciones en `plugins/OmniEvents/trazas/<fecha-hora>.txt`,
   con las versiones, los problemas de la última carga y el YAML de cada regla que aparece. Sin red: compártelo tú si
   pides ayuda (revísalo antes: lleva nombres y mensajes de jugadores).
-- `/omni stats`: disparos, aciertos, errores y tiempo promedio y máximo por regla; oyentes y tareas activos.
+- `/omni stats`: disparos, aciertos, errores y tiempo promedio y máximo por regla; oyentes y tareas activos (también
+  los de estado), y revisiones, cambios y jugadores dentro de cada regla `state`.
 - Los errores de configuración dicen archivo, ruta y causa, con «¿quisiste decir…?».
 
 ![Salida de /omni debug al romper una mena de diamante: cada condición con sus valores, la rama y cada acción](../../docs/img/omnievents/comando-debug.png)
@@ -249,7 +294,7 @@ debug:
 ```
 
 ## PlaceholderAPI
-`%omni_var_<n>%` · `%omni_gvar_<n>%` · `%omni_cooldown_<regla>%` · `%omni_uses_<regla>%`.
+`%omni_var_<n>%` · `%omni_gvar_<n>%` · `%omni_cooldown_<regla>%` · `%omni_uses_<regla>%` · `%omni_state_<regla>%` (`true`/`false`).
 
 ## API
 ```java

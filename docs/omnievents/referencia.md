@@ -42,10 +42,16 @@ Contenido: [opciones de una regla](#opciones-de-una-regla) · [condiciones](#con
 | `budget` | `0.5ms`, `200us` | todos | Presupuesto de tiempo por disparo: 0.5ms o 200us. Avisa en consola si el promedio reciente lo pasa. |
 | `every` | duración | `timer` | Cada cuánto corre el timer (10s, 5m; mínimo 1 tick). |
 | `repetitive_time` | entero | `timer` | Ticks entre ejecuciones (forma de ConditionalEvents; mejor every). |
-| `per_player` | `true` / `false` | `timer` | true (por defecto): una ejecución por cada jugador conectado; false: una sola, sin jugador. |
+| `per_player` | `true` / `false` | `timer, state` | true (por defecto): una ejecución (o un estado) por cada jugador conectado; false: una sola, sin jugador. |
 | `at` | `HH:mm` o lista | `clock` | Hora u horas del día, HH:mm ("08:00" o ["08:00", "20:30"]). |
 | `timezone` | texto | `clock` | Zona horaria de at (p. ej. America/Mexico_City); por defecto, la del servidor. |
 | `command` | nombre o mapa | `command` | El comando real que registra la regla: un nombre, o un mapa con name, aliases, permission, description, usage y tab. |
+| `when` | condiciones | `state` | El estado: una expresión o una lista de condiciones (todas). Se revisa solo cuando puede haber cambiado. |
+| `on_enter` | acciones | `state` | Acciones cuando when pasa a ser verdad (una vez; pasan por permiso, límite y enfriamiento). |
+| `on_exit` | acciones | `state` | Acciones cuando when deja de ser verdad, si corrió su on_enter (var.state_seconds: cuánto duró). |
+| `check_every` | duración | `state` | Respaldo por intervalo para lo que no se puede deducir (placeholders, perm(), la hora): 5s, 1m. |
+| `watch` | texto o lista | `state` | Disparadores extra que hacen revisar el estado (p. ej. [player_interact]). |
+| `initial` | `enter`, `silent` | `state` | Al entrar al servidor con el estado ya verdadero: enter (corre on_enter, por defecto) o silent. |
 | `event` | texto | `custom` | Nombre completo de la clase del evento (p. ej. org.bukkit.event.player.PlayerEggThrowEvent). |
 | `player_from` | texto | `custom` | Ruta al jugador dentro del evento (p. ej. getPlayer o entity); por defecto player o entity. |
 | `move_mode` | `block`, `chunk`, `any` | `player_move` | Cuándo cuenta un movimiento: block (cambia de bloque, por defecto), chunk o any. |
@@ -171,6 +177,7 @@ Raíces que todos ofrecen además de las suyas: `server` `rule` `online` `source
 | `clock` | `player` `world` `location` `time` | A una hora del día (at: HH:mm, timezone). |
 | `call` | `player` `event` `world` `location` `sender` `caller` | Solo corre cuando otra regla la llama (call) o con /omni call; sus args llegan como var.&lt;nombre>. |
 | `command` | `player` `sender` `cmd` `args` `world` `location` | Registra un comando real (command: name, aliases, permission, tab) y corre al usarlo. |
+| `state` | `player` `world` `location` | Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende. |
 | `custom` | `player` `event` `world` `location` | Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from). |
 
 Alias: `player_kill_entity` → `player_kill`, `player_leave` → `player_quit`, `repetitive` → `timer`, `repetitive_server` → `timer`.
@@ -848,6 +855,7 @@ Operadores: `&&` `||` `!` (`and` `or` `not`), `==` `!=` `<` `<=` `>` `>=`, `~=` 
 | `hour()` | Hora del día del servidor (0 a 23). |
 | `if(condición, a, b)` | a si la condición se cumple, si no b (solo evalúa la rama elegida). |
 | `in_area(mundo, x1, y1, z1, x2, y2, z2)` | true si el jugador está dentro del cubo. |
+| `in_state(regla)` | true si el jugador está en el estado de esa regla state (o si el estado del servidor está activo). |
 | `int(x)` | Convierte a entero, sin decimales (0 si no se puede). |
 | `join(lista[, separador])` | Une una lista en un texto (", " por defecto). |
 | `len(x)` | Largo de un texto, o tamaño de una lista o un mapa. |

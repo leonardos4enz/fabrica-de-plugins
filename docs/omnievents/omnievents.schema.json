@@ -74,6 +74,7 @@
             "clock",
             "call",
             "command",
+            "state",
             "custom",
             "player_kill_entity",
             "player_leave",
@@ -140,6 +141,7 @@
             "A una hora del día (at: HH:mm, timezone).",
             "Solo corre cuando otra regla la llama (call) o con /omni call; sus args llegan como var.<nombre>.",
             "Registra un comando real (command: name, aliases, permission, tab) y corre al usarlo.",
+            "Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende.",
             "Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from).",
             "Alias de player_kill (ConditionalEvents).",
             "Alias de player_quit (ConditionalEvents).",
@@ -206,6 +208,7 @@
             "A una hora del día (at: HH:mm, timezone).",
             "Solo corre cuando otra regla la llama (call) o con /omni call; sus args llegan como var.<nombre>.",
             "Registra un comando real (command: name, aliases, permission, tab) y corre al usarlo.",
+            "Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende.",
             "Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from).",
             "Alias de player_kill (ConditionalEvents).",
             "Alias de player_quit (ConditionalEvents).",
@@ -276,6 +279,7 @@
             "clock",
             "call",
             "command",
+            "state",
             "custom",
             "player_kill_entity",
             "player_leave",
@@ -342,6 +346,7 @@
             "A una hora del día (at: HH:mm, timezone).",
             "Solo corre cuando otra regla la llama (call) o con /omni call; sus args llegan como var.<nombre>.",
             "Registra un comando real (command: name, aliases, permission, tab) y corre al usarlo.",
+            "Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende.",
             "Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from).",
             "Alias de player_kill (ConditionalEvents).",
             "Alias de player_quit (ConditionalEvents).",
@@ -408,6 +413,7 @@
             "A una hora del día (at: HH:mm, timezone).",
             "Solo corre cuando otra regla la llama (call) o con /omni call; sus args llegan como var.<nombre>.",
             "Registra un comando real (command: name, aliases, permission, tab) y corre al usarlo.",
+            "Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende.",
             "Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from).",
             "Alias de player_kill (ConditionalEvents).",
             "Alias de player_quit (ConditionalEvents).",
@@ -623,7 +629,7 @@
         },
         "per_player": {
           "type": "boolean",
-          "description": "true (por defecto): una ejecución por cada jugador conectado; false: una sola, sin jugador. (para trigger: timer)"
+          "description": "true (por defecto): una ejecución (o un estado) por cada jugador conectado; false: una sola, sin jugador. (para trigger: timer, state)"
         },
         "at": {
           "anyOf": [
@@ -690,6 +696,56 @@
             }
           ],
           "description": "El comando real que registra la regla: un nombre, o un mapa con name, aliases, permission, description, usage y tab. (para trigger: command)"
+        },
+        "when": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/conditions"
+            }
+          ],
+          "description": "El estado: una expresión o una lista de condiciones (todas). Se revisa solo cuando puede haber cambiado. (para trigger: state)"
+        },
+        "on_enter": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Acciones cuando when pasa a ser verdad (una vez; pasan por permiso, límite y enfriamiento). (para trigger: state)"
+        },
+        "on_exit": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Acciones cuando when deja de ser verdad, si corrió su on_enter (var.state_seconds: cuánto duró). (para trigger: state)"
+        },
+        "check_every": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/duration"
+            }
+          ],
+          "description": "Respaldo por intervalo para lo que no se puede deducir (placeholders, perm(), la hora): 5s, 1m. (para trigger: state)"
+        },
+        "watch": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/texts"
+            }
+          ],
+          "description": "Disparadores extra que hacen revisar el estado (p. ej. [player_interact]). (para trigger: state)"
+        },
+        "initial": {
+          "type": "string",
+          "enum": [
+            "enter",
+            "silent",
+            "ENTER",
+            "SILENT"
+          ],
+          "description": "Al entrar al servidor con el estado ya verdadero: enter (corre on_enter, por defecto) o silent. (para trigger: state)"
         },
         "event": {
           "type": "string",
@@ -819,6 +875,25 @@
               "event"
             ]
           }
+        },
+        {
+          "if": {
+            "properties": {
+              "trigger": {
+                "enum": [
+                  "state"
+                ]
+              }
+            },
+            "required": [
+              "trigger"
+            ]
+          },
+          "then": {
+            "required": [
+              "when"
+            ]
+          }
         }
       ]
     },
@@ -828,7 +903,7 @@
         "number",
         "boolean"
       ],
-      "description": "Expresión de OmniEvents (el editor no la revisa: usa /omni validate). Operadores: && || ! == != < <= > >= ~= contains startsWith endsWith matches in, + - * / %, c ? a : b. Variables: var.x, pvar.x, gvar.x. Funciones: abs(x), bool(x), ceil(x), chance(p), clamp(x, min, max), cooldown(regla), date([patrón]), default(x, otro), distance(a, b), floor(x), format(x[, decimales]), has_item(material[, n]), hour(), if(condición, a, b), in_area(mundo, x1, y1, z1, x2, y2, z2), int(x), join(lista[, separador]), len(x), lower(t), max(a, b, …), min(a, b, …), minute(), now(), num(x), online(nombre), papi(texto[, jugador]), perm(permiso[, jugador]), player(nombre), players(), pow(x, y), pvar_of(jugador, nombre), random(a, b), randomf(a, b), replace(t, buscar, poner), round(x[, decimales]), size(x), split(t, separador), sqrt(x), str(x), strip(t), substr(t, desde[, hasta]), trim(t), upper(t), uses(regla), weekday()."
+      "description": "Expresión de OmniEvents (el editor no la revisa: usa /omni validate). Operadores: && || ! == != < <= > >= ~= contains startsWith endsWith matches in, + - * / %, c ? a : b. Variables: var.x, pvar.x, gvar.x. Funciones: abs(x), bool(x), ceil(x), chance(p), clamp(x, min, max), cooldown(regla), date([patrón]), default(x, otro), distance(a, b), floor(x), format(x[, decimales]), has_item(material[, n]), hour(), if(condición, a, b), in_area(mundo, x1, y1, z1, x2, y2, z2), in_state(regla), int(x), join(lista[, separador]), len(x), lower(t), max(a, b, …), min(a, b, …), minute(), now(), num(x), online(nombre), papi(texto[, jugador]), perm(permiso[, jugador]), player(nombre), players(), pow(x, y), pvar_of(jugador, nombre), random(a, b), randomf(a, b), replace(t, buscar, poner), round(x[, decimales]), size(x), split(t, separador), sqrt(x), str(x), strip(t), substr(t, desde[, hasta]), trim(t), upper(t), uses(regla), weekday()."
     },
     "duration": {
       "description": "Duración: 10s, 5m, 1h30m, 2d, 1w, 20t (ticks), 500ms, o un número de segundos.",

@@ -17,6 +17,7 @@ import dev.leo.omnievents.rule.RuleLoader;
 import dev.leo.omnievents.rule.RuleManager;
 import dev.leo.omnievents.trigger.ListenerManager;
 import dev.leo.omnievents.trigger.RuleCommands;
+import dev.leo.omnievents.trigger.StateService;
 import dev.leo.omnievents.trigger.TimerService;
 import dev.leo.omnievents.trigger.TriggerType;
 import dev.leo.omnievents.trigger.Triggers;
@@ -39,7 +40,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
     private static final List<String> EXAMPLES = List.of(
             "rules/ejemplos/bienvenida.yml", "rules/ejemplos/mineria.yml", "rules/ejemplos/comandos.yml",
             "rules/ejemplos/combate.yml", "rules/ejemplos/chat.yml", "rules/ejemplos/temporizadores.yml",
-            "rules/ejemplos/herramientas.yml");
+            "rules/ejemplos/herramientas.yml", "rules/ejemplos/estados.yml");
 
     private Settings settings;
     private Messages messages;
@@ -53,6 +54,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
     private RuleManager rules;
     private ListenerManager listeners;
     private TimerService timers;
+    private StateService states;
     private RuleCommands ruleCommands;
     private BukkitTask autosave;
     private Problems lastProblems = new Problems();
@@ -73,6 +75,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
         rules = new RuleManager(this);
         listeners = new ListenerManager(this);
         timers = new TimerService(this);
+        states = new StateService(this);
         ruleCommands = new RuleCommands(this);
         loadSettings();
 
@@ -112,6 +115,9 @@ public final class OmniEvents extends JavaPlugin implements Listener {
             });
             step("temporizadores", () -> {
                 if (timers != null) timers.stop();
+            });
+            step("estados", () -> {
+                if (states != null) states.unregister();
             });
             step("comandos", () -> {
                 if (ruleCommands != null) ruleCommands.unregister();
@@ -157,6 +163,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
         rules.set(loaded);
         guarded(p, "oyentes", () -> listeners.register(rules.all(), p));
         guarded(p, "temporizadores", timers::start);
+        guarded(p, "estados", () -> states.register(rules.all()));
         guarded(p, "comandos", ruleCommands::register);
         lastProblems = p;
         return p;
@@ -184,7 +191,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
             else getLogger().warning(pr.toString());
         }
         getLogger().info(rules.all().size() + " reglas cargadas, " + listeners.count() + " oyentes, " + timers.count()
-                + " temporizadores, " + ruleCommands.count() + " comandos (" + p.errors() + " errores, " + p.warnings() + " avisos)");
+                + " temporizadores, " + states.listenerCount() + " oyentes de estado, " + ruleCommands.count() + " comandos (" + p.errors() + " errores, " + p.warnings() + " avisos)");
     }
 
     private void fireAll(TriggerType.Kind kind) {
@@ -265,6 +272,10 @@ public final class OmniEvents extends JavaPlugin implements Listener {
 
     public TimerService timers() {
         return timers;
+    }
+
+    public StateService states() {
+        return states;
     }
 
     public RuleCommands ruleCommands() {

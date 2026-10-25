@@ -194,3 +194,69 @@ e2e_presupuesto:
     - repeat: 20
       do:
         - set: "var.x = i * 2"
+
+# Spec 008: disparador de estado. Los de jugador dependen de una pvar de la suite para no cruzarse con otros escenarios.
+e2e_estado_vida:
+  trigger: state
+  when: "default(pvar.e2e_estado_on, 0) == 1 && player.health <= 10"
+  on_enter:
+    - message: "e2e vida entra {round(player.health)}"
+  on_exit:
+    - message: "e2e vida sale tras {var.state_seconds}s"
+e2e_estado_zona:
+  trigger: state
+  when: "in_area('world', 30, -64, 30, 34, 0, 34)"
+  on_enter:
+    - message: "e2e zona entra"
+  on_exit:
+    - message: "e2e zona sale"
+e2e_estado_var:
+  trigger: state
+  when: "default(pvar.e2e_nivel, 0) >= 3"
+  on_enter:
+    - message: "e2e var entra"
+  on_exit:
+    - message: "e2e var sale"
+e2e_estado_subir:
+  trigger: call
+  actions:
+    - set: "pvar.e2e_nivel = 4"
+e2e_estado_pregunta:
+  trigger: call
+  actions:
+    - message: "e2e in_state {in_state('e2e_estado_var')}"
+e2e_estado_noche:
+  trigger: state
+  when: "default(pvar.e2e_estado_on, 0) == 1 && !world.day"
+  check_every: 1s
+  on_enter:
+    - message: "e2e noche entra"
+  on_exit:
+    - message: "e2e noche sale"
+e2e_estado_servidor:
+  trigger: state
+  per_player: false
+  when: "gvar.e2e_evento == 1"
+  on_enter:
+    - broadcast: "e2e servidor entra"
+  on_exit:
+    - broadcast: "e2e servidor sale"
+e2e_estado_pareja:
+  trigger: state
+  when: "default(pvar.e2e_pareja, 0) == 1"
+  cooldown: 1m
+  on_enter:
+    - message: "e2e pareja entra"
+  on_exit:
+    - message: "e2e pareja sale"
+e2e_estado_inicial:
+  trigger: state
+  when: "default(pvar.e2e_inicial, 0) == 1"
+  on_enter:
+    - message: "e2e inicial entra"
+e2e_estado_silencio:
+  trigger: state
+  when: "default(pvar.e2e_inicial, 0) == 1"
+  initial: silent
+  on_enter:
+    - message: "e2e silencio entra"

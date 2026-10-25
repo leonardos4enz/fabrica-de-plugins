@@ -73,13 +73,31 @@ public final class RuleManager {
 
     /** Ejecuta una regla (o la llama otra con call). Devuelve true si corrió sus acciones principales. */
     public boolean run(Rule rule, ExecContext ctx, int depth, Trace parentTrace) {
+        return run(rule, ctx, depth, parentTrace, null);
+    }
+
+    /**
+     * on_enter de una regla state (spec 008): un disparo normal (permiso, límite, enfriamiento, estadísticas) que
+     * sigue la traza que empezó la revisión. Devuelve true si corrió on_enter.
+     */
+    public boolean runState(Rule rule, ExecContext ctx, Trace own) {
+        return run(rule, ctx, 0, null, own);
+    }
+
+    /** on_exit de una regla state (spec 008): solo las acciones, con la traza de la revisión. */
+    public void runActions(Rule rule, List<ActionNode> nodes, ExecContext ctx, Trace trace) {
+        if (nodes.isEmpty()) plugin.debugger().flush(trace);
+        else execute(rule, nodes, ctx, 0, trace, null, true, false);
+    }
+
+    private boolean run(Rule rule, ExecContext ctx, int depth, Trace parentTrace, Trace own) {
         long t0 = System.nanoTime();
         // Una simulación (spec 006, H4) recorre la regla sin efectos: sin estadísticas, usos ni enfriamientos.
         boolean sim = parentTrace != null && parentTrace.simulation();
         boolean nested = parentTrace != null && depth > 0;
         boolean sampled = !sim && plugin.profiler().sample(rule.name(), rule.trigger().name(), rule.trigger().async());
         if (!sim) rule.stats().fired();
-        Trace trace = parentTrace != null ? parentTrace : plugin.debugger().start(rule.name());
+        Trace trace = parentTrace != null ? parentTrace : own != null ? own : plugin.debugger().start(rule.name());
         String ind = nested ? "  ↳ " : "";
         if (trace != null) trace.add(ind + "disparo de " + rule.trigger().name() + (ctx.playerOrNull() == null ? "" : " por " + ctx.playerOrNull().getName()));
         try {

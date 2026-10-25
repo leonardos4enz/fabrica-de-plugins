@@ -7,6 +7,7 @@ import dev.leo.omnievents.expr.ExprException;
 import dev.leo.omnievents.expr.Expression;
 import dev.leo.omnievents.expr.Properties;
 import dev.leo.omnievents.expr.Values;
+import dev.leo.omnievents.trigger.StateDeps;
 import dev.leo.omnievents.trigger.TriggerType;
 import dev.leo.omnievents.trigger.Triggers;
 import dev.leo.omnievents.util.Durations;
@@ -46,6 +47,8 @@ public final class RuleLoader {
 
     private final Actions actions;
     private final Triggers triggers;
+    /** in_state('regla') que usa cada regla (spec 008, H5 CA1): se validan al terminar la carpeta. */
+    private final Map<String, Set<String>> stateRefs = new LinkedHashMap<>();
 
     public RuleLoader(Actions actions, Triggers triggers) {
         this.actions = actions;
@@ -85,7 +88,33 @@ public final class RuleLoader {
                 }
             }
         }
+        checkStateRefs(out, problems);
         return out;
+    }
+
+    /** Cada in_state('x') con un nombre fijo apunta a una regla state; un estado del servidor solo lee otros del servidor. */
+    private void checkStateRefs(Map<String, Rule> out, Problems problems) {
+        List<String> stateNames = new ArrayList<>();
+        for (Rule r : out.values()) if (r.state() != null) stateNames.add(r.name());
+        for (Map.Entry<String, Set<String>> e : stateRefs.entrySet()) {
+            Rule r = out.get(e.getKey());
+            if (r == null) continue;
+            for (String ref : e.getValue()) {
+                Rule target = out.get(ref);
+                String msg = null;
+                if (target == null || target.state() == null) {
+                    msg = "in_state('" + ref + "'): no hay una regla state con ese nombre" + Suggest.hint(ref, stateNames);
+                } else if (r.state() != null && !r.state().perPlayer() && target.state().perPlayer()) {
+                    msg = "in_state('" + ref + "'): un estado del servidor no puede leer un estado por jugador";
+                }
+                if (msg != null) {
+                    problems.file(r.file()).error(r.name() + (r.state() != null ? ".when" : ""), msg);
+                    out.remove(e.getKey());
+                    break;
+                }
+            }
+        }
+        stateRefs.clear();
     }
 
     private static String firstLine(String s) {
@@ -136,26 +165,44 @@ public final class RuleLoader {
             }
         }
 
+        // Una regla state (spec 008) declara when, on_enter y on_exit en lugar de conditions, actions y else.
+        boolean isState = trigger.kind() == TriggerType.Kind.STATE;
+        if (isState) {
+            for (String k : List.of("conditions", "if", "actions", "then", "else")) {
+                if (s.contains(k)) problems.error(name + "." + k, "una regla state no usa '" + k + "': usa "
+                        + (k.equals("conditions") || k.equals("if") ? "when" : k.equals("else") ? "on_exit" : "on_enter"));
+            }
+        }
+        String condKey = isState ? "when" : "conditions";
         Expression.startCollecting();
         ActionParser parser = new ActionParser(actions, problems);
         List<Condition> conditions = new ArrayList<>();
-        List<ActionNode> act, els, onCd, onLim;
+        List<ActionNode> act, els, onCd, onLim, onExit;
+        List<Expression> collected = List.of();
         try {
-            Object cond = s.get("conditions", s.get("if"));
+            Object cond = isState ? s.get("when") : s.get("conditions", s.get("if"));
             List<?> condList = cond instanceof List<?> l ? l : cond == null ? List.of() : List.of(cond);
             for (int i = 0; i < condList.size(); i++) {
-                String path = name + ".conditions" + (condList.size() > 1 || cond instanceof List<?> ? "[" + i + "]" : "");
+                String path = name + "." + condKey + (condList.size() > 1 || cond instanceof List<?> ? "[" + i + "]" : "");
                 Condition c = condition(condList.get(i), path, parser, problems, true);
                 if (c != null) conditions.add(c);
             }
-            act = parser.parseList(s.get("actions", s.get("then")), name + ".actions");
-            els = parser.parseList(s.get("else"), name + ".else");
+            act = parser.parseList(isState ? s.get("on_enter") : s.get("actions", s.get("then")), name + (isState ? ".on_enter" : ".actions"));
+            els = isState ? List.of() : parser.parseList(s.get("else"), name + ".else");
+            onExit = isState ? parser.parseList(s.get("on_exit"), name + ".on_exit") : List.of();
             onCd = parser.parseList(s.get("on_cooldown"), name + ".on_cooldown");
             onLim = parser.parseList(s.get("on_limit"), name + ".on_limit");
         } finally {
-            validateRoots(name, trigger, parser, Expression.stopCollecting(), problems);
+            collected = Expression.stopCollecting();
+            validateRoots(name, trigger, parser, collected, problems);
         }
-        if (act.isEmpty() && els.isEmpty() && !problems.hasErrorsSince(mark)) problems.warn(name, "la regla no tiene acciones");
+        Set<String> refs = StateDeps.analyze(collected).states();
+        if (!refs.isEmpty()) stateRefs.put(name.toLowerCase(Locale.ROOT), Set.copyOf(refs));
+        if (isState) {
+            if (act.isEmpty() && onExit.isEmpty() && !problems.hasErrorsSince(mark)) problems.error(name, "una regla state necesita on_enter, on_exit o ambos");
+        } else if (act.isEmpty() && els.isEmpty() && !problems.hasErrorsSince(mark)) {
+            problems.warn(name, "la regla no tiene acciones");
+        }
 
         if (parser.usedTypes().contains("cancel") && trigger.kind() == TriggerType.Kind.EVENT && !trigger.cancellable()) {
             problems.warn(name, "'cancel' no tiene efecto: el evento de " + trigger.name() + " no se puede cancelar");
@@ -189,7 +236,9 @@ public final class RuleLoader {
                 }
             }
         }
-        if (!trigger.hasPlayer() && (cooldown > 0 && !cdGlobal || limit > 0 && !limGlobal)) {
+        StateSpec state = isState ? state(name, s, conditions, onExit, problems) : null;
+        boolean noPlayer = !trigger.hasPlayer() || state != null && !state.perPlayer();
+        if (noPlayer && (cooldown > 0 && !cdGlobal || limit > 0 && !limGlobal)) {
             problems.warn(name, "el disparador " + trigger.name() + " no tiene jugador: un enfriamiento o límite por jugador no se aplica (usa cooldown_scope o limit_scope: global)");
         }
 
@@ -234,8 +283,77 @@ public final class RuleLoader {
         if (problems.hasErrorsSince(mark)) return null;
         return new Rule(name, file, trigger, s.getBoolean("enabled", true), priority, s.getBoolean("ignore_cancelled", false),
                 worlds(s), s.getString("permission"), s.getString("bypass_permission", s.getString("ignore_with_permission")),
-                List.copyOf(conditions), cooldown, cdGlobal, limit, limGlobal, reset, resetMs, act, els, onCd, onLim, filter, s,
-                s.getStringList("args"), budget);
+                isState ? List.of() : List.copyOf(conditions), cooldown, cdGlobal, limit, limGlobal, reset, resetMs, act, els, onCd, onLim, filter, s,
+                s.getStringList("args"), budget, state);
+    }
+
+    /** Lo propio de una regla state (spec 008, H1 CA5, H2 CA3–CA4, H6 CA2). Los errores quedan en problems. */
+    private StateSpec state(String name, ConfigurationSection s, List<Condition> when, List<ActionNode> onExit, Problems problems) {
+        if (!s.contains("when")) {
+            problems.error(name, "una regla state necesita 'when' (p. ej. when: \"player.health <= 6\")");
+            return null;
+        }
+        List<Expression> exprs = new ArrayList<>();
+        for (Condition c : when) {
+            if (!c.deny().isEmpty()) problems.warn(c.path() + ".deny", "deny no se usa en when (se ignora): usa on_enter y on_exit");
+            expressions(c, exprs);
+        }
+        boolean perPlayer = s.getBoolean("per_player", true);
+        StateDeps deps = StateDeps.analyze(exprs);
+        if (perPlayer && !worlds(s).isEmpty()) deps.add(StateDeps.Source.MOVE);
+        long every = 0;
+        if (s.contains("check_every")) {
+            try {
+                long ms = Durations.parseMillis(s.get("check_every"));
+                if (ms < 50) problems.error(name + ".check_every", "el intervalo mínimo es 1 tick (50ms)");
+                every = Math.max(1, Durations.toTicks(ms));
+            } catch (IllegalArgumentException e) {
+                problems.error(name + ".check_every", e.getMessage());
+            }
+        }
+        if (!deps.random().isEmpty()) {
+            problems.error(name + ".when", "un estado no puede depender del azar (" + String.join(", ", deps.random()) + "): usa chance o random en las acciones");
+        }
+        if (deps.states().contains(name.toLowerCase(Locale.ROOT))) {
+            problems.error(name + ".when", "un estado no puede depender de sí mismo (in_state('" + name + "'))");
+        }
+        if (!perPlayer && !deps.playerUses().isEmpty()) {
+            problems.error(name + ".when", "un estado del servidor (per_player: false) no tiene jugador: no puede usar " + String.join(", ", deps.playerUses()));
+        }
+        if (!deps.unknown().isEmpty() && every == 0) {
+            problems.error(name + ".when", "no se puede deducir cuándo cambia " + String.join(", ", deps.unknown())
+                    + ": agrega check_every (p. ej. check_every: 5s) o usa algo que el motor sigue (vida, ubicación, pvar…)");
+        }
+        List<String> watchNames = s.isList("watch") ? s.getStringList("watch") : s.getString("watch") == null ? List.of() : List.of(s.getString("watch"));
+        List<TriggerType> watch = new ArrayList<>();
+        List<String> eventTriggers = new ArrayList<>();
+        for (TriggerType t : triggers.all()) if (t.eventClass() != null) eventTriggers.add(t.name());
+        for (String w : watchNames) {
+            TriggerType t = triggers.get(alias(w));
+            if (t == null || t.eventClass() == null) {
+                problems.error(name + ".watch", "'" + w + "' no es un disparador de evento" + Suggest.hint(w, eventTriggers) + " (lista: /omni triggers)");
+            } else {
+                watch.add(t);
+            }
+        }
+        if (deps.constant() && every == 0 && watch.isEmpty() && !when.isEmpty()) {
+            problems.warn(name + ".when", "when no depende de nada que cambie: el estado solo se revisa al entrar al servidor o al cargar");
+        }
+        String initial = s.getString("initial", "enter").toLowerCase(Locale.ROOT);
+        if (!initial.equals("enter") && !initial.equals("silent")) problems.error(name + ".initial", "usa enter o silent");
+        List<String> src = new ArrayList<>();
+        for (Condition c : when) src.add(c.source());
+        List<String> w = new ArrayList<>(worlds(s));
+        w.sort(null);
+        String fingerprint = String.join(" && ", src) + "|" + w + "|" + perPlayer;
+        return new StateSpec(List.copyOf(when), onExit, deps, every, perPlayer, initial.equals("silent"), List.copyOf(watch), fingerprint);
+    }
+
+    private static void expressions(Condition c, List<Expression> out) {
+        switch (c) {
+            case Condition.Single x -> out.add(x.expr());
+            case Condition.AnyOf a -> a.of().forEach(o -> expressions(o, out));
+        }
     }
 
     /**

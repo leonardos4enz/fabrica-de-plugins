@@ -369,6 +369,7 @@ public final class Triggers {
         register(TriggerType.special("clock", TriggerType.Kind.CLOCK, g, "player", "world", "location", "time").doc("A una hora del día (at: HH:mm, timezone)."));
         register(TriggerType.special("call", TriggerType.Kind.CALL, g, "player", "event", "world", "location", "sender", "caller").doc("Solo corre cuando otra regla la llama (call) o con /omni call; sus args llegan como var.<nombre>."));
         register(TriggerType.special("command", TriggerType.Kind.COMMAND, g, "player", "sender", "cmd", "args", "world", "location").doc("Registra un comando real (command: name, aliases, permission, tab) y corre al usarlo."));
+        register(TriggerType.special("state", TriggerType.Kind.STATE, g, "player", "world", "location").doc("Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende."));
         register(TriggerType.special("custom", TriggerType.Kind.CUSTOM, g, "player", "event", "world", "location").doc("Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from)."));
     }
 
