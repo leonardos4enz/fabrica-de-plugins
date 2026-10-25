@@ -18,5 +18,15 @@ storage:
   # Cada cuánto se guardan variables, enfriamientos y usos (además de al salir un jugador y al apagar).
   autosave-minutes: 5
 
+profiler:
+  # /omni cpu mide en detalle 1 de cada N disparos (cada condición y acción). Apagado no mide nada.
+  sample-every: 10
+  # Cada cuánto se repite el aviso en consola de una regla que pasa su budget (p. ej. budget: 0.5ms).
+  budget-warn-every: 5m
+
+debug:
+  # Cuántas trazas de /omni debug (y simulaciones) se guardan para /omni debug export.
+  export-buffer: 200
+
 # Registra los placeholders %omni_var_x%, %omni_gvar_x%, %omni_cooldown_regla% y %omni_uses_regla%.
 placeholderapi: true

@@ -40,6 +40,16 @@ public final class Durations {
         return total;
     }
 
+    /** Presupuesto de tiempo de una regla (spec 006, H7): 0.5ms, 200us o 200µs → nanosegundos. */
+    public static long parseBudgetNanos(Object value) {
+        String s = String.valueOf(value).trim().toLowerCase(Locale.ROOT).replace(" ", "");
+        Matcher m = Pattern.compile("(\\d+(?:\\.\\d+)?|\\.\\d+)(ms|us|µs)").matcher(s);
+        if (!m.matches() || Double.parseDouble(m.group(1)) <= 0) {
+            throw new IllegalArgumentException("presupuesto inválido '" + value + "' (usa por ejemplo 0.5ms o 200us)");
+        }
+        return Math.round(Double.parseDouble(m.group(1)) * (m.group(2).equals("ms") ? 1_000_000 : 1_000));
+    }
+
     public static long toTicks(long millis) {
         return Math.max(0, Math.round(millis / 50.0));
     }

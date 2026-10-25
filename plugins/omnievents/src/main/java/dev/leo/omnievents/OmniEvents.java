@@ -6,6 +6,7 @@ import dev.leo.omnievents.command.OmniCommand;
 import dev.leo.omnievents.data.DataStore;
 import dev.leo.omnievents.data.SavedItems;
 import dev.leo.omnievents.debug.Debugger;
+import dev.leo.omnievents.debug.Profiler;
 import dev.leo.omnievents.expr.BukkitProperties;
 import dev.leo.omnievents.expr.Properties;
 import dev.leo.omnievents.hook.PapiHook;
@@ -37,7 +38,8 @@ import java.util.Map;
 public final class OmniEvents extends JavaPlugin implements Listener {
     private static final List<String> EXAMPLES = List.of(
             "rules/ejemplos/bienvenida.yml", "rules/ejemplos/mineria.yml", "rules/ejemplos/comandos.yml",
-            "rules/ejemplos/combate.yml", "rules/ejemplos/chat.yml", "rules/ejemplos/temporizadores.yml");
+            "rules/ejemplos/combate.yml", "rules/ejemplos/chat.yml", "rules/ejemplos/temporizadores.yml",
+            "rules/ejemplos/herramientas.yml");
 
     private Settings settings;
     private Messages messages;
@@ -45,6 +47,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
     private SavedItems savedItems;
     private final Placeholders placeholders = new Placeholders();
     private Debugger debugger;
+    private final Profiler profiler = new Profiler();
     private Actions actions;
     private Triggers triggers;
     private RuleManager rules;
@@ -132,6 +135,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
     private void loadSettings() {
         reloadConfig();
         settings = Settings.from(getConfig());
+        profiler.sampleEvery(settings.sampleEvery());
         messages = new Messages(this);
         Properties.get().setAllowUnsafe(settings.allowUnsafeMethods());
         if (autosave != null) autosave.cancel();
@@ -237,6 +241,10 @@ public final class OmniEvents extends JavaPlugin implements Listener {
 
     public Debugger debugger() {
         return debugger;
+    }
+
+    public Profiler profiler() {
+        return profiler;
     }
 
     public Actions actions() {

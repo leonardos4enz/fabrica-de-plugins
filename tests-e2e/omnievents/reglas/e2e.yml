@@ -152,3 +152,45 @@ e2e_eco_chat:
   actions:
     - message: "<gray>eco: <white>{message}"
     - actionbar: "<gray>eco: {message}"
+
+# Spec 006 H1/H2: deny por condición y «al menos N de M»; H3/H4: /omni check y /omni run [--simular].
+e2e_tienda:
+  trigger: call
+  conditions:
+    - "player != null"
+    - expr: "player.level >= 3"
+      deny:
+        - message: "e2e deny nivel: tienes {player.level}"
+    - any: 2
+      of: ["player.foodLevel >= 20", "has_item('EMERALD', 1)", "player.level >= 10"]
+      deny:
+        - message: "e2e deny any"
+    - "default(pvar.e2e_bloqueo, 0) == 0"
+  actions:
+    - set: "pvar.e2e_compras = default(pvar.e2e_compras, 0) + 1"
+    - message: "e2e compra {pvar.e2e_compras}"
+  else:
+    - message: "e2e else"
+
+# Spec 006 H4: en una simulación, console no corre, delay no espera y call se simula por dentro.
+e2e_simulable:
+  trigger: call
+  actions:
+    - console: "say e2e no debe salir"
+    - delay: 2s
+    - if: "true"
+      then:
+        - call: "e2e_simulada_llamada"
+e2e_simulada_llamada:
+  trigger: call
+  actions:
+    - message: "e2e llamada"
+
+# Spec 006 H6/H7: un presupuesto imposible (1 µs) para que avise; /omni cpu lo mide.
+e2e_presupuesto:
+  trigger: call
+  budget: 1us
+  actions:
+    - repeat: 20
+      do:
+        - set: "var.x = i * 2"

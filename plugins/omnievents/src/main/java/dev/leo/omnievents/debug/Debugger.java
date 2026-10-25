@@ -7,17 +7,22 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/** Suscripciones a /omni debug y envío de trazas (H9 CA1). */
+/** Suscripciones a /omni debug, envío de trazas (H9 CA1) y las últimas trazas para /omni debug export (spec 006, H5). */
 public final class Debugger {
     private static final String ALL = "*";
     private static final UUID CONSOLE = new UUID(0, 0);
 
     private final OmniEvents plugin;
     private final Map<UUID, String> watchers = new ConcurrentHashMap<>();
+    private final Deque<Trace> recent = new ArrayDeque<>();
 
     public Debugger(OmniEvents plugin) {
         this.plugin = plugin;
@@ -48,8 +53,25 @@ public final class Debugger {
         return isWatched(rule) ? new Trace(rule) : null;
     }
 
+    /** Guarda la traza para exportarla; se queda con las últimas debug.export-buffer. */
+    public void remember(Trace t) {
+        int max = plugin.settings().exportBuffer();
+        synchronized (recent) {
+            recent.addLast(t);
+            while (recent.size() > max) recent.removeFirst();
+        }
+    }
+
+    public List<Trace> recent() {
+        synchronized (recent) {
+            return new ArrayList<>(recent);
+        }
+    }
+
     public void flush(Trace t) {
-        if (t == null || !t.markFlushed()) return;
+        // Una simulación no se envía a los que depuran: la recibe quien la pidió (spec 006, H4 CA2).
+        if (t == null || t.simulation() || !t.markFlushed()) return;
+        remember(t);
         Runnable send = () -> {
             String r = t.rule().toLowerCase();
             for (Map.Entry<UUID, String> e : watchers.entrySet()) {

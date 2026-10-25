@@ -41,7 +41,8 @@ public final class RuleLoader {
             "trigger", "type", "enabled", "priority", "ignore_cancelled", "worlds", "permission", "bypass_permission",
             "ignore_with_permission", "conditions", "if", "cooldown", "cooldown_scope", "limit", "limit_scope", "limit_reset",
             "one_time", "actions", "then", "else", "on_cooldown", "on_limit", "every", "repetitive_time", "per_player", "at",
-            "timezone", "move_mode", "command", "event", "player_from", "args", "description");
+            "timezone", "move_mode", "command", "event", "player_from", "args", "description", "budget");
+    private static final Set<String> CONDITION_KEYS = Set.of("expr", "any", "of", "deny");
 
     private final Actions actions;
     private final Triggers triggers;
@@ -137,23 +138,15 @@ public final class RuleLoader {
 
         Expression.startCollecting();
         ActionParser parser = new ActionParser(actions, problems);
-        List<Expression> conditions = new ArrayList<>();
+        List<Condition> conditions = new ArrayList<>();
         List<ActionNode> act, els, onCd, onLim;
         try {
             Object cond = s.get("conditions", s.get("if"));
             List<?> condList = cond instanceof List<?> l ? l : cond == null ? List.of() : List.of(cond);
             for (int i = 0; i < condList.size(); i++) {
-                String c = Values.str(condList.get(i));
                 String path = name + ".conditions" + (condList.size() > 1 || cond instanceof List<?> ? "[" + i + "]" : "");
-                if (c.matches("(?is).*\\sexecute\\s+\\S+\\s*$")) {
-                    problems.error(path, "'execute <grupo>' es de ConditionalEvents: usa un 'if' dentro de actions o /omni import conditionalevents");
-                    continue;
-                }
-                try {
-                    conditions.add(Expression.compile(c));
-                } catch (ExprException e) {
-                    problems.error(path, e.getMessage() + " en «" + c + "»");
-                }
+                Condition c = condition(condList.get(i), path, parser, problems, true);
+                if (c != null) conditions.add(c);
             }
             act = parser.parseList(s.get("actions", s.get("then")), name + ".actions");
             els = parser.parseList(s.get("else"), name + ".else");
@@ -229,11 +222,83 @@ public final class RuleLoader {
             default -> { }
         }
 
+        long budget = 0;
+        if (s.contains("budget")) {
+            try {
+                budget = Durations.parseBudgetNanos(s.get("budget"));
+            } catch (IllegalArgumentException e) {
+                problems.error(name + ".budget", e.getMessage());
+            }
+        }
+
         if (problems.hasErrorsSince(mark)) return null;
         return new Rule(name, file, trigger, s.getBoolean("enabled", true), priority, s.getBoolean("ignore_cancelled", false),
                 worlds(s), s.getString("permission"), s.getString("bypass_permission", s.getString("ignore_with_permission")),
                 List.copyOf(conditions), cooldown, cdGlobal, limit, limGlobal, reset, resetMs, act, els, onCd, onLim, filter, s,
-                s.getStringList("args"));
+                s.getStringList("args"), budget);
+    }
+
+    /**
+     * Un elemento de conditions (spec 006, H1 y H2): un texto (forma corta de siempre), o un mapa con expr o any + of,
+     * y deny opcional. Devuelve null si tiene errores (quedan registrados).
+     */
+    private Condition condition(Object raw, String path, ActionParser parser, Problems problems, boolean denyAllowed) {
+        if (!(raw instanceof Map<?, ?> || raw instanceof ConfigurationSection)) {
+            String c = Values.str(raw);
+            if (c.matches("(?is).*\\sexecute\\s+\\S+\\s*$")) {
+                problems.error(path, "'execute <grupo>' es de ConditionalEvents: usa un 'if' dentro de actions o /omni import conditionalevents");
+                return null;
+            }
+            try {
+                return new Condition.Single(path, Expression.compile(c), List.of());
+            } catch (ExprException e) {
+                problems.error(path, e.getMessage() + " en «" + c + "»");
+                return null;
+            }
+        }
+        Map<String, Object> m = new LinkedHashMap<>();
+        if (raw instanceof ConfigurationSection cs) cs.getKeys(false).forEach(k -> m.put(k, cs.get(k)));
+        else ((Map<?, ?>) raw).forEach((k, v) -> m.put(String.valueOf(k), v));
+        for (String k : m.keySet()) {
+            if (!CONDITION_KEYS.contains(k)) problems.warn(path + "." + k, "clave desconocida en una condición" + Suggest.hint(k, CONDITION_KEYS) + " (usa expr, any, of o deny)");
+        }
+        List<ActionNode> deny = List.of();
+        if (m.containsKey("deny")) {
+            if (denyAllowed) deny = parser.parseList(m.get("deny"), path + ".deny");
+            else problems.warn(path + ".deny", "un deny dentro de 'of' no se usa: ponlo en el grupo any (se ignora)");
+        }
+        boolean hasExpr = m.containsKey("expr"), hasAny = m.containsKey("any");
+        if (hasExpr == hasAny) {
+            problems.error(path, hasExpr ? "una condición lleva 'expr' o 'any', no ambas" : "una condición en forma de mapa necesita 'expr' (o 'any' con 'of')");
+            return null;
+        }
+        if (hasExpr) {
+            if (m.containsKey("of")) problems.warn(path + ".of", "'of' solo se usa con 'any' (se ignora)");
+            String c = Values.str(m.get("expr"));
+            try {
+                return new Condition.Single(path, Expression.compile(c), deny);
+            } catch (ExprException e) {
+                problems.error(path + ".expr", e.getMessage() + " en «" + c + "»");
+                return null;
+            }
+        }
+        if (!(m.get("of") instanceof List<?> of) || of.isEmpty()) {
+            problems.error(path + ".of", "'any' necesita 'of' con una lista de condiciones");
+            return null;
+        }
+        Double n = m.get("any") instanceof Number num ? num.doubleValue() : Values.toNumberOrNull(Values.str(m.get("any")));
+        if (n == null || n != Math.floor(n) || n < 1 || n > of.size()) {
+            problems.error(path + ".any", "'any' debe ser un entero entre 1 y " + of.size() + " (el número de condiciones en 'of')");
+            return null;
+        }
+        List<Condition> items = new ArrayList<>();
+        boolean ok = true;
+        for (int i = 0; i < of.size(); i++) {
+            Condition c = condition(of.get(i), path + ".of[" + i + "]", parser, problems, false);
+            if (c == null) ok = false;
+            else items.add(c);
+        }
+        return ok ? new Condition.AnyOf(path, n.intValue(), List.copyOf(items), deny) : null;
     }
 
     private static String alias(String t) {

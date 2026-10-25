@@ -23,12 +23,15 @@ permissions:
       omnievents.command.enable: true
       omnievents.command.disable: true
       omnievents.command.debug: true
+      omnievents.command.check: true
+      omnievents.command.run: true
       omnievents.command.eval: true
       omnievents.command.call: true
       omnievents.command.var: true
       omnievents.command.cooldown: true
       omnievents.command.limit: true
       omnievents.command.stats: true
+      omnievents.command.cpu: true
       omnievents.command.triggers: true
       omnievents.command.actions: true
       omnievents.command.item: true
@@ -42,12 +45,15 @@ permissions:
   omnievents.command.enable: {default: op}
   omnievents.command.disable: {default: op}
   omnievents.command.debug: {default: op}
+  omnievents.command.check: {default: op}
+  omnievents.command.run: {default: op}
   omnievents.command.eval: {default: op}
   omnievents.command.call: {default: op}
   omnievents.command.var: {default: op}
   omnievents.command.cooldown: {default: op}
   omnievents.command.limit: {default: op}
   omnievents.command.stats: {default: op}
+  omnievents.command.cpu: {default: op}
   omnievents.command.triggers: {default: op}
   omnievents.command.actions: {default: op}
   omnievents.command.item: {default: op}

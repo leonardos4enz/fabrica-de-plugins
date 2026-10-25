@@ -1,8 +1,8 @@
 package dev.leo.omnievents.rule;
 
 import dev.leo.omnievents.action.ActionNode;
+import dev.leo.omnievents.debug.Budget;
 import dev.leo.omnievents.debug.Stats;
-import dev.leo.omnievents.expr.Expression;
 import dev.leo.omnievents.trigger.TriggerType;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.event.Event;
@@ -25,7 +25,7 @@ public final class Rule {
     final Set<String> worlds;
     final String permission;
     final String bypassPermission;
-    final List<Expression> conditions;
+    final List<Condition> conditions;
     final long cooldownMs;
     final boolean cooldownGlobal;
     final int limit;
@@ -39,13 +39,15 @@ public final class Rule {
     final Predicate<Event> filter;
     final ConfigurationSection section;
     final List<String> declaredArgs;
+    final long budgetNanos;
     private final Stats stats = new Stats();
+    private final Budget budget = new Budget();
 
     Rule(String name, String file, TriggerType trigger, boolean enabled, EventPriority priority, boolean ignoreCancelled,
-         Set<String> worlds, String permission, String bypassPermission, List<Expression> conditions, long cooldownMs,
+         Set<String> worlds, String permission, String bypassPermission, List<Condition> conditions, long cooldownMs,
          boolean cooldownGlobal, int limit, boolean limitGlobal, Reset limitReset, long limitResetMs,
          List<ActionNode> actions, List<ActionNode> elseActions, List<ActionNode> onCooldown, List<ActionNode> onLimit,
-         Predicate<Event> filter, ConfigurationSection section, List<String> declaredArgs) {
+         Predicate<Event> filter, ConfigurationSection section, List<String> declaredArgs, long budgetNanos) {
         this.name = name;
         this.file = file;
         this.trigger = trigger;
@@ -69,6 +71,7 @@ public final class Rule {
         this.filter = filter;
         this.section = section;
         this.declaredArgs = declaredArgs;
+        this.budgetNanos = budgetNanos;
     }
 
     public String name() {
@@ -99,7 +102,7 @@ public final class Rule {
         return ignoreCancelled;
     }
 
-    public List<Expression> conditions() {
+    public List<Condition> conditions() {
         return conditions;
     }
 
@@ -124,7 +127,9 @@ public final class Rule {
     }
 
     public int actionCount() {
-        return actions.size() + elseActions.size() + onCooldown.size() + onLimit.size();
+        int n = actions.size() + elseActions.size() + onCooldown.size() + onLimit.size();
+        for (Condition c : conditions) n += c.deny().size();
+        return n;
     }
 
     public boolean accepts(Event e) {
@@ -137,5 +142,22 @@ public final class Rule {
 
     public Stats stats() {
         return stats;
+    }
+
+    /** Presupuesto declarado con budget (spec 006, H7), en nanosegundos; 0 = sin presupuesto. */
+    public long budgetNanos() {
+        return budgetNanos;
+    }
+
+    public Budget budget() {
+        return budget;
+    }
+
+    public java.util.List<ActionNode> actions() {
+        return actions;
+    }
+
+    public java.util.List<ActionNode> elseActions() {
+        return elseActions;
     }
 }

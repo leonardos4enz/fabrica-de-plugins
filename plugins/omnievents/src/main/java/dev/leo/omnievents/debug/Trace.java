@@ -4,18 +4,36 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/** Traza de un disparo para /omni debug. Solo se crea si alguien está depurando la regla. */
+/**
+ * Traza de un disparo para /omni debug. Solo se crea si alguien está depurando la regla, o para una simulación
+ * (spec 006, H4): entonces la regla se recorre sin efectos.
+ */
 public final class Trace {
     private final String rule;
+    private final boolean simulation;
+    private final long createdMs = System.currentTimeMillis();
     private final List<String> lines = Collections.synchronizedList(new ArrayList<>());
     private boolean flushed;
 
     public Trace(String rule) {
+        this(rule, false);
+    }
+
+    public Trace(String rule, boolean simulation) {
         this.rule = rule;
+        this.simulation = simulation;
     }
 
     public String rule() {
         return rule;
+    }
+
+    public boolean simulation() {
+        return simulation;
+    }
+
+    public long createdMs() {
+        return createdMs;
     }
 
     public void add(String line) {

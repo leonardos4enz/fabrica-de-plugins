@@ -6,8 +6,6 @@ import dev.leo.omnievents.action.ExecContext;
 import dev.leo.omnievents.action.Execution;
 import dev.leo.omnievents.data.DataStore;
 import dev.leo.omnievents.debug.Trace;
-import dev.leo.omnievents.expr.ExprException;
-import dev.leo.omnievents.expr.Expression;
 import dev.leo.omnievents.expr.Values;
 import dev.leo.omnievents.trigger.TriggerType;
 import org.bukkit.entity.Player;
@@ -76,9 +74,13 @@ public final class RuleManager {
     /** Ejecuta una regla (o la llama otra con call). Devuelve true si corrió sus acciones principales. */
     public boolean run(Rule rule, ExecContext ctx, int depth, Trace parentTrace) {
         long t0 = System.nanoTime();
-        rule.stats().fired();
+        // Una simulación (spec 006, H4) recorre la regla sin efectos: sin estadísticas, usos ni enfriamientos.
+        boolean sim = parentTrace != null && parentTrace.simulation();
+        boolean nested = parentTrace != null && depth > 0;
+        boolean sampled = !sim && plugin.profiler().sample(rule.name(), rule.trigger().name(), rule.trigger().async());
+        if (!sim) rule.stats().fired();
         Trace trace = parentTrace != null ? parentTrace : plugin.debugger().start(rule.name());
-        String ind = parentTrace != null ? "  ↳ " : "";
+        String ind = nested ? "  ↳ " : "";
         if (trace != null) trace.add(ind + "disparo de " + rule.trigger().name() + (ctx.playerOrNull() == null ? "" : " por " + ctx.playerOrNull().getName()));
         try {
             Player p = ctx.playerOrNull();
@@ -94,21 +96,21 @@ public final class RuleManager {
             if (rule.bypassPermission != null && p != null && p.hasPermission(rule.bypassPermission)) {
                 return skip(trace, ind + "✘ ignorado por " + rule.bypassPermission);
             }
-            for (Expression c : rule.conditions) {
-                boolean ok;
-                try {
-                    ok = c.test(ctx);
-                    if (trace != null) trace.add(ind + (ok ? "✔ " : "✘ ") + c.explain(ctx));
-                } catch (ExprException e) {
-                    ok = false;
+            for (int i = 0; i < rule.conditions.size(); i++) {
+                Condition c = rule.conditions.get(i);
+                long tc = sampled ? System.nanoTime() : 0;
+                boolean ok = c.test(ctx, trace == null ? null : trace::add, ind, false, (single, e) -> {
+                    if (sim) return;
                     rule.stats().error();
-                    plugin.getLogger().warning("Error en la condición «" + c.source() + "» de la regla '" + rule.name() + "': " + e.getMessage());
-                    if (trace != null) trace.add(ind + "✘ error en «" + c.source() + "»: " + e.getMessage());
-                }
+                    plugin.getLogger().warning("Error en la condición «" + single.source() + "» de la regla '" + rule.name() + "': " + e.getMessage());
+                });
+                if (sampled) plugin.profiler().recordPart(rule.name(), rule.trigger().name(), rule.trigger().async(), part(rule, c.path()), System.nanoTime() - tc);
                 if (!ok) {
-                    if (!rule.elseActions.isEmpty()) {
-                        if (trace != null) trace.add(ind + "→ else");
-                        execute(rule, rule.elseActions, ctx, depth, trace, null, parentTrace == null);
+                    // H1 CA1-2: el deny de la condición que falla reemplaza al else; sin deny, corre el else.
+                    List<ActionNode> branch = c.deny().isEmpty() ? rule.elseActions : c.deny();
+                    if (!branch.isEmpty()) {
+                        if (trace != null) trace.add(ind + (c.deny().isEmpty() ? "→ else" : "→ deny de " + part(rule, c.path())));
+                        execute(rule, branch, ctx, depth, trace, null, parentTrace == null, sampled);
                     } else {
                         plugin.debugger().flush(parentTrace == null ? trace : null);
                     }
@@ -117,10 +119,10 @@ public final class RuleManager {
             }
             DataStore.Holder limitHolder = holder(rule.limitGlobal, p);
             if (rule.limit > 0 && limitHolder != null) {
-                long[] u = currentUses(rule, limitHolder);
+                long[] u = currentUses(rule, limitHolder, !sim);
                 if (u[0] >= rule.limit) {
                     if (trace != null) trace.add(ind + "✘ límite: " + u[0] + "/" + rule.limit + " usos");
-                    if (!rule.onLimit.isEmpty()) execute(rule, rule.onLimit, ctx, depth, trace, null, parentTrace == null);
+                    if (!rule.onLimit.isEmpty()) execute(rule, rule.onLimit, ctx, depth, trace, null, parentTrace == null, sampled);
                     else plugin.debugger().flush(parentTrace == null ? trace : null);
                     return false;
                 }
@@ -134,19 +136,121 @@ public final class RuleManager {
                     double left = Math.ceil((until - now) / 1000.0);
                     ctx.locals().put("cooldown_left", left);
                     if (trace != null) trace.add(ind + "✘ enfriamiento: faltan " + Values.formatNumber(left) + "s");
-                    if (!rule.onCooldown.isEmpty()) execute(rule, rule.onCooldown, ctx, depth, trace, null, parentTrace == null);
+                    if (!rule.onCooldown.isEmpty()) execute(rule, rule.onCooldown, ctx, depth, trace, null, parentTrace == null, sampled);
                     else plugin.debugger().flush(parentTrace == null ? trace : null);
                     return false;
                 }
             }
-            Runnable revert = registerUsage(rule, cdHolder, limitHolder, now, bypassCd);
-            rule.stats().passed();
+            Runnable revert = sim ? null : registerUsage(rule, cdHolder, limitHolder, now, bypassCd);
+            if (!sim) rule.stats().passed();
             if (trace != null) trace.add(ind + "→ actions");
-            execute(rule, rule.actions, ctx, depth, trace, revert, parentTrace == null);
-            if (parentTrace != null) trace.add(ind + "(fin de " + rule.name() + ")");
+            execute(rule, rule.actions, ctx, depth, trace, revert, parentTrace == null, sampled);
+            if (nested) trace.add(ind + "(fin de " + rule.name() + ")");
             return true;
         } finally {
-            rule.stats().time(System.nanoTime() - t0);
+            if (!sim) finished(rule, System.nanoTime() - t0, sampled);
+        }
+    }
+
+    /** Tiempo del disparo: estadísticas, perfilador (si se midió) y presupuesto (spec 006, H6 y H7). */
+    private void finished(Rule rule, long nanos, boolean sampled) {
+        rule.stats().time(nanos);
+        if (sampled) plugin.profiler().recordRule(rule.name(), rule.trigger().name(), rule.trigger().async(), nanos);
+        if (rule.budgetNanos > 0 && rule.budget().record(nanos, rule.budgetNanos, System.currentTimeMillis(), plugin.settings().budgetWarnEveryMs())) {
+            plugin.getLogger().warning("La regla '" + rule.name() + "' promedia " + Values.formatNumber(Values.round(rule.budget().recentMillis(), 3))
+                    + " ms por disparo, más que su budget de " + Values.formatNumber(rule.budgetNanos / 1e6) + " ms (detalle: /omni cpu on)");
+        }
+    }
+
+    /** Ruta de una condición o acción sin el nombre de la regla: conditions[1], actions[0].then[2]. */
+    public static String part(Rule rule, String path) {
+        String prefix = rule.name() + ".";
+        return path.startsWith(prefix) ? path.substring(prefix.length()) : path;
+    }
+
+    // ------------------------------------------------------------------ revisión y simulación (spec 006)
+
+    /** Simula un disparo (H4): recorre la regla y lista las acciones sin aplicarlas. */
+    public Trace simulate(Rule rule, ExecContext ctx) {
+        Trace t = new Trace(rule.name(), true);
+        Player p = ctx.playerOrNull();
+        t.add("simulación de " + rule.name() + (p == null ? "" : " para " + p.getName()) + ": no se aplica ninguna acción");
+        run(rule, ctx, 0, t);
+        plugin.debugger().remember(t);
+        return t;
+    }
+
+    /**
+     * Revisa la regla ahora (H3): mundo, permisos, todas las condiciones con sus valores, usos y enfriamiento, y la
+     * rama que correría. No ejecuta acciones ni cambia datos o estadísticas.
+     */
+    public List<String> check(Rule rule, ExecContext ctx) {
+        List<String> out = new ArrayList<>();
+        String branch = null;
+        Player p = ctx.playerOrNull();
+        if (!rule.worlds.isEmpty()) {
+            String w = ctx.world() == null ? "" : ctx.world().getName().toLowerCase(Locale.ROOT);
+            boolean ok = rule.worlds.contains(w);
+            out.add((ok ? "✔ mundo '" + w + "' en " : "✘ mundo '" + w + "' fuera de ") + rule.worlds);
+            if (!ok) branch = "nada (fuera de sus mundos)";
+        }
+        if (rule.permission != null) {
+            boolean ok = p != null && p.hasPermission(rule.permission);
+            out.add((ok ? "✔ tiene el permiso " : "✘ sin el permiso ") + rule.permission);
+            if (!ok && branch == null) branch = "nada (sin el permiso)";
+        }
+        if (rule.bypassPermission != null && p != null && p.hasPermission(rule.bypassPermission)) {
+            out.add("✘ tiene " + rule.bypassPermission + ": la regla lo ignora");
+            if (branch == null) branch = "nada (permiso de bypass)";
+        }
+        for (Condition c : rule.conditions) {
+            boolean ok = c.test(ctx, out::add, "", true, null);
+            if (!ok && branch == null) {
+                String where = part(rule, c.path());
+                branch = !c.deny().isEmpty() ? "deny de " + where + " (" + c.deny().size() + " acciones)"
+                        : !rule.elseActions.isEmpty() ? "else (" + rule.elseActions.size() + " acciones), falla " + where
+                        : "nada (falla " + where + " y no hay else)";
+            }
+        }
+        DataStore.Holder limitHolder = holder(rule.limitGlobal, p);
+        if (rule.limit > 0 && limitHolder != null) {
+            long used = currentUses(rule, limitHolder, false)[0];
+            boolean ok = used < rule.limit;
+            out.add((ok ? "✔ " : "✘ ") + "límite: " + used + "/" + rule.limit + " usos");
+            if (!ok && branch == null) branch = rule.onLimit.isEmpty() ? "nada (límite alcanzado)" : "on_limit (" + rule.onLimit.size() + " acciones)";
+        }
+        DataStore.Holder cdHolder = holder(rule.cooldownGlobal, p);
+        if (rule.cooldownMs > 0 && cdHolder != null) {
+            boolean bypassCd = p != null && plugin.settings().cooldownBypassOp() && p.isOp();
+            Long until = cdHolder.cooldowns().get(rule.name());
+            long left = until == null || bypassCd ? 0 : Math.max(0, until - System.currentTimeMillis());
+            out.add((left == 0 ? "✔ " : "✘ ") + "enfriamiento: " + (left == 0 ? "libre" + (bypassCd ? " (OP)" : "") : "faltan " + Values.formatNumber(Math.ceil(left / 1000.0)) + "s"));
+            if (left > 0 && branch == null) branch = rule.onCooldown.isEmpty() ? "nada (en enfriamiento)" : "on_cooldown (" + rule.onCooldown.size() + " acciones)";
+        }
+        out.add("→ correría: " + (branch == null ? "actions (" + rule.actions.size() + " acciones)" : branch));
+        java.util.Set<String> used = new java.util.TreeSet<>();
+        for (Condition c : rule.conditions) roots(c, used);
+        out.addAll(missingNotes(used, rule.trigger().roots(), r -> ctx.resolve(r) != null));
+        return out;
+    }
+
+    /** H3 CA3: avisa qué raíces del disparador que usan las condiciones no tienen valor en la revisión. */
+    static List<String> missingNotes(java.util.Set<String> used, java.util.Set<String> triggerRoots, java.util.function.Predicate<String> bound) {
+        java.util.Set<String> missing = new java.util.TreeSet<>(used);
+        missing.retainAll(triggerRoots);
+        missing.removeIf(bound);
+        List<String> out = new ArrayList<>();
+        if (missing.remove("player")) out.add("• sin jugador: player vale nulo (usa /omni check <regla> <jugador>)");
+        if (!missing.isEmpty()) {
+            out.add("• sin evento: " + String.join(", ", missing) + (missing.size() == 1 ? " vale" : " valen") + " nulo en esta revisión");
+        }
+        return out;
+    }
+
+    private static void roots(Condition c, java.util.Set<String> out) {
+        switch (c) {
+            case Condition.Single s -> out.addAll(s.expr().roots());
+            case Condition.AnyOf a -> a.of().forEach(x -> roots(x, out));
         }
     }
 
@@ -158,8 +262,8 @@ public final class RuleManager {
         return false;
     }
 
-    private void execute(Rule rule, List<ActionNode> nodes, ExecContext ctx, int depth, Trace trace, Runnable revert, boolean ownsTrace) {
-        Execution exec = new Execution(plugin, rule, depth, trace, ownsTrace);
+    private void execute(Rule rule, List<ActionNode> nodes, ExecContext ctx, int depth, Trace trace, Runnable revert, boolean ownsTrace, boolean sampled) {
+        Execution exec = new Execution(plugin, rule, depth, trace, ownsTrace, sampled);
         if (revert != null) exec.revertUsage(revert);
         exec.start(nodes, ctx);
     }
@@ -173,8 +277,8 @@ public final class RuleManager {
         return p == null ? null : plugin.data().player(p.getUniqueId());
     }
 
-    /** Usos vigentes, aplicando el reinicio de la ventana (H8 CA2). */
-    private long[] currentUses(Rule rule, DataStore.Holder h) {
+    /** Usos vigentes, aplicando el reinicio de la ventana (H8 CA2). Con write = false no borra una ventana vencida. */
+    private long[] currentUses(Rule rule, DataStore.Holder h, boolean write) {
         long[] u = h.uses().get(rule.name());
         if (u == null) return new long[]{0, 0};
         long now = System.currentTimeMillis();
@@ -184,6 +288,7 @@ public final class RuleManager {
             default -> u[1] < windowStart(rule.limitReset);
         };
         if (expired) {
+            if (!write) return new long[]{0, 0};
             h.uses().remove(rule.name());
             h.markDirty();
             return new long[]{0, 0};
@@ -214,7 +319,7 @@ public final class RuleManager {
             changed = true;
         }
         if (limApplied) {
-            long[] u = currentUses(rule, lim);
+            long[] u = currentUses(rule, lim, true);
             lim.uses().put(rule.name(), new long[]{u[0] + 1, u[0] == 0 ? now : u[1]});
             lim.markDirty();
             changed = true;
@@ -264,7 +369,7 @@ public final class RuleManager {
         Rule r = get(ruleName);
         if (r == null) return 0;
         DataStore.Holder h = r.limitGlobal || player == null ? plugin.data().global() : plugin.data().player(player);
-        return currentUses(r, h)[0];
+        return currentUses(r, h, true)[0];
     }
 
     public void resetCooldown(String ruleName, UUID player) {

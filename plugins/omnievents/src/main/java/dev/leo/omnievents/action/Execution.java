@@ -29,6 +29,7 @@ public final class Execution {
     private final Deque<Frame> stack = new ArrayDeque<>();
     private final Trace trace;
     private final boolean ownsTrace;
+    private final boolean sampled;
     private ActionNode pending;
     private ExecContext pendingCtx;
     private boolean stopped;
@@ -37,8 +38,9 @@ public final class Execution {
     private Runnable revertUsage;
     private Runnable onFinish;
 
-    public Execution(OmniEvents plugin, Rule rule, int depth, Trace trace, boolean ownsTrace) {
+    public Execution(OmniEvents plugin, Rule rule, int depth, Trace trace, boolean ownsTrace, boolean sampled) {
         this.ownsTrace = ownsTrace;
+        this.sampled = sampled;
         this.plugin = plugin;
         this.rule = rule;
         this.depth = depth;
@@ -59,6 +61,11 @@ public final class Execution {
 
     public Trace traceObj() {
         return trace;
+    }
+
+    /** ¿Es una simulación (spec 006, H4)? Entonces solo corren las acciones de control; las demás se listan. */
+    public boolean simulating() {
+        return trace != null && trace.simulation();
     }
 
     public void trace(String line) {
@@ -190,6 +197,7 @@ public final class Execution {
                 return;
             }
             long wait;
+            long t0 = sampled ? System.nanoTime() : 0;
             try {
                 wait = node.execute(ctx, this);
             } catch (ActionException | ExprException e) {
@@ -200,7 +208,15 @@ public final class Execution {
                 plugin.getLogger().log(java.util.logging.Level.WARNING, "Detalle del error", e);
                 continue;
             }
+            if (sampled && rule != null) {
+                plugin.profiler().recordPart(rule.name(), rule.trigger().name(), rule.trigger().async(),
+                        dev.leo.omnievents.rule.RuleManager.part(rule, node.path()), System.nanoTime() - t0);
+            }
             if (wait > 0 && !stopped) {
+                if (simulating()) {
+                    trace("    (espera " + wait + " ticks: en la simulación no se espera)");
+                    continue;
+                }
                 if (plugin.disabling()) {
                     trace("  delay ignorado: el servidor se está apagando");
                     continue;

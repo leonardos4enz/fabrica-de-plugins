@@ -10,6 +10,7 @@ import dev.leo.omnievents.expr.Expression;
 import dev.leo.omnievents.expr.Node;
 import dev.leo.omnievents.expr.Values;
 import dev.leo.omnievents.importer.ConditionalEventsImporter;
+import dev.leo.omnievents.rule.Condition;
 import dev.leo.omnievents.rule.Problems;
 import dev.leo.omnievents.rule.Rule;
 import dev.leo.omnievents.text.TextFormat;
@@ -49,13 +50,16 @@ public final class OmniCommand implements TabExecutor {
         SUBS.put("info", "Detalle de una regla");
         SUBS.put("enable", "Activa una regla");
         SUBS.put("disable", "Desactiva una regla");
-        SUBS.put("debug", "Traza en vivo: <regla|all|off>");
+        SUBS.put("debug", "Traza en vivo: <regla|all|off|export>");
+        SUBS.put("check", "Revisa una regla ahora, sin efectos: <regla> [jugador]");
+        SUBS.put("run", "Dispara una regla: <regla> <jugador> [--simular]");
         SUBS.put("eval", "Evalúa una expresión con tu contexto");
         SUBS.put("call", "Ejecuta una regla call: <regla> [jugador] [k=v…]");
         SUBS.put("var", "Variables: get|set|del|list <jugador|global> [nombre] [valor]");
         SUBS.put("cooldown", "reset <regla> [jugador|global]");
         SUBS.put("limit", "reset <regla> [jugador|global]");
         SUBS.put("stats", "Rendimiento por regla, oyentes y tareas");
+        SUBS.put("cpu", "Perfilador por regla, condición y acción: [on|off|reset]");
         SUBS.put("triggers", "Disparadores disponibles");
         SUBS.put("actions", "Acciones disponibles");
         SUBS.put("item", "save|delete|list <nombre>: ítems para saved:nombre");
@@ -106,6 +110,9 @@ public final class OmniCommand implements TabExecutor {
                 case "info" -> info(s, a);
                 case "enable", "disable" -> toggle(s, a, sub.equals("enable"));
                 case "debug" -> debug(s, a);
+                case "check" -> check(s, a);
+                case "run" -> runRule(s, a);
+                case "cpu" -> cpu(s, a);
                 case "eval" -> eval(s, a);
                 case "call" -> call(s, a);
                 case "var" -> var(s, a);
@@ -190,7 +197,10 @@ public final class OmniCommand implements TabExecutor {
         Stats st = r.stats();
         raw(s, "<gold>" + esc(r.name()) + "</gold> " + (r.enabled() ? "<green>activa" : "<red>inactiva"));
         raw(s, "<gray>Archivo: <white>" + esc(r.file()) + "</white> · disparador <aqua>" + esc(r.trigger().name()) + "</aqua> · prioridad " + r.priority());
-        for (Expression c : r.conditions()) raw(s, "<gray>  si <white>" + esc(c.source()));
+        for (Condition c : r.conditions()) {
+            raw(s, "<gray>  si <white>" + esc(c.source()) + (c.deny().isEmpty() ? "" : "</white> <dark_gray>·</dark_gray> deny: " + c.deny().size() + " acciones"));
+        }
+        if (r.budgetNanos() > 0) raw(s, "<gray>Presupuesto: <white>" + Values.formatNumber(r.budgetNanos() / 1e6) + " ms");
         if (r.cooldownMs() > 0) raw(s, "<gray>Enfriamiento: <white>" + Durations.format(r.cooldownMs()) + (r.cooldownGlobal() ? " (global)" : " (por jugador)"));
         if (r.limit() > 0) raw(s, "<gray>Límite: <white>" + r.limit() + " usos " + (r.limitGlobal() ? "globales" : "por jugador") + ", reinicio " + r.limitReset().name().toLowerCase(Locale.ROOT));
         raw(s, "<gray>Acciones: <white>" + r.actionCount() + "</white> · disparos <white>" + st.firedCount() + "</white> · aciertos <white>"
@@ -217,6 +227,10 @@ public final class OmniCommand implements TabExecutor {
             return;
         }
         String arg = a[0];
+        if (arg.equalsIgnoreCase("export")) {
+            export(s);
+            return;
+        }
         if (arg.equalsIgnoreCase("off")) {
             plugin.debugger().watch(s, null);
             send(s, "debug-off");
@@ -228,9 +242,14 @@ public final class OmniCommand implements TabExecutor {
     }
 
     private ExecContext senderContext(CommandSender s) {
+        return playerContext(s, s instanceof Player p ? p : null);
+    }
+
+    /** Contexto de /omni eval, check y run: el jugador, su mundo, lugar, ítem en la mano y lo que mira. */
+    private ExecContext playerContext(CommandSender s, Player p) {
         Map<String, Object> b = new HashMap<>();
         b.put("sender", s);
-        if (s instanceof Player p) {
+        if (p != null) {
             b.put("player", p);
             b.put("world", p.getWorld());
             b.put("location", p.getLocation());
@@ -404,6 +423,177 @@ public final class OmniCommand implements TabExecutor {
         send(s, "import-done", "events", rep.events(), "review", rep.review(), "folder", "rules/importado");
     }
 
+    // ------------------------------------------------------------------ herramientas de autor (spec 006)
+
+    private Player onlinePlayer(String name) {
+        Player p = Bukkit.getPlayerExact(name);
+        if (p != null) return p;
+        List<String> online = new ArrayList<>();
+        Bukkit.getOnlinePlayers().forEach(x -> online.add(x.getName()));
+        throw new IllegalArgumentException("el jugador '" + name + "' no está conectado" + dev.leo.omnievents.util.Suggest.hint(name, online));
+    }
+
+    /** Una línea de traza con el color de /omni debug. */
+    private static void traceLine(CommandSender s, String line) {
+        String color = line.contains("✘") ? "<red>" : line.contains("✔") ? "<green>" : line.startsWith("→") ? "<yellow>" : "<gray>";
+        raw(s, color + esc(line));
+    }
+
+    /** /omni check (H3): evalúa todo con sus valores, sin ejecutar acciones. */
+    private void check(CommandSender s, String[] a) {
+        Rule r = rule(s, a, 0);
+        Player p = a.length > 1 ? onlinePlayer(a[1]) : s instanceof Player sp ? sp : null;
+        raw(s, "<gold>Revisión de <white>" + esc(r.name()) + "</white></gold> <gray>· " + esc(r.trigger().name())
+                + (p == null ? " · sin jugador" : " · para " + esc(p.getName())) + (r.enabled() ? "" : " · <red>regla inactiva</red>")
+                + " <dark_gray>(no se ejecuta nada)");
+        for (String line : plugin.rules().check(r, playerContext(s, p))) traceLine(s, line);
+    }
+
+    /** /omni run (H4): dispara la regla para un jugador, o la simula con --simular. */
+    private void runRule(CommandSender s, String[] a) {
+        List<String> args = new ArrayList<>(Arrays.asList(a));
+        boolean simulate = args.removeIf(x -> x.equalsIgnoreCase("--simular"));
+        if (args.size() < 2) throw new IllegalArgumentException("uso: /omni run <regla> <jugador> [--simular]");
+        Rule r = rule(s, args.toArray(new String[0]), 0);
+        Player p = onlinePlayer(args.get(1));
+        ExecContext ctx = playerContext(s, p);
+        if (simulate) {
+            for (String line : plugin.rules().simulate(r, ctx).lines()) traceLine(s, line);
+            return;
+        }
+        if (!r.enabled()) throw new IllegalArgumentException("la regla '" + r.name() + "' está desactivada (/omni enable " + r.name() + ")");
+        plugin.getLogger().info(s.getName() + " ejecutó la regla " + r.name() + " para " + p.getName() + " (/omni run)");
+        Map<String, Object> b = new HashMap<>(ctx.flatBindings());
+        b.remove("sender");
+        boolean passed = plugin.rules().run(r, new ExecContext(plugin, r, b), 0, null);
+        send(s, passed ? "run-done" : "run-not-passed", "rule", r.name(), "player", p.getName());
+    }
+
+    /** /omni cpu (H6, H7 CA3). */
+    private void cpu(CommandSender s, String[] a) {
+        var prof = plugin.profiler();
+        String op = a.length == 0 ? "" : a[0].toLowerCase(Locale.ROOT);
+        switch (op) {
+            case "on" -> {
+                prof.start();
+                send(s, "cpu-on", "n", prof.sampleEvery());
+                return;
+            }
+            case "off" -> {
+                prof.stop();
+                send(s, "cpu-off");
+                return;
+            }
+            case "reset" -> {
+                prof.reset();
+                send(s, "cpu-reset");
+                return;
+            }
+            case "" -> { }
+            default -> throw new IllegalArgumentException("usa /omni cpu [on|off|reset]");
+        }
+        if (!prof.enabled() && prof.rules().isEmpty()) {
+            send(s, "cpu-disabled");
+        } else {
+            showProfile(s, prof);
+        }
+        List<Rule> budgeted = new ArrayList<>();
+        for (Rule r : plugin.rules().all()) if (r.budgetNanos() > 0) budgeted.add(r);
+        if (budgeted.isEmpty()) return;
+        budgeted.sort((x, y) -> x.name().compareToIgnoreCase(y.name()));
+        raw(s, "<gold>Presupuestos</gold> <gray>(promedio reciente, se mide siempre)");
+        for (Rule r : budgeted) {
+            double budget = r.budgetNanos() / 1e6, recent = r.budget().recentMillis();
+            String state = r.budget().warmingUp() ? "<gray>calentando (" + r.budget().fires() + " disparos)" : recent > budget ? "<red>✘ lo pasa" : "<green>✔ dentro";
+            raw(s, "<white>" + esc(r.name()) + "</white> <gray>· " + Values.formatNumber(Values.round(recent, 3)) + " ms de "
+                    + Values.formatNumber(budget) + " ms · " + state);
+        }
+    }
+
+    private void showProfile(CommandSender s, dev.leo.omnievents.debug.Profiler prof) {
+        long elapsed = prof.elapsedNanos();
+        long mainNanos = 0;
+        Map<String, Long> byTrigger = new TreeMap<>();
+        for (var e : prof.rules().values()) {
+            if (!e.async()) mainNanos += e.total().nanos();
+            byTrigger.merge(e.trigger(), e.total().nanos(), Long::sum);
+        }
+        raw(s, "<gold>Perfilador</gold> <gray>· " + (prof.enabled() ? "<green>encendido</green>" : "<red>apagado</red>") + " · "
+                + Durations.format(elapsed / 1_000_000) + " midiendo · 1 de cada " + prof.sampleEvery() + " disparos · OmniEvents ≈ <white>"
+                + Values.formatNumber(Values.round(prof.mainThreadPercent(mainNanos), 3)) + " %</white> del hilo principal");
+        List<Map.Entry<String, dev.leo.omnievents.debug.Profiler.RuleProfile>> rs = new ArrayList<>(prof.rules().entrySet());
+        rs.sort((x, y) -> Long.compare(y.getValue().total().nanos(), x.getValue().total().nanos()));
+        if (rs.isEmpty()) raw(s, "<gray>  Aún no hay disparos medidos.");
+        int n = 0;
+        for (var e : rs) {
+            if (n++ >= 10) break;
+            var rp = e.getValue();
+            raw(s, "<white>" + esc(e.getKey()) + "</white> <gray>· " + esc(rp.trigger()) + " · " + rp.total().count() + " medidos · prom <white>"
+                    + Values.formatNumber(Values.round(rp.total().avgMicros(), 1)) + " µs</white> · "
+                    + (rp.async() ? "asíncrona" : Values.formatNumber(Values.round(prof.mainThreadPercent(rp.total().nanos()), 3)) + " %"));
+            int k = 0;
+            for (var part : rp.parts()) {
+                if (k++ >= 3) break;
+                raw(s, "<dark_gray>    " + esc(part.getKey()) + " · prom " + Values.formatNumber(Values.round(part.getValue().avgMicros(), 1))
+                        + " µs · " + part.getValue().count() + " veces");
+            }
+        }
+        if (byTrigger.size() > 1) {
+            List<Map.Entry<String, Long>> ts = new ArrayList<>(byTrigger.entrySet());
+            ts.sort((x, y) -> Long.compare(y.getValue(), x.getValue()));
+            StringBuilder sb = new StringBuilder();
+            for (var t : ts) sb.append(sb.isEmpty() ? "" : ", ").append(t.getKey()).append(" ").append(Values.formatNumber(Values.round(t.getValue() / 1e3 * prof.sampleEvery(), 0))).append(" µs");
+            raw(s, "<gray>Por disparador (estimado): <white>" + esc(sb.toString()));
+        }
+    }
+
+    private volatile boolean exporting;
+
+    /** /omni debug export (H5): arma el texto en el hilo principal y lo escribe en otro hilo, sin red. */
+    private void export(CommandSender s) {
+        List<dev.leo.omnievents.debug.Trace> traces = plugin.debugger().recent();
+        if (traces.isEmpty()) {
+            send(s, "export-empty");
+            return;
+        }
+        if (exporting) {
+            send(s, "export-busy");
+            return;
+        }
+        List<String> header = List.of(
+                "OmniEvents " + plugin.getPluginMeta().getVersion() + " · " + Bukkit.getName() + " " + Bukkit.getVersion()
+                        + " · Java " + System.getProperty("java.version"),
+                "Fecha: " + java.time.LocalDateTime.now().withNano(0),
+                "Reglas: " + plugin.rules().all().size() + " · oyentes " + plugin.listeners().count() + " · temporizadores "
+                        + plugin.timers().count() + " · comandos " + plugin.ruleCommands().count());
+        List<String> problems = new ArrayList<>();
+        for (Problems.Problem pr : plugin.lastProblems().all()) {
+            problems.add((pr.error() ? "ERROR " : "aviso ") + pr.file() + (pr.path().isEmpty() ? "" : " › " + pr.path()) + ": " + pr.message());
+        }
+        Map<String, String> yaml = new TreeMap<>();
+        for (var t : traces) {
+            Rule r = plugin.rules().get(t.rule());
+            if (r == null || yaml.containsKey(r.name())) continue;
+            org.bukkit.configuration.file.YamlConfiguration y = new org.bukkit.configuration.file.YamlConfiguration();
+            y.set(r.name(), r.section());
+            yaml.put(r.name(), "# " + r.file() + "\n" + y.saveToString());
+        }
+        String text = dev.leo.omnievents.debug.TraceExport.render(header, problems, traces, yaml);
+        java.nio.file.Path folder = plugin.getDataFolder().toPath().resolve("trazas");
+        exporting = true;
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                java.nio.file.Path out = dev.leo.omnievents.debug.TraceExport.write(folder, text, java.time.LocalDateTime.now());
+                String rel = plugin.getDataFolder().getParentFile().toPath().relativize(out).toString().replace('\\', '/');
+                Bukkit.getScheduler().runTask(plugin, () -> send(s, "export-done", "file", "plugins/" + rel, "traces", traces.size()));
+            } catch (IOException e) {
+                Bukkit.getScheduler().runTask(plugin, () -> send(s, "error", "message", "no se pudo guardar la traza: " + e.getMessage()));
+            } finally {
+                exporting = false;
+            }
+        });
+    }
+
     private void selftest(CommandSender s) {
         List<SelfTest.Result> res = SelfTest.run();
         long fail = res.stream().filter(r -> !r.ok()).count();
@@ -428,10 +618,19 @@ public final class OmniCommand implements TabExecutor {
                 case "info", "enable", "disable" -> {
                     if (i == 1) opts.addAll(plugin.rules().names());
                 }
+                case "check", "run" -> {
+                    if (i == 1) opts.addAll(plugin.rules().names());
+                    if (i == 2) Bukkit.getOnlinePlayers().forEach(p -> opts.add(p.getName()));
+                    if (i == 3 && sub.equals("run")) opts.add("--simular");
+                }
+                case "cpu" -> {
+                    if (i == 1) opts.addAll(List.of("on", "off", "reset"));
+                }
                 case "debug" -> {
                     if (i == 1) {
                         opts.add("all");
                         opts.add("off");
+                        opts.add("export");
                         opts.addAll(plugin.rules().names());
                     }
                 }

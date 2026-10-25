@@ -1,5 +1,7 @@
 // Escenarios en el juego de OmniEvents (spec 002, H4): uno por criterio de la spec 001 que la compuerta 2 no
 // podía probar. El estado se prepara por consola; el bot solo hace lo que se prueba.
+import fs from 'node:fs'
+import path from 'node:path'
 import { dormir } from '../lib/servidor.mjs'
 
 const ANA = 'Ana_e2e'
@@ -431,6 +433,135 @@ export default {
         await ana.esperar('chat', /^e2e mensaje para Ana_e2e$/, { desde: ma })
         const cme = srv.errores({ desde: ml }).filter(l => /ConcurrentModification/.test(l))
         if (cme.length) throw new Error('el log tiene ConcurrentModificationException:\n    ' + cme.join('\n    '))
+      }
+    },
+    {
+      id: '006 H1 CA1 · H1 CA2 · H1 CA3 · H2 CA1 · H2 CA2 · H4 CA4',
+      nombre: 'deny por condición y «2 de 3»: /omni run real corre el deny de la que falla, si no el else',
+      timeoutMs: 30000,
+      async fn (ctx) {
+        const { srv } = ctx
+        await prepararJugador(ctx, ANA)
+        const ana = ctx.bots[ANA]
+        await srv.consola(`omni var del ${ANA} e2e_bloqueo`)
+        await srv.consola(`omni var set ${ANA} e2e_compras 0`, { espera: /e2e_compras = 0/ })
+        const correr = async (espera) => {
+          const m = ana.marca()
+          await srv.consola(`omni run e2e_tienda ${ANA}`, { espera: /(ejecutada|no corrió sus acciones) para/ })
+          await ana.esperar('chat', espera, { desde: m })
+          await ana.nunca('chat', /^e2e (else|deny|compra)/, { desde: ana.marca(), ms: 300 })
+          return m
+        }
+        // Nivel 0: falla la condición con deny propio → su deny y no el else.
+        let m = await correr(/^e2e deny nivel: tienes 0$/)
+        await ana.nunca('chat', /^e2e else$/, { desde: m, ms: 200 })
+        // Nivel 5: pasa la de nivel; del grupo solo se cumple 1 de 3 (hambre llena) → deny del grupo.
+        await srv.consola(`xp set ${ANA} 5 levels`)
+        await correr(/^e2e deny any$/)
+        // Con una esmeralda se cumplen 2 de 3 → corre actions de verdad (H4 CA4) y queda en la consola.
+        await srv.consola(`give ${ANA} emerald 1`)
+        await srv.sincronizar()
+        await ana.hasta('tener la esmeralda', () => ana.cantidad('emerald') === 1)
+        const ml = srv.marca()
+        await correr(/^e2e compra 1$/)
+        await srv.esperarLog(/CONSOLE ejecutó la regla e2e_tienda para Ana_e2e \(\/omni run\)/, { desde: ml })
+        await esperarVar(srv, ANA, 'e2e_compras', 1)
+        // Falla una condición sin deny (forma corta de texto) → el else de la regla, como antes.
+        await srv.consola(`omni var set ${ANA} e2e_bloqueo 1`, { espera: /e2e_bloqueo = 1/ })
+        await correr(/^e2e else$/)
+      }
+    },
+    {
+      id: '006 H3 CA1 · H3 CA2 · H2 CA4',
+      nombre: '/omni check: todas las condiciones con sus valores y la rama, sin ejecutar nada',
+      timeoutMs: 20000,
+      async fn ({ srv, bots }) {
+        const ana = bots[ANA]
+        const ma = ana.marca()
+        // Estado del escenario anterior: esmeralda, e2e_bloqueo = 1, e2e_compras = 1. Con nivel 10 se cumplen al
+        // menos 2 de 3 aunque el hambre haya bajado.
+        await srv.consola(`xp set ${ANA} 10 levels`)
+        let ml = srv.marca()
+        await srv.consola(`omni check e2e_tienda ${ANA}`, { espera: /→ correría: else \(1 acciones\), falla conditions\[3\]/ })
+        for (const re of [/Revisión de e2e_tienda · call · para Ana_e2e/, /✔ player\.level \(10\) >= 3 → true/,
+          /✔ al menos 2 de 3 → se cumplen [23]$/, /✔ has_item\('EMERALD', 1\) → true/, /✔ player\.level \(10\) >= 10 → true/,
+          /✘ default\(pvar\.e2e_bloqueo, 0\) \(1\) == 0 → false/]) {
+          await srv.esperarLog(re, { desde: ml, timeoutMs: 2000 })
+        }
+        // Sin cortar: con nivel 0 falla la primera con deny, y aun así se ven las de después.
+        await srv.consola(`xp set ${ANA} 0 levels`)
+        ml = srv.marca()
+        await srv.consola(`omni check e2e_tienda ${ANA}`, { espera: /→ correría: deny de conditions\[1\] \(1 acciones\)/ })
+        await srv.esperarLog(/✘ player\.level \(0\) >= 3 → false/, { desde: ml, timeoutMs: 2000 })
+        await srv.esperarLog(/al menos 2 de 3 → se cumplen [12]$/, { desde: ml, timeoutMs: 2000 })
+        await srv.esperarLog(/✘ default\(pvar\.e2e_bloqueo, 0\) \(1\) == 0 → false/, { desde: ml, timeoutMs: 2000 })
+        await ana.nunca('chat', /^e2e /, { desde: ma, ms: 300 })
+        await esperarVar(srv, ANA, 'e2e_compras', 1)
+      }
+    },
+    {
+      id: '006 H4 CA1 · H4 CA2 · H4 CA3',
+      nombre: '/omni run --simular lista las acciones (set, message, console, delay, call) sin aplicarlas',
+      timeoutMs: 20000,
+      async fn ({ srv, bots }) {
+        const ana = bots[ANA]
+        await srv.consola(`xp set ${ANA} 10 levels`)
+        await srv.consola(`omni var del ${ANA} e2e_bloqueo`)
+        const ma = ana.marca()
+        let ml = srv.marca()
+        await srv.consola(`omni run e2e_tienda ${ANA} --simular`, { espera: /simulación de e2e_tienda para Ana_e2e: no se aplica ninguna acción/ })
+        await srv.esperarLog(/• e2e_tienda\.actions\[0\] set: pvar\.e2e_compras = default\(pvar\.e2e_compras, 0\) \+ 1/, { desde: ml, timeoutMs: 2000 })
+        await srv.esperarLog(/• e2e_tienda\.actions\[1\] message: e2e compra \{pvar\.e2e_compras\}/, { desde: ml, timeoutMs: 2000 })
+        ml = srv.marca()
+        await srv.consola(`omni run e2e_simulable ${ANA} --simular`, { espera: /simulación de e2e_simulable/ })
+        await srv.esperarLog(/• e2e_simulable\.actions\[0\] console: say e2e no debe salir/, { desde: ml, timeoutMs: 2000 })
+        await srv.esperarLog(/espera 40 ticks: en la simulación no se espera/, { desde: ml, timeoutMs: 2000 })
+        await srv.esperarLog(/↳ disparo de call por Ana_e2e/, { desde: ml, timeoutMs: 2000 })
+        await srv.esperarLog(/• e2e_simulada_llamada\.actions\[0\] message: e2e llamada/, { desde: ml, timeoutMs: 2000 })
+        await dormir(2500) // más que el delay: nada llega después
+        if (srv.lineas.slice(ml).some(l => /\[Server\] e2e no debe salir/.test(l))) throw new Error('la simulación corrió el comando de consola')
+        await ana.nunca('chat', /^e2e (compra|llamada)/, { desde: ma, ms: 200 })
+        await esperarVar(srv, ANA, 'e2e_compras', 1)
+      }
+    },
+    {
+      id: '006 H5 CA1 · H5 CA2 · H5 CA3',
+      nombre: '/omni debug export guarda las trazas y simulaciones en trazas/ con el YAML de las reglas',
+      timeoutMs: 20000,
+      async fn ({ srv }) {
+        await srv.consola('omni debug e2e_tienda', { espera: /Depurando e2e_tienda/ })
+        await srv.consola(`omni run e2e_tienda ${ANA}`, { espera: /ejecutada para Ana_e2e/ })
+        await srv.consola('omni debug off', { espera: /Depuración apagada/ })
+        const r = await srv.consola('omni debug export', { espera: /(\d+) trazas guardadas en plugins\/OmniEvents\/trazas\/([\w-]+\.txt)/ })
+        const archivo = r.match(/plugins\/OmniEvents\/trazas\/([\w-]+\.txt)/)[1]
+        const texto = fs.readFileSync(path.join(srv.run, 'plugins', 'OmniEvents', 'trazas', archivo), 'utf8')
+        for (const parte of ['# Traza de OmniEvents', '## Problemas de la última carga', '] regla e2e_tienda', '→ actions',
+          '] simulación de e2e_simulable', '# e2e_tienda', 'trigger: call']) {
+          if (!texto.includes(parte)) throw new Error(`la traza exportada no tiene «${parte}»:\n${texto.slice(0, 1500)}`)
+        }
+      }
+    },
+    {
+      id: '006 H6 CA1 · H6 CA2 · H6 CA3 · H7 CA2 · H7 CA3',
+      nombre: '/omni cpu mide por regla y acción con muestreo; budget avisa una vez en la consola',
+      timeoutMs: 40000,
+      async fn ({ srv }) {
+        await srv.consola('omni cpu reset')
+        await srv.consola('omni cpu on', { espera: /Perfilador encendido: mide 1 de cada 10 disparos/ })
+        const ml = srv.marca()
+        for (let i = 0; i < 25; i++) await srv.consola('omni call e2e_presupuesto')
+        await srv.esperarLog(/La regla 'e2e_presupuesto' promedia [\d.]+ ms por disparo, más que su budget de 0\.001 ms/, { desde: ml })
+        await srv.sincronizar()
+        const avisos = srv.lineas.slice(ml).filter(l => /La regla 'e2e_presupuesto' promedia/.test(l))
+        if (avisos.length !== 1) throw new Error(`se esperaba un solo aviso de budget y hubo ${avisos.length}`)
+        const mc = srv.marca()
+        await srv.consola('omni cpu', { espera: /Presupuestos/ })
+        await srv.esperarLog(/Perfilador · encendido · .* · 1 de cada 10 disparos · OmniEvents ≈ [\d.]+ % del hilo principal/, { desde: mc, timeoutMs: 2000 })
+        await srv.esperarLog(/e2e_presupuesto · call · 2 medidos · prom [\d.]+ µs/, { desde: mc, timeoutMs: 2000 })
+        await srv.esperarLog(/ {4}actions\[0\][^ ]* · prom [\d.]+ µs/, { desde: mc, timeoutMs: 2000 })
+        await srv.esperarLog(/e2e_presupuesto · [\d.]+ ms de 0\.001 ms · ✘ lo pasa/, { desde: mc, timeoutMs: 2000 })
+        await srv.consola('omni cpu off', { espera: /Perfilador apagado/ })
+        await srv.consola('omni cpu reset', { espera: /Perfilador reiniciado/ })
       }
     },
     {

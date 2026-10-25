@@ -70,6 +70,9 @@ con `--release 21`.
   `syncCommands()` ya llama a `sendCommands` por jugador (no sumarle `updateCommands()`).
 - Al subir la versión de un plugin quedan dos jars en `dist/`: la suite y `compuerta-servidor.sh` instalan solo el más
   reciente (005 F-01; antes la suite probaba el viejo y Paper no cargaba ninguno por «Ambiguous plugin name»).
+- `/omni debug` y `/omni check` intercalan los valores en cada condición (`player.level (10) >= 3 → true`): un
+  escenario que lee esas líneas busca ese texto, no la expresión sola (006 F-03). Otro proyecto de la máquina puede
+  ocupar el puerto 25599 de la suite: mirar `netstat -ano | grep :25599` antes de culpar al plugin (006).
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

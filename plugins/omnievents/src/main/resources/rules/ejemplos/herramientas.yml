@@ -1,0 +1,34 @@
+# Ejemplos de OmniEvents: herramientas de autor (spec 006).
+# - Cada condición puede llevar su propio deny: le dice al jugador exactamente qué le falta.
+# - any: N / of: [...] pide «al menos N de estas».
+# - budget avisa en consola si la regla se vuelve lenta.
+# Pruébala sin efectos:  /omni check tienda_espada <jugador>   y   /omni run tienda_espada <jugador> --simular
+
+tienda_espada:
+  trigger: command
+  command:
+    name: espada
+    description: Compra una espada de diamante por 50 monedas
+    usage: /espada
+  budget: 0.5ms
+  conditions:
+    - "player != null"                       # forma corta: sin deny, si falla corre el else
+    - expr: "player.level >= 5"
+      deny:
+        - message: "<red>Necesitas nivel 5 (tienes {player.level})."
+    - expr: "default(pvar.monedas, 0) >= 50"
+      deny:
+        - message: "<red>Te faltan monedas: tienes {default(pvar.monedas, 0)} de 50."
+    - any: 2                                 # al menos 2 de estas 3
+      of:
+        - "perm('omnievents.vip')"
+        - "has_item('EMERALD', 1)"
+        - "player.world.time > 12000"
+      deny:
+        - message: "<red>Necesitas 2 de 3: ser VIP, llevar una esmeralda o que sea de noche."
+  actions:
+    - set: "pvar.monedas -= 50"
+    - give_item: "DIAMOND_SWORD"
+    - message: "<green>¡Espada comprada! Te quedan {pvar.monedas} monedas."
+  else:
+    - message: "Solo los jugadores pueden comprar."

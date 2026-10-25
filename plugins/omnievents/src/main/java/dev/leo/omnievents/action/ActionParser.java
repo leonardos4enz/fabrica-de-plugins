@@ -112,7 +112,7 @@ public final class ActionParser {
         Map<String, Object> node = new LinkedHashMap<>();
         node.put(type, value);
         ActionNode n = parseMap(node, path);
-        if (n != null && forced != null) n = new ActionNode(n.type(), n.path(), n.action(), forced, n.where(), n.chance(), n.when());
+        if (n != null && forced != null) n = new ActionNode(n.type(), n.path(), n.action(), forced, n.where(), n.chance(), n.when(), n.control(), n.source());
         return n;
     }
 
@@ -149,7 +149,17 @@ public final class ActionParser {
         }
         return new ActionNode(canonical, path, action, spec,
                 where == null ? null : Expression.compile(Values.str(where)), ch,
-                when == null ? null : Expression.compile(Values.str(when)));
+                when == null ? null : Expression.compile(Values.str(when)),
+                catalog.isFlow(canonical) || canonical.equals("call"), source(canonical, value, extra));
+    }
+
+    /** Texto corto de la acción para listarla en una simulación (spec 006, H4). */
+    static String source(String type, Object value, Map<String, Object> extra) {
+        StringBuilder sb = new StringBuilder(type);
+        String v = value == null ? "" : Values.str(value).replace('\n', ' ');
+        if (!v.isEmpty()) sb.append(": ").append(v);
+        extra.forEach((k, x) -> sb.append(" · ").append(k).append("=").append(Values.str(x).replace('\n', ' ')));
+        return sb.length() <= 120 ? sb.toString() : sb.substring(0, 119) + "…";
     }
 
     static String canonical(String k) {

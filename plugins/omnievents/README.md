@@ -2,7 +2,8 @@
 
 Eventos condicionales para **Paper 1.21.4 y 26.1** (ver [Compatibilidad](#compatibilidad)): «cuando pase X, si se cumple Y, haz Z», declarado en YAML.
 Es la versión propia de la fábrica de *ConditionalEvents*, con un lenguaje de expresiones real, control de flujo,
-variables persistentes y herramientas de diagnóstico. Spec: [001](../../docs/sdd/specs/001-omnievents-nucleo/spec.md).
+variables persistentes y herramientas de diagnóstico. Specs: [001](../../docs/sdd/specs/001-omnievents-nucleo/spec.md) (núcleo) y
+[006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/spec.md) (herramientas de autor).
 
 ![El ejemplo bienvenida: anuncio de primera entrada en el chat y el título «Bienvenido · 2 jugadores en línea»](../../docs/img/omnievents/ejemplo-bienvenida.png)
 
@@ -13,8 +14,8 @@ Minecraft 1.21.4 ([spec 004](../../docs/sdd/specs/004-fabrica-capturas-en-juego/
 ## Compatibilidad
 | Servidor | Estado | Evidencia |
 |---|---|---|
-| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.0.1) | Compuertas 1, 2 y 3a: unitarias, servidor real y 22/22 escenarios en el juego dos veces (2026-10-24, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md) y [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md)) |
-| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.0.1) | 22/22 escenarios en el juego dos veces con el mismo jar (2026-10-24, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md) y [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md)) |
+| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.1.0) | Compuertas 1, 2 y 3a: 62 unitarias, servidor real y 27/27 escenarios en el juego dos veces (2026-10-24, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md) y [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md)) |
+| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.1.0) | 27/27 escenarios en el juego dos veces con el mismo jar (2026-10-24, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md) y [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md)) |
 | Paper 1.21.5 – 1.21.11 | Sin verificar | Debería funcionar (misma API, sin NMS), pero no se probó |
 | Paper 26.2 y 26.3 | Sin verificar | El bot de pruebas (mineflayer 4.39) llega hasta 26.1 |
 | Paper 1.21.3 o anterior | No soportada | Se compila contra la API de 1.21.4 |
@@ -66,7 +67,7 @@ Imágenes de `cooldown`, `on_cooldown`, `limit` y `on_limit`: [galería](../../d
 | `enabled` | `false` la apaga sin borrarla |
 | `priority`, `ignore_cancelled` | Prioridad del oyente; no correr si otro plugin canceló el evento |
 | `worlds`, `permission`, `bypass_permission` | Filtros rápidos |
-| `conditions` | Una expresión o una lista (todas) |
+| `conditions` | Una expresión o una lista (todas); cada una puede llevar su `deny` y un grupo `any`/`of` pide «N de M» ([abajo](#condiciones-con-deny-y-n-de-m)) |
 | `actions`, `else` | Qué hacer si se cumplen / si no |
 | `cooldown`, `cooldown_scope` | `30s`, `5m`, `1h30m`, `2d`, `20t`; `player` o `global` |
 | `limit`, `limit_scope`, `limit_reset` | Usos máximos; `never`, `daily`, `weekly`, `monthly` o una duración |
@@ -77,6 +78,31 @@ Imágenes de `cooldown`, `on_cooldown`, `limit` y `on_limit`: [galería](../../d
 | `event`, `player_from` | Para `custom`: clase del evento y ruta al jugador |
 | `move_mode` | Para `player_move`: `block` (defecto), `chunk` o `any` |
 | `args` | Para `call`: parámetros (llegan como `var.<nombre>`) |
+| `budget` | Presupuesto de tiempo: `0.5ms` o `200us`; avisa en consola si el promedio reciente lo pasa ([abajo](#rendimiento-omni-cpu-y-budget)) |
+
+## Condiciones con deny y «N de M»
+Cada condición puede ser un texto (como siempre) o un mapa con `expr` y sus propias acciones `deny`. Si falla, corren
+solo sus `deny` (no el `else`); una condición sin `deny` que falla corre el `else` de la regla, como antes. Un grupo
+`any: N` con `of: [...]` se cumple si al menos N de sus condiciones se cumplen (se puede anidar). Ejemplo completo:
+[`rules/ejemplos/herramientas.yml`](src/main/resources/rules/ejemplos/herramientas.yml).
+```yaml
+tienda_espada:
+  trigger: command
+  command: {name: espada}
+  conditions:
+    - "player != null"                       # forma corta: si falla, corre el else
+    - expr: "player.level >= 5"
+      deny:
+        - message: "<red>Necesitas nivel 5 (tienes {player.level})."
+    - any: 2                                 # al menos 2 de estas 3
+      of: ["perm(omnievents.vip)", "has_item(EMERALD, 1)", "player.world.time > 12000"]
+      deny:
+        - message: "<red>Necesitas 2 de 3: ser VIP, llevar una esmeralda o que sea de noche."
+  actions: [...]
+  else: [...]
+```
+`any` debe ser un entero entre 1 y el número de condiciones de `of`; un `deny` dentro de `of` no se usa (aviso al
+cargar).
 
 ## Expresiones
 - Lógica: `&&` `and`, `||` `or`, `!` `not`, paréntesis, `c ? a : b`.
@@ -144,7 +170,8 @@ Control de flujo: `if/then/else`, `repeat/do` (`var.i`), `while/do`, `for_each/a
 Siempre disponibles: `player`, `event`, `world`, `location`, `item` (mano principal), `server`, `online`, `rule`.
 
 ## Comandos (`/omni`, alias `/oe`)
-`reload` · `validate` · `list [filtro]` · `info <regla>` · `enable|disable <regla>` · `debug <regla|all|off>` ·
+`reload` · `validate` · `list [filtro]` · `info <regla>` · `enable|disable <regla>` · `debug <regla|all|off|export>` ·
+`check <regla> [jugador]` · `run <regla> <jugador> [--simular]` · `cpu [on|off|reset]` ·
 `eval <expr>` · `call <regla> [jugador] [k=v…]` · `var get|set|del|list <jugador|global> [nombre] [valor]` ·
 `cooldown reset <regla> [jugador|global]` · `limit reset <regla> [jugador|global]` · `stats` · `triggers` · `actions` ·
 `item save|delete|list` · `import conditionalevents` · `selftest`.
@@ -158,12 +185,42 @@ autocompletado y deja de funcionar («comando desconocido») sin desregistrarse,
 ## Diagnóstico
 - `/omni debug mi_regla`: en cada disparo ves cada condición con sus valores (`player.level (3) >= 10 → false`),
   la rama que se tomó y cada acción.
+- `/omni check mi_regla Ana`: revisa la regla **ahora** para Ana sin ejecutar nada: mundo, permisos, **todas** las
+  condiciones con sus valores (también las que vienen después de la que falla, y cuántas se cumplen de un grupo
+  `any`), usos y enfriamiento, y la rama que correría (`→ correría: deny de conditions[1] (1 acciones)`). Si la regla
+  usa datos de un evento (`block`, `message`…), avisa que valen nulo en la revisión.
+- `/omni run mi_regla Ana --simular`: recorre la regla como un disparo real y **lista** cada acción, en orden, sin
+  aplicarla (`• mi_regla.actions[0] message: …`). Los `if`, bucles, `when`, `to:` y `random` se evalúan con los
+  valores actuales; `delay` no espera y `call` se simula por dentro. No cuenta usos ni enfriamientos ni cambia
+  variables: una condición que dependa de un `set` anterior ve el valor de antes.
+- `/omni run mi_regla Ana` (sin `--simular`): la dispara de verdad, como si la activara Ana, con cualquier disparador
+  (queda en la consola quién la corrió).
+- `/omni debug export`: guarda las últimas trazas de `debug` y simulaciones en `plugins/OmniEvents/trazas/<fecha-hora>.txt`,
+  con las versiones, los problemas de la última carga y el YAML de cada regla que aparece. Sin red: compártelo tú si
+  pides ayuda (revísalo antes: lleva nombres y mensajes de jugadores).
 - `/omni stats`: disparos, aciertos, errores y tiempo promedio y máximo por regla; oyentes y tareas activos.
 - Los errores de configuración dicen archivo, ruta y causa, con «¿quisiste decir…?».
 
 ![Salida de /omni debug al romper una mena de diamante: cada condición con sus valores, la rama y cada acción](../../docs/img/omnievents/comando-debug.png)
 
 ![Salida de /omni validate con un disparador mal escrito y la sugerencia «¿quisiste decir player_join?»](../../docs/img/omnievents/comando-validate.png)
+
+## Rendimiento: /omni cpu y budget
+- `/omni cpu on` enciende el perfilador; `/omni cpu` muestra, de mayor a menor, cada regla con su tiempo promedio por
+  disparo (µs) y el % estimado del hilo principal, sus 3 condiciones o acciones más caras, y el costo por disparador.
+  `off` lo apaga (lo medido se conserva) y `reset` lo reinicia. Mide 1 de cada `profiler.sample-every` disparos de cada
+  regla (10 por defecto); apagado no mide nada.
+- `budget: 0.5ms` en una regla: si su promedio reciente pasa el presupuesto, avisa en la consola, como mucho una vez
+  cada `profiler.budget-warn-every` (5 min). No cuenta los primeros 10 disparos (calentamiento de Java) y avisa desde el
+  disparo 20. `/omni cpu` lista las reglas con presupuesto y si lo pasan, aun con el perfilador apagado.
+```yaml
+# config.yml (claves nuevas en 1.1.0; si faltan se usan estos valores)
+profiler:
+  sample-every: 10
+  budget-warn-every: 5m
+debug:
+  export-buffer: 200      # trazas que guarda /omni debug export
+```
 
 ## PlaceholderAPI
 `%omni_var_<n>%` · `%omni_gvar_<n>%` · `%omni_cooldown_<regla>%` · `%omni_uses_<regla>%`.
