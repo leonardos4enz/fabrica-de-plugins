@@ -1058,6 +1058,23 @@ export default {
       }
     },
     {
+      id: '013 F-04',
+      nombre: 'has_item cuenta por material aunque los ítems tengan nombre',
+      async fn (ctx) {
+        const { srv } = ctx
+        await prepararJugador(ctx, ANA)
+        const ana = ctx.bots[ANA]
+        // Regresión (spec 013, F-04): containsAtLeast comparaba el ítem exacto y uno con nombre no contaba.
+        await srv.consola(`give ${ANA} diamond[custom_name='"e2e brillante"'] 2`)
+        await srv.sincronizar()
+        await ana.hasta('tener 2 diamantes con nombre', () => ana.cantidad('diamond') === 2)
+        const m = ana.marca()
+        ana.comando('e2etiene')
+        await ana.esperar('chat', /^e2e tiene diamantes true$/, { desde: m })
+        await srv.consola(`clear ${ANA}`)
+      }
+    },
+    {
       id: '013 H3 CA1 · H3 CA2 · H3 CA4',
       nombre: 'Bedrock (Geyser + Floodgate): el menú llega como formulario de botones; un botón corre su clic y vuelve con el valor nuevo; una respuesta vieja no vale; cerrar corre on_close',
       timeoutMs: 45000,

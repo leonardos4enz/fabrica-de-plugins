@@ -272,14 +272,19 @@ public final class DataStore {
             if (at != null) queue.add(new Pending(at, owner, k));
         }
         h.expires.keySet().retainAll(h.vars.keySet());
+        // Regresión (spec 013, F-03): el nombre de una regla de menú lleva puntos (tienda.menu.items.x.click) y YAML lo
+        // guarda como secciones anidadas; se leen las claves completas, no solo el primer nivel.
         ConfigurationSection cds = y.getConfigurationSection("cooldowns");
-        if (cds != null) for (String k : cds.getKeys(false)) {
+        if (cds != null) for (String k : cds.getKeys(true)) {
+            if (cds.isConfigurationSection(k)) continue;
             long until = cds.getLong(k);
             if (until > now) h.cooldowns.put(k, until);
         }
         ConfigurationSection uses = y.getConfigurationSection("uses");
-        if (uses != null) for (String k : uses.getKeys(false)) {
-            h.uses.put(k, new long[]{uses.getLong(k + ".count"), uses.getLong(k + ".since")});
+        if (uses != null) for (String k : uses.getKeys(true)) {
+            if (!k.endsWith(".count") || uses.isConfigurationSection(k)) continue;
+            String rule = k.substring(0, k.length() - ".count".length());
+            h.uses.put(rule, new long[]{uses.getLong(k), uses.getLong(rule + ".since")});
         }
         return h;
     }

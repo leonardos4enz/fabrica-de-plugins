@@ -35,6 +35,21 @@ jugadores), `bedrock.image` (el cliente de prueba no dibuja) y `bedrock: { enabl
 | F-01 | Media (arnés) | Desde la 012, el servidor de prueba mandaba métricas de bStats (WorldEdit, WorldGuard, EssentialsX… lo traen activado): telemetría que la constitución (II.4) pide apagada | `configurarGeyser` pone `enabled: false` en `plugins/bStats/config.yml` y apaga las métricas de Geyser; prueba en `plugins-extra.test.mjs`, que falla con el arnés anterior (nada lo apagaba) |
 | F-02 | Baja (arnés) | Con el RakNet en JavaScript (`jsp-raknet`) el cliente de Bedrock no conectaba a Geyser («Connect timed out») | El cliente usa el RakNet nativo (el de bedrock-protocol por defecto); lección en `CLAUDE.md` |
 
+### Después del cierre: OmniEvents 1.8.1 (servidor de demostración, 2026-10-25)
+Un servidor de demostración con un paquete de reglas grande (lobby, menús, tienda, kits, trivia, NPC) y un bot que lo
+recorrió encontraron dos bugs. Se corrigieron en la 1.8.1.
+
+| ID | Sev. | Hallazgo | Resolución |
+|---|---|---|---|
+| F-03 | Alta | Los enfriamientos y usos de un clic de menú se perdían al salir y volver a entrar: el nombre de la regla lleva puntos (`demo:principal.menu.items.diario.click`), YAML lo guarda en `data/players/` como secciones anidadas y `DataStore` solo leía el primer nivel. Un diario o un kit diario se cobraba de nuevo reconectándose | `DataStore` lee las claves completas (`getKeys(true)`): los archivos ya guardados se leen bien sin migrar. `DataStoreTest.F03_enfriamientos_y_usos_de_reglas_con_puntos_persisten` falló con la 1.8.0 (comprobado) y pasa con la corrección |
+| F-04 | Media | `has_item('COMPASS')` no contaba una brújula con nombre: `containsAtLeast` compara el ítem exacto (como `removeItem` en 002 F-02), y la regla de bienvenida volvía a dar la brújula en cada entrada | `has_item` cuenta por material, como `cost.items` (`PlayerPurse.count`). El escenario `013 F-04` (2 diamantes con nombre → `has_item('DIAMOND', 2)`) dio `false` con el jar 1.8.0 (comprobado) y pasa con el 1.8.1 |
+
+Nota (no es bug): un color dentro de una `{expresión}` (`{x ? '<red>a' : '<green>b'}`) se ve literal, porque lo que
+sale de una expresión se escapa (constitución II.2). Va fuera de las llaves o en dos ítems con `view`; lo dice el README.
+
+Compuertas de la 1.8.1 (2026-10-25): unitarias 170/170; compuerta 2 limpia (52 reglas, 0 errores, 0 avisos, 25/25
+pruebas, dos `reload` iguales); 45/45 escenarios dos veces en Paper 1.21.4 y otras dos en 26.1.2.
+
 En el desarrollo, el menú de la suite se llamó primero `e2e_tienda` y chocó con una regla de la spec 006: el cargador lo
 dijo con su error («el nombre de regla 'e2e_tienda' ya existe en e2e/e2e.yml»). No es un bug: se renombró a `e2e_menu_tienda`.
 

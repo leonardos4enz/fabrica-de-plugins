@@ -1034,7 +1034,7 @@ Operadores: `&&` `||` `!` (`and` `or` `not`), `==` `!=` `<` `<=` `>` `>=`, `~=` 
 | `distance(a, b)` | Distancia entre dos ubicaciones, entidades o bloques (-1 si están en mundos distintos). |
 | `floor(x)` | Redondea hacia abajo. |
 | `format(x[, decimales])` | Número con separador de miles (1,234.5). |
-| `has_item(material[, n])` | true si el jugador lleva al menos n (1 por defecto) del material. |
+| `has_item(material[, n])` | true si el jugador lleva al menos n (1 por defecto) del material, tengan o no nombre (sin contar la armadura). |
 | `hour()` | Hora del día del servidor (0 a 23). |
 | `if(condición, a, b)` | a si la condición se cumple, si no b (solo evalúa la rama elegida). |
 | `in_area(mundo, x1, y1, z1, x2, y2, z2)` | true si el jugador está dentro del cubo. |

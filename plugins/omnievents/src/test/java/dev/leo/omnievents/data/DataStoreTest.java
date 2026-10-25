@@ -52,6 +52,29 @@ class DataStoreTest {
         assertTrue(g.remove("bono"));
     }
 
+    // Regresión (spec 013, F-03): el enfriamiento y los usos de un clic de menú (nombre con puntos) se perdían al
+    // volver a cargar: el diario o un kit diario se cobraban de nuevo reconectándose.
+    @Test
+    void F03_enfriamientos_y_usos_de_reglas_con_puntos_persisten(@TempDir File dir) {
+        DataStore s = store(dir);
+        UUID id = UUID.randomUUID();
+        DataStore.Holder h = s.player(id);
+        h.cooldowns().put("demo:principal.menu.items.diario.click", now.get() + 3_600_000);
+        h.cooldowns().put("simple", now.get() + 60_000);
+        h.uses().put("kits.menu.items.minero.click", new long[]{1, 123});
+        h.uses().put("diaria", new long[]{2, 456});
+        h.markDirty();
+        s.saveAllSync();
+
+        DataStore.Holder again = store(dir).player(id);
+        assertEquals(now.get() + 3_600_000, again.cooldowns().get("demo:principal.menu.items.diario.click"));
+        assertEquals(now.get() + 60_000, again.cooldowns().get("simple"));
+        assertEquals(2, again.cooldowns().size(), again.cooldowns().toString());
+        assertEquals(List.of(1L, 123L), java.util.Arrays.stream(again.uses().get("kits.menu.items.minero.click")).boxed().toList());
+        assertEquals(List.of(2L, 456L), java.util.Arrays.stream(again.uses().get("diaria")).boxed().toList());
+        assertEquals(2, again.uses().size(), again.uses().keySet().toString());
+    }
+
     @Test
     void H1_CA3_la_caducidad_persiste_y_lo_vencido_no_vuelve(@TempDir File dir) throws IOException {
         DataStore s = store(dir);

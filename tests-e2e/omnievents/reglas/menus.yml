@@ -55,3 +55,10 @@ e2e_menu_tienda:
           close: true
           actions:
             - message: "e2e cerrar"
+
+# Regresión (spec 013, F-04): has_item cuenta por material aunque el ítem tenga nombre.
+e2e_tiene_item:
+  trigger: command
+  command: e2etiene
+  actions:
+    - message: "e2e tiene diamantes {has_item('DIAMOND', 2)}"

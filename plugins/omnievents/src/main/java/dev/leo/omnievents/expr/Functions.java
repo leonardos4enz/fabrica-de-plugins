@@ -165,10 +165,11 @@ public final class Functions {
             if (l == null || l.getWorld() == null || !l.getWorld().getName().equalsIgnoreCase(s(a, 0))) return false;
             return between(l.getX(), n(a, 1), n(a, 4)) && between(l.getY(), n(a, 2), n(a, 5)) && between(l.getZ(), n(a, 3), n(a, 6));
         });
-        doc("has_item(material[, n])", "true si el jugador lleva al menos n (1 por defecto) del material.", 1, 2, (c, a) -> {
+        // Regresión (spec 013, F-04): containsAtLeast compara el ítem exacto y no contaba uno con nombre o encantado.
+        doc("has_item(material[, n])", "true si el jugador lleva al menos n (1 por defecto) del material, tengan o no nombre (sin contar la armadura).", 1, 2, (c, a) -> {
             if (!(c.player() instanceof Player p)) return false;
             Material m = Material.matchMaterial(s(a, 0));
-            return m != null && p.getInventory().containsAtLeast(new org.bukkit.inventory.ItemStack(m), a.length > 1 ? (int) n(a, 1) : 1);
+            return m != null && dev.leo.omnievents.action.PlayerPurse.count(p.getInventory(), m) >= (a.length > 1 ? (int) n(a, 1) : 1);
         });
         // Datos de OmniEvents
         doc("cooldown(regla)", "Segundos de enfriamiento que le quedan al jugador en esa regla.", 1, 1, (c, a) -> c.service("cooldown", s(a, 0)));

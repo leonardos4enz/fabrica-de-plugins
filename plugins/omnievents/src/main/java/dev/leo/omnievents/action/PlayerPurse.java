@@ -68,8 +68,11 @@ public final class PlayerPurse implements Purse {
     @Override
     public int count(String material) {
         Material m = Material.matchMaterial(material);
-        if (m == null) return 0;
-        PlayerInventory inv = p().getInventory();
+        return m == null ? 0 : count(p().getInventory(), m);
+    }
+
+    /** Cuántos ítems de ese material lleva, tengan o no nombre (inventario y mano secundaria, sin la armadura). */
+    public static int count(PlayerInventory inv, Material m) {
         int n = 0;
         for (int i = 0; i < inv.getSize(); i++) {
             if (i >= 36 && i < 40) continue;
