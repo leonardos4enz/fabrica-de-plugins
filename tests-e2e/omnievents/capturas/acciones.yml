@@ -1,0 +1,230 @@
+# Reglas de demostración para las capturas (spec 004): una por acción. El bot escribe /cap <nombre> y la regla
+# cap_<nombre> corre. La galería muestra el YAML de cada una junto a su imagen, así que se escriben como las
+# escribiría el dueño de un servidor. El escenario es una plataforma en y = 100 (el jugador mira hacia +z).
+
+cap:
+  trigger: command
+  command:
+    name: cap
+    permission: omnievents.cap
+    description: Escenas de las capturas de la galería
+  actions:
+    - if: "player == null || args.size == 0"
+      then:
+        - message: "Uso: /cap <escena>"
+        - stop
+    - call: "cap_{args[0]}"
+
+# ───────────── Mensajes ─────────────
+cap_message:
+  trigger: call
+  actions:
+    - message: "<green>¡Hola, <yellow>{player.name}</yellow>! Este mensaje es solo para ti."
+
+cap_broadcast:
+  trigger: call
+  actions:
+    - broadcast: "<gold>[Anuncio]</gold> <white>{player.name} abrió el evento de la noche."
+
+cap_actionbar:
+  trigger: call
+  actions:
+    - actionbar: "<aqua>Puntos: <white>120</white> <dark_gray>»</dark_gray> <yellow>Racha x3"
+
+cap_title:
+  trigger: call
+  actions:
+    - title: "<gold><bold>¡Victoria!;<gray>Ganaste la ronda 3;10;70;20"
+
+cap_bossbar:
+  trigger: call
+  actions:
+    - bossbar: "<red>El Guardián del Bosque;4;RED;0.65"
+
+cap_console_message:
+  trigger: call
+  actions:
+    - console_message: "<gold>{player.name} abrió el cofre del castillo"
+
+# ───────────── Comandos ─────────────
+cap_console:
+  trigger: call
+  actions:
+    - console: "say {player.name} activó la palanca del castillo"
+
+cap_command:
+  trigger: call
+  actions:
+    - command: "monedas"
+
+cap_chat:
+  trigger: call
+  actions:
+    - chat: "¡Listo para la carrera!"
+
+# ───────────── Jugador ─────────────
+cap_teleport:
+  trigger: call
+  actions:
+    - teleport: "world;12.5;104;6.5;0;35"
+    - actionbar: "<green>Bienvenido a la torre"
+
+cap_heal:
+  trigger: call
+  actions:
+    - heal: 6
+
+cap_damage:
+  trigger: call
+  actions:
+    - damage: 7
+
+cap_feed:
+  trigger: call
+  actions:
+    - feed: 6
+
+cap_set_food:
+  trigger: call
+  actions:
+    - set_food: 7
+
+cap_gamemode:
+  trigger: call
+  actions:
+    - gamemode: creative
+
+cap_fly:
+  trigger: call
+  actions:
+    - fly: true
+    - actionbar: "<aqua>Ahora puedes volar <gray>(doble salto)"
+
+cap_effect:
+  trigger: call
+  actions:
+    - effect: SPEED;60;2;false
+    - effect: JUMP_BOOST;60;1;false
+    - effect: NIGHT_VISION;60;1;false
+    - effect: SLOWNESS;60;1;false
+
+cap_remove_effect:
+  trigger: call
+  actions:
+    - remove_effect: SLOWNESS
+
+cap_give_item:
+  trigger: call
+  actions:
+    - give_item:
+        material: DIAMOND_SWORD
+        name: "<aqua><bold>Filo del Alba"
+        lore: ["<gray>Forjada para {player.name}", "<dark_gray>Evento de otoño"]
+        enchants: {SHARPNESS: 3}
+        unbreakable: true
+
+cap_remove_item:
+  trigger: call
+  actions:
+    - remove_item: DIAMOND;5
+
+cap_clear_inventory:
+  trigger: call
+  actions:
+    - clear_inventory
+    - message: "<gray>Tu inventario quedó vacío."
+
+cap_close_inventory:
+  trigger: call
+  actions:
+    - close_inventory
+    - message: "<gray>Se cerró tu inventario."
+
+cap_give_exp:
+  trigger: call
+  actions:
+    - give_exp: 12
+
+cap_give_level:
+  trigger: call
+  actions:
+    - give_level: 5
+
+cap_velocity:
+  trigger: call
+  actions:
+    - velocity: "0;1.2;0"
+
+cap_launch:
+  trigger: call
+  actions:
+    - launch: 1.6
+
+cap_kick:
+  trigger: call
+  actions:
+    - kick: "<red>Te expulsó un administrador.\n<gray>Motivo: <white>pruebas de la galería"
+
+# ───────────── Mundo ─────────────
+cap_set_block:
+  trigger: call
+  actions:
+    - set_block: "world;11;100;14;GOLD_BLOCK"
+    - set_block: "world;12;100;14;DIAMOND_BLOCK"
+    - set_block: "world;13;100;14;EMERALD_BLOCK"
+
+cap_summon:
+  trigger: call
+  actions:
+    - summon: "SHEEP;world;10.5;100;15.5"
+    - summon: "COW;world;14.5;100;15.5"
+
+cap_explosion:
+  trigger: call
+  actions:
+    - explosion: "3;false;true"
+      to: "player:Beto"
+
+# ───────────── Evento ─────────────
+cap_golpe_letal:
+  trigger: player_attack
+  enabled: false
+  conditions: "target.type == 'COW'"
+  actions:
+    - set_damage: 1000
+    - actionbar: "<red>¡Golpe letal! <gray>{target.type} fuera de combate"
+
+cap_megafono:
+  trigger: player_chat
+  enabled: false
+  conditions: "message startsWith '!'"
+  actions:
+    - set_message: "<gold>[megáfono]</gold> <white>{substr(message, 1)}"
+
+cap_muerte:
+  trigger: player_death
+  enabled: false
+  actions:
+    - set_death_message: "<red>☠ {player.name}</red> <gray>se rindió ante el vacío"
+
+cap_conservar:
+  trigger: player_death
+  enabled: false
+  actions:
+    - keep_inventory
+    - message: "<green>Conservaste tu inventario y tu nivel."
+
+cap_sin_botin:
+  trigger: entity_death
+  enabled: false
+  conditions: "entity.type == 'CHICKEN'"
+  actions:
+    - cancel_drops
+    - actionbar: "<gray>La gallina no soltó nada"
+
+cap_portero:
+  trigger: player_pre_login
+  enabled: false
+  conditions: "name == 'Intruso'"
+  actions:
+    - deny_join: "<red>El servidor está en mantenimiento.\n<gray>Vuelve en una hora."

@@ -2,14 +2,22 @@
   "name": "fabrica-tests-e2e",
   "private": true,
   "version": "1.0.0",
-  "description": "Compuerta 3a de VERIFY: pruebas en el juego con bots de mineflayer contra un Paper real (spec 002).",
+  "description": "Compuertas en el juego con bots de mineflayer contra un Paper real: pruebas (spec 002) y capturas de la galería (spec 004).",
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "test": "node --test \"lib/*.test.mjs\" && node correr.mjs",
-    "test:arnes": "node --test \"lib/*.test.mjs\""
+    "test": "node --test \"lib/*.test.mjs\" \"lib/capturas/*.test.mjs\" && node correr.mjs",
+    "test:arnes": "node --test \"lib/*.test.mjs\" \"lib/capturas/*.test.mjs\"",
+    "capturas": "node capturas.mjs"
   },
   "dependencies": {
     "mineflayer": "~4.39.0"
+  },
+  "optionalDependencies": {
+    "canvas": "~3.2.0",
+    "prismarine-viewer": "~1.33.0",
+    "puppeteer-core": "~25.16.0"
   }
 }

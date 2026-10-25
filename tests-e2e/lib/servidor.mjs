@@ -31,8 +31,11 @@ export class Servidor {
     this.salida = null
   }
 
-  /** H2: EULA del dueño, solo localhost, sin cuentas. Nunca escribe fuera de run/. */
-  prepararPropiedades () {
+  /**
+   * H2: EULA del dueño, solo localhost, sin cuentas. Nunca escribe fuera de run/. `ademas`: propiedades propias de quien
+   * usa el servidor (las capturas de la spec 004 necesitan monstruos); no pueden cambiar las de seguridad.
+   */
+  prepararPropiedades (ademas = {}) {
     const eula = path.join(this.run, 'eula.txt')
     if (!fs.existsSync(eula) || !/eula=true/.test(fs.readFileSync(eula, 'utf8'))) {
       throw new Error(`El EULA de Minecraft lo acepta el dueño en ${eula}; la suite no lo acepta por él.`)
@@ -50,6 +53,7 @@ export class Servidor {
       'view-distance': '4',
       'simulation-distance': '4'
     }
+    for (const [k, v] of Object.entries(ademas)) if (!['server-ip', 'online-mode', 'enforce-secure-profile'].includes(k)) forzadas[k] = v
     const archivo = path.join(this.run, 'server.properties')
     const lineas = fs.existsSync(archivo) ? fs.readFileSync(archivo, 'utf8').split(/\r?\n/) : []
     const vistas = new Set()

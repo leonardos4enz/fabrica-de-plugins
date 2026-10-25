@@ -58,6 +58,21 @@ npm --prefix tests-e2e test -- --paper 26.1.2 --version-bot 26.1 --java-servidor
   plugin. El log queda en `run/e2e.log`.
 - Otra versión de Paper vive en `run-<versión>/` (jar de la API Fill con sha256 verificado).
 
+### Capturas de la galería (al cerrar una spec que cambia algo visible)
+```bash
+npm --prefix tests-e2e run capturas                      # todas las escenas (≈10 min), con compilación
+npm --prefix tests-e2e run capturas -- --sin-build --solo "comando-|accion-title"
+```
+- Usa el mismo servidor de prueba y bots que la 3a. Cada escena prepara su estado por consola, el bot vive la
+  capacidad y se guarda un render de lo que recibió (chat, barra, títulos, HUD, inventarios, vista 3D del mundo) en
+  `docs/img/<plugin>/<escena>.png`, con la galería generada en `docs/<plugin>/galeria.md`. Diseño:
+  [spec 004](specs/004-fabrica-capturas-en-juego/plan.md).
+- Cada imagen se compara por píxeles con la anterior: `=` igual (no se reescribe), `!` cambió, `≈` cambió en una
+  escena marcada como `varía` (tiempos, azar, criaturas con IA), `+` nueva.
+- Pasa si ninguna escena falla, toda capacidad del servidor vivo (`/omni triggers`, `actions`, `help` y las reglas
+  de ejemplo) tiene su escena, y una segunda corrida seguida no tiene `!`. Un `!` esperado (cambió un mensaje) se
+  revisa a ojo antes del commit.
+
 ## 3b. Revisión exploratoria
 Una persona en el juego, o un agente que maneja un bot con las mismas ayudas de `tests-e2e/lib/`. Lo que encuentre
 se vuelve escenario de la 3a (o unitaria) según la regla de oro.

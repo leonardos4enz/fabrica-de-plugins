@@ -1,0 +1,330 @@
+# Reglas de demostración para las capturas (spec 004): una por disparador. Empiezan apagadas (enabled: false) y cada
+# escena enciende solo la suya por consola (/omni enable), así una no se mezcla con las demás.
+
+# ───────────── Jugador ─────────────
+cap_t_player_respawn:
+  trigger: player_respawn
+  enabled: false
+  actions:
+    - message: "<green>Reapareciste en <white>{round(location.x)}, {round(location.y)}, {round(location.z)}</white> <gray>({reason})"
+
+cap_t_player_command:
+  trigger: player_command
+  enabled: false
+  conditions: "cmd.name == 'reglas'"
+  actions:
+    - cancel
+    - message: "<gold>Reglas del servidor:"
+    - message: "<gray>1. Respeta a los demás jugadores."
+    - message: "<gray>2. Nada de trampas ni programas externos."
+
+cap_t_player_move:
+  trigger: player_move
+  enabled: false
+  move_mode: block
+  actions:
+    - actionbar: "<gray>Caminas por <white>{to.block_x}, {to.block_y}, {to.block_z}"
+
+cap_t_player_teleport:
+  trigger: player_teleport
+  enabled: false
+  actions:
+    - message: "<light_purple>Teletransporte <gray>({cause})</gray> de {round(from.x)}, {round(from.z)} a {round(to.x)}, {round(to.z)}"
+
+cap_t_player_world_change:
+  trigger: player_world_change
+  enabled: false
+  actions:
+    - message: "<gray>Llegaste a <white>{world.name}</white> desde <white>{from_world.name}"
+
+cap_t_player_sneak:
+  trigger: player_sneak
+  enabled: false
+  conditions: "sneaking"
+  actions:
+    - actionbar: "<yellow>Modo sigilo activado"
+
+cap_t_player_sprint:
+  trigger: player_sprint
+  enabled: false
+  conditions: "sprinting"
+  actions:
+    - actionbar: "<aqua>¡A toda velocidad!"
+
+cap_t_player_jump:
+  trigger: player_jump
+  enabled: false
+  actions:
+    - actionbar: "<green>¡Salto!"
+
+cap_t_player_level_change:
+  trigger: player_level_change
+  enabled: false
+  conditions: "new_level > old_level"
+  actions:
+    - title: "<green>¡Nivel {new_level}!;<gray>Subiste desde el nivel {old_level};5;50;10"
+
+cap_t_player_gamemode_change:
+  trigger: player_gamemode_change
+  enabled: false
+  actions:
+    - message: "<gray>Modo de juego: <white>{new_mode}"
+
+cap_t_player_toggle_flight:
+  trigger: player_toggle_flight
+  enabled: false
+  conditions: "flying"
+  actions:
+    - actionbar: "<aqua>Vuelo activado"
+
+cap_t_player_bed_enter:
+  trigger: player_bed_enter
+  enabled: false
+  actions:
+    - message: "<dark_aqua>Buenas noches, {player.name} <gray>({result})"
+
+cap_t_player_fish:
+  trigger: player_fish
+  enabled: false
+  conditions: "state == 'FISHING'"
+  actions:
+    - actionbar: "<aqua>Lanzaste la caña: espera a que piquen"
+
+cap_t_player_regain_health:
+  trigger: player_regain_health
+  enabled: false
+  actions:
+    - actionbar: "<red>❤ <gray>+{round(amount, 1)} de vida <dark_gray>({reason})"
+
+cap_t_player_food_change:
+  trigger: player_food_change
+  enabled: false
+  conditions: "new_food < old_food"
+  actions:
+    - actionbar: "<gold>Hambre: <white>{old_food} → {new_food}"
+
+cap_t_player_advancement:
+  trigger: player_advancement
+  enabled: false
+  actions:
+    - message: "<gold>+10 monedas</gold> <gray>por el logro <white>{advancement}"
+
+cap_t_player_swap_hands:
+  trigger: player_swap_hands
+  enabled: false
+  actions:
+    - actionbar: "<gray>Mano izquierda: <white>{offhand.type}"
+
+cap_t_player_armor_change:
+  trigger: player_armor_change
+  enabled: false
+  conditions: "item != null && item.type != 'AIR'"
+  actions:
+    - message: "<gray>Te equipaste <white>{item.type}</white> en <white>{slot}"
+
+cap_t_player_portal:
+  trigger: player_portal
+  enabled: false
+  actions:
+    - cancel
+    - message: "<dark_purple>El Nether está cerrado durante el evento."
+
+cap_t_player_kick:
+  trigger: player_kick
+  enabled: false
+  actions:
+    - broadcast: "<gray>{player.name} fue expulsado: <white>{reason}"
+
+# ───────────── Combate ─────────────
+cap_t_player_damage:
+  trigger: player_damage
+  enabled: false
+  actions:
+    - actionbar: "<red>-{round(damage, 1)} de vida <gray>({cause})"
+
+cap_t_player_attack:
+  trigger: player_attack
+  enabled: false
+  actions:
+    - actionbar: "<gray>Golpeaste a <white>{target.type}</white> <dark_gray>»</dark_gray> <red>{round(damage, 1)}"
+
+cap_t_player_kill:
+  trigger: player_kill
+  enabled: false
+  actions:
+    - message: "<green>Cazaste un <white>{target.type}</white> <gray>(+5 monedas)"
+
+cap_t_player_shoot:
+  trigger: player_shoot
+  enabled: false
+  actions:
+    - actionbar: "<gray>Disparo con fuerza <white>{round(force, 1)}"
+
+cap_t_projectile_hit:
+  trigger: projectile_hit
+  enabled: false
+  conditions: "block != null"
+  actions:
+    - message: "<gray>La flecha pegó en <white>{block.type}"
+
+# ───────────── Bloques ─────────────
+cap_t_block_place:
+  trigger: block_place
+  enabled: false
+  actions:
+    - actionbar: "<gray>Pusiste <white>{block.type}</white> sobre <white>{against.type}"
+
+cap_t_block_interact:
+  trigger: block_interact
+  enabled: false
+  conditions: "block.type == 'LEVER'"
+  actions:
+    - message: "<gray>{action} en la palanca: <green>se abrió la puerta secreta"
+
+cap_t_sign_change:
+  trigger: sign_change
+  enabled: false
+  actions:
+    - message: "<gray>Cartel escrito: <white>{join(lines, ' | ')}"
+
+cap_t_bucket_fill:
+  trigger: bucket_fill
+  enabled: false
+  actions:
+    - actionbar: "<aqua>Llenaste el balde: <white>{item.type}"
+
+cap_t_bucket_empty:
+  trigger: bucket_empty
+  enabled: false
+  actions:
+    - actionbar: "<aqua>Vaciaste <white>{bucket}"
+
+# ───────────── Ítems ─────────────
+cap_t_player_interact:
+  trigger: player_interact
+  enabled: false
+  conditions: "action == 'RIGHT_CLICK' && block == null"
+  actions:
+    - actionbar: "<gray>Clic derecho al aire con <white>{item.type}"
+
+cap_t_item_interact:
+  trigger: item_interact
+  enabled: false
+  conditions: "item.type == 'BLAZE_ROD'"
+  actions:
+    - actionbar: "<gold>La vara de fuego chisporrotea"
+
+cap_t_item_consume:
+  trigger: item_consume
+  enabled: false
+  actions:
+    - message: "<gray>Comiste <white>{item.type}"
+
+cap_t_item_craft:
+  trigger: item_craft
+  enabled: false
+  actions:
+    - message: "<gray>Fabricaste <white>{item.amount} {item.type}"
+
+cap_t_item_drop:
+  trigger: item_drop
+  enabled: false
+  actions:
+    - actionbar: "<gray>Tiraste <white>{item.amount} {item.type}"
+
+cap_t_item_pickup:
+  trigger: item_pickup
+  enabled: false
+  actions:
+    - actionbar: "<green>+{item.amount} {item.type}"
+
+cap_t_item_held:
+  trigger: item_held
+  enabled: false
+  conditions: "item != null"
+  actions:
+    - actionbar: "<gray>Ranura {slot + 1}: <white>{item.type}"
+
+cap_t_item_enchant:
+  trigger: item_enchant
+  enabled: false
+  actions:
+    - message: "<light_purple>Encantaste <white>{item.type}</white> por {cost} niveles"
+
+cap_t_item_break:
+  trigger: item_break
+  enabled: false
+  actions:
+    - message: "<red>Se rompió tu <white>{item.type}"
+
+# ───────────── Inventario ─────────────
+cap_t_inventory_open:
+  trigger: inventory_open
+  enabled: false
+  conditions: "inventory_type == 'CHEST'"
+  actions:
+    - message: "<gray>Abriste un cofre: <white>{title}"
+
+cap_t_inventory_click:
+  trigger: inventory_click
+  enabled: false
+  conditions: "item != null"
+  actions:
+    - message: "<gray>Clic {click} en la ranura {slot}: <white>{item.type}"
+
+cap_t_inventory_close:
+  trigger: inventory_close
+  enabled: false
+  conditions: "inventory_type == 'CHEST'"
+  actions:
+    - message: "<gray>Cerraste el cofre"
+
+# ───────────── Entidades ─────────────
+cap_t_entity_interact:
+  trigger: entity_interact
+  enabled: false
+  actions:
+    - message: "<gray>Acariciaste a <white>{target.type}"
+
+cap_t_entity_spawn:
+  trigger: entity_spawn
+  enabled: false
+  conditions: "entity.type == 'SHEEP'"
+  actions:
+    - broadcast: "<gray>Apareció una oveja <dark_gray>({reason})"
+
+cap_t_entity_death:
+  trigger: entity_death
+  enabled: false
+  conditions: "entity.type == 'RABBIT'"
+  actions:
+    - message: "<gray>Atrapaste un conejo"
+
+# ───────────── Servidor ─────────────
+cap_t_console_command:
+  trigger: console_command
+  enabled: false
+  conditions: "cmd.name == 'anuncio'"
+  actions:
+    - cancel
+    - broadcast: "<gold>[Anuncio]</gold> <white>{join(cmd.args, ' ')}"
+
+cap_t_timer:
+  trigger: timer
+  enabled: false
+  every: 2s
+  actions:
+    - actionbar: "<gold>Evento en curso <dark_gray>»</dark_gray> <gray>quedan 5 minutos"
+
+# La escena reescribe «at» con el minuto siguiente en el servidor de prueba (la galería muestra este archivo).
+cap_t_clock:
+  trigger: clock
+  enabled: false
+  at: ["20:00"]
+  actions:
+    - broadcast: "<dark_aqua>Es la hora del evento nocturno."
+
+cap_t_server_stop:
+  trigger: server_stop
+  actions:
+    - log: "Guardando el evento antes de apagar: {online} jugadores conectados."

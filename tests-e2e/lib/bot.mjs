@@ -65,7 +65,7 @@ export class Jugador {
     bot._client.on('explosion', () => registrar('explosion', 'explosion'))
     bot._client.on('abilities', (p) => registrar('abilities', `flags=${p.flags}`, p))
     bot.on('entitySpawn', (e) => registrar('entity', String(e.name), e))
-    bot.on('kicked', (r) => { this.expulsion = texto(r); registrar('kicked', this.expulsion) })
+    bot.on('kicked', (r) => { this.expulsion = texto(r); registrar('kicked', this.expulsion, r) })
     bot.on('error', () => {})
   }
 

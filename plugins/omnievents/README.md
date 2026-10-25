@@ -4,6 +4,12 @@ Eventos condicionales para **Paper 1.21.4 y 26.1** (ver [Compatibilidad](#compat
 Es la versión propia de la fábrica de *ConditionalEvents*, con un lenguaje de expresiones real, control de flujo,
 variables persistentes y herramientas de diagnóstico. Spec: [001](../../docs/sdd/specs/001-omnievents-nucleo/spec.md).
 
+![El ejemplo bienvenida: anuncio de primera entrada en el chat y el título «Bienvenido · 2 jugadores en línea»](../../docs/img/omnievents/ejemplo-bienvenida.png)
+
+**[Galería](../../docs/omnievents/galeria.md)**: una imagen por disparador, acción, subcomando y ejemplo, generada en el juego. No son capturas del
+cliente oficial: son un render de lo que recibió un cliente real (un bot) del servidor, con la fuente y el HUD de
+Minecraft 1.21.4 ([spec 004](../../docs/sdd/specs/004-fabrica-capturas-en-juego/spec.md)).
+
 ## Compatibilidad
 | Servidor | Estado | Evidencia |
 |---|---|---|
@@ -47,7 +53,13 @@ diamantes:
     - message: "<red>Espera {var.cooldown_left}s"
 ```
 
+Así se ve el ejemplo `diamantes_contados`, que hace lo mismo (cuenta los diamantes en `pvar` y los muestra en la barra):
+
+![El ejemplo diamantes_contados: la barra de acción dice «Diamantes: 1» después de romper una mena](../../docs/img/omnievents/ejemplo-diamantes_contados.png)
+
 ## Opciones de una regla
+Imágenes de `cooldown`, `on_cooldown`, `limit` y `on_limit`: [galería](../../docs/omnievents/galeria.md#opciones-de-una-regla).
+
 | Opción | Qué hace |
 |---|---|
 | `trigger` | Disparador (`/omni triggers` los lista) |
@@ -84,6 +96,8 @@ diamantes:
 
 Prueba cualquier expresión en el juego: `/omni eval player.location.biome`.
 
+![Salida de /omni eval con tres expresiones, su resultado y su tipo](../../docs/img/omnievents/comando-eval.png)
+
 ## Textos
 `{expresión}` interpola, `%placeholder%` pasa por PlaceholderAPI, y se aceptan MiniMessage, `&a` y `&#RRGGBB`.
 Lo que escribe el jugador e interpolas con `{}` nunca se interpreta como MiniMessage (no puede inyectar `<click>`),
@@ -99,29 +113,33 @@ Dos formas equivalentes: `- message: "hola"` o `- "message: hola"`. Modificadore
   when: "hour() >= 20"     # guarda
 ```
 Control de flujo: `if/then/else`, `repeat/do` (`var.i`), `while/do`, `for_each/as/do`, `random` (ramas con `weight`),
-`delay`, `stop`, `call`, `set`, `unset`, `no_cooldown`, `reset_cooldown`.
+`delay`, `wait_ticks` (en ticks), `stop`, `call`, `set`, `unset`, `no_cooldown`, `reset_cooldown` ([imágenes](../../docs/omnievents/galeria.md#acciones--control-de-flujo)).
 
-| Grupo | Acciones |
+| Grupo (enlace a sus imágenes) | Acciones |
 |---|---|
-| Mensajes | `message` `broadcast` `actionbar` `title` (`título;subtítulo;in;stay;out`) `bossbar` (`texto;segundos;color;progreso`) `sound` (`SONIDO;vol;tono`) `stop_sound` `console_message` `log` |
-| Comandos | `console` `command` `chat` `send_to_server` |
-| Jugador | `teleport` (`mundo;x;y;z;yaw;pitch`, `~` relativo) `heal` `damage` `feed` `set_food` `gamemode` `fly` `effect` (`EFECTO;segundos;nivel;partículas`) `remove_effect` `fire` `freeze` `velocity` `launch` `give_item` `drop_item` `remove_item` (`MATERIAL;cantidad`: por material, aunque el ítem tenga nombre) `clear_inventory` `close_inventory` `give_exp` `give_level` `kick` |
-| Mundo | `set_block` `lightning` `explosion` (`potencia;fuego;romper`) `particle` (`PARTÍCULA;n;dx;dy;dz;vel[;r;g;b]`) `summon` |
-| Evento | `cancel` `set_event` (`propiedad = expresión`) `set_damage` (`10` o `150%`) `set_message` `set_join_message` `set_quit_message` `set_death_message` (`none` la oculta) `keep_inventory` `cancel_drops` `deny_join` |
+| [Mensajes](../../docs/omnievents/galeria.md#acciones--mensajes) | `message` `broadcast` `actionbar` `title` (`título;subtítulo;in;stay;out`) `bossbar` (`texto;segundos;color;progreso`) `sound` (`SONIDO;vol;tono`) `stop_sound` `console_message` `log` |
+| [Comandos](../../docs/omnievents/galeria.md#acciones--comandos) | `console` `command` `chat` `send_to_server` |
+| [Jugador](../../docs/omnievents/galeria.md#acciones--jugador) | `teleport` (`mundo;x;y;z;yaw;pitch`, `~` relativo) `heal` `damage` `feed` `set_food` `gamemode` `fly` `effect` (`EFECTO;segundos;nivel;partículas`) `remove_effect` `fire` `freeze` `velocity` `launch` `give_item` `drop_item` `remove_item` (`MATERIAL;cantidad`: por material, aunque el ítem tenga nombre) `clear_inventory` `close_inventory` `give_exp` `give_level` `kick` |
+| [Mundo](../../docs/omnievents/galeria.md#acciones--mundo) | `set_block` `lightning` `explosion` (`potencia;fuego;romper`) `particle` (`PARTÍCULA;n;dx;dy;dz;vel[;r;g;b]`) `summon` |
+| [Evento](../../docs/omnievents/galeria.md#acciones--evento) | `cancel` `set_event` (`propiedad = expresión`) `set_damage` (`10` o `150%`) `set_message` `set_join_message` `set_quit_message` `set_death_message` (`none` la oculta) `keep_inventory` `cancel_drops` `deny_join` |
+
+| `title` | `bossbar` |
+|---|---|
+| ![Título «¡Victoria!» con el subtítulo «Ganaste la ronda 3»](../../docs/img/omnievents/accion-title.png) | ![Bossbar roja «El Guardián del Bosque» al 65 %](../../docs/img/omnievents/accion-bossbar.png) |
 
 Ítems: `give_item: "DIAMOND;2;<aqua>Nombre;<gray>Lore 1|<gray>Lore 2"`, en mapa (`material`, `amount`, `name`,
 `lore`, `model`, `enchants`, `glow`, `unbreakable`, `hide_flags`) o `saved:<nombre>` (guardado con `/omni item save`).
 
 ## Disparadores
-| Grupo | Disparadores |
+| Grupo (enlace a sus imágenes) | Disparadores |
 |---|---|
-| Jugador | `player_join` (`first_join`) `player_quit` `player_pre_login` (`name`, `uuid`, `ip`) `player_respawn` `player_death` (`killer`, `cause`) `player_chat` (`message`) `player_command` (`cmd`, `args`) `player_move` `player_teleport` `player_world_change` `player_sneak` `player_sprint` `player_jump` `player_level_change` `player_gamemode_change` `player_toggle_flight` `player_bed_enter` `player_fish` `player_regain_health` `player_food_change` `player_advancement` `player_swap_hands` `player_armor_change` `player_portal` `player_kick` `player_resource_pack` |
-| Combate | `player_damage` (`cause`, `damager`) `player_attack` (`target`) `player_kill` (`target`) `player_shoot` `projectile_hit` |
-| Bloques | `block_break` `block_place` `block_interact` (`action`: `RIGHT_CLICK`, `SHIFT_LEFT_CLICK`…) `sign_change` (`lines`) `bucket_fill` `bucket_empty` |
-| Ítems | `player_interact` `item_interact` `item_consume` `item_craft` `item_drop` `item_pickup` `item_held` `item_enchant` `item_break` |
-| Inventario | `inventory_open` `inventory_close` `inventory_click` (`slot`, `click`, `title`, `cursor`) |
-| Entidades | `entity_interact` `entity_spawn` `entity_death` |
-| Servidor | `console_command` `server_start` `server_stop` `timer` `clock` `call` `command` `custom` |
+| [Jugador](../../docs/omnievents/galeria.md#disparadores--jugador) | `player_join` (`first_join`) `player_quit` `player_pre_login` (`name`, `uuid`, `ip`) `player_respawn` `player_death` (`killer`, `cause`) `player_chat` (`message`) `player_command` (`cmd`, `args`) `player_move` `player_teleport` `player_world_change` `player_sneak` `player_sprint` `player_jump` `player_level_change` `player_gamemode_change` `player_toggle_flight` `player_bed_enter` `player_fish` `player_regain_health` `player_food_change` `player_advancement` `player_swap_hands` `player_armor_change` `player_portal` `player_kick` `player_resource_pack` |
+| [Combate](../../docs/omnievents/galeria.md#disparadores--combate) | `player_damage` (`cause`, `damager`) `player_attack` (`target`) `player_kill` (`target`) `player_shoot` `projectile_hit` |
+| [Bloques](../../docs/omnievents/galeria.md#disparadores--bloques) | `block_break` `block_place` `block_interact` (`action`: `RIGHT_CLICK`, `SHIFT_LEFT_CLICK`…) `sign_change` (`lines`) `bucket_fill` `bucket_empty` |
+| [Ítems](../../docs/omnievents/galeria.md#disparadores--ítems) | `player_interact` `item_interact` `item_consume` `item_craft` `item_drop` `item_pickup` `item_held` `item_enchant` `item_break` |
+| [Inventario](../../docs/omnievents/galeria.md#disparadores--inventario) | `inventory_open` `inventory_close` `inventory_click` (`slot`, `click`, `title`, `cursor`) |
+| [Entidades](../../docs/omnievents/galeria.md#disparadores--entidades) | `entity_interact` `entity_spawn` `entity_death` |
+| [Servidor](../../docs/omnievents/galeria.md#disparadores--servidor) | `console_command` `server_start` `server_stop` `timer` `clock` `call` `command` `custom` |
 
 Siempre disponibles: `player`, `event`, `world`, `location`, `item` (mano principal), `server`, `online`, `rule`.
 
@@ -130,13 +148,17 @@ Siempre disponibles: `player`, `event`, `world`, `location`, `item` (mano princi
 `eval <expr>` · `call <regla> [jugador] [k=v…]` · `var get|set|del|list <jugador|global> [nombre] [valor]` ·
 `cooldown reset <regla> [jugador|global]` · `limit reset <regla> [jugador|global]` · `stats` · `triggers` · `actions` ·
 `item save|delete|list` · `import conditionalevents` · `selftest`.
-Permisos: `omnievents.command.<sub>` (por defecto solo OP) o `omnievents.command.*`.
+Permisos: `omnievents.command.<sub>` (por defecto solo OP) o `omnievents.command.*`. Cómo se ve cada uno: [galería](../../docs/omnievents/galeria.md#comandos-de-omni).
 
 ## Diagnóstico
 - `/omni debug mi_regla`: en cada disparo ves cada condición con sus valores (`player.level (3) >= 10 → false`),
   la rama que se tomó y cada acción.
 - `/omni stats`: disparos, aciertos, errores y tiempo promedio y máximo por regla; oyentes y tareas activos.
 - Los errores de configuración dicen archivo, ruta y causa, con «¿quisiste decir…?».
+
+![Salida de /omni debug al romper una mena de diamante: cada condición con sus valores, la rama y cada acción](../../docs/img/omnievents/comando-debug.png)
+
+![Salida de /omni validate con un disparador mal escrito y la sugerencia «¿quisiste decir player_join?»](../../docs/img/omnievents/comando-validate.png)
 
 ## PlaceholderAPI
 `%omni_var_<n>%` · `%omni_gvar_<n>%` · `%omni_cooldown_<regla>%` · `%omni_uses_<regla>%`.

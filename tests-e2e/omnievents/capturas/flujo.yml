@@ -1,0 +1,138 @@
+# Reglas de demostración para las capturas (spec 004): control de flujo y variables. Se usan con /cap <nombre>.
+
+cap_if:
+  trigger: call
+  actions:
+    - if: "player.level >= 10"
+      then:
+        - message: "<green>Tienes nivel {player.level}: puedes entrar a la mazmorra."
+      else:
+        - message: "<red>Necesitas nivel 10 para entrar <gray>(tienes {player.level})."
+
+cap_repeat:
+  trigger: call
+  actions:
+    - repeat: 3
+      do:
+        - message: "<yellow>Cuenta regresiva: <white>{3 - var.i}"
+    - message: "<green><bold>¡Ya!"
+
+cap_while:
+  trigger: call
+  actions:
+    - set: "var.n = 1"
+    - while: "var.n <= 64"
+      do:
+        - message: "<gray>Pila de <white>{var.n}</white> bloques"
+        - set: "var.n = var.n * 4"
+
+cap_for_each:
+  trigger: call
+  actions:
+    - message: "<gray>Jugadores en el evento:"
+    - for_each: all
+      as: jugador
+      do:
+        - message: "<gray> • <white>{jugador.name}</white> con {jugador.health} de vida"
+
+cap_random:
+  trigger: call
+  actions:
+    - random:
+        - weight: 60
+          do: [{message: "<gray>Sacaste: <white>madera"}]
+        - weight: 30
+          do: [{message: "<gray>Sacaste: <aqua>hierro"}]
+        - weight: 10
+          do: [{message: "<gray>Sacaste: <gold>¡oro!"}]
+
+cap_delay:
+  trigger: call
+  actions:
+    - message: "<gray>Abriendo el cofre del tesoro..."
+    - delay: 2s
+    - message: "<gold>¡Encontraste 3 esmeraldas!"
+
+cap_wait_ticks:
+  trigger: call
+  actions:
+    - message: "<gray>Preparados..."
+    - wait_ticks: 10
+    - message: "<gray>Listos..."
+    - wait_ticks: 10
+    - message: "<green>¡Fuera!"
+
+cap_stop:
+  trigger: call
+  actions:
+    - message: "<gray>Revisando tu pase..."
+    - if: "player.level < 10"
+      then:
+        - message: "<red>Necesitas nivel 10 para el pase del evento."
+        - stop
+    - message: "<green>Adelante."
+
+cap_set:
+  trigger: call
+  actions:
+    - set: "pvar.visitas += 1"
+    - set: "gvar.visitas_totales += 1"
+    - message: "<gray>Tus visitas: <white>{pvar.visitas}</white> · del servidor: <white>{gvar.visitas_totales}"
+
+cap_unset:
+  trigger: call
+  actions:
+    - unset: pvar.visitas
+    - message: "<gray>Visitas borradas: ahora <white>{default(pvar.visitas, 0)}"
+
+cap_call:
+  trigger: call
+  actions:
+    - message: "<gray>Entregando premio..."
+    - call: "cap_premio; cantidad=3"
+
+cap_premio:
+  trigger: call
+  args: [cantidad]
+  actions:
+    - message: "<gold>Premio: <white>{var.cantidad} llaves</white> para {player.name}"
+
+# Enfriamiento con on_cooldown; no_cooldown hace que un intento fallido no gaste el enfriamiento.
+cap_cofre:
+  trigger: call
+  cooldown: 1h
+  on_cooldown:
+    - message: "<red>El cofre diario vuelve en {round(var.cooldown_left / 60)} minutos."
+  actions:
+    - if: "player.inventory.first_empty < 0"
+      then:
+        - message: "<red>Tu inventario está lleno; vuelve a intentarlo."
+        - no_cooldown
+        - stop
+    - message: "<green>Abriste el cofre diario."
+
+cap_no_cooldown:
+  trigger: call
+  cooldown: 1h
+  actions:
+    - message: "<gray>Intento de abrir el portal..."
+    - if: "player.level < 30"
+      then:
+        - message: "<red>Te falta nivel: este intento no gasta el enfriamiento."
+        - no_cooldown
+
+cap_reset_cooldown:
+  trigger: call
+  actions:
+    - reset_cooldown: cap_cofre
+    - message: "<green>El cofre diario está disponible otra vez."
+
+# Límite de usos con on_limit.
+cap_premio_unico:
+  trigger: call
+  limit: 1
+  limit_reset: never
+  on_limit:
+    - message: "<red>Ya reclamaste el premio de bienvenida."
+  actions:
+    - message: "<green>Reclamaste el premio de bienvenida."

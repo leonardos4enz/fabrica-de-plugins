@@ -1,0 +1,18 @@
+# Configuración de ConditionalEvents (Ajneb97) de ejemplo para la captura de /omni import (spec 004).
+Events:
+  bienvenida_vip:
+    type: player_join
+    conditions:
+    - '%player_name% equals Ana'
+    actions:
+      default:
+      - 'message: &6Bienvenida de nuevo, %player%'
+      - 'title: 20;40;20;&eHola;&7Disfruta tu estadía'
+  bloquear_tnt:
+    type: block_place
+    conditions:
+    - '%block% equals TNT'
+    actions:
+      default:
+      - 'cancel_event: true'
+      - 'message: &cLa TNT está prohibida aquí'

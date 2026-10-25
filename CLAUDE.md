@@ -26,7 +26,11 @@ Cada plugin vive en `plugins/<nombre>/`. Idioma del proyecto: **español** (cód
 bash tools/compuerta-servidor.sh omnievents "omni selftest"   # Paper real (el EULA lo acepta el dueño)
 npm --prefix tests-e2e test          # compuerta 3a: bots de mineflayer en el Paper de prueba (spec 002)
 npm --prefix tests-e2e test -- --sin-build --solo "H5 CA3"     # un subconjunto
+npm --prefix tests-e2e run capturas  # galería: una imagen por capacidad en docs/img/<plugin>/ (spec 004)
+npm --prefix tests-e2e run capturas -- --sin-build --solo "accion-title"   # algunas escenas
 ```
+Las capturas usan la fuente y el HUD del Minecraft Java 1.21.4 instalado del dueño (`%APPDATA%\.minecraft`) y Chrome
+o Edge; los assets se extraen a `tests-e2e/.cache/` y **nunca se copian al repositorio**.
 Gradle 8.14 no corre sobre Java 25: usar el JDK 24 (`JAVA_HOME=C:\Program Files\Java\jdk-24`). El código se compila
 con `--release 21`.
 
@@ -52,6 +56,13 @@ con `--release 21`.
 - Un plugin que copia ejemplos solo si su carpeta no existe deja ejemplos viejos en `run/`: la suite los copia del
   código fuente. En 26.1 los datos del jugador viven en `world/players/` (002 F-05).
 - Paper 26.x necesita Java 25 (`--java-servidor`); el bot usa `--version-bot 26.1` (mismo protocolo que 26.1.2).
+- En 1.21.4, `spawn-monsters=false` borra al instante hasta los monstruos **invocados** (las capturas lo activan). Con
+  mineflayer 4.39 en 1.21.4, `setControlState('sneak')` no agacha (manda un número donde va el nombre de la acción) y
+  en creativo el bot no aplica la corrección del servidor tras una rotura cancelada (004).
+- prismarine-viewer solo dibuja de y = 0 a 255 y no dibuja bloques con entidad (cofres, camas, carteles), ítems
+  tirados, relámpagos ni partículas: las escenas de capturas se montan en y = 100 y lo demás va como texto (004).
+- `/omni enable|disable` seguidos provocan una `ConcurrentModificationException` en el envío asíncrono de comandos de
+  Paper (004 F-01, pendiente): no es un error de la prueba.
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.
@@ -62,7 +73,11 @@ Los README son lo que lee el dueño de un servidor; si no dicen algo, para él n
 - **README raíz**: la fila del plugin en la tabla (versión del plugin, versiones de Paper verificadas, estado) y la
   estructura del repositorio si cambió.
 - Si la spec es de la fábrica (herramientas, arnés), el README raíz explica cómo usarla.
-- En `verify.md`, la fila «README» dice qué se actualizó.
+- **Capturas** (spec 004): si la spec agrega o cambia algo que se ve en el juego (un mensaje, una acción, un
+  disparador, un subcomando, un ejemplo), se le agrega su escena en `tests-e2e/<plugin>/capturas.mjs` y se regeneran
+  con `npm --prefix tests-e2e run capturas`. El comando falla si una capacidad del servidor vivo no tiene escena.
+  Revisar que las imágenes `cambió` sean las esperadas antes del commit.
+- En `verify.md`, la fila «README» dice qué se actualizó (y si se regeneraron las capturas).
 
 ## Antes de cada commit
 - Sin secretos: tokens, contraseñas, claves.

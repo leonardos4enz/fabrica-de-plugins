@@ -1,0 +1,443 @@
+{
+  "accion-actionbar": {
+    "alt": "Barra de acción: Puntos: 120 » Racha x3"
+  },
+  "accion-bossbar": {
+    "alt": "Bossbar: El Guardián del Bosque"
+  },
+  "accion-broadcast": {
+    "alt": "Chat: [Anuncio] Ana abrió el evento de la noche."
+  },
+  "accion-cancel_drops": {
+    "alt": "Barra de acción: La gallina no soltó nada"
+  },
+  "accion-chat": {
+    "alt": "Chat: <Ana> ¡Listo para la carrera!"
+  },
+  "accion-clear_inventory": {
+    "alt": "Chat: Tu inventario quedó vacío."
+  },
+  "accion-close_inventory": {
+    "alt": "Chat: Se cerró tu inventario."
+  },
+  "accion-command": {
+    "alt": "Chat: Tienes 110 monedas."
+  },
+  "accion-console": {
+    "alt": "Chat: [Server] Ana activó la palanca del castillo"
+  },
+  "accion-console_message": {
+    "alt": "Consola del servidor: Ana abrió el cofre del castillo"
+  },
+  "accion-damage": {
+    "alt": ""
+  },
+  "accion-delay": {
+    "alt": "Chat: Abriendo el cofre del tesoro... / ¡Encontraste 3 esmeraldas!"
+  },
+  "accion-deny_join": {
+    "alt": "No se pudo conectar con el servidor: El servidor está en mantenimiento.\nVuelve en una hora."
+  },
+  "accion-drop_item": {
+    "soloTexto": "Los ítems tirados en el suelo no se dibujan en estas imágenes (el visor 3D no tiene su modelo). La suite en el juego comprueba que el ítem aparece."
+  },
+  "accion-effect": {
+    "alt": ""
+  },
+  "accion-explosion": {
+    "alt": ""
+  },
+  "accion-feed": {
+    "alt": ""
+  },
+  "accion-fire": {
+    "soloTexto": "Las llamas en pantalla las dibuja el cliente; el bot solo recibe la marca «en llamas» de la entidad, y el render no la dibuja. Lo que sí se ve es la vida que baja."
+  },
+  "accion-fly": {
+    "alt": "Barra de acción: Ahora puedes volar (doble salto)"
+  },
+  "accion-for_each": {
+    "alt": "Chat: Jugadores en el evento: /  • Beto con 20 de vida /  • Ana con 20 de vida"
+  },
+  "accion-freeze": {
+    "soloTexto": "La escarcha en pantalla la dibuja el cliente a partir de los ticks de congelamiento; el render no la dibuja."
+  },
+  "accion-gamemode": {
+    "alt": ""
+  },
+  "accion-give_exp": {
+    "alt": ""
+  },
+  "accion-give_item": {
+    "alt": ""
+  },
+  "accion-give_level": {
+    "alt": ""
+  },
+  "accion-heal": {
+    "alt": ""
+  },
+  "accion-if": {
+    "alt": "Chat: Necesitas nivel 10 para entrar (tienes 0)."
+  },
+  "accion-keep_inventory": {
+    "alt": "Chat: Conservaste tu inventario y tu nivel. / Ana murió"
+  },
+  "accion-kick": {
+    "alt": "Conexión perdida: Te expulsó un administrador.\nMotivo: pruebas de la galería"
+  },
+  "accion-launch": {
+    "alt": ""
+  },
+  "accion-lightning": {
+    "soloTexto": "El visor 3D no dibuja relámpagos. El jugador ve el rayo y oye el trueno; el relámpago de OmniEvents es solo visual (no hace daño ni prende fuego)."
+  },
+  "accion-message": {
+    "alt": "Chat: ¡Hola, Ana! Este mensaje es solo para ti."
+  },
+  "accion-no_cooldown": {
+    "alt": "Chat: Intento de abrir el portal... / Te falta nivel: este intento no gasta el enfriamiento. / Intento de abrir el portal... / Te falta nivel: este intento no gasta el enfriamiento."
+  },
+  "accion-particle": {
+    "soloTexto": "El visor 3D no dibuja partículas, así que una imagen no puede mostrarlas con fidelidad. La suite en el juego comprueba que el paquete llega al jugador."
+  },
+  "accion-random": {
+    "alt": "Chat: Sacaste: hierro"
+  },
+  "accion-remove_effect": {
+    "alt": ""
+  },
+  "accion-remove_item": {
+    "alt": ""
+  },
+  "accion-repeat": {
+    "alt": "Chat: Cuenta regresiva: 3 / Cuenta regresiva: 2 / Cuenta regresiva: 1 / ¡Ya!"
+  },
+  "accion-reset_cooldown": {
+    "alt": "Chat: Abriste el cofre diario. / El cofre diario vuelve en 60 minutos. / El cofre diario está disponible otra vez. / Abriste el cofre diario."
+  },
+  "accion-send_to_server": {
+    "soloTexto": "Manda al jugador a otro servidor de la red: necesita un proxy (Velocity o BungeeCord), que el servidor de prueba no tiene."
+  },
+  "accion-set": {
+    "alt": "Chat: Tus visitas: 1 · del servidor: 1"
+  },
+  "accion-set_block": {
+    "alt": ""
+  },
+  "accion-set_damage": {
+    "alt": "Barra de acción: ¡Golpe letal! COW fuera de combate"
+  },
+  "accion-set_death_message": {
+    "alt": "Chat: ☠ Ana se rindió ante el vacío"
+  },
+  "accion-set_food": {
+    "alt": ""
+  },
+  "accion-set_join_message": {
+    "alt": "Chat: ¡Démosle la bienvenida a Ana, es su primera vez! / [+] Ana / Recompensa diaria: +25 monedas (total 125)."
+  },
+  "accion-set_message": {
+    "alt": "Chat: <Ana> [megáfono] La subasta empieza en 5 minutos"
+  },
+  "accion-set_quit_message": {
+    "alt": "Chat: [-] Ana"
+  },
+  "accion-sound": {
+    "soloTexto": "El sonido no se ve. El bot recibe el paquete de sonido (la suite en el juego lo comprueba por su tono), pero una imagen no puede mostrarlo."
+  },
+  "accion-stop": {
+    "alt": "Chat: Revisando tu pase... / Necesitas nivel 10 para el pase del evento."
+  },
+  "accion-stop_sound": {
+    "soloTexto": "El sonido no se ve. El bot recibe el paquete de sonido (la suite en el juego lo comprueba por su tono), pero una imagen no puede mostrarlo."
+  },
+  "accion-summon": {
+    "alt": ""
+  },
+  "accion-teleport": {
+    "alt": "Barra de acción: Bienvenido a la torre"
+  },
+  "accion-title": {
+    "alt": "Título: ¡Victoria!. Subtítulo: Ganaste la ronda 3"
+  },
+  "accion-unset": {
+    "alt": "Chat: Tus visitas: 1 · del servidor: 1 / Visitas borradas: ahora 0"
+  },
+  "accion-velocity": {
+    "alt": ""
+  },
+  "accion-wait_ticks": {
+    "alt": "Chat: Preparados... / Listos... / ¡Fuera!"
+  },
+  "accion-while": {
+    "alt": "Chat: Pila de 1 bloques / Pila de 4 bloques / Pila de 16 bloques / Pila de 64 bloques"
+  },
+  "comando-actions": {
+    "alt": "Chat: Acciones: actionbar, bossbar, broadcast, call, cancel, cancel_drops, chat, clear_inventory, close_inventory, command, console, console_message, damage, delay, deny_join, drop_item, effect, explosion, feed, fire, fly, for_each, freeze, gamemode, give_exp, give_item, give_level, heal, if, keep_inventory, kick, launch, lightning, log, message, no_cooldown, particle, random, remove_effect, remove_item, repeat, reset_cooldown, send_to_server, set, set_block, set_damage, set_death_message, set_event, set_food, set_join_message, set_message, set_quit_message, sound, stop, stop_sound, summon, teleport, title, unset, velocity, wait_ticks, while"
+  },
+  "comando-call": {
+    "alt": "Chat: [Omni] Regla sumar_monedas ejecutada."
+  },
+  "comando-cooldown": {
+    "alt": "Chat: [Omni] enfriamiento de spawn_vip reiniciado para Ana."
+  },
+  "comando-debug": {
+    "alt": "Barra de acción: Diamantes: 1. Chat: → actions /   diamantes_contados.actions[0] set /     pvar.diamantes = 1 /   diamantes_contados.actions[1] if /     if pvar.diamantes % 10 (1) == 0 → false /   diamantes_contados.actions[2] actionbar"
+  },
+  "comando-enable": {
+    "alt": "Chat: [Omni] Regla menciones desactivada. /   El cambio dura hasta el próximo reload; para dejarlo fijo, edita enabled en su archivo. / [Omni] Regla menciones activada. /   El cambio dura hasta el próximo reload; para dejarlo fijo, edita enabled en su archivo."
+  },
+  "comando-eval": {
+    "alt": "Chat: player.name + ' está en ' + player.world.name = 'Ana está en world' (texto) / player.gamemode == 'SURVIVAL' && player.health > 10 = true (booleano) / max(3, 7) * 2 + 1 = 15 (número)"
+  },
+  "comando-help": {
+    "alt": "Chat: /omni stats » Rendimiento por regla, oyentes y tareas / /omni triggers » Disparadores disponibles / /omni actions » Acciones disponibles / /omni item » save|delete|list <nombre>: ítems para saved:nombre / /omni import » import conditionalevents / /omni selftest » Autoprueba del motor en este servidor"
+  },
+  "comando-import": {
+    "alt": "Chat: [Omni] 2 eventos importados en rules/importado; 0 acciones para revisar. Usa /omni validate y luego /omni reload."
+  },
+  "comando-info": {
+    "alt": "Chat: monedas activa / Archivo: ejemplos/comandos.yml · disparador command · prioridad NORMAL / Acciones: 3 · disparos 0 · aciertos 0 · errores 0 · promedio 0 ms"
+  },
+  "comando-item": {
+    "alt": "Chat: [Omni] Ítem guardado como espada_demo. Úsalo con give_item: saved:espada_demo. / Ítems guardados: espada_demo / [Omni] Ítem espada_demo borrado."
+  },
+  "comando-limit": {
+    "alt": "Chat: [Omni] límite de recompensa_diaria reiniciado para Ana."
+  },
+  "comando-list": {
+    "alt": "Chat: ● recompensa_diaria · player_join · ejemplos/bienvenida.yml / ● sin_caida_vip · player_damage · ejemplos/combate.yml / ● sol_del_desierto · timer · ejemplos/temporizadores.yml / ● spawn_vip · command · ejemplos/comandos.yml / ● suerte_minera · block_break · ejemplos/mineria.yml / ● sumar_monedas · call · ejemplos/comandos.yml"
+  },
+  "comando-reload": {
+    "alt": "Chat: [Omni] Recargado en 21.3 ms: 122 reglas, 0 errores, 0 avisos."
+  },
+  "comando-selftest": {
+    "alt": "Chat: ✔ funciones max(1, n, 2) + round(2.567, 1) = 5.6 / ✔ duraciones 1h30m y 20t / ✔ escape de lo interpolado (H4 CA6) <green><click:run_command:/op yo>x<red> / ✔ saneo de comandos (H4 CA6) say hola op yoc / ✔ validate: 0 errores, 0 avisos / [Omni] Autoprueba superada (12/12)."
+  },
+  "comando-stats": {
+    "alt": "Chat:   PlayerDeathEvent @NORMAL → 1 regla(s) / diamantes_contados · 1 disparos · 1 aciertos · prom 1.819 ms · máx 1.819 ms / sol_del_desierto · 8 disparos · 0 aciertos · prom 0.053 ms · máx 0.112 ms / sumar_monedas · 1 disparos · 1 aciertos · prom 0.258 ms · máx 0.258 ms / bloque_protegido · 1 disparos · 0 aciertos · prom 0.054 ms · máx 0.054 ms / suerte_minera · 1 disparos · 0 aciertos · prom 0.01 ms · máx 0.01 ms"
+  },
+  "comando-triggers": {
+    "alt": "Chat: combate: player_damage, player_attack, player_kill, player_shoot, projectile_hit / bloques: block_break, block_place, block_interact, sign_change, bucket_fill, bucket_empty / ítems: player_interact, item_interact, item_consume, item_craft, item_drop, item_pickup, item_held, item_enchant, item_break / inventario: inventory_open, inventory_close, inventory_click / entidades: entity_interact, entity_spawn, entity_death / servidor: console_command, server_start, server_stop, timer, clock, call, command, custom"
+  },
+  "comando-validate": {
+    "alt": "Chat: ✘ capturas-errores/roto.yml › saludo_roto.trigger: disparador desconocido 'player_joim' (¿quisiste decir 'player_join'?) (lista: /omni triggers) / [Omni] 1 errores y 0 avisos. Las reglas con errores no se cargan."
+  },
+  "comando-var": {
+    "alt": "Chat: [Omni] Ana.gemas = 7 / Ana.gemas = 7 / [Omni] Ana.gemas borrada."
+  },
+  "comando-var-list": {
+    "alt": "Chat: Variables de global (2) /   arranques = 56 /   visitas_totales = 1"
+  },
+  "disparador-block_interact": {
+    "alt": "Chat: RIGHT_CLICK en la palanca: se abrió la puerta secreta"
+  },
+  "disparador-block_place": {
+    "alt": "Barra de acción: Pusiste OAK_PLANKS sobre GRASS_BLOCK"
+  },
+  "disparador-bucket_empty": {
+    "alt": "Barra de acción: Vaciaste WATER_BUCKET"
+  },
+  "disparador-bucket_fill": {
+    "alt": "Barra de acción: Llenaste el balde: WATER_BUCKET"
+  },
+  "disparador-clock": {
+    "alt": "Chat: Es la hora del evento nocturno."
+  },
+  "disparador-console_command": {
+    "alt": "Chat: [Anuncio] El torneo empieza a las 18:00"
+  },
+  "disparador-entity_death": {
+    "alt": "Chat: Atrapaste un conejo"
+  },
+  "disparador-entity_interact": {
+    "alt": "Chat: Acariciaste a COW"
+  },
+  "disparador-entity_spawn": {
+    "alt": "Chat: Apareció una oveja (COMMAND)"
+  },
+  "disparador-inventory_click": {
+    "alt": ". Chat: Clic LEFT en la ranura 13: EMERALD / Clic LEFT en la ranura 13: AIR"
+  },
+  "disparador-inventory_close": {
+    "alt": "Chat: Cerraste el cofre"
+  },
+  "disparador-inventory_open": {
+    "alt": "Chat: Abriste un cofre: Cofre del tesoro"
+  },
+  "disparador-item_break": {
+    "alt": "Chat: Se rompió tu WOODEN_PICKAXE"
+  },
+  "disparador-item_consume": {
+    "alt": "Chat: Comiste GOLDEN_APPLE"
+  },
+  "disparador-item_craft": {
+    "alt": "Chat: Fabricaste 4 OAK_PLANKS"
+  },
+  "disparador-item_drop": {
+    "alt": "Barra de acción: Tiraste 1 DIAMOND"
+  },
+  "disparador-item_enchant": {
+    "soloTexto": "La escena no puede encantar con el bot: mineflayer 4.39 no logra poner el ítem ni el lapislázuli en la mesa de encantamientos en 1.21.4 (la ventana queda vacía). Con un jugador real, esta regla escribe en su chat «Encantaste IRON_SWORD por 1 niveles»."
+  },
+  "disparador-item_held": {
+    "alt": "Barra de acción: Ranura 4: DIAMOND_SWORD"
+  },
+  "disparador-item_interact": {
+    "alt": "Barra de acción: La vara de fuego chisporrotea"
+  },
+  "disparador-item_pickup": {
+    "alt": "Barra de acción: +3 EMERALD"
+  },
+  "disparador-player_advancement": {
+    "alt": "Chat: +10 monedas por el logro minecraft:story/mine_stone / Ana ha conseguido el progreso [La Edad de Piedra]"
+  },
+  "disparador-player_armor_change": {
+    "alt": "Chat: Te equipaste DIAMOND_CHESTPLATE en CHEST"
+  },
+  "disparador-player_attack": {
+    "alt": "Barra de acción: Golpeaste a COW » 1"
+  },
+  "disparador-player_bed_enter": {
+    "alt": "Barra de acción: 1/2 jugadores durmiendo. Chat: Punto de reaparición establecido / Buenas noches, Ana (OK)"
+  },
+  "disparador-player_command": {
+    "alt": "Chat: Reglas del servidor: / 1. Respeta a los demás jugadores. / 2. Nada de trampas ni programas externos."
+  },
+  "disparador-player_damage": {
+    "alt": "Barra de acción: -5 de vida (CUSTOM)"
+  },
+  "disparador-player_fish": {
+    "alt": "Barra de acción: Lanzaste la caña: espera a que piquen"
+  },
+  "disparador-player_food_change": {
+    "alt": "Barra de acción: Hambre: 20 → 19"
+  },
+  "disparador-player_gamemode_change": {
+    "alt": "Chat: Modo de juego: CREATIVE"
+  },
+  "disparador-player_interact": {
+    "alt": "Barra de acción: Clic derecho al aire con STICK"
+  },
+  "disparador-player_jump": {
+    "alt": "Barra de acción: ¡Salto!"
+  },
+  "disparador-player_kick": {
+    "alt": "Chat: Beto fue expulsado: Lenguaje inapropiado / [-] Beto / [+] Beto"
+  },
+  "disparador-player_kill": {
+    "alt": "Chat: Cazaste un CHICKEN (+5 monedas)"
+  },
+  "disparador-player_level_change": {
+    "alt": "Título: ¡Nivel 3!. Subtítulo: Subiste desde el nivel 0"
+  },
+  "disparador-player_move": {
+    "alt": "Barra de acción: Caminas por 12, 100, 11"
+  },
+  "disparador-player_portal": {
+    "alt": "Chat: El Nether está cerrado durante el evento."
+  },
+  "disparador-player_regain_health": {
+    "alt": "Barra de acción: ❤ +4 de vida (MAGIC)"
+  },
+  "disparador-player_resource_pack": {
+    "soloTexto": "Dispara cuando el jugador acepta, rechaza o termina de bajar un paquete de recursos (`status`). El servidor de prueba no manda ninguno y OmniEvents no tiene una acción para mandarlo, así que no se puede provocar."
+  },
+  "disparador-player_respawn": {
+    "alt": "Chat: Ana murió / Reapareciste en 13, 100, 13 (DEATH)"
+  },
+  "disparador-player_shoot": {
+    "alt": "Barra de acción: Disparo con fuerza 3"
+  },
+  "disparador-player_sneak": {
+    "alt": "Barra de acción: Modo sigilo activado"
+  },
+  "disparador-player_sprint": {
+    "alt": "Barra de acción: ¡A toda velocidad!"
+  },
+  "disparador-player_swap_hands": {
+    "alt": "Barra de acción: Mano izquierda: TORCH"
+  },
+  "disparador-player_teleport": {
+    "alt": "Chat: Teletransporte (COMMAND) de 13, 11 a 13, 15"
+  },
+  "disparador-player_toggle_flight": {
+    "alt": "Barra de acción: Vuelo activado"
+  },
+  "disparador-player_world_change": {
+    "alt": "Chat: Ana ha conseguido el progreso [Tenemos que ir más profundo] / Llegaste a world_nether desde world / Llegaste a world desde world_nether"
+  },
+  "disparador-projectile_hit": {
+    "alt": "Chat: La flecha pegó en GRASS_BLOCK"
+  },
+  "disparador-server_stop": {
+    "alt": "Consola del servidor: [OmniEvents] [cap_t_server_stop] Guardando el evento antes de apagar: 0 jugadores conectados."
+  },
+  "disparador-sign_change": {
+    "alt": "Chat: Cartel escrito: Bienvenidos | al evento | de otoño | "
+  },
+  "disparador-timer": {
+    "alt": "Barra de acción: Evento en curso » quedan 5 minutos"
+  },
+  "ejemplo-anuncio": {
+    "soloTexto": "Es un `timer` global cada 10 minutos: la escena no espera tanto. Cuando corre, todos ven en el chat uno de los dos consejos al azar («Consejo: usa /monedas para ver tus monedas.»). El disparador `timer` tiene su imagen más abajo."
+  },
+  "ejemplo-arranque": {
+    "alt": "Consola del servidor: [OmniEvents] [arranque] OmniEvents listo. Arranque número 56."
+  },
+  "ejemplo-bienvenida": {
+    "alt": "Título: Bienvenido. Subtítulo: 2 jugadores en línea. Chat: ¡Démosle la bienvenida a Ana, es su primera vez! / [+] Ana"
+  },
+  "ejemplo-bloque_protegido": {
+    "alt": "Chat: No puedes romper ese bloque aquí."
+  },
+  "ejemplo-cazador": {
+    "alt": "Chat: Ana ya cazó 50 monstruos."
+  },
+  "ejemplo-diamantes_contados": {
+    "alt": "Barra de acción: Diamantes: 1"
+  },
+  "ejemplo-filtro_palabras": {
+    "alt": "Chat: Cuida tu lenguaje, Ana."
+  },
+  "ejemplo-golpe_critico": {
+    "alt": "Barra de acción: ¡Crítico! 2.4 de daño"
+  },
+  "ejemplo-huevo_sin_pollitos": {
+    "alt": "Chat: Este huevo no tendrá pollitos."
+  },
+  "ejemplo-menciones": {
+    "alt": "Barra de acción: Ana te mencionó: hola beto, ¿vienes a la mina?. Chat: <Ana> hola beto, ¿vienes a la mina?"
+  },
+  "ejemplo-mensaje_de_muerte": {
+    "alt": "Chat: Ana cayó ante Beto."
+  },
+  "ejemplo-mensaje_noche": {
+    "soloTexto": "Es un `clock` a las 22:00 (hora del servidor): la escena no puede adelantar el reloj sin cambiar el ejemplo. Todos ven en el chat «Son las 22:00. ¡No olvides descansar!». El disparador `clock` tiene su imagen más abajo."
+  },
+  "ejemplo-monedas": {
+    "alt": "Chat: Tienes 125 monedas. / Cantidad inválida: tienes 125 monedas. / Diste 15 monedas a Beto."
+  },
+  "ejemplo-recompensa_diaria": {
+    "alt": "Chat: ¡Démosle la bienvenida a Ana, es su primera vez! / [+] Ana / Recompensa diaria: +25 monedas (total 125)."
+  },
+  "ejemplo-sin_caida_vip": {
+    "soloTexto": "Cancela el daño por caída de quien tiene el permiso `omnievents.vip`. No muestra nada: lo que se nota es que la vida no baja."
+  },
+  "ejemplo-sol_del_desierto": {
+    "alt": "Barra de acción: El sol del desierto te agota..."
+  },
+  "ejemplo-spawn_vip": {
+    "alt": "Chat: Teletransportando en 3 segundos... / Espera 58s para volver a usarlo."
+  },
+  "ejemplo-suerte_minera": {
+    "soloTexto": "Depende del azar: `chance(2)` (2 % de las piedras) y después un `random` ponderado. No se puede provocar a propósito sin cambiar el ejemplo. Cuando sale, el jugador ve en el chat «¡Encontraste hierro escondido!» (70 %), «¡Una pepita de oro!» (25 %) o, para todos, «<jugador> encontró un diamante de la suerte.» (5 %)."
+  },
+  "ejemplo-sumar_monedas": {
+    "alt": "Chat: Recibiste 15 monedas de Ana."
+  },
+  "opcion-limit": {
+    "alt": "Chat: Reclamaste el premio de bienvenida. / Ya reclamaste el premio de bienvenida."
+  }
+}

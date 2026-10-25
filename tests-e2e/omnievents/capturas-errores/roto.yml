@@ -1,0 +1,6 @@
+# Regla con errores a propósito para la captura de /omni validate (spec 004). Solo se copia durante esa escena.
+saludo_roto:
+  trigger: player_joim
+  actions:
+    - mesage: "<green>Hola {player.name}"
+    - title: "<gold>Bienvenido;{player.level >= }"

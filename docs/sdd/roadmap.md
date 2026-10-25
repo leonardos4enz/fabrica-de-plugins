@@ -5,6 +5,7 @@
 |---|---|
 | 001 OmniEvents: núcleo | Verificado: unitarias 38/38, servidor real y en el juego (3a) aprobados ([verify](specs/001-omnievents-nucleo/verify.md)) |
 | 002 Fábrica: pruebas en el juego | Verificado: `npm --prefix tests-e2e test` 21/21 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/002-fabrica-pruebas-en-juego/verify.md)) |
+| 004 Fábrica: capturas en el juego | Verificado: `npm --prefix tests-e2e run capturas` genera la [galería de OmniEvents](../omnievents/galeria.md) ([verify](specs/004-fabrica-capturas-en-juego/verify.md)) |
 
 ## Por qué empezamos con OmniEvents
 OmniEvents es la versión propia de *ConditionalEvents* (Ajneb97): «cuando pase X, si se cumple Y, haz Z». Es el
@@ -31,6 +32,8 @@ los siguientes plugins de la fábrica.
   Con la suite en el juego (002) es menos urgente: queda para la persistencia y los casos de bordes.
 - **Fábrica: más escenarios en el juego** — las acciones y disparadores sin escenario (riesgos de la 002) y
   PlaceholderAPI con su jar en el servidor de prueba.
+- **OmniEvents: `/omni enable|disable` sin re-sincronizar comandos** — hallazgo F-01 de la 004: cada cambio vuelve a
+  registrar los comandos y llama a `syncCommands()`; dos seguidos chocan con el envío asíncrono de Paper.
 - **OmniEvents: integraciones** — Vault (economía como funciones `money()` y acciones `give_money`), WorldGuard
   (disparadores de región sin plugins extra), Citizens (NPC).
 - **OmniEvents: editor en el juego** — inventario para ver, activar y probar reglas sin editar YAML.
