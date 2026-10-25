@@ -32,8 +32,13 @@
 | H6 (estado del servidor) | `EstadoCargaTest`, escenario servidor |
 | H7 (documentación generada) | `SchemaTest` (esquema y referencia al día, ejemplo `estados.yml` válido contra el esquema) |
 
-No se probaron en el juego (cubiertos por unitarias o sin bot que los ejerza): `watch`, el placeholder
-`%omni_state_<regla>%` (sin PlaceholderAPI en el servidor de prueba), la dependencia entre estados con `in_state` al
+PlaceholderAPI (prueba puntual, 2026-10-25, Paper 1.21.4): con PlaceholderAPI 2.12.3 de su release oficial en el servidor de
+prueba, la expansión `omni 1.3.0` se registra y `papi parse Ana_e2e %omni_state_e2e_estado_var% %omni_var_e2e_nivel%
+%omni_state_vida_baja%` da `true 5 false` dentro del estado y `false` al salir. No queda en la suite: el jar no se
+instala en el servidor de prueba (al arrancar consulta su repositorio de expansiones por red); eso es la spec de
+fábrica «PlaceholderAPI con su jar en el servidor de prueba».
+
+No se probaron en el juego (cubiertos por unitarias o sin bot que los ejerza): `watch`, la dependencia entre estados con `in_state` al
 cambiar el otro, el inventario (`has_item`, ítem en mano) y el clima. Quedan como riesgo bajo: usan el mismo camino
 de marcar y revisar que los escenarios.
 

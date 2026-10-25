@@ -29,7 +29,8 @@ Minecraft 1.21.4 ([spec 004](../../docs/sdd/specs/004-fabrica-capturas-en-juego/
 | Folia | No soportada | Planificada para una spec futura |
 
 - **Java:** el jar necesita Java 21 o más; usa el Java que pida tu versión de Paper (las pruebas en 26.x usaron Java 25).
-- **Opcional:** PlaceholderAPI 2.11+ (sin verificar en el juego todavía).
+- **Opcional:** PlaceholderAPI. Probada a mano con la 2.12.3 en Paper 1.21.4 (2026-10-25): la expansión `omni` se
+  registra y `%omni_state_<regla>%` y `%omni_var_<n>%` responden; no está en la suite automática.
 - Para verificar otra versión: `npm --prefix tests-e2e test -- --paper <versión> --version-bot <versión> --java-servidor <JDK>`
   (ver [verificacion.md](../../docs/sdd/verificacion.md#3a-en-el-juego-automática)).
 
