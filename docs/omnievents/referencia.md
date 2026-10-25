@@ -39,6 +39,7 @@ Contenido: [opciones de una regla](#opciones-de-una-regla) · [condiciones](#con
 | `limit_scope` | `player`, `jugador`, `global`, `server`, `servidor` | todos | player (por jugador, por defecto) o global. |
 | `limit_reset` | `never`, `nunca`, `daily`, `diario`, `weekly`, `semanal`, `monthly`, `mensual` o una duración | todos | Cuándo se reinician los usos: never, daily, weekly, monthly o una duración (12h). |
 | `on_limit` | acciones | todos | Acciones si ya no quedan usos. |
+| `tests` | lista de casos | todos | Pruebas de la regla: casos con given (el contexto falso) y expect (lo esperado). Corren con /omni test y al cargar, sin efectos. |
 | `budget` | `0.5ms`, `200us` | todos | Presupuesto de tiempo por disparo: 0.5ms o 200us. Avisa en consola si el promedio reciente lo pasa. |
 | `every` | duración | `timer` | Cada cuánto corre el timer (10s, 5m; mínimo 1 tick). |
 | `repetitive_time` | entero | `timer` | Ticks entre ejecuciones (forma de ConditionalEvents; mejor every). |
@@ -68,6 +69,27 @@ Bloque `command` (para `trigger: command`):
 | `description` | Descripción que muestra /help. |
 | `usage` | Uso que se muestra al equivocarse. |
 | `tab` | Autocompletado: una lista por argumento; "{players}" son los jugadores conectados. |
+
+Cada caso de `tests` (spec 010; corren con `/omni test` y al cargar):
+
+| Clave | Qué hace |
+|---|---|
+| `name` | Nombre del caso (sin él: caso 1, caso 2…). |
+| `given` | Contexto falso: rutas con puntos y su valor (block.type: DIAMOND_ORE, player.level: 12, event.damage: 5), variables iniciales (pvar.x, gvar.x, var.x, block.data.x) y placeholders ("%vault_eco_balance%": 100). |
+| `expect` | Lo esperado: fired, branch, variables, messages, commands, actions, cancelled y assert. |
+| `seed` | Semilla de random en este caso (0 por defecto): el mismo número elige siempre la misma rama. |
+
+Claves de `expect` (además, variables: `pvar.x`, `gvar.x`, `var.x`, `block.data.x`; `null` = que no exista):
+
+| Clave | Qué hace |
+|---|---|
+| `fired` | true si corrieron las acciones principales (actions, u on_enter en un state). |
+| `branch` | La rama que corrió: actions, else, deny (o deny conditions[1]), none, u on_enter en un state. |
+| `messages` | Textos que deben aparecer, en orden y sin formato, en los mensajes que mandaría (message, broadcast, actionbar, title…). |
+| `commands` | Textos que deben aparecer, en orden, en los comandos que correría (console, command). |
+| `actions` | Acciones que correría, en orden: el tipo (give_item) o el tipo y un texto ("sound: LEVELUP"). |
+| `cancelled` | true si cancela el evento. |
+| `assert` | Expresión o lista de expresiones que deben dar verdadero al terminar ("pvar.d >= 10"). |
 
 ## Condiciones
 Cada elemento de `conditions` es una expresión, o un mapa con estas claves:

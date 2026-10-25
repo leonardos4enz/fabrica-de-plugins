@@ -55,6 +55,7 @@ public final class OmniCommand implements TabExecutor {
         SUBS.put("disable", "Desactiva una regla");
         SUBS.put("debug", "Traza en vivo: <regla|all|off|export>");
         SUBS.put("check", "Revisa una regla ahora, sin efectos: <regla> [jugador]");
+        SUBS.put("test", "Corre las pruebas (tests:) de las reglas, sin efectos: [regla]");
         SUBS.put("run", "Dispara una regla: <regla> <jugador> [--simular]");
         SUBS.put("state", "Quién está en el estado de una regla state: <regla>");
         SUBS.put("eval", "Evalúa una expresión con tu contexto");
@@ -117,6 +118,7 @@ public final class OmniCommand implements TabExecutor {
                 case "enable", "disable" -> toggle(s, a, sub.equals("enable"));
                 case "debug" -> debug(s, a);
                 case "check" -> check(s, a);
+                case "test" -> test(s, a);
                 case "run" -> runRule(s, a);
                 case "state" -> state(s, a);
                 case "cpu" -> cpu(s, a);
@@ -519,6 +521,49 @@ public final class OmniCommand implements TabExecutor {
         for (String line : lines) traceLine(s, line);
     }
 
+    /** /omni test [regla] (spec 010, H3): corre los casos de tests sin efectos y muestra los que fallan. */
+    private void test(CommandSender s, String[] a) {
+        dev.leo.omnievents.rule.RuleTester tester = plugin.tester();
+        if (a.length > 0) {
+            Rule r = rule(s, a, 0);
+            if (r.tests().isEmpty()) {
+                send(s, "test-rule-none", "rule", r.name());
+                return;
+            }
+            List<dev.leo.omnievents.rule.RuleTester.Result> res = tester.run(r);
+            showTests(s, r, res);
+            testSummary(s, new dev.leo.omnievents.rule.RuleTester.Summary(res, 0));
+            return;
+        }
+        dev.leo.omnievents.rule.RuleTester.Summary sum = tester.runAll(plugin.rules().all());
+        if (sum.results().isEmpty()) {
+            send(s, "test-none");
+            return;
+        }
+        Map<Rule, List<dev.leo.omnievents.rule.RuleTester.Result>> byRule = new java.util.LinkedHashMap<>();
+        for (var r : sum.results()) byRule.computeIfAbsent(r.rule(), k -> new ArrayList<>()).add(r);
+        byRule.forEach((r, res) -> showTests(s, r, res));
+        testSummary(s, sum);
+    }
+
+    private static void showTests(CommandSender s, Rule rule, List<dev.leo.omnievents.rule.RuleTester.Result> res) {
+        long ok = res.stream().filter(dev.leo.omnievents.rule.RuleTester.Result::ok).count();
+        raw(s, (ok == res.size() ? "<green>✔ " : "<red>✘ ") + "<white>" + esc(rule.name()) + "</white> <gray>" + ok + "/" + res.size());
+        for (var r : res) {
+            if (r.ok()) continue;
+            raw(s, "<red>  ✘ «" + esc(r.test().name()) + "»");
+            for (String f : r.failures()) raw(s, "<red>    • " + esc(f));
+            raw(s, "<dark_gray>    traza:");
+            for (String line : r.trace()) traceLine(s, "    " + line);
+        }
+    }
+
+    private void testSummary(CommandSender s, dev.leo.omnievents.rule.RuleTester.Summary sum) {
+        String untested = sum.untested() == 0 ? "" : " · " + sum.untested() + (sum.untested() == 1 ? " regla" : " reglas") + " sin pruebas";
+        if (sum.failed() == 0) send(s, "test-summary-ok", "total", sum.results().size(), "untested", untested);
+        else send(s, "test-summary-fail", "total", sum.results().size(), "failed", sum.failed(), "passed", sum.passed(), "untested", untested);
+    }
+
     /** /omni state <regla> (spec 008, H5 CA4). */
     private void state(CommandSender s, String[] a) {
         Rule r = rule(s, a, 0);
@@ -723,6 +768,9 @@ public final class OmniCommand implements TabExecutor {
             switch (sub) {
                 case "info", "enable", "disable" -> {
                     if (i == 1) opts.addAll(plugin.rules().names());
+                }
+                case "test" -> {
+                    if (i == 1) for (Rule r : plugin.rules().all()) if (!r.tests().isEmpty()) opts.add(r.name());
                 }
                 case "check", "run" -> {
                     if (i == 1) opts.addAll(plugin.rules().names());

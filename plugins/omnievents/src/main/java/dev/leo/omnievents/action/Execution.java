@@ -37,8 +37,20 @@ public final class Execution {
     private int iterations;
     private Runnable revertUsage;
     private Runnable onFinish;
+    /** Spec 010: en una prueba no hay plugin; los topes y los errores van al Sandbox. */
+    private final Sandbox sandbox;
 
     public Execution(OmniEvents plugin, Rule rule, int depth, Trace trace, boolean ownsTrace, boolean sampled) {
+        this(plugin, rule, depth, trace, ownsTrace, sampled, null);
+    }
+
+    /** Ejecución de un caso de prueba (spec 010): sin plugin, en el hilo que llama, sin esperar los delay. */
+    public Execution(Sandbox sandbox, Rule rule, int depth, Trace trace) {
+        this(null, rule, depth, trace, false, false, sandbox);
+    }
+
+    private Execution(OmniEvents plugin, Rule rule, int depth, Trace trace, boolean ownsTrace, boolean sampled, Sandbox sandbox) {
+        this.sandbox = sandbox;
         this.ownsTrace = ownsTrace;
         this.sampled = sampled;
         this.plugin = plugin;
@@ -66,6 +78,15 @@ public final class Execution {
     /** ¿Es una simulación (spec 006, H4)? Entonces solo corren las acciones de control; las demás se listan. */
     public boolean simulating() {
         return trace != null && trace.simulation();
+    }
+
+    /** ¿Es un caso de prueba (spec 010)? Corren el flujo y set/unset/cancel sobre el Sandbox; lo demás se registra. */
+    public boolean testing() {
+        return sandbox != null;
+    }
+
+    public Sandbox sandbox() {
+        return sandbox;
     }
 
     public void trace(String line) {
@@ -99,8 +120,10 @@ public final class Execution {
 
     /** Cuenta una vuelta de un bucle y corta la ejecución al pasar el tope (constitución III.4). */
     public void countIteration() {
-        if (++iterations > plugin.settings().maxLoopIterations()) {
-            throw new ActionException("se pasó el tope de " + plugin.settings().maxLoopIterations()
+        int max = sandbox != null ? sandbox.maxLoops() : plugin.settings().maxLoopIterations();
+        if (sandbox != null) sandbox.step();
+        if (++iterations > max) {
+            throw new ActionException("se pasó el tope de " + max
                     + " iteraciones (expressions.max-loop-iterations): ¿un while que nunca termina?");
         }
     }
@@ -159,7 +182,7 @@ public final class Execution {
     }
 
     public void resume() {
-        if (!plugin.isEnabled() && !plugin.disabling()) {
+        if (sandbox == null && !plugin.isEnabled() && !plugin.disabling()) {
             finish();
             return;
         }
@@ -189,7 +212,15 @@ public final class Execution {
                 node = (ActionNode) s;
                 ctx = pendingCtx;
             }
-            if (!Bukkit.isPrimaryThread() && !node.asyncSafe()) {
+            if (sandbox != null) {
+                try {
+                    sandbox.step();
+                } catch (ActionException e) {
+                    fail(node, e);
+                    stopped = true;
+                    break;
+                }
+            } else if (!Bukkit.isPrimaryThread() && !node.asyncSafe()) {
                 pending = node;
                 pendingCtx = ctx;
                 trace("  » pasa al hilo principal para '" + node.type() + "'");
@@ -205,7 +236,7 @@ public final class Execution {
                 continue;
             } catch (RuntimeException e) {
                 fail(node, e);
-                plugin.getLogger().log(java.util.logging.Level.WARNING, "Detalle del error", e);
+                if (sandbox == null) plugin.getLogger().log(java.util.logging.Level.WARNING, "Detalle del error", e);
                 continue;
             }
             if (sampled && rule != null) {
@@ -213,8 +244,8 @@ public final class Execution {
                         dev.leo.omnievents.rule.RuleManager.part(rule, node.path()), System.nanoTime() - t0);
             }
             if (wait > 0 && !stopped) {
-                if (simulating()) {
-                    trace("    (espera " + wait + " ticks: en la simulación no se espera)");
+                if (simulating() || testing()) {
+                    trace("    (espera " + wait + " ticks: en la " + (testing() ? "prueba" : "simulación") + " no se espera)");
                     continue;
                 }
                 if (plugin.disabling()) {
@@ -231,8 +262,13 @@ public final class Execution {
     private void fail(ActionNode node, RuntimeException e) {
         String where = "regla '" + (rule == null ? "?" : rule.name()) + "'" + (node == null ? "" : ", " + node.path() + " (" + node.type() + ")");
         String msg = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
-        plugin.getLogger().warning("Error en " + where + ": " + msg);
         trace("  ✘ " + (node == null ? "" : node.type() + ": ") + msg);
+        if (sandbox != null) {
+            sandbox.error((node == null ? "" : node.path() + " (" + node.type() + "): ") + msg);
+            if (e instanceof ActionException ae && ae.getMessage() != null && ae.getMessage().contains("tope")) stopped = true;
+            return;
+        }
+        plugin.getLogger().warning("Error en " + where + ": " + msg);
         if (rule != null) rule.stats().error();
         if (e instanceof ActionException ae && ae.getMessage() != null && ae.getMessage().contains("tope")) stopped = true;
     }

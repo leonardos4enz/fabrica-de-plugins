@@ -180,7 +180,34 @@ public final class OmniEvents extends JavaPlugin implements Listener {
         guarded(p, "comandos", ruleCommands::register);
         guarded(p, "datos de bloques", () -> blockCleaner.update(rules.all()));
         lastProblems = p;
+        if (settings.testsOnLoad()) {
+            try {
+                logTests(tester().runAll(rules.all()));
+            } catch (RuntimeException e) {
+                getLogger().log(java.util.logging.Level.WARNING, "Error al correr las pruebas de las reglas", e);
+            }
+        }
         return p;
+    }
+
+    /** Corredor de las pruebas de las reglas (spec 010) con los topes de config.yml. */
+    public dev.leo.omnievents.rule.RuleTester tester() {
+        return new dev.leo.omnievents.rule.RuleTester(rules::get, settings.maxLoopIterations(), settings.maxCallDepth());
+    }
+
+    /** H4 CA1: una línea si todas pasan; un aviso por caso que falla. Sin pruebas, nada. */
+    private void logTests(dev.leo.omnievents.rule.RuleTester.Summary sum) {
+        if (sum.results().isEmpty()) return;
+        if (sum.failed() == 0) {
+            getLogger().info("Pruebas de reglas: " + sum.passed() + "/" + sum.results().size() + " pasan");
+            return;
+        }
+        for (var r : sum.results()) {
+            if (r.ok()) continue;
+            getLogger().warning("La prueba «" + r.test().name() + "» de la regla '" + r.rule().name() + "' falla: "
+                    + String.join("; ", r.failures()) + " (detalle: /omni test " + r.rule().name() + ")");
+        }
+        getLogger().warning("Pruebas de reglas: " + sum.failed() + " de " + sum.results().size() + " fallan");
     }
 
     private void guarded(Problems p, String what, Runnable r) {

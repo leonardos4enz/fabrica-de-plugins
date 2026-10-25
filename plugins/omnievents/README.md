@@ -5,8 +5,9 @@ Es la versión propia de la fábrica de *ConditionalEvents*, con un lenguaje de 
 variables persistentes y herramientas de diagnóstico. Specs: [001](../../docs/sdd/specs/001-omnievents-nucleo/spec.md) (núcleo) y
 [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/spec.md) (herramientas de autor),
 [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/spec.md) (esquema para el editor y referencia generada),
-[008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/spec.md) (disparador de estado, sin sondeo) y
-[009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/spec.md) (variables que caducan y variables en bloques, entidades e ítems).
+[008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/spec.md) (disparador de estado, sin sondeo),
+[009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/spec.md) (variables que caducan y variables en bloques, entidades e ítems) y
+[010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/spec.md) (pruebas de reglas en el YAML: `tests:` y `/omni test`).
 
 **[Referencia completa](../../docs/omnievents/referencia.md)**: cada opción, disparador, acción y función, generada del
 código (nunca queda desactualizada). **[Autocompletado en VS Code](#editor-autocompletado-y-errores-en-vs-code)** con
@@ -21,8 +22,8 @@ Minecraft 1.21.4 ([spec 004](../../docs/sdd/specs/004-fabrica-capturas-en-juego/
 ## Compatibilidad
 | Servidor | Estado | Evidencia |
 |---|---|---|
-| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.4.0) | Compuertas 1, 2 y 3a: 113 unitarias, servidor real y 37/37 escenarios en el juego dos veces (2026-10-25, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md) y [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md)) |
-| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.4.0) | 37/37 escenarios en el juego dos veces con el mismo jar (2026-10-25, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md) y [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md)) |
+| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.5.0) | Compuertas 1, 2 y 3a: 123 unitarias, servidor real y 38/38 escenarios en el juego dos veces (2026-10-25, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md) y [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md)) |
+| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.5.0) | 38/38 escenarios en el juego dos veces con el mismo jar (2026-10-25, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md) y [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md)) |
 | Paper 1.21.5 – 1.21.11 | Sin verificar | Debería funcionar (misma API, sin NMS), pero no se probó |
 | Paper 26.2 y 26.3 | Sin verificar | El bot de pruebas (mineflayer 4.39) llega hasta 26.1 |
 | Paper 1.21.3 o anterior | No soportada | Se compila contra la API de 1.21.4 |
@@ -235,6 +236,60 @@ object-data:
   `expire`). Tus datos cargan igual; si vuelves a una versión anterior, usa ese respaldo. Un archivo de un formato
   más nuevo que el que entiende el plugin no se sobrescribe.
 
+## Pruebas de reglas (`tests:` y `/omni test`)
+Desde la 1.5.0 ([spec 010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/spec.md)). Cada regla puede llevar
+sus casos de prueba: el contexto que entra (`given`) y lo que esperas (`expect`). Corren **sin servidor ni
+jugadores y sin tocar nada real**, así que te enteras si una regla dejó de hacer lo que hacía al cambiarla, al
+actualizar el plugin o Paper. Los ejemplos de `rules/ejemplos/` traen los suyos.
+```yaml
+diamantes_contados:
+  trigger: block_break
+  conditions: ["block.type == 'DIAMOND_ORE'", "player.gamemode == 'survival'"]
+  actions:
+    - set: "pvar.diamantes += 1"
+    - actionbar: "<aqua>Diamantes: {pvar.diamantes}"
+    - console: "give {player.name} emerald 1"
+  tests:
+    - name: suma uno                     # opcional
+      given:                             # rutas con puntos: las raíces del disparador y sus propiedades
+        player.name: Ana
+        player.gamemode: SURVIVAL
+        block.type: DIAMOND_ORE
+        pvar.diamantes: 9                # variables iniciales (pvar, gvar, var, block.data.x)
+      expect:
+        fired: true                      # corrieron sus actions
+        pvar.diamantes: 10               # null = que no exista
+        messages: ["Diamantes: 10"]      # contiene, en orden, sin formato ni mayúsculas
+        commands: ["give Ana emerald"]
+    - name: la piedra no cuenta
+      given: {block.type: STONE}
+      expect: {fired: false, branch: none}
+```
+- **`given`:** cada clave es una ruta (`block.type`, `player.level`, `event.damage`, `player.location.y`) con su
+  valor; también `pvar.x`, `gvar.x`, `var.x`, `<raíz>.data.x` y placeholders (`"%vault_eco_balance%": 100`). Un texto
+  en mayúsculas (`SURVIVAL`, `DIAMOND_ORE`) se compara como en el servidor, sin mayúsculas. Lo que no das vale nulo.
+- **`expect`:** `fired`, `branch` (`actions`, `else`, `deny`, `deny conditions[1]`, `none`; `on_enter` en un
+  `state`), variables, `messages` (message, broadcast, actionbar, title…), `commands` (console, command), `actions`
+  (`give_item`, o `"sound: LEVELUP"` con su texto), `cancelled` y `assert` (expresiones que deben dar verdadero).
+- **Qué corre:** condiciones, sus `deny` y el `else`, y las acciones de flujo (`if`, bucles, `random` con la semilla
+  del caso, `seed`, `stop`, `call` a otra regla, que también se prueba). `set`, `unset` y `cancel` cambian solo el
+  caso. Lo demás (mensajes, comandos, ítems, mundo) se **registra** con su texto armado y no se aplica; `delay` no
+  espera y `chance` no se sortea (corre).
+- **Qué no se prueba:** `worlds`, `permission`, `bypass_permission`, `cooldown` y `limit` (la traza lo dice); `to:` y
+  `for_each` no resuelven destinatarios. Las funciones que miran el servidor dan nulo, falso o 0 (`cooldown()`,
+  `uses()`, `in_state()`, `ttl()` de lo que no diste); `online()`, `player()` y `perm()` leen el servidor de verdad (en
+  gradle no hay). Un método de un objeto falso (`player.hasPermission(…)`) es un error del caso.
+- **`/omni test [regla]`** (permiso `omnievents.command.test`, también desde la consola y sin jugadores): `✔ regla
+  3/3`, y por cada caso que falla qué esperaba, qué salió y la traza (`pvar.diamantes: esperaba 10, dio 9`).
+- **Al arrancar y en cada `reload`** corren todas: la consola dice `Pruebas de reglas: 12/12 pasan` o avisa de cada
+  una que falla. Una prueba mal escrita se informa como cualquier error de configuración (con ruta y «¿quisiste
+  decir…?») y no impide que la regla cargue.
+```yaml
+# config.yml (clave nueva en 1.5.0; si falta se usa este valor)
+tests:
+  on-load: true    # false: las pruebas solo corren con /omni test
+```
+
 ## Expresiones
 - Lógica: `&&` `and`, `||` `or`, `!` `not`, paréntesis, `c ? a : b`.
 - Comparación: `==` `!=` `<` `<=` `>` `>=`, `~=` (igual sin mayúsculas), `contains`, `startsWith`, `endsWith`,
@@ -307,7 +362,7 @@ Las raíces de cada disparador y si se puede cancelar: [referencia](../../docs/o
 
 ## Comandos (`/omni`, alias `/oe`)
 `reload` · `validate` · `list [filtro]` · `info <regla>` · `enable|disable <regla>` · `debug <regla|all|off|export>` ·
-`check <regla> [jugador]` · `run <regla> <jugador> [--simular]` · `state <regla>` · `cpu [on|off|reset]` ·
+`check <regla> [jugador]` · `test [regla]` · `run <regla> <jugador> [--simular]` · `state <regla>` · `cpu [on|off|reset]` ·
 `eval <expr>` · `call <regla> [jugador] [k=v…]` · `var get|set|del|list <jugador|global> [nombre] [valor] [--expire 10m]` ·
 `data [bloque|entidad|mano]` ·
 `cooldown reset <regla> [jugador|global]` · `limit reset <regla> [jugador|global]` · `stats` · `triggers` · `actions` ·

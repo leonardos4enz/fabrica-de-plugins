@@ -295,3 +295,27 @@ e2e_bloque_roto:
   conditions: "block.type == 'EMERALD_BLOCK'"
   actions:
     - message: "e2e roto con {default(block.data.e2e_dueño, 'nadie')}"
+
+# Spec 010: tests: y /omni test. La prueba no cambia la pvar real ni corre el comando de consola; la segunda regla
+# tiene una prueba que falla a propósito (se avisa al cargar y en /omni test).
+e2e_probada:
+  trigger: call
+  conditions: ["default(pvar.e2e_probada, 0) < 100"]
+  actions:
+    - set: "pvar.e2e_probada += 1"
+    - console: "say e2e prueba no debe salir"
+    - message: "e2e probada {pvar.e2e_probada}"
+  tests:
+    - name: suma uno
+      given: {player.name: Ana, pvar.e2e_probada: 9}
+      expect: {pvar.e2e_probada: 10, commands: ["say e2e prueba"], messages: ["e2e probada 10"]}
+    - name: tope
+      given: {pvar.e2e_probada: 100}
+      expect: {fired: false}
+
+e2e_probada_falla:
+  trigger: call
+  actions: ["set: pvar.e2e_x = 1"]
+  tests:
+    - name: espera mal
+      expect: {pvar.e2e_x: 2}

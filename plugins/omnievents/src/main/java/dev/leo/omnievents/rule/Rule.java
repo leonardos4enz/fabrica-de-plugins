@@ -45,6 +45,8 @@ public final class Rule {
     boolean writesObjectData;
     /** Spec 009: variables que acepta una regla var_expire (vacío = todas). */
     Set<String> expireVariables = Set.of();
+    /** Spec 010: los casos de tests (los inválidos ya se descartaron al cargar). */
+    List<RuleTest> tests = List.of();
     private final Stats stats = new Stats();
     private final Budget budget = new Budget();
 
@@ -172,6 +174,10 @@ public final class Rule {
 
     public Set<String> expireVariables() {
         return expireVariables;
+    }
+
+    public List<RuleTest> tests() {
+        return tests;
     }
 
     public Budget budget() {

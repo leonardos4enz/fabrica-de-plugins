@@ -38,3 +38,8 @@ object-data:
   max-text-length: 256
   # Variables por objeto.
   max-vars: 32
+
+tests:
+  # Las pruebas de las reglas (tests:, spec 010) corren al arrancar y en cada reload, sin efectos; las que fallan se
+  # avisan en la consola. Siempre se pueden correr a mano con /omni test.
+  on-load: true

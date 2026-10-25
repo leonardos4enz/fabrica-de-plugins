@@ -49,6 +49,7 @@ public final class SchemaGenerator {
         defs.put("conditions", map("description", RuleOptions.all().get("conditions").description(),
                 "anyOf", List.of(ref("condition"), map("type", "array", "items", ref("condition")))));
         defs.put("condition", condition());
+        defs.put("test", test());
         defs.put("actions", map("description", "Una acción o una lista de acciones.",
                 "anyOf", List.of(ref("action"), map("type", "array", "items", ref("action")), map("type", "null"))));
         defs.put("action", action(actions));
@@ -133,6 +134,7 @@ public final class SchemaGenerator {
             }
             case BUDGET -> ref("budget");
             case LIST -> map("type", "array", "items", map("type", "string"));
+            case TESTS -> map("type", "array", "items", ref("test"));
         };
     }
 
@@ -167,6 +169,27 @@ public final class SchemaGenerator {
                 "required", List.of("any", "of"), "additionalProperties", false);
         return map("description", "Una condición: una expresión, o un mapa con expr o any + of, y deny opcional.",
                 "anyOf", List.of(ref("expression"), expr, any));
+    }
+
+    /** Un caso de tests (spec 010): given libre (rutas con puntos), expect con sus claves o variables. */
+    private static Map<String, Object> test() {
+        Map<String, String> t = RuleOptions.TEST_KEYS, e = RuleOptions.EXPECT_KEYS;
+        Map<String, Object> expect = map("type", "object", "description", t.get("expect"), "properties", map(
+                        "fired", map("type", "boolean", "description", e.get("fired")),
+                        "branch", map("type", "string", "pattern", "^(actions|else|deny|deny .+|none|on_enter)$", "description", e.get("branch")),
+                        "messages", with(ref("texts"), e.get("messages")),
+                        "commands", with(ref("texts"), e.get("commands")),
+                        "actions", with(ref("texts"), e.get("actions")),
+                        "cancelled", map("type", "boolean", "description", e.get("cancelled")),
+                        "assert", map("description", e.get("assert"), "anyOf", List.of(ref("expression"), map("type", "array", "items", ref("expression"))))),
+                "patternProperties", map(RuleLoader.TEST_VAR_PATTERN, map("description", "Valor esperado de la variable al terminar (null: que no exista).")),
+                "additionalProperties", false);
+        return map("type", "object", "description", RuleOptions.all().get("tests").description(), "properties", map(
+                        "name", map("type", "string", "description", t.get("name")),
+                        "given", map("type", "object", "description", t.get("given")),
+                        "expect", expect,
+                        "seed", map("type", "integer", "description", t.get("seed"))),
+                "required", List.of("expect"), "additionalProperties", false);
     }
 
     // ------------------------------------------------------------------ acciones

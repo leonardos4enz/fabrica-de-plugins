@@ -24,6 +24,14 @@ PJAR="$(ls -t "$ROOT"/dist/*.jar 2>/dev/null | grep -i "/$PLUGIN-[^/]*\.jar$" | 
 [ -n "$PJAR" ] || { echo "no hay jar de $PLUGIN en dist/: ./gradlew :$PLUGIN:dist"; exit 1; }
 find plugins -maxdepth 1 -iname "$PLUGIN-*.jar" -delete
 cp "$PJAR" plugins/
+# Los ejemplos tal como están en el código fuente: el plugin solo los copia si su carpeta no existe, y la compuerta
+# probaba los de una versión vieja (regresión 010 F-02; la suite ya lo hacía, 002 F-05).
+NAME="$(grep -m1 '^name:' "$ROOT/plugins/$PLUGIN/src/main/resources/plugin.yml" 2>/dev/null | sed 's/^name:[[:space:]]*//')"
+EJ="$ROOT/plugins/$PLUGIN/src/main/resources/rules/ejemplos"
+if [ -n "$NAME" ] && [ -d "$EJ" ] && [ -d "plugins/$NAME/rules" ]; then
+  rm -rf "plugins/$NAME/rules/ejemplos"
+  cp -r "$EJ" "plugins/$NAME/rules/ejemplos"
+fi
 
 wait_done() {
   for _ in $(seq 1 300); do

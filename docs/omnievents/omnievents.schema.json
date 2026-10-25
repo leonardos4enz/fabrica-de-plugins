@@ -612,6 +612,13 @@
           ],
           "description": "Acciones si ya no quedan usos."
         },
+        "tests": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/test"
+          },
+          "description": "Pruebas de la regla: casos con given (el contexto falso) y expect (lo esperado). Corren con /omni test y al cargar, sin efectos."
+        },
         "budget": {
           "allOf": [
             {
@@ -1027,6 +1034,91 @@
           "additionalProperties": false
         }
       ]
+    },
+    "test": {
+      "type": "object",
+      "description": "Pruebas de la regla: casos con given (el contexto falso) y expect (lo esperado). Corren con /omni test y al cargar, sin efectos.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Nombre del caso (sin él: caso 1, caso 2…)."
+        },
+        "given": {
+          "type": "object",
+          "description": "Contexto falso: rutas con puntos y su valor (block.type: DIAMOND_ORE, player.level: 12, event.damage: 5), variables iniciales (pvar.x, gvar.x, var.x, block.data.x) y placeholders (\"%vault_eco_balance%\": 100)."
+        },
+        "expect": {
+          "type": "object",
+          "description": "Lo esperado: fired, branch, variables, messages, commands, actions, cancelled y assert.",
+          "properties": {
+            "fired": {
+              "type": "boolean",
+              "description": "true si corrieron las acciones principales (actions, u on_enter en un state)."
+            },
+            "branch": {
+              "type": "string",
+              "pattern": "^(actions|else|deny|deny .+|none|on_enter)$",
+              "description": "La rama que corrió: actions, else, deny (o deny conditions[1]), none, u on_enter en un state."
+            },
+            "messages": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/texts"
+                }
+              ],
+              "description": "Textos que deben aparecer, en orden y sin formato, en los mensajes que mandaría (message, broadcast, actionbar, title…)."
+            },
+            "commands": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/texts"
+                }
+              ],
+              "description": "Textos que deben aparecer, en orden, en los comandos que correría (console, command)."
+            },
+            "actions": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/texts"
+                }
+              ],
+              "description": "Acciones que correría, en orden: el tipo (give_item) o el tipo y un texto (\"sound: LEVELUP\")."
+            },
+            "cancelled": {
+              "type": "boolean",
+              "description": "true si cancela el evento."
+            },
+            "assert": {
+              "description": "Expresión o lista de expresiones que deben dar verdadero al terminar (\"pvar.d >= 10\").",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/expression"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/expression"
+                  }
+                }
+              ]
+            }
+          },
+          "patternProperties": {
+            "^((pvar|gvar|var)\\.[A-Za-z0-9_\\-]+|.+\\.data\\.[^.\\s]+)$": {
+              "description": "Valor esperado de la variable al terminar (null: que no exista)."
+            }
+          },
+          "additionalProperties": false
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Semilla de random en este caso (0 por defecto): el mismo número elige siempre la misma rama."
+        }
+      },
+      "required": [
+        "expect"
+      ],
+      "additionalProperties": false
     },
     "actions": {
       "description": "Una acción o una lista de acciones.",

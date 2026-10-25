@@ -38,6 +38,10 @@ public final class ReferenceGenerator {
         }
         sb.append("\nBloque `command` (para `trigger: command`):\n\n| Clave | Qué hace |\n|---|---|\n");
         RuleOptions.COMMAND_KEYS.forEach((k, d) -> sb.append("| `").append(k).append("` | ").append(cell(d)).append(" |\n"));
+        sb.append("\nCada caso de `tests` (spec 010; corren con `/omni test` y al cargar):\n\n| Clave | Qué hace |\n|---|---|\n");
+        RuleOptions.TEST_KEYS.forEach((k, d) -> sb.append("| `").append(k).append("` | ").append(cell(d)).append(" |\n"));
+        sb.append("\nClaves de `expect` (además, variables: `pvar.x`, `gvar.x`, `var.x`, `block.data.x`; `null` = que no exista):\n\n| Clave | Qué hace |\n|---|---|\n");
+        RuleOptions.EXPECT_KEYS.forEach((k, d) -> sb.append("| `").append(k).append("` | ").append(cell(d)).append(" |\n"));
 
         sb.append("\n## Condiciones\nCada elemento de `conditions` es una expresión, o un mapa con estas claves:\n\n| Clave | Qué hace |\n|---|---|\n");
         RuleOptions.CONDITION_KEYS.forEach((k, d) -> sb.append("| `").append(k).append("` | ").append(cell(d)).append(" |\n"));
@@ -130,6 +134,7 @@ public final class ReferenceGenerator {
             case COMMAND -> "nombre o mapa";
             case BUDGET -> "`0.5ms`, `200us`";
             case LIST -> "lista de nombres";
+            case TESTS -> "lista de casos";
         };
         return o.aliasOf() == null ? k : k + " (sinónimo de `" + o.aliasOf() + "`)";
     }

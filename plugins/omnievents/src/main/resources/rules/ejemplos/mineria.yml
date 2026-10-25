@@ -1,5 +1,6 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
 # Ejemplos de OmniEvents: bloques, variables por jugador, azar ponderado y enfriamientos.
+# tests: casos de prueba de la regla; corren con /omni test y al cargar, sin tocar nada real (spec 010).
 
 diamantes_contados:
   trigger: block_break
@@ -14,6 +15,17 @@ diamantes_contados:
         - broadcast: "<aqua>{player.name}</aqua> <gray>ya minó <aqua>{pvar.diamantes}</aqua> diamantes."
         - particle: TOTEM_OF_UNDYING;40;0.5;1;0.5;0.3
     - actionbar: "<aqua>Diamantes: {pvar.diamantes}"
+  tests:
+    - name: el décimo diamante se anuncia
+      given: {player.name: Ana, player.gamemode: SURVIVAL, block.type: DIAMOND_ORE, pvar.diamantes: 9}
+      expect:
+        fired: true
+        pvar.diamantes: 10
+        messages: ["Ana ya minó 10 diamantes", "Diamantes: 10"]
+        actions: ["particle: TOTEM"]
+    - name: la piedra no cuenta
+      given: {player.gamemode: SURVIVAL, block.type: STONE, pvar.diamantes: 3}
+      expect: {fired: false, pvar.diamantes: 3}
 
 # Paréntesis, ||, && y ! en una sola condición: imposible en una línea de ConditionalEvents.
 bloque_protegido:
@@ -22,6 +34,11 @@ bloque_protegido:
   actions:
     - cancel
     - message: "<red>No puedes romper ese bloque aquí."
+  tests:
+    - given: {block.type: BEDROCK}
+      expect: {fired: true, cancelled: true, messages: ["No puedes romper"]}
+    - given: {block.type: STONE, block.y: 12}
+      expect: {fired: false, cancelled: false}
 
 suerte_minera:
   trigger: block_break

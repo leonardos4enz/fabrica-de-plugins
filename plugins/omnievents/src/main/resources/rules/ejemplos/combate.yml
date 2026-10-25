@@ -28,6 +28,13 @@ cazador:
       then:
         - broadcast: "<gold>{player.name}</gold> <gray>ya cazó <red>{pvar.monstruos}</red> monstruos."
         - give_level: 5
+  tests:
+    - name: el monstruo 50 da niveles
+      given: {player.name: Leo, target.type: ZOMBIE, pvar.monstruos: 49}
+      expect: {pvar.monstruos: 50, messages: ["Leo ya cazó 50 monstruos"], actions: ["give_level: 5"]}
+    - name: una vaca no cuenta
+      given: {target.type: COW}
+      expect: {fired: false, pvar.monstruos: null}
 
 mensaje_de_muerte:
   trigger: player_death

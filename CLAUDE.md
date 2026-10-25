@@ -54,8 +54,8 @@ con `--release 21`.
 - En la suite en el juego, **la consola no espera**: después de preparar, `srv.sincronizar()` antes de que el bot actúe
   (002 F-03). mineflayer 4.39 no lee la barra de acción de Paper ni el chat cambiado por el servidor y nombra mal los
   sonidos de 1.21.4: `tests-e2e/lib/bot.mjs` lee esos paquetes directamente (002 F-04).
-- Un plugin que copia ejemplos solo si su carpeta no existe deja ejemplos viejos en `run/`: la suite los copia del
-  código fuente. En 26.1 los datos del jugador viven en `world/players/` (002 F-05).
+- Un plugin que copia ejemplos solo si su carpeta no existe deja ejemplos viejos en `run/`: la suite y
+  `compuerta-servidor.sh` (desde la 010, F-02) los copian del código fuente. En 26.1 los datos del jugador viven en `world/players/` (002 F-05).
 - Paper 26.x necesita Java 25 (`--java-servidor`); el bot usa `--version-bot 26.1` (mismo protocolo que 26.1.2).
 - **Proporción costo/valor (lección del dueño, spec 004):** la galería con una imagen para *cada* capacidad (147
   escenas, 9 corridas completas para estabilizarla) tomó horas y no valió la pena. Antes de una spec de alcance «todo»,

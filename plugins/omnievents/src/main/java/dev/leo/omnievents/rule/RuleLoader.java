@@ -294,7 +294,174 @@ public final class RuleLoader {
                 s.getStringList("args"), budget, state);
         rule.writesObjectData = parser.writesObjectData();
         rule.expireVariables = expireVars;
+        // Spec 010: después de compilar la regla (assert no cuenta para las dependencias de un estado). Un caso mal
+        // escrito se descarta con su error, pero la regla carga (H1 CA3).
+        if (s.contains("tests")) rule.tests = tests(name, s.get("tests"), trigger, problems);
         return rule;
+    }
+
+    // ------------------------------------------------------------------ pruebas (spec 010)
+
+    /** Clave de expect que es una variable: pvar.x, gvar.x, var.x u objeto.data.x (también en el esquema). */
+    public static final String TEST_VAR_PATTERN = "^((pvar|gvar|var)\\.[A-Za-z0-9_\\-]+|.+\\.data\\.[^.\\s]+)$";
+    private static final java.util.regex.Pattern TEST_SCOPED = java.util.regex.Pattern.compile("^(pvar|gvar|var)\\.([A-Za-z0-9_\\-]+)$");
+    private static final java.util.regex.Pattern TEST_DATA = java.util.regex.Pattern.compile("^(.+?)\\.data\\.([\\p{L}0-9_]+)$");
+    private static final Set<String> BRANCHES = Set.of("actions", "else", "deny", "none", "on_enter");
+
+    private List<RuleTest> tests(String rule, Object raw, TriggerType trigger, Problems problems) {
+        String base = rule + ".tests";
+        if (!(raw instanceof List<?> list)) {
+            problems.error(base, "tests es una lista de casos, cada uno con given y expect");
+            return List.of();
+        }
+        Set<String> roots = new HashSet<>(trigger.roots());
+        roots.addAll(Triggers.COMMON_ROOTS);
+        boolean anyRoot = trigger.kind() == TriggerType.Kind.CALL || trigger.kind() == TriggerType.Kind.CUSTOM;
+        List<RuleTest> out = new ArrayList<>();
+        for (int i = 0; i < list.size(); i++) {
+            String path = base + "[" + i + "]";
+            int mark = problems.size();
+            if (!(list.get(i) instanceof Map<?, ?> m)) {
+                problems.error(path, "cada caso es un mapa con given y expect");
+                continue;
+            }
+            for (Object k : m.keySet()) {
+                if (!RuleOptions.TEST_KEYS.containsKey(String.valueOf(k))) problems.error(path + "." + k, "clave desconocida" + Suggest.hint(String.valueOf(k), RuleOptions.TEST_KEYS.keySet()));
+            }
+            String name = m.get("name") == null ? "caso " + (i + 1) : Values.str(m.get("name"));
+            List<Map.Entry<String, Object>> given = new ArrayList<>();
+            Object g = m.get("given");
+            if (g instanceof Map<?, ?> gm) {
+                for (Map.Entry<?, ?> e : gm.entrySet()) {
+                    String key = String.valueOf(e.getKey()).trim();
+                    testRoot(key, path + ".given." + key, roots, anyRoot, problems);
+                    given.add(Map.entry(key, e.getValue() == null ? NULL : e.getValue()));
+                }
+            } else if (g != null) {
+                problems.error(path + ".given", "given es un mapa ruta: valor (p. ej. block.type: DIAMOND_ORE)");
+            }
+            long seed = 0;
+            if (m.get("seed") != null) {
+                Double d = Values.toNumberOrNull(m.get("seed"));
+                if (d == null || d != Math.floor(d)) problems.error(path + ".seed", "seed es un número entero");
+                else seed = d.longValue();
+            }
+            RuleTest.Expect expect = null;
+            if (!(m.get("expect") instanceof Map<?, ?> em)) {
+                problems.error(path + (m.containsKey("expect") ? ".expect" : ""), "cada caso necesita expect, un mapa con lo esperado (p. ej. fired: true)");
+            } else {
+                expect = expect(em, path + ".expect", roots, anyRoot, trigger, problems);
+            }
+            if (!problems.hasErrorsSince(mark)) out.add(new RuleTest(name, path, List.copyOf(given), seed, expect));
+        }
+        return List.copyOf(out);
+    }
+
+    /** Marca un valor null de given (Map.entry no acepta null). */
+    public static final Object NULL = new Object() {
+        @Override
+        public String toString() {
+            return "null";
+        }
+    };
+
+    private RuleTest.Expect expect(Map<?, ?> m, String path, Set<String> roots, boolean anyRoot, TriggerType trigger, Problems problems) {
+        Boolean fired = null, cancelled = null;
+        String branch = null;
+        List<RuleTest.VarCheck> vars = new ArrayList<>();
+        List<String> messages = List.of(), commands = List.of(), acts = List.of();
+        List<Expression> asserts = new ArrayList<>();
+        for (Map.Entry<?, ?> e : m.entrySet()) {
+            String key = String.valueOf(e.getKey()).trim();
+            String p = path + "." + key;
+            Object v = e.getValue();
+            switch (key) {
+                case "fired" -> fired = bool(v, p, problems);
+                case "cancelled" -> cancelled = bool(v, p, problems);
+                case "branch" -> {
+                    branch = Values.str(v).trim().toLowerCase(Locale.ROOT);
+                    if (!BRANCHES.contains(branch) && !branch.startsWith("deny ")) {
+                        problems.error(p, "rama desconocida '" + branch + "'" + Suggest.hint(branch, BRANCHES) + " (actions, else, deny, deny conditions[1], none, on_enter)");
+                    }
+                }
+                case "messages" -> messages = texts(v, p, problems);
+                case "commands" -> commands = texts(v, p, problems);
+                case "actions" -> {
+                    acts = texts(v, p, problems);
+                    for (String a : acts) {
+                        String type = ActionParser.canonical(a.contains(":") ? a.substring(0, a.indexOf(':')) : a);
+                        if (!actions.has(type)) problems.error(p, "acción desconocida '" + type + "'" + Suggest.hint(type, actions.names()));
+                    }
+                }
+                case "assert" -> {
+                    for (String src : texts(v, p, problems)) {
+                        try {
+                            asserts.add(Expression.compile(src));
+                        } catch (ExprException ex) {
+                            problems.error(p, ex.getMessage());
+                        }
+                    }
+                }
+                default -> {
+                    if (!key.matches(TEST_VAR_PATTERN)) {
+                        problems.error(p, "clave desconocida" + Suggest.hint(key, RuleOptions.EXPECT_KEYS.keySet())
+                                + " (o una variable: pvar.x, gvar.x, var.x, block.data.x)");
+                        continue;
+                    }
+                    testRoot(key, p, roots, anyRoot, problems);
+                    try {
+                        vars.add(new RuleTest.VarCheck(key, Expression.compile(key), v));
+                    } catch (ExprException ex) {
+                        problems.error(p, ex.getMessage());
+                    }
+                }
+            }
+        }
+        boolean isState = trigger.kind() == TriggerType.Kind.STATE;
+        if (branch != null && isState && !branch.equals("on_enter") && !branch.equals("none")) {
+            problems.error(path + ".branch", "una regla state solo tiene las ramas on_enter y none");
+        } else if (branch != null && !isState && branch.equals("on_enter")) {
+            problems.error(path + ".branch", "on_enter es la rama de una regla state; esta usa actions");
+        }
+        return new RuleTest.Expect(fired, branch, List.copyOf(vars), messages, commands, acts, cancelled, List.copyOf(asserts));
+    }
+
+    /** La raíz de una clave de given o de una variable de expect existe (H1 CA3). */
+    private static void testRoot(String key, String path, Set<String> roots, boolean anyRoot, Problems problems) {
+        if (key.startsWith("%") && key.endsWith("%") && key.length() > 2) return;
+        java.util.regex.Matcher sc = TEST_SCOPED.matcher(key);
+        if (sc.matches()) return;
+        java.util.regex.Matcher d = TEST_DATA.matcher(key);
+        String obj = d.matches() ? d.group(1) : key;
+        String root = obj.contains(".") ? obj.substring(0, obj.indexOf('.')) : obj;
+        if (root.equals("pvar") || root.equals("gvar") || root.equals("var")) {
+            problems.error(path, "una variable se escribe " + root + ".nombre (letras, números, _ y -)");
+            return;
+        }
+        if (anyRoot || roots.contains(root)) return;
+        problems.error(path, "'" + root + "' no existe en este disparador" + Suggest.hint(root, roots) + " (o usa pvar.x, gvar.x, var.x o un %placeholder%)");
+    }
+
+    private static Boolean bool(Object v, String path, Problems problems) {
+        if (v instanceof Boolean b) return b;
+        problems.error(path, "va true o false");
+        return null;
+    }
+
+    private static List<String> texts(Object v, String path, Problems problems) {
+        if (v instanceof List<?> l) {
+            List<String> out = new ArrayList<>();
+            for (Object o : l) {
+                if (o instanceof Map<?, ?> || o instanceof List<?>) problems.error(path, "va un texto o una lista de textos");
+                else out.add(Values.str(o));
+            }
+            return List.copyOf(out);
+        }
+        if (v instanceof Map<?, ?> || v == null) {
+            problems.error(path, "va un texto o una lista de textos");
+            return List.of();
+        }
+        return List.of(Values.str(v));
     }
 
     /** Lo propio de una regla state (spec 008, H1 CA5, H2 CA3–CA4, H6 CA2). Los errores quedan en problems. */

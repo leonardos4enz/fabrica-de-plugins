@@ -10,6 +10,7 @@ como lo haría un administrador y un jugador.
       ├─ carga                el plugin habilita sin excepciones con la configuración de ejemplo
       ├─ validación           /<plugin> validate → 0 errores en los ejemplos que trae el plugin
       ├─ autoprueba           /<plugin> selftest → los casos incorporados pasan en el servidor vivo
+      ├─ pruebas de reglas    /omni test → los tests: de los ejemplos pasan (OmniEvents, spec 010)
       └─ recarga              /<plugin> reload dos veces seguidas sin fugas de oyentes ni tareas
  3a. En el juego, automática npm --prefix tests-e2e test   (bots de mineflayer contra el Paper de prueba)
       ├─ un escenario por criterio que necesita un jugador (acciones, eventos, variables, enfriamientos)
@@ -27,13 +28,15 @@ como lo haría un administrador y un jugador.
 
 ## 2. Servidor real
 ```bash
-bash tools/compuerta-servidor.sh omnievents "omni validate" "omni selftest" "omni reload" "omni reload" "omni stats"
+bash tools/compuerta-servidor.sh omnievents "omni validate" "omni selftest" "omni test" "omni reload" "omni stats" "omni reload" "omni stats"
 ```
 - El servidor vive en `plugins/<plugin>/run/` (fuera del repositorio). El jar de Paper se baja de la API oficial
   (`https://fill.papermc.io/v3/projects/paper/versions/<versión>/builds/latest`) y **se verifica su sha256**.
   `run-paper` 2.3.1 ya no encuentra las versiones (usa la API anterior de PaperMC).
 - **El EULA de Minecraft lo acepta el dueño**, una vez, por escrito; solo entonces se escribe `eula=true` en
   `run/eula.txt`. El script se niega a arrancar sin él.
+- Antes de arrancar copia los ejemplos del código fuente a `run/plugins/<Plugin>/rules/ejemplos/` (el plugin solo los
+  copia si su carpeta no existe; spec 010, F-02).
 - El script manda los comandos por consola, apaga y **vuelve a arrancar** para comprobar que los datos persisten.
 - La compuerta pasa si: el log no tiene `ERROR`/`Exception` del plugin, `validate` reporta 0 errores en los ejemplos,
   `selftest` pasa y dos `reload` seguidos dejan el mismo número de oyentes y tareas (lo muestra `/<plugin> stats`).

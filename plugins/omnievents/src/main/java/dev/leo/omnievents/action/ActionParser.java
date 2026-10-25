@@ -4,6 +4,7 @@ import dev.leo.omnievents.expr.ExprException;
 import dev.leo.omnievents.expr.Expression;
 import dev.leo.omnievents.expr.Values;
 import dev.leo.omnievents.rule.Problems;
+import dev.leo.omnievents.text.Template;
 import dev.leo.omnievents.util.Suggest;
 
 import java.util.ArrayList;
@@ -135,7 +136,7 @@ public final class ActionParser {
         Map<String, Object> node = new LinkedHashMap<>();
         node.put(type, value);
         ActionNode n = parseMap(node, path);
-        if (n != null && forced != null) n = new ActionNode(n.type(), n.path(), n.action(), forced, n.where(), n.chance(), n.when(), n.control(), n.source());
+        if (n != null && forced != null) n = n.withTarget(forced);
         return n;
     }
 
@@ -173,7 +174,18 @@ public final class ActionParser {
         return new ActionNode(canonical, path, action, spec,
                 where == null ? null : Expression.compile(Values.str(where)), ch,
                 when == null ? null : Expression.compile(Values.str(when)),
-                catalog.isFlow(canonical) || canonical.equals("call"), source(canonical, value, extra));
+                catalog.isFlow(canonical) || canonical.equals("call"), source(canonical, value, extra),
+                catalog.isFlow(canonical) || canonical.equals("call") || ActionNode.SANDBOXED.contains(canonical) ? null : preview(value));
+    }
+
+    /** El valor de texto como plantilla, para registrarlo armado en una prueba (spec 010); null si no es texto. */
+    private static Template preview(Object value) {
+        if (!(value instanceof String s) || s.isEmpty()) return null;
+        try {
+            return Template.compile(s);
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     /** Texto corto de la acción para listarla en una simulación (spec 006, H4). */
@@ -185,7 +197,7 @@ public final class ActionParser {
         return sb.length() <= 120 ? sb.toString() : sb.substring(0, 119) + "…";
     }
 
-    static String canonical(String k) {
+    public static String canonical(String k) {
         String l = k.trim().toLowerCase(Locale.ROOT);
         return ALIASES.getOrDefault(l, l);
     }

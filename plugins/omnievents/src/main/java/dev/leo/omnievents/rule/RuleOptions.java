@@ -11,7 +11,7 @@ import java.util.Set;
  */
 public final class RuleOptions {
     /** Qué tipo de valor lleva una opción (decide su forma en el esquema). */
-    public enum Kind { TRIGGER, BOOLEAN, INTEGER, TEXT, TEXTS, ENUM, DURATION, RESET, TIMES, CONDITIONS, ACTIONS, COMMAND, BUDGET, LIST }
+    public enum Kind { TRIGGER, BOOLEAN, INTEGER, TEXT, TEXTS, ENUM, DURATION, RESET, TIMES, CONDITIONS, ACTIONS, COMMAND, BUDGET, LIST, TESTS }
 
     /**
      * @param values  valores permitidos (ENUM y RESET)
@@ -24,6 +24,10 @@ public final class RuleOptions {
     private static final Map<String, Option> OPTIONS = new LinkedHashMap<>();
     /** Claves de una condición en forma de mapa (spec 006). */
     public static final Map<String, String> CONDITION_KEYS = new LinkedHashMap<>();
+    /** Claves de un caso de tests (spec 010). */
+    public static final Map<String, String> TEST_KEYS = new LinkedHashMap<>();
+    /** Claves de expect de un caso (spec 010); además, variables como pvar.x, gvar.x, var.x o block.data.x. */
+    public static final Map<String, String> EXPECT_KEYS = new LinkedHashMap<>();
     /** Claves del bloque command de un trigger command. */
     public static final Map<String, String> COMMAND_KEYS = new LinkedHashMap<>();
 
@@ -71,6 +75,7 @@ public final class RuleOptions {
         values("limit_scope", Kind.ENUM, "player (por jugador, por defecto) o global.", "player", "jugador", "global", "server", "servidor");
         values("limit_reset", Kind.RESET, "Cuándo se reinician los usos: never, daily, weekly, monthly o una duración (12h).", "never", "nunca", "daily", "diario", "weekly", "semanal", "monthly", "mensual");
         add("on_limit", Kind.ACTIONS, "Acciones si ya no quedan usos.");
+        add("tests", Kind.TESTS, "Pruebas de la regla: casos con given (el contexto falso) y expect (lo esperado). Corren con /omni test y al cargar, sin efectos.");
         add("budget", Kind.BUDGET, "Presupuesto de tiempo por disparo: 0.5ms o 200us. Avisa en consola si el promedio reciente lo pasa.");
         only("timer", "every", Kind.DURATION, "Cada cuánto corre el timer (10s, 5m; mínimo 1 tick).");
         only("timer", "repetitive_time", Kind.INTEGER, "Ticks entre ejecuciones (forma de ConditionalEvents; mejor every).");
@@ -94,6 +99,18 @@ public final class RuleOptions {
         CONDITION_KEYS.put("any", "Cuántas de las condiciones de of deben cumplirse como mínimo (entero entre 1 y el tamaño de of).");
         CONDITION_KEYS.put("of", "Condiciones del grupo any (textos o mapas; se puede anidar otro any).");
         CONDITION_KEYS.put("deny", "Acciones si esta condición es la primera que falla; reemplazan al else de la regla. Dentro de of se ignoran.");
+
+        TEST_KEYS.put("name", "Nombre del caso (sin él: caso 1, caso 2…).");
+        TEST_KEYS.put("given", "Contexto falso: rutas con puntos y su valor (block.type: DIAMOND_ORE, player.level: 12, event.damage: 5), variables iniciales (pvar.x, gvar.x, var.x, block.data.x) y placeholders (\"%vault_eco_balance%\": 100).");
+        TEST_KEYS.put("expect", "Lo esperado: fired, branch, variables, messages, commands, actions, cancelled y assert.");
+        TEST_KEYS.put("seed", "Semilla de random en este caso (0 por defecto): el mismo número elige siempre la misma rama.");
+        EXPECT_KEYS.put("fired", "true si corrieron las acciones principales (actions, u on_enter en un state).");
+        EXPECT_KEYS.put("branch", "La rama que corrió: actions, else, deny (o deny conditions[1]), none, u on_enter en un state.");
+        EXPECT_KEYS.put("messages", "Textos que deben aparecer, en orden y sin formato, en los mensajes que mandaría (message, broadcast, actionbar, title…).");
+        EXPECT_KEYS.put("commands", "Textos que deben aparecer, en orden, en los comandos que correría (console, command).");
+        EXPECT_KEYS.put("actions", "Acciones que correría, en orden: el tipo (give_item) o el tipo y un texto (\"sound: LEVELUP\").");
+        EXPECT_KEYS.put("cancelled", "true si cancela el evento.");
+        EXPECT_KEYS.put("assert", "Expresión o lista de expresiones que deben dar verdadero al terminar (\"pvar.d >= 10\").");
 
         COMMAND_KEYS.put("name", "Nombre del comando, sin la barra (letras, números, _ y -).");
         COMMAND_KEYS.put("aliases", "Otros nombres del comando.");

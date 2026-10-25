@@ -219,7 +219,7 @@ public final class Actions {
 
     private static Object dataTarget(Expression object, ExecContext ctx) {
         Object t = Values.raw(object.eval(ctx));
-        if (!ObjectData.supports(t)) throw new ActionException(object.source() + " no es un bloque, una entidad ni un ítem (es " + Values.typeName(t) + "): no guarda variables");
+        if (!ctx.isDataTarget(t)) throw new ActionException(object.source() + " no es un bloque, una entidad ni un ítem (es " + Values.typeName(t) + "): no guarda variables");
         return t;
     }
 
@@ -264,6 +264,11 @@ public final class Actions {
             String as = a.extra("as") == null ? null : Values.str(a.extra("as"));
             if (as != null) a.parser().declare(as);
             return (ctx, exec) -> {
+                if (ctx.sandbox() != null) {
+                    // Spec 010: una prueba no tiene jugadores ni entidades de verdad a los que recorrer.
+                    exec.trace("    for_each " + spec + ": en la prueba no da vueltas (no hay destinatarios reales)");
+                    return 0;
+                }
                 List<Entity> items = spec.resolve(ctx);
                 Object source = ctx.subject();
                 exec.push(exec.loop(body, i -> {
@@ -292,7 +297,8 @@ public final class Actions {
             }
             double total = weights.stream().mapToDouble(Double::doubleValue).sum();
             return Action.safe((ctx, exec) -> {
-                double r = ThreadLocalRandom.current().nextDouble(total);
+                // Spec 010: en una prueba, con la semilla del caso (reproducible).
+                double r = ctx.sandbox() != null ? ctx.sandbox().random().nextDouble(total) : ThreadLocalRandom.current().nextDouble(total);
                 for (int i = 0; i < branches.size(); i++) {
                     r -= weights.get(i);
                     if (r < 0) {
@@ -336,11 +342,11 @@ public final class Actions {
             if (object != null) a.parser().markObjectData();
             return Action.safe((ctx, exec) -> {
                 Object v = rhs.eval(ctx);
-                long expireAt = expire == null ? 0 : ctx.plugin().data().now() + expireMillis(expire, ctx);
+                long expireAt = expire == null ? 0 : ctx.now() + expireMillis(expire, ctx);
                 if (object != null) {
                     Object target = dataTarget(object, ctx);
-                    if (!op.equals("=")) v = combine(op, ctx.plugin().objectData().get(target, name), v);
-                    ctx.plugin().objectData().set(target, name, v, expireAt);
+                    if (!op.equals("=")) v = combine(op, ctx.objectGet(target, name), v);
+                    ctx.objectSet(target, name, v, expireAt);
                     exec.trace("    " + object.source() + ".data." + name + " = " + Values.str(v));
                     return 0;
                 }
@@ -362,7 +368,7 @@ public final class Actions {
             Expression object = Expression.compile(d.group(1));
             String name = d.group(2);
             a.parser().markObjectData();
-            return Action.safe(Action.of(ctx -> ctx.plugin().objectData().set(dataTarget(object, ctx), name, null, 0)));
+            return Action.safe(Action.of(ctx -> ctx.objectSet(dataTarget(object, ctx), name, null, 0)));
         });
         register("call", doc("Corre otra regla (trigger: call) con argumentos, que llegan como var.<nombre>.", "regla; nombre=expresión… o un mapa con rule y args", "call: \"sumar_monedas; jugador=player.name; cantidad=10\"").shape(Shape.CALL, "rule", "Regla que se llama.", "args", "Mapa nombre: expresión con los argumentos."), a -> {
             Template rule;
@@ -387,7 +393,9 @@ public final class Actions {
             return (ctx, exec) -> {
                 Map<String, Object> vals = new HashMap<>();
                 for (Map.Entry<String, Expression> e : params.entrySet()) vals.put(e.getKey(), e.getValue().eval(ctx));
-                plugin.rules().call(rule.render(ctx, Template.Mode.RAW), ctx, vals, exec.depth() + 1, exec.traceObj());
+                String target = rule.render(ctx, Template.Mode.RAW);
+                if (ctx.sandbox() != null) ctx.sandbox().call(target, ctx, vals, exec.depth() + 1, exec.traceObj());
+                else plugin.rules().call(target, ctx, vals, exec.depth() + 1, exec.traceObj());
                 return 0;
             };
         });
@@ -846,6 +854,10 @@ public final class Actions {
         register("cancel", doc("Cancela el evento (o no, con false o una expresión).", "(sin valor) o expresión", "cancel"), a -> {
             Expression e = a.text().isEmpty() ? Expression.compile("true") : a.expr();
             return Action.safe(Action.of(ctx -> {
+                if (ctx.sandbox() != null) {
+                    ctx.sandbox().cancel(Values.truthy(e.eval(ctx)));
+                    return;
+                }
                 Event ev = ctx.event();
                 if (!(ev instanceof Cancellable c)) throw new ActionException("este evento no se puede cancelar");
                 c.setCancelled(Values.truthy(e.eval(ctx)));

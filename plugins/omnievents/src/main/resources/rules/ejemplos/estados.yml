@@ -31,6 +31,11 @@ racha_de_fuego:
     - broadcast: "<gold>{player.name}</gold> <red>está en racha de fuego"
   on_exit:
     - message: "<gray>Se acabó tu racha."
+  tests:
+    - given: {player.name: Ana, pvar.racha: 12}
+      expect: {branch: on_enter, messages: ["Ana está en racha de fuego"]}
+    - given: {pvar.racha: 3}
+      expect: {fired: false}
 
 de_noche:
   trigger: state
@@ -62,3 +67,6 @@ curar_si_peligro:
   actions:
     - effect: REGENERATION;5;1
     - message: "<green>Te estás curando."
+  tests:
+    - name: fuera de peligro no cura   # en una prueba, in_state() es falso
+      expect: {branch: deny, messages: ["No estás en peligro"]}

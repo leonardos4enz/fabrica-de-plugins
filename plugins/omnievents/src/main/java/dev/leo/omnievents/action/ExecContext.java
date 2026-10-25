@@ -33,28 +33,41 @@ public final class ExecContext implements EvalContext {
     private final ExecContext parent;
     private final Map<String, Object> locals;
     private final Rule rule;
+    /** Spec 010: con un Sandbox (una prueba) los datos salen de él y no del servidor; plugin puede ser null. */
+    private final Sandbox sandbox;
 
     public ExecContext(OmniEvents plugin, Rule rule, Map<String, Object> bindings) {
-        this(plugin, rule, bindings, null, new HashMap<>());
+        this(plugin, rule, bindings, null, new HashMap<>(), null);
     }
 
-    private ExecContext(OmniEvents plugin, Rule rule, Map<String, Object> bindings, ExecContext parent, Map<String, Object> locals) {
+    /** Contexto de un caso de prueba (spec 010). */
+    public ExecContext(Rule rule, Map<String, Object> bindings, Sandbox sandbox) {
+        this(null, rule, bindings, null, new HashMap<>(), sandbox);
+    }
+
+    private ExecContext(OmniEvents plugin, Rule rule, Map<String, Object> bindings, ExecContext parent, Map<String, Object> locals, Sandbox sandbox) {
         this.plugin = plugin;
         this.rule = rule;
         this.bindings = bindings;
         this.parent = parent;
         this.locals = locals;
+        this.sandbox = sandbox;
     }
 
     /** Hijo con raíces cambiadas; comparte las variables locales. */
     public ExecContext child(Map<String, Object> overrides) {
-        return new ExecContext(plugin, rule, overrides, this, locals);
+        return new ExecContext(plugin, rule, overrides, this, locals, sandbox);
     }
 
     /** Contexto nuevo (para call) con las mismas raíces y locales nuevas. */
     public ExecContext forCall(Rule target, Map<String, Object> args) {
         Map<String, Object> b = new HashMap<>(flatBindings());
-        return new ExecContext(plugin, target, b, null, new HashMap<>(args));
+        return new ExecContext(plugin, target, b, null, new HashMap<>(args), sandbox);
+    }
+
+    /** El estado falso de una prueba (spec 010), o null en un disparo real. */
+    public Sandbox sandbox() {
+        return sandbox;
     }
 
     public Map<String, Object> flatBindings() {
@@ -79,6 +92,7 @@ public final class ExecContext implements EvalContext {
     public Object resolve(String name) {
         if (bindings.containsKey(name)) return bindings.get(name);
         if (parent != null) return parent.resolve(name);
+        if (sandbox != null) return name.equals("rule") && rule != null ? rule.name() : name.equals("online") ? 0.0 : null;
         return switch (name) {
             case "server" -> Bukkit.getServer();
             case "rule" -> rule == null ? null : rule.name();
@@ -144,11 +158,18 @@ public final class ExecContext implements EvalContext {
     public World world() {
         Location l = location();
         if (l != null) return l.getWorld();
-        return Values.raw(resolve("world")) instanceof World w ? w : Bukkit.getWorlds().get(0);
+        if (Values.raw(resolve("world")) instanceof World w) return w;
+        return sandbox != null ? null : Bukkit.getWorlds().get(0);
+    }
+
+    /** Hora en ms de época (para expire): la del almacén, o la fija de la prueba. */
+    public long now() {
+        return sandbox != null ? sandbox.now() : plugin.data().now();
     }
 
     @Override
     public Object getVar(Scope scope, String name) {
+        if (sandbox != null && scope != Scope.LOCAL) return sandbox.get(scope, name);
         return switch (scope) {
             case LOCAL -> locals.get(name);
             case GLOBAL -> plugin.data().global().get(name);
@@ -165,6 +186,10 @@ public final class ExecContext implements EvalContext {
 
     /** Asigna (value null = borra); expireAt en ms de época, 0 = no caduca (spec 009). */
     public void setVar(Scope scope, String name, Object value, long expireAt) {
+        if (sandbox != null && scope != Scope.LOCAL) {
+            sandbox.put(scope, name, value == null ? null : DataStore.storable(value), expireAt);
+            return;
+        }
         DataStore.Holder holder = switch (scope) {
             case LOCAL -> null;
             case GLOBAL -> plugin.data().global();
@@ -192,17 +217,43 @@ public final class ExecContext implements EvalContext {
     @Override
     public Object objectVar(Object target, String name) {
         Object raw = Values.raw(target);
+        if (sandbox != null) return Sandbox.isObject(raw) ? sandbox.objectGet(raw, name) : NOT_OBJECT;
         return ObjectData.supports(raw) ? plugin.objectData().get(raw, name) : NOT_OBJECT;
+    }
+
+    /** ¿Admite variables de objeto? Un bloque, entidad o ítem; en una prueba, un objeto de given. */
+    public boolean isDataTarget(Object raw) {
+        return sandbox != null ? Sandbox.isObject(raw) : ObjectData.supports(raw);
+    }
+
+    public Object objectGet(Object target, String name) {
+        return sandbox != null ? sandbox.objectGet(target, name) : plugin.objectData().get(target, name);
+    }
+
+    public void objectSet(Object target, String name, Object value, long expireAt) {
+        if (sandbox != null) sandbox.objectSet(target, name, value == null ? null : DataStore.storable(value));
+        else plugin.objectData().set(target, name, value, expireAt);
     }
 
     @Override
     public Object placeholder(String raw, Object player) {
+        if (sandbox != null) return sandbox.placeholder(raw);
         Object p = player == null ? subject() : Values.raw(player);
         return plugin.placeholders().resolve(raw, p instanceof OfflinePlayer op ? op : null, this);
     }
 
     @Override
     public Object service(String name, Object... args) {
+        if (sandbox != null) {
+            // Spec 010: una prueba no mira enfriamientos, usos ni estados reales.
+            return switch (name) {
+                case "cooldown", "uses" -> 0.0;
+                case "in_state" -> false;
+                case "ttl" -> sandbox.ttl((Scope) args[0], String.valueOf(args[1]));
+                case "ttl_data" -> Sandbox.isObject(Values.raw(args[0])) && sandbox.objectGet(Values.raw(args[0]), String.valueOf(args[1])) != null ? -1.0 : null;
+                default -> null;
+            };
+        }
         Player p = playerOrNull();
         UUID id = p == null ? null : p.getUniqueId();
         return switch (name) {

@@ -53,6 +53,13 @@ monedas:
         - message: "<green>Diste {args[2]} monedas a {args[1]}."
       else:
         - message: "<gray>Uso: /monedas [ver | dar <jugador> <cantidad>]"
+  tests:
+    - name: ver el saldo
+      given: {player.name: Ana, args: [], pvar.monedas: 30}
+      expect: {messages: ["Tienes 30 monedas"], pvar.monedas: 30}
+    - name: un subcomando desconocido muestra el uso
+      given: {player.name: Ana, args: [regalar]}
+      expect: {messages: ["Uso: /monedas"]}
 
 # trigger: call solo corre cuando otra regla la llama (o con /omni call). Sus argumentos llegan como var.<nombre>.
 sumar_monedas:

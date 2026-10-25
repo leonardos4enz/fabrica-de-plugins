@@ -7,7 +7,7 @@ tarea y no se da por terminada sin una fase de verificación en un servidor real
 ## Plugins
 | Plugin | Qué hace | Versión | Paper verificado | Java |
 |---|---|---|---|---|
-| [OmniEvents](plugins/omnievents/README.md) | Eventos condicionales: «cuando pase X, si se cumple Y, haz Z». Versión propia y ampliada de ConditionalEvents ([galería](docs/omnievents/galeria.md), [referencia](docs/omnievents/referencia.md), autocompletado en VS Code) | 1.4.0 | 1.21.4 y 26.1.2 ([detalle](plugins/omnievents/README.md#compatibilidad)) | 21+ |
+| [OmniEvents](plugins/omnievents/README.md) | Eventos condicionales: «cuando pase X, si se cumple Y, haz Z». Versión propia y ampliada de ConditionalEvents ([galería](docs/omnievents/galeria.md), [referencia](docs/omnievents/referencia.md), autocompletado en VS Code, pruebas de reglas con `/omni test`) | 1.5.0 | 1.21.4 y 26.1.2 ([detalle](plugins/omnievents/README.md#compatibilidad)) | 21+ |
 
 «Verificado» quiere decir que el plugin pasó la suite en el juego en esa versión; las demás están «sin verificar» en
 el README de cada plugin.

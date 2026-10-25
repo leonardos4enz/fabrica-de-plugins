@@ -809,6 +809,31 @@ export default {
       }
     },
     {
+      id: '010 H3 CA1 · H3 CA2 · H3 CA3 · H4 CA1',
+      nombre: '/omni test corre los tests: de las reglas sin cambiar la pvar real ni correr la consola; avisa al cargar',
+      timeoutMs: 20000,
+      async fn ({ srv, bots }) {
+        const ana = bots[ANA]
+        await srv.esperarLog(/La prueba «espera mal» de la regla 'e2e_probada_falla' falla: pvar\.e2e_x: esperaba 2, dio 1/, { desde: 0, timeoutMs: 2000 })
+        await srv.consola(`omni var set ${ANA} e2e_probada 5`)
+        const ml = srv.marca()
+        let m = ana.marca()
+        ana.comando('omni test e2e_probada')
+        await ana.esperar('chat', /e2e_probada 2\/2$/, { desde: m })
+        await ana.esperar('chat', /2 pruebas: todas pasan/, { desde: m })
+        m = ana.marca()
+        ana.comando('omni test e2e_probada_falla')
+        await ana.esperar('chat', /«espera mal»/, { desde: m })
+        await ana.esperar('chat', /pvar\.e2e_x: esperaba 2, dio 1/, { desde: m })
+        await ana.esperar('chat', /1 pruebas: 1 fallan/, { desde: m })
+        await srv.consola('omni test', { espera: /\d+ pruebas: 1 fallan, \d+ pasan/ })
+        await ana.nunca('chat', /^e2e probada/, { desde: m, ms: 200 })
+        if (srv.lineas.slice(ml).some(l => /\[Server\] e2e prueba no debe salir/.test(l))) throw new Error('la prueba corrió el comando de consola')
+        await esperarVar(srv, ANA, 'e2e_probada', 5)
+        await srv.consola(`omni var del ${ANA} e2e_probada`)
+      }
+    },
+    {
       id: 'H4 CA11 · H8 CA1',
       nombre: 'delay en spawnvip: el teletransporte llega a los 3 s sin bloquear el servidor; luego enfriamiento',
       timeoutMs: 30000,
