@@ -28,7 +28,7 @@ public final class ReferenceGenerator {
         sb.append("```yaml\n# yaml-language-server: $schema=").append(SchemaGenerator.URL).append("\n```\n\n");
         sb.append("El editor revisa opciones, disparadores, acciones y la forma de las condiciones; las expresiones, los materiales, ")
                 .append("los sonidos y los efectos se revisan con `/omni validate`. Los nombres van en minúsculas.\n\n");
-        sb.append("Contenido: [opciones de una regla](#opciones-de-una-regla) · [condiciones](#condiciones) · ")
+        sb.append("Contenido: [opciones de una regla](#opciones-de-una-regla) · [paquetes y plantillas](#paquetes-y-plantillas) · [condiciones](#condiciones) · ")
                 .append("[disparadores](#disparadores) · [acciones](#acciones) · [funciones](#funciones)\n\n");
 
         sb.append("## Opciones de una regla\n| Opción | Valor | Disparador | Qué hace |\n|---|---|---|---|\n");
@@ -42,6 +42,37 @@ public final class ReferenceGenerator {
         RuleOptions.TEST_KEYS.forEach((k, d) -> sb.append("| `").append(k).append("` | ").append(cell(d)).append(" |\n"));
         sb.append("\nClaves de `expect` (además, variables: `pvar.x`, `gvar.x`, `var.x`, `block.data.x`; `null` = que no exista):\n\n| Clave | Qué hace |\n|---|---|\n");
         RuleOptions.EXPECT_KEYS.forEach((k, d) -> sb.append("| `").append(k).append("` | ").append(cell(d)).append(" |\n"));
+
+        sb.append("\n## Paquetes y plantillas\nUna carpeta de `rules/` con un `pack.yml` es un paquete (spec 011): sus reglas se llaman ")
+                .append("`paquete:regla` y, desde ellas, un nombre sin paquete (`call`, `cooldown()`, `uses()`, `in_state()`, `extends`) se busca ")
+                .append("primero en el paquete y luego entre las globales. `${nombre}` en los textos de una regla de un paquete, que usa `extends` ")
+                .append("o que declara `params` se reemplaza al cargar con `with`, `params` de la regla y de sus plantillas, y `params` del paquete, ")
+                .append("en ese orden; `\\${` deja `${`. Esquema de `pack.yml`: `").append(SchemaGenerator.PACK_URL).append("`.\n\n| Clave de `pack.yml` | Qué hace |\n|---|---|\n");
+        RuleOptions.PACK_KEYS.forEach((k, d) -> sb.append("| `").append(k).append("` | ").append(cell(d)).append(" |\n"));
+        sb.append("\nClaves de `requires`:\n\n| Clave | Qué hace |\n|---|---|\n");
+        RuleOptions.REQUIRES_KEYS.forEach((k, d) -> sb.append("| `").append(k).append("` | ").append(cell(d)).append(" |\n"));
+        sb.append("""
+
+                ```yaml
+                # rules/recompensas/pack.yml
+                version: 1.1.0
+                params: { moneda: pvar.monedas }
+                migrations:
+                  "1.1.0":
+                    - log: "recompensas {var.from} → {var.to}"
+                # rules/recompensas/reglas.yml → recompensas:base (plantilla) y recompensas:diaria
+                base:
+                  template: true
+                  params: { cantidad: 1 }
+                  trigger: command
+                  actions:
+                    - set: "${moneda} += ${cantidad}"
+                diaria:
+                  extends: base
+                  with: { cantidad: 50 }
+                  command: diaria
+                ```
+                """);
 
         sb.append("\n## Condiciones\nCada elemento de `conditions` es una expresión, o un mapa con estas claves:\n\n| Clave | Qué hace |\n|---|---|\n");
         RuleOptions.CONDITION_KEYS.forEach((k, d) -> sb.append("| `").append(k).append("` | ").append(cell(d)).append(" |\n"));
@@ -135,6 +166,7 @@ public final class ReferenceGenerator {
             case BUDGET -> "`0.5ms`, `200us`";
             case LIST -> "lista de nombres";
             case TESTS -> "lista de casos";
+            case PARAMS -> "mapa nombre: valor";
         };
         return o.aliasOf() == null ? k : k + " (sinónimo de `" + o.aliasOf() + "`)";
     }

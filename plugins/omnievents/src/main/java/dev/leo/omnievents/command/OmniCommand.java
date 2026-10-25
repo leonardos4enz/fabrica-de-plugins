@@ -13,6 +13,7 @@ import dev.leo.omnievents.expr.Scope;
 import dev.leo.omnievents.expr.Values;
 import dev.leo.omnievents.importer.ConditionalEventsImporter;
 import dev.leo.omnievents.rule.Condition;
+import dev.leo.omnievents.rule.Pack;
 import dev.leo.omnievents.rule.Problems;
 import dev.leo.omnievents.rule.Rule;
 import dev.leo.omnievents.text.TextFormat;
@@ -56,6 +57,7 @@ public final class OmniCommand implements TabExecutor {
         SUBS.put("debug", "Traza en vivo: <regla|all|off|export>");
         SUBS.put("check", "Revisa una regla ahora, sin efectos: <regla> [jugador]");
         SUBS.put("test", "Corre las pruebas (tests:) de las reglas, sin efectos: [regla]");
+        SUBS.put("pack", "Paquetes de reglas: list|info|enable|disable <paquete>");
         SUBS.put("run", "Dispara una regla: <regla> <jugador> [--simular]");
         SUBS.put("state", "Quién está en el estado de una regla state: <regla>");
         SUBS.put("eval", "Evalúa una expresión con tu contexto");
@@ -119,6 +121,7 @@ public final class OmniCommand implements TabExecutor {
                 case "debug" -> debug(s, a);
                 case "check" -> check(s, a);
                 case "test" -> test(s, a);
+                case "pack" -> pack(s, a);
                 case "run" -> runRule(s, a);
                 case "state" -> state(s, a);
                 case "cpu" -> cpu(s, a);
@@ -223,14 +226,96 @@ public final class OmniCommand implements TabExecutor {
     private void toggle(CommandSender s, String[] a, boolean on) {
         Rule r = rule(s, a, 0);
         r.setEnabled(on);
-        // Re-registrar: una regla activada necesita su oyente, una desactivada lo libera (H6 CA5).
+        reRegister();
+        send(s, on ? "rule-enabled" : "rule-disabled", "rule", r.name());
+        send(s, "toggle-note");
+    }
+
+    /** Re-registrar: una regla activada necesita su oyente, una desactivada lo libera (H6 CA5). */
+    private void reRegister() {
         plugin.listeners().register(plugin.rules().all(), new Problems());
         plugin.timers().start();
         plugin.states().register(plugin.rules().all());
         // Solo registra si cambió el conjunto de comandos; si no, como mucho reenvía el árbol una vez (spec 005).
         plugin.ruleCommands().refresh();
-        send(s, on ? "rule-enabled" : "rule-disabled", "rule", r.name());
-        send(s, "toggle-note");
+    }
+
+    // ------------------------------------------------------------------ paquetes (spec 011, H4)
+
+    private void pack(CommandSender s, String[] a) {
+        String what = a.length == 0 ? "list" : a[0].toLowerCase(Locale.ROOT);
+        if (what.equals("list")) {
+            packList(s);
+            return;
+        }
+        if (!List.of("info", "enable", "disable").contains(what)) {
+            throw new IllegalArgumentException("uso: /omni pack list|info|enable|disable <paquete>" + dev.leo.omnievents.util.Suggest.hint(what, List.of("list", "info", "enable", "disable")));
+        }
+        if (a.length < 2) throw new IllegalArgumentException("falta el nombre del paquete");
+        Pack p = plugin.rules().pack(a[1]);
+        if (p == null) {
+            List<String> names = plugin.rules().packs().stream().map(Pack::name).toList();
+            throw new IllegalArgumentException("no existe el paquete '" + a[1] + "'" + dev.leo.omnievents.util.Suggest.hint(a[1], names));
+        }
+        if (what.equals("info")) {
+            packInfo(s, p);
+            return;
+        }
+        if (!p.loaded()) throw new IllegalArgumentException("el paquete " + p.name() + " no carga: " + p.error());
+        boolean on = what.equals("enable");
+        for (String n : p.rules()) {
+            Rule r = plugin.rules().get(n);
+            if (r != null) r.setEnabled(on);
+        }
+        reRegister();
+        send(s, on ? "pack-enabled" : "pack-disabled", "pack", p.name(), "rules", p.rules().size());
+        send(s, "pack-note");
+    }
+
+    private void packList(CommandSender s) {
+        List<Pack> ps = new ArrayList<>(plugin.rules().packs());
+        if (ps.isEmpty()) {
+            send(s, "pack-none");
+            return;
+        }
+        ps.sort((x, y) -> x.name().compareToIgnoreCase(y.name()));
+        raw(s, "<gold>Paquetes</gold> <gray>(" + ps.size() + ")");
+        for (Pack p : ps) {
+            String head = "<white><click:run_command:/omni pack info " + esc(p.name()) + "><hover:show_text:'Ver detalle'>" + esc(p.name())
+                    + "</hover></click></white> <gray>" + esc(p.version());
+            if (!p.loaded()) {
+                raw(s, "<red>✘ " + head + " <dark_gray>·</dark_gray> <red>no carga: " + esc(p.error()));
+                continue;
+            }
+            long active = p.rules().stream().map(plugin.rules()::get).filter(r -> r != null && r.enabled()).count();
+            raw(s, (active > 0 || p.rules().isEmpty() ? "<green>● " : "<red>○ ") + head + " <dark_gray>·</dark_gray> <gray>" + p.rules().size() + " reglas"
+                    + (active < p.rules().size() ? " (" + active + " activas)" : "") + " <dark_gray>·</dark_gray> " + p.templates().size() + " plantillas");
+        }
+    }
+
+    private void packInfo(CommandSender s, Pack p) {
+        raw(s, "<gold>" + esc(p.name()) + "</gold> <gray>" + esc(p.version()) + (p.loaded() ? "" : " <red>· no carga: " + esc(p.error())));
+        if (p.description() != null) raw(s, "<gray>" + esc(p.description()));
+        raw(s, "<gray>Carpeta: <white>rules/" + esc(p.folder()) + "</white>" + (p.author() == null ? "" : " · autor <white>" + esc(p.author()))
+                + (p.enabled() ? "" : " · <red>enabled: false"));
+        String saved = plugin.packVersions().get(p.name());
+        raw(s, "<gray>Versión guardada: <white>" + (saved == null ? "ninguna (aún no corrió)" : esc(saved)));
+        if (!p.params().isEmpty()) {
+            List<String> ps = new ArrayList<>();
+            p.params().forEach((k, v) -> ps.add(k + " = " + Values.str(v)));
+            raw(s, "<gray>Parámetros: <white>" + esc(String.join(", ", ps)));
+        }
+        if (p.requiresOmni() != null || !p.requiresPacks().isEmpty()) {
+            List<String> rq = new ArrayList<>();
+            if (p.requiresOmni() != null) rq.add("omnievents " + p.requiresOmni());
+            p.requiresPacks().forEach((k, v) -> rq.add(k + " " + v));
+            raw(s, "<gray>Requiere: <white>" + esc(String.join(", ", rq)));
+        }
+        if (!p.migrations().isEmpty()) {
+            raw(s, "<gray>Migraciones: <white>" + esc(String.join(", ", p.migrations().stream().map(m -> m.version() + " (" + m.rule().actionCount() + " acciones)").toList())));
+        }
+        if (!p.rules().isEmpty()) raw(s, "<gray>Reglas: <white>" + esc(String.join(", ", p.rules())));
+        if (!p.templates().isEmpty()) raw(s, "<gray>Plantillas: <white>" + esc(String.join(", ", p.templates())));
     }
 
     private void debug(CommandSender s, String[] a) {
@@ -782,6 +867,10 @@ public final class OmniCommand implements TabExecutor {
                 }
                 case "cpu" -> {
                     if (i == 1) opts.addAll(List.of("on", "off", "reset"));
+                }
+                case "pack" -> {
+                    if (i == 1) opts.addAll(List.of("list", "info", "enable", "disable"));
+                    if (i == 2 && !args[1].equalsIgnoreCase("list")) for (Pack p : plugin.rules().packs()) opts.add(p.name());
                 }
                 case "debug" -> {
                     if (i == 1) {

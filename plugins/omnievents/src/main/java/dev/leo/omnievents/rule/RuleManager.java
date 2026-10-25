@@ -29,17 +29,44 @@ import java.util.UUID;
 public final class RuleManager {
     private final OmniEvents plugin;
     private volatile Map<String, Rule> rules = Map.of();
+    private volatile List<Pack> packs = List.of();
 
     public RuleManager(OmniEvents plugin) {
         this.plugin = plugin;
     }
 
     public void set(Map<String, Rule> loaded) {
+        set(loaded, List.of());
+    }
+
+    public void set(Map<String, Rule> loaded, List<Pack> packs) {
         this.rules = Map.copyOf(loaded);
+        this.packs = List.copyOf(packs);
     }
 
     public Rule get(String name) {
         return name == null ? null : rules.get(name.toLowerCase(Locale.ROOT));
+    }
+
+    /** Un nombre visto desde una regla (spec 011, H1 CA2): primero en su paquete, luego entre las globales. */
+    public Rule resolve(String name, Rule from) {
+        return Rule.resolve(name, from, this::get);
+    }
+
+    /** Nombre completo de la regla a la que apunta name desde from, o name si no existe. */
+    public String resolveName(String name, Rule from) {
+        Rule r = resolve(name, from);
+        return r == null ? name : r.name();
+    }
+
+    public List<Pack> packs() {
+        return packs;
+    }
+
+    public Pack pack(String name) {
+        if (name == null) return null;
+        for (Pack p : packs) if (p.name().equalsIgnoreCase(name.trim())) return p;
+        return null;
     }
 
     public Collection<Rule> all() {
@@ -361,7 +388,7 @@ public final class RuleManager {
 
     /** Acción call y /omni call (H4 CA1). */
     public void call(String ruleName, ExecContext from, Map<String, Object> args, int depth, Trace trace) {
-        Rule target = get(ruleName);
+        Rule target = resolve(ruleName, from == null ? null : from.rule());
         if (target == null) throw new dev.leo.omnievents.action.ActionException("no existe la regla '" + ruleName + "' para call");
         if (depth > plugin.settings().maxCallDepth()) {
             throw new dev.leo.omnievents.action.ActionException("se pasó el tope de " + plugin.settings().maxCallDepth() + " call anidados (expressions.max-call-depth): ¿una regla que se llama a sí misma?");

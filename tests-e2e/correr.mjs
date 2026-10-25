@@ -6,7 +6,7 @@ import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Servidor, dormir, jarMasNuevo } from './lib/servidor.mjs'
+import { Servidor, dormir, jarMasNuevo, copiarCarpeta } from './lib/servidor.mjs'
 import { conectar } from './lib/bot.mjs'
 import { prepararPaper } from './lib/paper.mjs'
 
@@ -43,11 +43,6 @@ function compilar (plugin) {
     cwd: RAIZ, stdio: 'inherit', shell: win, env: { ...process.env, JAVA_HOME: javaHome() }
   })
   if (r.status !== 0) throw new Error('La compilación falló')
-}
-
-function copiarCarpeta (de, a) {
-  fs.mkdirSync(a, { recursive: true })
-  for (const f of fs.readdirSync(de)) fs.copyFileSync(path.join(de, f), path.join(a, f))
 }
 
 async function principal () {

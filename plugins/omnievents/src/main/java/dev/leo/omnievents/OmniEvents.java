@@ -6,6 +6,8 @@ import dev.leo.omnievents.command.OmniCommand;
 import dev.leo.omnievents.data.BlockDataCleaner;
 import dev.leo.omnievents.data.DataStore;
 import dev.leo.omnievents.data.ObjectData;
+import dev.leo.omnievents.data.PackVersions;
+import dev.leo.omnievents.rule.Pack;
 import dev.leo.omnievents.data.SavedItems;
 import dev.leo.omnievents.debug.Debugger;
 import dev.leo.omnievents.debug.Profiler;
@@ -42,7 +44,8 @@ public final class OmniEvents extends JavaPlugin implements Listener {
     private static final List<String> EXAMPLES = List.of(
             "rules/ejemplos/bienvenida.yml", "rules/ejemplos/mineria.yml", "rules/ejemplos/comandos.yml",
             "rules/ejemplos/combate.yml", "rules/ejemplos/chat.yml", "rules/ejemplos/temporizadores.yml",
-            "rules/ejemplos/herramientas.yml", "rules/ejemplos/estados.yml", "rules/ejemplos/variables.yml");
+            "rules/ejemplos/herramientas.yml", "rules/ejemplos/estados.yml", "rules/ejemplos/variables.yml",
+            "rules/ejemplos/recompensas/pack.yml", "rules/ejemplos/recompensas/reglas.yml");
 
     private Settings settings;
     private Messages messages;
@@ -63,6 +66,8 @@ public final class OmniEvents extends JavaPlugin implements Listener {
     private RuleCommands ruleCommands;
     private BukkitTask autosave;
     private Problems lastProblems = new Problems();
+    private PackVersions packVersions;
+    private boolean migrationScheduled;
     private volatile boolean disabling;
 
     @Override
@@ -73,6 +78,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
 
         BukkitProperties.register(Properties.get());
         data = new DataStore(getDataFolder(), getLogger());
+        packVersions = new PackVersions(getDataFolder(), getLogger());
         objectData = new ObjectData(data::now, () -> settings.objectMaxText(), () -> settings.objectMaxVars());
         blockCleaner = new BlockDataCleaner(this);
         savedItems = new SavedItems(getDataFolder());
@@ -168,18 +174,25 @@ public final class OmniEvents extends JavaPlugin implements Listener {
         File folder = new File(getDataFolder(), "rules");
         folder.mkdirs();
         Problems p = new Problems();
-        Map<String, Rule> loaded = new RuleLoader(actions, triggers).loadFolder(folder, p);
+        RuleLoader loader = new RuleLoader(actions, triggers, getPluginMeta().getVersion());
+        Map<String, Rule> loaded = loader.loadFolder(folder, p);
         // Cada servicio por separado: si uno falla, los demás quedan activos (H1 CA3; regresión 001 F-03).
         listeners.unregister();
         timers.stop();
         // Los comandos no se quitan antes: register() concilia y solo registra si cambiaron (spec 005).
-        rules.set(loaded);
+        rules.set(loaded, loader.packs());
         guarded(p, "oyentes", () -> listeners.register(rules.all(), p));
         guarded(p, "temporizadores", timers::start);
         guarded(p, "estados", () -> states.register(rules.all()));
         guarded(p, "comandos", ruleCommands::register);
         guarded(p, "datos de bloques", () -> blockCleaner.update(rules.all()));
         lastProblems = p;
+        // Spec 011: las migraciones de los paquetes corren en el tick siguiente (al arrancar, antes que server_start).
+        packVersions.load();
+        if (!migrationScheduled && !packVersions.plan(rules.packs()).isEmpty()) {
+            migrationScheduled = true;
+            Bukkit.getScheduler().runTask(this, this::migratePacks);
+        }
         if (settings.testsOnLoad()) {
             try {
                 logTests(tester().runAll(rules.all()));
@@ -188,6 +201,50 @@ public final class OmniEvents extends JavaPlugin implements Listener {
             }
         }
         return p;
+    }
+
+    /**
+     * Spec 011, H3 CA2–CA3: por cada paquete que cambió de versión, sus migraciones en orden y la versión nueva en
+     * data/packs.yml. Se vuelve a planear aquí: dos reload seguidos no corren nada dos veces.
+     */
+    private void migratePacks() {
+        migrationScheduled = false;
+        packVersions.load();
+        List<PackVersions.Step> steps = packVersions.plan(rules.packs());
+        if (steps.isEmpty()) return;
+        for (PackVersions.Step st : steps) {
+            String name = st.pack().name();
+            if (st.from() == null) {
+                getLogger().info("Paquete " + name + ": primera carga, versión " + st.to());
+            } else if (dev.leo.omnievents.util.Versions.compare(st.to(), st.from()) < 0) {
+                getLogger().warning("Paquete " + name + ": la versión " + st.to() + " es menor que la última cargada (" + st.from() + "); no corre ninguna migración");
+                continue;
+            } else {
+                for (Pack.Migration m : st.migrations()) {
+                    Map<String, Object> b = new HashMap<>();
+                    b.put("world", Bukkit.getWorlds().isEmpty() ? null : Bukkit.getWorlds().get(0));
+                    dev.leo.omnievents.action.ExecContext ctx = new dev.leo.omnievents.action.ExecContext(this, m.rule(), b);
+                    ctx.locals().put("from", st.from());
+                    ctx.locals().put("to", st.to());
+                    try {
+                        rules.run(m.rule(), ctx, 0, null);
+                    } catch (RuntimeException e) {
+                        getLogger().log(java.util.logging.Level.WARNING, "Error en la migración " + m.version() + " del paquete " + name, e);
+                    }
+                }
+                getLogger().info("Paquete " + name + ": " + st.from() + " → " + st.to() + " (" + st.migrations().size() + " migraciones)");
+            }
+            packVersions.record(st);
+        }
+        try {
+            packVersions.save();
+        } catch (java.io.IOException e) {
+            getLogger().log(java.util.logging.Level.WARNING, "No se pudo guardar data/packs.yml", e);
+        }
+    }
+
+    public PackVersions packVersions() {
+        return packVersions;
     }
 
     /** Corredor de las pruebas de las reglas (spec 010) con los topes de config.yml. */
@@ -222,7 +279,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
     /** Valida sin aplicar (H9 CA4). */
     public Problems validate() {
         Problems p = new Problems();
-        new RuleLoader(actions, triggers).loadFolder(new File(getDataFolder(), "rules"), p);
+        new RuleLoader(actions, triggers, getPluginMeta().getVersion()).loadFolder(new File(getDataFolder(), "rules"), p);
         return p;
     }
 

@@ -17,6 +17,7 @@ import java.util.Map;
 public final class SchemaFiles {
     public static final String SCHEMA = "omnievents.schema.json";
     public static final String REFERENCE = "referencia.md";
+    public static final String PACK_SCHEMA = "omnievents-pack.schema.json";
 
     private SchemaFiles() {
     }
@@ -25,6 +26,7 @@ public final class SchemaFiles {
     public static Map<String, String> render(Triggers triggers, Actions actions) {
         Map<String, String> out = new LinkedHashMap<>();
         out.put(SCHEMA, SchemaGenerator.generate(triggers, actions));
+        out.put(PACK_SCHEMA, SchemaGenerator.generatePack(triggers, actions));
         out.put(REFERENCE, ReferenceGenerator.generate(triggers, actions));
         return out;
     }

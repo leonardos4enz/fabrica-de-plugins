@@ -188,7 +188,8 @@ public final class StateService implements Listener {
         String k = t.key();
         for (String v : s.deps().pvars()) byPvar.computeIfAbsent(v, x -> new ArrayList<>()).add(t);
         for (String v : s.deps().gvars()) byGvar.computeIfAbsent(v, x -> new ArrayList<>()).add(t);
-        for (String st : s.deps().states()) dependents.computeIfAbsent(st, x -> new ArrayList<>()).add(t);
+        // Spec 011: in_state('x') desde un paquete apunta a paquete:x si existe.
+        for (String st : s.deps().states()) dependents.computeIfAbsent(plugin.rules().resolveName(st, t.rule).toLowerCase(Locale.ROOT), x -> new ArrayList<>()).add(t);
         for (StateDeps.Source src : s.deps().sources()) {
             boolean world = WORLD_SOURCES.contains(src);
             if (!world && !s.perPlayer()) continue;

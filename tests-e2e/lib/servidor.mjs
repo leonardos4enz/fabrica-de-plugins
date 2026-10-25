@@ -171,3 +171,12 @@ export function jarMasNuevo (dir, patron) {
 }
 
 export const dormir = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+
+/** Copia una carpeta de configuración a la del servidor de prueba, con sus subcarpetas (paquetes, spec 011 F-01). */
+export function copiarCarpeta (de, a) {
+  fs.mkdirSync(a, { recursive: true })
+  for (const e of fs.readdirSync(de, { withFileTypes: true })) {
+    if (e.isDirectory()) copiarCarpeta(path.join(de, e.name), path.join(a, e.name))
+    else fs.copyFileSync(path.join(de, e.name), path.join(a, e.name))
+  }
+}

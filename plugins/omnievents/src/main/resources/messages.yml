@@ -40,3 +40,8 @@ test-summary-ok: "{prefix} <green>{total} pruebas: todas pasan</green><gray>{unt
 test-summary-fail: "{prefix} <red>{total} pruebas: {failed} fallan</red><gray>, {passed} pasan{untested}</gray>"
 selftest-ok: "{prefix} <green>Autoprueba superada ({passed}/{total})."
 selftest-fail: "{prefix} <red>Autoprueba con fallas ({passed}/{total})."
+# Paquetes (spec 011)
+pack-enabled: "{prefix} <green>Paquete <white>{pack}</white> activado: {rules} reglas."
+pack-disabled: "{prefix} <yellow>Paquete <white>{pack}</white> desactivado: {rules} reglas."
+pack-note: "<gray>  El cambio dura hasta el próximo reload; para dejarlo fijo, pon enabled en su pack.yml."
+pack-none: "{prefix} <gray>No hay paquetes. Un paquete es una carpeta de rules/ con un pack.yml (mira el README)."

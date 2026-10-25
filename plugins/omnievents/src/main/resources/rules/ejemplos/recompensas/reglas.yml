@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
+# Reglas del paquete recompensas (spec 011): recompensas:base (plantilla), recompensas:diaria, recompensas:semanal y
+# recompensas:avisar. Una plantilla se escribe una vez; cada regla que la extiende cambia solo lo que necesita.
+
+base:
+  template: true                       # no corre sola: la usan diaria y semanal con extends
+  params: { cantidad: 1, espera: 1h }  # valores por defecto de ${cantidad} y ${espera}
+  trigger: command
+  cooldown: ${espera}
+  on_cooldown:
+    - message: "<red>Vuelve en {var.cooldown_left}s."
+  actions:
+    - if: "player == null"
+      then: [stop]
+    - set: "${moneda} = default(${moneda}, 0) + ${cantidad}"
+    - call: avisar                     # sin paquete: busca recompensas:avisar y luego una regla global avisar
+
+diaria:
+  extends: base
+  with: { cantidad: 10, espera: 1d }
+  command:
+    name: fichasdiarias
+    description: Tus fichas del día
+  tests:
+    - name: suma 10 y avisa
+      given: { player.name: Ana, pvar.fichas: 5 }
+      expect:
+        fired: true
+        pvar.fichas: 15
+        messages: ["Ana, ahora tienes 15 fichas"]
+    - name: sin fichas empieza en cero
+      given: { player.name: Ana }
+      expect: { pvar.fichas: 10 }
+
+semanal:
+  extends: base
+  with: { cantidad: 50, espera: 7d }
+  command:
+    name: fichassemanales
+    description: Tus fichas de la semana
+  tests:
+    - given: { player.name: Beto, pvar.fichas: 1 }
+      expect: { pvar.fichas: 51, messages: ["ahora tienes 51 fichas"] }
+
+avisar:
+  trigger: call
+  actions:
+    - message: "<green>{player.name}, ahora tienes {${moneda}} fichas."

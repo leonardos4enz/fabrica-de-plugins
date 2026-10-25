@@ -12,6 +12,7 @@
 | 008 OmniEvents: disparador de estado (P6) | Verificado: 1.3.0; `trigger: state` con `on_enter`/`on_exit` sin sondeo, `in_state`, estados del servidor y `/omni state`; 94 unitarias; 34/34 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/008-omnievents-disparador-de-estado/verify.md)) |
 | 009 OmniEvents: variables con caducidad y en objetos (P5) | Verificado: 1.4.0; `expire` y `ttl()`, `trigger: var_expire`, `objeto.data.nombre` en bloques, entidades e ítems (PDC), `/omni data` y migración de `data/` con respaldo; 113 unitarias; 37/37 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/009-omnievents-variables-caducidad-y-objetos/verify.md)) |
 | 010 OmniEvents: pruebas de reglas en el YAML (P7) | Verificado: 1.5.0; `tests:` con `given` y `expect` sin servidor ni efectos, `/omni test`, pruebas al cargar y de los ejemplos en gradle; 123 unitarias; 38/38 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/010-omnievents-pruebas-de-reglas/verify.md)) |
+| 011 OmniEvents: paquetes, plantillas y versión (P8) | Verificado: 1.6.0; carpetas con `pack.yml` y nombres `paquete:regla` con búsqueda relativa, `template`/`extends` con parámetros `${nombre}`, `requires` y `migrations` al subir de versión (`data/packs.yml`), `/omni pack`; 143 unitarias; 39/39 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/011-omnievents-paquetes-plantillas-version/verify.md)) |
 
 ## Por qué empezamos con OmniEvents
 OmniEvents es la versión propia de *ConditionalEvents* (Ajneb97): «cuando pase X, si se cumple Y, haz Z». Es el
@@ -36,6 +37,7 @@ los siguientes plugins de la fábrica.
 | Lo que depende de un estado («cuando la vida baja de 3») se sondea con `repetitive` y una variable de «ya avisé» | `trigger: state` con `on_enter`/`on_exit`: el motor deduce de qué eventos depende y solo revisa ahí; `check_every` declarado para lo demás | 008 |
 | Variables sin caducidad y solo en el jugador o el servidor; los datos de un ítem o un bloque necesitan otro plugin | `expire:` con aviso `var_expire` sin sondeo, `ttl()`, y `objeto.data.nombre` en el PDC de bloques, entidades e ítems | 009 |
 | Una regla se prueba jugando; al actualizar nadie vuelve a probar lo que ya andaba | `tests:` en la regla (`given` y `expect`) que corren sin servidor ni efectos con `/omni test`, al cargar y en gradle | 010 |
+| Sin espacios de nombres: dos reglas `diaria` chocan; lo que se repite se copia y pega; una configuración compartida no dice su versión ni qué necesita | Paquetes (`pack.yml`, `paquete:regla`), plantillas con `extends` y `${parámetros}`, `requires` y migraciones al subir de versión | 011 |
 | Errores de configuración poco precisos | Validación al cargar con archivo, ruta y «¿quisiste decir?»; `/omni validate` | 001 |
 | Oyentes siempre registrados | Solo se escucha un evento si alguna regla lo usa | 001 |
 | — | Importador de configuraciones de ConditionalEvents | 001 |
@@ -48,7 +50,7 @@ menos el editor visual), una por sesión. El número de cada una se asigna al ab
 3. ~~**OmniEvents: disparador de estado** (P6)~~: hecha en la [008](specs/008-omnievents-disparador-de-estado/spec.md).
 4. ~~**OmniEvents: variables con caducidad y en bloques, entidades e ítems** (P5)~~: hecha en la [009](specs/009-omnievents-variables-caducidad-y-objetos/spec.md).
 5. ~~**OmniEvents: pruebas de reglas en el YAML** `tests:` y `/omni test` (P7)~~: hecha en la [010](specs/010-omnievents-pruebas-de-reglas/spec.md).
-6. **OmniEvents: paquetes, plantillas y versión** (P8).
+6. ~~**OmniEvents: paquetes, plantillas y versión** (P8)~~: hecha en la [011](specs/011-omnievents-paquetes-plantillas-version/spec.md).
 7. **OmniEvents: integraciones con costos**: Vault, `cost:` todo o nada (P9), WorldGuard y Citizens (abajo).
 8. **OmniEvents: menús de inventario y formularios de Bedrock** (P10).
 

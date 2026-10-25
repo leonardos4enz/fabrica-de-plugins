@@ -12,6 +12,7 @@ import dev.leo.omnievents.trigger.TriggerType;
 import dev.leo.omnievents.trigger.Triggers;
 import dev.leo.omnievents.util.Durations;
 import dev.leo.omnievents.util.Suggest;
+import dev.leo.omnievents.util.Versions;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -50,19 +51,48 @@ public final class RuleLoader {
     /** in_state('regla') que usa cada regla (spec 008, H5 CA1): se validan al terminar la carpeta. */
     private final Map<String, Set<String>> stateRefs = new LinkedHashMap<>();
 
+    /** Versión de OmniEvents para requires de los paquetes (null: no se comprueba, p. ej. en unitarias sin plugin). */
+    private final String pluginVersion;
+    private final List<Pack> packs = new ArrayList<>();
+
     public RuleLoader(Actions actions, Triggers triggers) {
-        this.actions = actions;
-        this.triggers = triggers;
+        this(actions, triggers, null);
     }
 
+    public RuleLoader(Actions actions, Triggers triggers, String pluginVersion) {
+        this.actions = actions;
+        this.triggers = triggers;
+        this.pluginVersion = pluginVersion == null ? null : pluginVersion.replaceFirst("[-+].*$", "");
+    }
+
+    /** Los paquetes de la última carga, también los que no cargaron (con su error). */
+    public List<Pack> packs() {
+        return List.copyOf(packs);
+    }
+
+    public static final String PACK_FILE = "pack.yml";
+    private static final java.util.regex.Pattern PACK_NAME = java.util.regex.Pattern.compile("^[a-z0-9_\\-]{1,32}$");
+    private static final java.util.regex.Pattern PARAM_NAME = java.util.regex.Pattern.compile("^[A-Za-z0-9_\\-]+$");
+
+    /**
+     * Carga rules/ en tres pasos (spec 011): paquetes (pack.yml), entradas de cada archivo (nombres paquete:regla) y
+     * compilación, con la herencia y los parámetros resueltos. Sin pack.yml ni extends, igual que antes.
+     */
     public Map<String, Rule> loadFolder(File folder, Problems problems) {
-        Map<String, Rule> out = new LinkedHashMap<>();
-        Map<String, String> origin = new LinkedHashMap<>();
+        packs.clear();
         List<File> files = new ArrayList<>();
         collect(folder, files);
         files.sort(null);
+        Map<String, Pack> byDir = loadPacks(folder, files, problems);
+
+        // Entradas: cada clave de primer nivel de cada archivo, con su nombre completo.
+        Map<String, Templates.Entry> entries = new LinkedHashMap<>();
+        Map<String, String> origin = new LinkedHashMap<>();
         for (File f : files) {
-            String rel = folder.toPath().relativize(f.toPath()).toString().replace('\\', '/');
+            if (f.getName().equals(PACK_FILE)) continue;
+            String rel = rel(folder, f);
+            Pack pack = packOf(rel, byDir);
+            if (pack == SKIP || pack != null && !pack.loaded()) continue;
             problems.file(rel);
             YamlConfiguration y = new YamlConfiguration();
             try {
@@ -71,25 +101,255 @@ public final class RuleLoader {
                 problems.error("", "YAML inválido: " + firstLine(e.getMessage()));
                 continue;
             }
-            for (String name : y.getKeys(false)) {
-                if (!y.isConfigurationSection(name)) {
+            for (String key : y.getKeys(false)) {
+                String name = pack == null ? key : pack.name + ":" + key;
+                if (!y.isConfigurationSection(key)) {
                     problems.error(name, "cada clave de primer nivel debe ser una regla (un mapa con trigger, conditions, actions…)");
                     continue;
                 }
-                String key = name.toLowerCase(Locale.ROOT);
-                if (origin.containsKey(key)) {
-                    problems.error(name, "el nombre de regla '" + name + "' ya existe en " + origin.get(key) + " (los nombres son únicos en todo el plugin)");
+                if (key.indexOf(':') >= 0) {
+                    if (pack != null) {
+                        problems.error(name, "dentro del paquete " + pack.name + " el nombre va sin paquete (" + key.substring(key.lastIndexOf(':') + 1) + "): se llamará " + pack.name + ":…");
+                        continue;
+                    }
+                    problems.warn(key, "los nombres con ':' se reservan para las reglas de un paquete (paquete:regla); cámbiale el nombre");
+                }
+                String lower = name.toLowerCase(Locale.ROOT);
+                if (origin.containsKey(lower)) {
+                    problems.error(name, "el nombre de regla '" + name + "' ya existe en " + origin.get(lower) + " (los nombres son únicos en todo el plugin)");
                     continue;
                 }
-                Rule r = parse(name, rel, y.getConfigurationSection(name), problems);
-                if (r != null) {
-                    out.put(key, r);
-                    origin.put(key, rel);
+                origin.put(lower, rel);
+                ConfigurationSection s = y.getConfigurationSection(key);
+                entries.put(lower, new Templates.Entry(name, rel, pack, Templates.plain(s), s));
+            }
+        }
+
+        Set<String> templateNames = new java.util.TreeSet<>();
+        for (Templates.Entry e : entries.values()) {
+            if (e.template()) {
+                templateNames.add(e.name());
+                if (e.pack() != null) e.pack().templates.add(e.name());
+            }
+        }
+        Map<String, Rule> out = new LinkedHashMap<>();
+        for (Map.Entry<String, Templates.Entry> me : entries.entrySet()) {
+            Templates.Entry e = me.getValue();
+            if (e.template()) continue;
+            Map<String, Object> m = Templates.expand(e, n -> entries.get(n.toLowerCase(Locale.ROOT)), templateNames, problems);
+            if (m == null) continue;
+            problems.file(e.file());
+            ConfigurationSection s = m == e.map() ? e.section() : section(m);
+            Rule r = parse(e.name(), e.file(), s, problems, e.pack());
+            if (r != null) out.put(me.getKey(), r);
+        }
+        checkStateRefs(out, problems);
+        for (Rule r : out.values()) {
+            Pack p = r.pack == null ? null : byDir.values().stream().filter(x -> x != SKIP && x.name.equals(r.pack)).findFirst().orElse(null);
+            if (p == null) continue;
+            p.rules.add(r.name());
+            if (!p.enabled) r.setEnabled(false);
+        }
+        return out;
+    }
+
+    /** Marca de una carpeta cuyos archivos se saltan (un pack.yml dentro de otro paquete). */
+    private static final Pack SKIP = new Pack("", "", "");
+
+    private static String rel(File folder, File f) {
+        return folder.toPath().relativize(f.toPath()).toString().replace('\\', '/');
+    }
+
+    /** El paquete al que pertenece un archivo: el de la carpeta más cercana con pack.yml. */
+    private static Pack packOf(String rel, Map<String, Pack> byDir) {
+        String dir = rel.contains("/") ? rel.substring(0, rel.lastIndexOf('/')) : "";
+        while (true) {
+            Pack p = byDir.get(dir);
+            if (p != null) return p;
+            if (dir.isEmpty()) return null;
+            dir = dir.contains("/") ? dir.substring(0, dir.lastIndexOf('/')) : "";
+        }
+    }
+
+    /** Un mapa como sección, con los mapas anidados como secciones (como al leer el YAML). */
+    @SuppressWarnings("unchecked")
+    private static ConfigurationSection section(Map<String, Object> m) {
+        org.bukkit.configuration.MemoryConfiguration c = new org.bukkit.configuration.MemoryConfiguration();
+        m.forEach((k, v) -> {
+            if (v instanceof Map<?, ?> map) c.createSection(k, (Map<String, Object>) map);
+            else c.set(k, v);
+        });
+        return c;
+    }
+
+    // ------------------------------------------------------------------ paquetes (spec 011)
+
+    /** Lee cada pack.yml; carpeta relativa → paquete (o SKIP). Los paquetes quedan en packs, con su error si no cargan. */
+    private Map<String, Pack> loadPacks(File folder, List<File> files, Problems problems) {
+        Map<String, Pack> byDir = new LinkedHashMap<>();
+        List<String> dirs = new ArrayList<>();
+        for (File f : files) if (f.getName().equals(PACK_FILE)) dirs.add(rel(folder, f.getParentFile()).replaceFirst("^\\.?$", ""));
+        dirs.sort(null);
+        Map<String, Pack> byName = new LinkedHashMap<>();
+        for (String dir : dirs) {
+            String file = dir.isEmpty() ? PACK_FILE : dir + "/" + PACK_FILE;
+            problems.file(file);
+            Pack outer = packOf(file, byDir);
+            if (dir.isEmpty()) {
+                problems.error("", "rules/ no puede ser un paquete: pon pack.yml en una carpeta dentro de rules/");
+                byDir.put(dir, SKIP);
+                continue;
+            }
+            if (outer != null) {
+                problems.error("", "un paquete no puede estar dentro de otro (" + (outer == SKIP ? "carpeta omitida" : outer.folder) + "): esta carpeta se omite");
+                byDir.put(dir, SKIP);
+                continue;
+            }
+            String folderName = dir.contains("/") ? dir.substring(dir.lastIndexOf('/') + 1) : dir;
+            Pack p = readPack(new File(folder, file), dir, file, folderName.toLowerCase(Locale.ROOT), problems);
+            if (p.loaded() && byName.containsKey(p.name)) {
+                problems.error("name", "ya hay un paquete '" + p.name + "' en " + byName.get(p.name).folder);
+                p.error = "nombre repetido";
+            }
+            if (p.loaded()) byName.put(p.name, p);
+            byDir.put(dir, p);
+            packs.add(p);
+        }
+        // requires hasta un punto fijo: si un paquete requerido no carga, el que lo requiere tampoco (H3 CA1).
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (Pack p : packs) {
+                if (!p.loaded()) continue;
+                String why = null;
+                if (p.requiresOmni != null && pluginVersion != null && Versions.valid(pluginVersion) && !Versions.satisfies(pluginVersion, p.requiresOmni)) {
+                    why = "necesita OmniEvents " + p.requiresOmni + " y este es " + pluginVersion;
+                }
+                for (Map.Entry<String, String> r : p.requiresPacks.entrySet()) {
+                    if (why != null) break;
+                    Pack dep = byName.get(r.getKey());
+                    if (dep == null) why = "necesita el paquete " + r.getKey() + " " + r.getValue() + " y no está" + Suggest.hint(r.getKey(), byName.keySet());
+                    else if (!dep.loaded()) why = "necesita el paquete " + r.getKey() + ", que no carga";
+                    else if (!Versions.satisfies(dep.version, r.getValue())) why = "necesita el paquete " + r.getKey() + " " + r.getValue() + " y hay " + dep.version;
+                }
+                if (why != null) {
+                    problems.file(p.file).error("requires", why + ": el paquete no carga");
+                    p.error = why;
+                    changed = true;
                 }
             }
         }
-        checkStateRefs(out, problems);
-        return out;
+        for (Pack p : packs) {
+            if (!p.loaded() && p.error != null && !p.error.startsWith("necesita")) problems.file(p.file).error("", "el paquete no carga: sus reglas se omiten");
+        }
+        return byDir;
+    }
+
+    private Pack readPack(File f, String dir, String file, String folderName, Problems problems) {
+        Pack fallback = new Pack(folderName, dir, file);
+        YamlConfiguration y = new YamlConfiguration();
+        // Las versiones de migrations llevan puntos ("1.2.0"): que no se lean como rutas.
+        y.options().pathSeparator('\u0001');
+        try {
+            y.loadFromString(Files.readString(f.toPath(), StandardCharsets.UTF_8));
+        } catch (IOException | InvalidConfigurationException e) {
+            problems.error("", "YAML inválido: " + firstLine(e.getMessage()));
+            fallback.error = "YAML inválido";
+            return fallback;
+        }
+        int mark = problems.size();
+        Map<String, Object> m = Templates.plain(y);
+        for (String k : m.keySet()) {
+            if (!RuleOptions.PACK_KEYS.containsKey(k)) problems.error(k, "clave desconocida en pack.yml" + Suggest.hint(k, RuleOptions.PACK_KEYS.keySet()));
+        }
+        String name = m.get("name") == null ? folderName : Values.str(m.get("name")).trim();
+        if (!PACK_NAME.matcher(name).matches()) {
+            problems.error(m.get("name") == null ? "" : "name", "nombre de paquete inválido '" + name + "' (minúsculas, números, _ y -; hasta 32)"
+                    + (m.get("name") == null ? ": ponle name en pack.yml o cambia el nombre de la carpeta" : ""));
+            name = folderName;
+        }
+        Pack p = new Pack(name, dir, file);
+        if (m.get("version") != null) {
+            String v = Values.str(m.get("version")).trim();
+            if (Versions.valid(v)) p.version = v;
+            else problems.error("version", "versión inválida '" + v + "' (usa x.y.z, p. ej. 1.2.0)");
+        }
+        p.description = m.get("description") == null ? null : Values.str(m.get("description"));
+        p.author = m.get("author") == null ? null : Values.str(m.get("author"));
+        if (m.get("enabled") != null) {
+            if (m.get("enabled") instanceof Boolean b) p.enabled = b;
+            else problems.error("enabled", "va true o false");
+        }
+        if (m.get("params") != null) {
+            if (m.get("params") instanceof Map<?, ?> pm) {
+                Map<String, Object> params = new LinkedHashMap<>();
+                pm.forEach((k, v) -> {
+                    String pk = String.valueOf(k);
+                    if (!PARAM_NAME.matcher(pk).matches()) problems.error("params." + pk, "nombre de parámetro inválido (letras, números, _ y -)");
+                    params.put(pk, v);
+                });
+                p.params = params;
+            } else {
+                problems.error("params", "params es un mapa nombre: valor (p. ej. { diaria: 50 })");
+            }
+        }
+        Object req = m.get("requires");
+        if (req instanceof Map<?, ?> rm) {
+            for (Map.Entry<?, ?> e : rm.entrySet()) {
+                String k = String.valueOf(e.getKey());
+                switch (k) {
+                    case "omnievents" -> {
+                        String c = Values.str(e.getValue());
+                        if (constraint(c, "requires.omnievents", problems)) p.requiresOmni = c;
+                    }
+                    case "packs" -> {
+                        if (e.getValue() instanceof Map<?, ?> pk) {
+                            pk.forEach((dn, dc) -> {
+                                String c = Values.str(dc);
+                                if (constraint(c, "requires.packs." + dn, problems)) p.requiresPacks.put(String.valueOf(dn).toLowerCase(Locale.ROOT), c);
+                            });
+                        } else {
+                            problems.error("requires.packs", "packs es un mapa paquete: restricción (p. ej. { plantillas: \">=1.0.0\" })");
+                        }
+                    }
+                    default -> problems.error("requires." + k, "clave desconocida" + Suggest.hint(k, RuleOptions.REQUIRES_KEYS.keySet()));
+                }
+            }
+        } else if (req != null) {
+            problems.error("requires", "requires es un mapa con omnievents y packs");
+        }
+        Object mig = m.get("migrations");
+        if (mig instanceof Map<?, ?> mm) {
+            List<Pack.Migration> list = new ArrayList<>();
+            for (Map.Entry<?, ?> e : mm.entrySet()) {
+                String v = String.valueOf(e.getKey()).trim();
+                if (!Versions.valid(v)) {
+                    problems.error("migrations." + v, "versión inválida '" + v + "' (usa x.y.z, p. ej. 1.2.0)");
+                    continue;
+                }
+                org.bukkit.configuration.MemoryConfiguration c = new org.bukkit.configuration.MemoryConfiguration();
+                c.set("trigger", "call");
+                c.set("actions", e.getValue());
+                Rule r = parse("migrations." + v, file, c, problems, p);
+                if (r != null) list.add(new Pack.Migration(v, r));
+            }
+            list.sort((a, b) -> Versions.compare(a.version(), b.version()));
+            p.migrations = List.copyOf(list);
+        } else if (mig != null) {
+            problems.error("migrations", "migrations es un mapa versión: acciones (p. ej. \"1.2.0\": [log: hola])");
+        }
+        if (problems.hasErrorsSince(mark)) p.error = "errores en pack.yml";
+        return p;
+    }
+
+    private static boolean constraint(String c, String path, Problems problems) {
+        try {
+            Versions.constraint(c);
+            return true;
+        } catch (IllegalArgumentException e) {
+            problems.error(path, e.getMessage());
+            return false;
+        }
     }
 
     /** Cada in_state('x') con un nombre fijo apunta a una regla state; un estado del servidor solo lee otros del servidor. */
@@ -100,7 +360,7 @@ public final class RuleLoader {
             Rule r = out.get(e.getKey());
             if (r == null) continue;
             for (String ref : e.getValue()) {
-                Rule target = out.get(ref);
+                Rule target = Rule.resolve(ref, r, n -> out.get(n.toLowerCase(Locale.ROOT)));
                 String msg = null;
                 if (target == null || target.state() == null) {
                     msg = "in_state('" + ref + "'): no hay una regla state con ese nombre" + Suggest.hint(ref, stateNames);
@@ -134,6 +394,10 @@ public final class RuleLoader {
 
     /** Compila una regla. Devuelve null si tiene errores (los problemas quedan registrados). */
     public Rule parse(String name, String file, ConfigurationSection s, Problems problems) {
+        return parse(name, file, s, problems, null);
+    }
+
+    private Rule parse(String name, String file, ConfigurationSection s, Problems problems, Pack pack) {
         int mark = problems.size();
         for (String k : s.getKeys(false)) {
             if (!KNOWN_KEYS.contains(k)) problems.warn(name + "." + k, "opción desconocida" + Suggest.hint(k, KNOWN_KEYS));
@@ -294,6 +558,7 @@ public final class RuleLoader {
                 s.getStringList("args"), budget, state);
         rule.writesObjectData = parser.writesObjectData();
         rule.expireVariables = expireVars;
+        rule.pack = pack == null ? null : pack.name;
         // Spec 010: después de compilar la regla (assert no cuenta para las dependencias de un estado). Un caso mal
         // escrito se descarta con su error, pero la regla carga (H1 CA3).
         if (s.contains("tests")) rule.tests = tests(name, s.get("tests"), trigger, problems);

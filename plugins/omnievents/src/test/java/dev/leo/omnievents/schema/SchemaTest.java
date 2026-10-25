@@ -125,12 +125,31 @@ class SchemaTest {
             files = s.filter(f -> f.toString().endsWith(".yml")).sorted().toList();
         }
         assertTrue(files.size() >= 7, "se esperaban los 7 archivos de ejemplo");
+        JsonSchema pack = compile(SchemaGenerator.generatePack(triggers, actions));
         for (Path f : files) {
             String text = Files.readString(f, StandardCharsets.UTF_8);
-            assertTrue(text.startsWith("# yaml-language-server: $schema=" + SchemaGenerator.URL), f + " no apunta al esquema");
-            Set<ValidationMessage> errors = validate(text);
+            // Spec 011: un pack.yml tiene su propio esquema.
+            boolean isPack = f.getFileName().toString().equals("pack.yml");
+            assertTrue(text.startsWith("# yaml-language-server: $schema=" + (isPack ? SchemaGenerator.PACK_URL : SchemaGenerator.URL)), f + " no apunta al esquema");
+            Set<ValidationMessage> errors = isPack ? validate(pack, text) : validate(text);
             assertTrue(errors.isEmpty(), f + ":\n" + dump(errors));
         }
+    }
+
+    @Test
+    void S011_H5_CA1_plantillas_y_pack_yml_en_los_esquemas() {
+        assertTrue(validate(rule("template: true\nparams: { cantidad: 1 }\nactions: [\"message: hola ${cantidad}\"]")).isEmpty());
+        assertTrue(validate(rule("extends: base\nwith: { cantidad: 5 }")).isEmpty());
+        assertFalse(validate(rule("actions: [\"message: sin trigger ni extends\"]")).isEmpty());
+        assertFalse(validate(rule("extends: base\nwith: [1, 2]")).isEmpty());
+        JsonSchema pack = compile(SchemaGenerator.generatePack(triggers, actions));
+        assertTrue(validate(pack, "name: tienda\nversion: 1.2.0\nparams: { moneda: pvar.m }\nrequires: { omnievents: \">=1.6.0\", packs: { base: \">=1.0, <2.0\" } }\n"
+                + "migrations:\n  \"1.2.0\":\n    - log: hola\n").isEmpty());
+        assertFalse(validate(pack, "name: Tienda Grande\n").isEmpty());
+        assertFalse(validate(pack, "version: uno\n").isEmpty());
+        assertFalse(validate(pack, "requires: { omnievents: \"mayor que 1\" }\n").isEmpty());
+        assertFalse(validate(pack, "migrations:\n  \"1.2.0\":\n    - no_existe: x\n").isEmpty());
+        assertFalse(validate(pack, "nombre: tienda\n").isEmpty());
     }
 
     @Test

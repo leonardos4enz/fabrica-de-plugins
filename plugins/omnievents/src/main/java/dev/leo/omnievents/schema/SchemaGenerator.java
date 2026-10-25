@@ -22,6 +22,7 @@ import java.util.Set;
  */
 public final class SchemaGenerator {
     public static final String URL = "https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json";
+    public static final String PACK_URL = "https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents-pack.schema.json";
     /** Acciones cuyas claves hermanas son listas de acciones. */
     private static final Set<String> ACTION_LIST_KEYS = Set.of("then", "else", "do");
     private static final String DURATION = "^\\s*(\\d+(\\.\\d+)?|(\\d+(\\.\\d+)?\\s*([mM][sS]|[tTsSmMhHdDwW])\\s*)+)$";
@@ -39,12 +40,18 @@ public final class SchemaGenerator {
         root.put("description", "Cada clave de primer nivel es una regla. Generado del código con ./gradlew :omnievents:schema o /omni schema; las expresiones se revisan con /omni validate.");
         root.put("type", "object");
         root.put("additionalProperties", ref("rule"));
+        root.put("definitions", definitions(triggers, actions));
+        return new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(root) + "\n";
+    }
+
+    private static Map<String, Object> definitions(Triggers triggers, Actions actions) {
         Map<String, Object> defs = new LinkedHashMap<>();
         defs.put("rule", rule(triggers));
         defs.put("expression", expression());
         defs.put("duration", map("description", "Duración: 10s, 5m, 1h30m, 2d, 1w, 20t (ticks), 500ms, o un número de segundos.",
-                "anyOf", List.of(map("type", "number", "minimum", 0), map("type", "string", "pattern", DURATION))));
-        defs.put("budget", map("type", "string", "pattern", BUDGET, "description", "Presupuesto de tiempo: 0.5ms, 200us o 200µs."));
+                "anyOf", List.of(map("type", "number", "minimum", 0), map("type", "string", "pattern", DURATION), param())));
+        defs.put("budget", map("description", "Presupuesto de tiempo: 0.5ms, 200us o 200µs.",
+                "anyOf", List.of(map("type", "string", "pattern", BUDGET), param())));
         defs.put("texts", map("anyOf", List.of(map("type", "string"), map("type", "array", "items", map("type", "string")))));
         defs.put("conditions", map("description", RuleOptions.all().get("conditions").description(),
                 "anyOf", List.of(ref("condition"), map("type", "array", "items", ref("condition")))));
@@ -62,8 +69,7 @@ public final class SchemaGenerator {
             p.put("description", desc);
             defs.put("modifier_" + m, p);
         });
-        root.put("definitions", defs);
-        return new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(root) + "\n";
+        return defs;
     }
 
     // ------------------------------------------------------------------ reglas
@@ -82,12 +88,51 @@ public final class SchemaGenerator {
         conditional.add(requires(List.of("state"), map("required", List.of("when"))));
         return map("type", "object", "description", "Una regla: cuando pase trigger, si se cumplen conditions, corre actions.",
                 "properties", props, "additionalProperties", false,
-                "anyOf", List.of(map("required", List.of("trigger")), map("required", List.of("type"))),
+                "anyOf", List.of(map("required", List.of("trigger")), map("required", List.of("type")), map("required", List.of("extends")),
+                        map("properties", map("template", map("const", true)), "required", List.of("template"))),
                 "allOf", conditional);
     }
 
+    /** Esquema de pack.yml (spec 011, H5 CA1), del registro PACK_KEYS. */
+    public static String generatePack(Triggers triggers, Actions actions) {
+        Map<String, String> k = RuleOptions.PACK_KEYS, r = RuleOptions.REQUIRES_KEYS;
+        String constraint = "^\\s*(>=|<=|>|<|=)?\\s*\\d+\\.\\d+(\\.\\d+)?\\s*(,\\s*(>=|<=|>|<|=)?\\s*\\d+\\.\\d+(\\.\\d+)?\\s*)*$";
+        String version = "^\\d+\\.\\d+(\\.\\d+)?$";
+        Map<String, Object> props = new LinkedHashMap<>();
+        props.put("name", map("type", "string", "pattern", "^[a-z0-9_\\-]{1,32}$", "description", k.get("name")));
+        props.put("version", map("type", "string", "pattern", version, "description", k.get("version")));
+        props.put("description", map("type", "string", "description", k.get("description")));
+        props.put("author", map("type", "string", "description", k.get("author")));
+        props.put("enabled", map("type", "boolean", "description", k.get("enabled")));
+        props.put("params", map("type", "object", "propertyNames", map("pattern", "^[A-Za-z0-9_\\-]+$"), "description", k.get("params")));
+        props.put("requires", map("type", "object", "description", k.get("requires"), "properties", map(
+                        "omnievents", map("type", "string", "pattern", constraint, "description", r.get("omnievents")),
+                        "packs", map("type", "object", "additionalProperties", map("type", "string", "pattern", constraint), "description", r.get("packs"))),
+                "additionalProperties", false));
+        props.put("migrations", map("type", "object", "description", k.get("migrations"), "propertyNames", map("pattern", version),
+                "additionalProperties", ref("actions")));
+        Map<String, Object> root = new LinkedHashMap<>();
+        root.put("$schema", "http://json-schema.org/draft-07/schema#");
+        root.put("$id", PACK_URL);
+        root.put("title", "pack.yml de OmniEvents");
+        root.put("description", "Un paquete de reglas (spec 011). Generado del código con ./gradlew :omnievents:schema o /omni schema.");
+        root.put("type", "object");
+        root.put("properties", props);
+        root.put("additionalProperties", false);
+        // Las mismas definiciones que el esquema de reglas: las acciones de migrations se autocompletan igual.
+        root.put("definitions", definitions(triggers, actions));
+        return new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(root) + "\n";
+    }
+
+    /** Lo que exige un disparador; una plantilla (template: true) no lo exige: lo completa quien la extiende. */
     private static Map<String, Object> requires(List<String> triggerNames, Map<String, Object> then) {
-        return map("if", map("properties", map("trigger", map("enum", triggerNames)), "required", List.of("trigger")), "then", then);
+        return map("if", map("properties", map("trigger", map("enum", triggerNames)), "required", List.of("trigger"),
+                "not", map("properties", map("template", map("const", true)), "required", List.of("template"))), "then", then);
+    }
+
+    /** Un valor que es un parámetro ${nombre} de un paquete o una plantilla (spec 011): se reemplaza al cargar. */
+    private static Map<String, Object> param() {
+        return map("type", "string", "pattern", "^\\$\\{[A-Za-z0-9_\\-]+}$", "description", "Parámetro ${nombre}: se reemplaza al cargar.");
     }
 
     private static Map<String, Object> option(RuleOptions.Option o, Triggers triggers) {
@@ -104,8 +149,8 @@ public final class SchemaGenerator {
                 });
                 yield map("type", "string", "enum", names, "enumDescriptions", descs, "markdownEnumDescriptions", descs);
             }
-            case BOOLEAN -> map("type", "boolean");
-            case INTEGER -> map("type", "integer", "minimum", 0);
+            case BOOLEAN -> map("anyOf", List.of(map("type", "boolean"), param()));
+            case INTEGER -> map("anyOf", List.of(map("type", "integer", "minimum", 0), param()));
             case TEXT -> map("type", "string");
             case TEXTS -> ref("texts");
             case ENUM -> map("type", "string", "enum", bothCases(o.values()));
@@ -135,6 +180,7 @@ public final class SchemaGenerator {
             case BUDGET -> ref("budget");
             case LIST -> map("type", "array", "items", map("type", "string"));
             case TESTS -> map("type", "array", "items", ref("test"));
+            case PARAMS -> map("type", "object", "propertyNames", map("pattern", "^[A-Za-z0-9_\\-]+$"));
         };
     }
 

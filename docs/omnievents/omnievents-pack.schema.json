@@ -1,0 +1,4097 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents-pack.schema.json",
+  "title": "pack.yml de OmniEvents",
+  "description": "Un paquete de reglas (spec 011). Generado del código con ./gradlew :omnievents:schema o /omni schema.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9_\\-]{1,32}$",
+      "description": "Nombre del paquete (por defecto, el de la carpeta): minúsculas, números, _ y -. Sus reglas se llaman nombre:regla."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+(\\.\\d+)?$",
+      "description": "Versión del paquete, x.y.z (1.0.0 por defecto). Al subirla corren las migrations que correspondan."
+    },
+    "description": {
+      "type": "string",
+      "description": "Qué hace el paquete (lo muestra /omni pack info)."
+    },
+    "author": {
+      "type": "string",
+      "description": "Quién lo hizo."
+    },
+    "enabled": {
+      "type": "boolean",
+      "description": "false: sus reglas cargan desactivadas y no corren sus migraciones."
+    },
+    "params": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9_\\-]+$"
+      },
+      "description": "Parámetros de todas las reglas del paquete: ${nombre} en sus textos se reemplaza al cargar."
+    },
+    "requires": {
+      "type": "object",
+      "description": "Lo que necesita para cargar: omnievents y packs, con restricciones como \">=1.2.0, <2.0.0\".",
+      "properties": {
+        "omnievents": {
+          "type": "string",
+          "pattern": "^\\s*(>=|<=|>|<|=)?\\s*\\d+\\.\\d+(\\.\\d+)?\\s*(,\\s*(>=|<=|>|<|=)?\\s*\\d+\\.\\d+(\\.\\d+)?\\s*)*$",
+          "description": "Versión de OmniEvents que necesita (p. ej. \">=1.6.0\")."
+        },
+        "packs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^\\s*(>=|<=|>|<|=)?\\s*\\d+\\.\\d+(\\.\\d+)?\\s*(,\\s*(>=|<=|>|<|=)?\\s*\\d+\\.\\d+(\\.\\d+)?\\s*)*$"
+          },
+          "description": "Otros paquetes que necesita: nombre → restricción (p. ej. plantillas: \">=1.0.0\")."
+        }
+      },
+      "additionalProperties": false
+    },
+    "migrations": {
+      "type": "object",
+      "description": "Versión → acciones de servidor que corren una vez al subir a esa versión (var.from y var.to: de qué versión a cuál).",
+      "propertyNames": {
+        "pattern": "^\\d+\\.\\d+(\\.\\d+)?$"
+      },
+      "additionalProperties": {
+        "$ref": "#/definitions/actions"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "rule": {
+      "type": "object",
+      "description": "Una regla: cuando pase trigger, si se cumplen conditions, corre actions.",
+      "properties": {
+        "trigger": {
+          "type": "string",
+          "enum": [
+            "player_join",
+            "player_quit",
+            "player_pre_login",
+            "player_respawn",
+            "player_death",
+            "player_chat",
+            "player_command",
+            "player_move",
+            "player_teleport",
+            "player_world_change",
+            "player_sneak",
+            "player_sprint",
+            "player_jump",
+            "player_level_change",
+            "player_gamemode_change",
+            "player_toggle_flight",
+            "player_bed_enter",
+            "player_fish",
+            "player_regain_health",
+            "player_food_change",
+            "player_advancement",
+            "player_swap_hands",
+            "player_armor_change",
+            "player_portal",
+            "player_kick",
+            "player_resource_pack",
+            "player_damage",
+            "player_attack",
+            "player_kill",
+            "player_shoot",
+            "projectile_hit",
+            "block_break",
+            "block_place",
+            "block_interact",
+            "sign_change",
+            "bucket_fill",
+            "bucket_empty",
+            "player_interact",
+            "item_interact",
+            "item_consume",
+            "item_craft",
+            "item_drop",
+            "item_pickup",
+            "item_held",
+            "item_enchant",
+            "item_break",
+            "inventory_open",
+            "inventory_close",
+            "inventory_click",
+            "entity_interact",
+            "entity_spawn",
+            "entity_death",
+            "console_command",
+            "server_start",
+            "server_stop",
+            "timer",
+            "clock",
+            "call",
+            "command",
+            "state",
+            "var_expire",
+            "custom",
+            "player_kill_entity",
+            "player_leave",
+            "repetitive",
+            "repetitive_server"
+          ],
+          "enumDescriptions": [
+            "Un jugador entra al servidor (first_join: si es su primera vez).",
+            "Un jugador sale del servidor.",
+            "Antes de entrar, en un hilo asíncrono: aún no hay jugador, solo name, uuid e ip (deny_join lo rechaza).",
+            "Un jugador reaparece tras morir.",
+            "Un jugador muere (killer: quien lo mató, si fue otro jugador).",
+            "Un jugador escribe en el chat (asíncrono; message es el texto, sin formato).",
+            "Un jugador escribe un comando, de cualquier plugin (cmd.name, args).",
+            "Un jugador se mueve (move_mode: block, chunk o any).",
+            "Un jugador es teletransportado.",
+            "Un jugador cambia de mundo (from_world: de dónde viene).",
+            "Un jugador empieza o deja de agacharse (sneaking).",
+            "Un jugador empieza o deja de correr (sprinting).",
+            "Un jugador salta.",
+            "Cambia el nivel de experiencia de un jugador.",
+            "Un jugador cambia de modo de juego (new_mode).",
+            "Un jugador empieza o deja de volar (flying).",
+            "Un jugador intenta acostarse en una cama.",
+            "Un jugador pesca (state: estado de la caña; target: lo que sacó).",
+            "Un jugador recupera vida (amount, reason).",
+            "Cambia el hambre de un jugador (old_food, new_food).",
+            "Un jugador consigue un logro (sin las recetas).",
+            "Un jugador cambia los ítems de mano (tecla F).",
+            "Un jugador se pone o se quita una pieza de armadura.",
+            "Un jugador usa un portal.",
+            "Un jugador es expulsado del servidor.",
+            "Un jugador responde al paquete de recursos (status).",
+            "Un jugador recibe daño (cause; damager si fue una entidad o un jugador, también con proyectil).",
+            "Un jugador golpea a una entidad, directo o con un proyectil (target, damage).",
+            "Un jugador mata a una entidad (target).",
+            "Un jugador dispara un arco o una ballesta (force).",
+            "El proyectil de un jugador pega en una entidad o un bloque.",
+            "Un jugador rompe un bloque.",
+            "Un jugador coloca un bloque (against: el bloque en que se apoya).",
+            "Un jugador hace clic en un bloque con la mano principal (action: RIGHT_CLICK, SHIFT_LEFT_CLICK…).",
+            "Un jugador escribe un cartel (lines).",
+            "Un jugador llena un cubo.",
+            "Un jugador vacía un cubo.",
+            "Un jugador hace clic, con o sin bloque, con la mano principal (action).",
+            "Un jugador hace clic con un ítem en la mano principal (action).",
+            "Un jugador come o bebe un ítem.",
+            "Un jugador fabrica un ítem (item: el resultado).",
+            "Un jugador tira un ítem.",
+            "Un jugador recoge un ítem del suelo.",
+            "Un jugador cambia de ranura en la barra (item: el nuevo, previous_item: el anterior).",
+            "Un jugador encanta un ítem en la mesa (enchants, cost).",
+            "Se rompe la herramienta o la armadura de un jugador.",
+            "Un jugador abre un inventario (title, inventory_type).",
+            "Un jugador cierra un inventario.",
+            "Un jugador hace clic en un inventario (slot, raw_slot, click, cursor, title).",
+            "Un jugador hace clic derecho en una entidad (target).",
+            "Aparece una criatura (entity, reason); sin jugador.",
+            "Muere una entidad (entity; player y killer si la mató un jugador).",
+            "La consola ejecuta un comando (cmd, args, sender).",
+            "Al arrancar el servidor, cuando OmniEvents termina de cargar.",
+            "El servidor se apaga.",
+            "Cada cierto tiempo (every); por defecto una vez por jugador conectado (per_player).",
+            "A una hora del día (at: HH:mm, timezone).",
+            "Solo corre cuando otra regla la llama (call) o con /omni call; sus args llegan como var.<nombre>.",
+            "Registra un comando real (command: name, aliases, permission, tab) y corre al usarlo.",
+            "Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende.",
+            "Caduca una variable con expire (spec 009): una pvar de un jugador conectado (con player) o una gvar. variable: el nombre; value: lo último que valía; scope: pvar o gvar.",
+            "Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from).",
+            "Alias de player_kill (ConditionalEvents).",
+            "Alias de player_quit (ConditionalEvents).",
+            "Alias de timer (ConditionalEvents).",
+            "Alias de timer (ConditionalEvents)."
+          ],
+          "markdownEnumDescriptions": [
+            "Un jugador entra al servidor (first_join: si es su primera vez).",
+            "Un jugador sale del servidor.",
+            "Antes de entrar, en un hilo asíncrono: aún no hay jugador, solo name, uuid e ip (deny_join lo rechaza).",
+            "Un jugador reaparece tras morir.",
+            "Un jugador muere (killer: quien lo mató, si fue otro jugador).",
+            "Un jugador escribe en el chat (asíncrono; message es el texto, sin formato).",
+            "Un jugador escribe un comando, de cualquier plugin (cmd.name, args).",
+            "Un jugador se mueve (move_mode: block, chunk o any).",
+            "Un jugador es teletransportado.",
+            "Un jugador cambia de mundo (from_world: de dónde viene).",
+            "Un jugador empieza o deja de agacharse (sneaking).",
+            "Un jugador empieza o deja de correr (sprinting).",
+            "Un jugador salta.",
+            "Cambia el nivel de experiencia de un jugador.",
+            "Un jugador cambia de modo de juego (new_mode).",
+            "Un jugador empieza o deja de volar (flying).",
+            "Un jugador intenta acostarse en una cama.",
+            "Un jugador pesca (state: estado de la caña; target: lo que sacó).",
+            "Un jugador recupera vida (amount, reason).",
+            "Cambia el hambre de un jugador (old_food, new_food).",
+            "Un jugador consigue un logro (sin las recetas).",
+            "Un jugador cambia los ítems de mano (tecla F).",
+            "Un jugador se pone o se quita una pieza de armadura.",
+            "Un jugador usa un portal.",
+            "Un jugador es expulsado del servidor.",
+            "Un jugador responde al paquete de recursos (status).",
+            "Un jugador recibe daño (cause; damager si fue una entidad o un jugador, también con proyectil).",
+            "Un jugador golpea a una entidad, directo o con un proyectil (target, damage).",
+            "Un jugador mata a una entidad (target).",
+            "Un jugador dispara un arco o una ballesta (force).",
+            "El proyectil de un jugador pega en una entidad o un bloque.",
+            "Un jugador rompe un bloque.",
+            "Un jugador coloca un bloque (against: el bloque en que se apoya).",
+            "Un jugador hace clic en un bloque con la mano principal (action: RIGHT_CLICK, SHIFT_LEFT_CLICK…).",
+            "Un jugador escribe un cartel (lines).",
+            "Un jugador llena un cubo.",
+            "Un jugador vacía un cubo.",
+            "Un jugador hace clic, con o sin bloque, con la mano principal (action).",
+            "Un jugador hace clic con un ítem en la mano principal (action).",
+            "Un jugador come o bebe un ítem.",
+            "Un jugador fabrica un ítem (item: el resultado).",
+            "Un jugador tira un ítem.",
+            "Un jugador recoge un ítem del suelo.",
+            "Un jugador cambia de ranura en la barra (item: el nuevo, previous_item: el anterior).",
+            "Un jugador encanta un ítem en la mesa (enchants, cost).",
+            "Se rompe la herramienta o la armadura de un jugador.",
+            "Un jugador abre un inventario (title, inventory_type).",
+            "Un jugador cierra un inventario.",
+            "Un jugador hace clic en un inventario (slot, raw_slot, click, cursor, title).",
+            "Un jugador hace clic derecho en una entidad (target).",
+            "Aparece una criatura (entity, reason); sin jugador.",
+            "Muere una entidad (entity; player y killer si la mató un jugador).",
+            "La consola ejecuta un comando (cmd, args, sender).",
+            "Al arrancar el servidor, cuando OmniEvents termina de cargar.",
+            "El servidor se apaga.",
+            "Cada cierto tiempo (every); por defecto una vez por jugador conectado (per_player).",
+            "A una hora del día (at: HH:mm, timezone).",
+            "Solo corre cuando otra regla la llama (call) o con /omni call; sus args llegan como var.<nombre>.",
+            "Registra un comando real (command: name, aliases, permission, tab) y corre al usarlo.",
+            "Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende.",
+            "Caduca una variable con expire (spec 009): una pvar de un jugador conectado (con player) o una gvar. variable: el nombre; value: lo último que valía; scope: pvar o gvar.",
+            "Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from).",
+            "Alias de player_kill (ConditionalEvents).",
+            "Alias de player_quit (ConditionalEvents).",
+            "Alias de timer (ConditionalEvents).",
+            "Alias de timer (ConditionalEvents)."
+          ],
+          "description": "Disparador: el evento que hace correr la regla (/omni triggers los lista)."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "player_join",
+            "player_quit",
+            "player_pre_login",
+            "player_respawn",
+            "player_death",
+            "player_chat",
+            "player_command",
+            "player_move",
+            "player_teleport",
+            "player_world_change",
+            "player_sneak",
+            "player_sprint",
+            "player_jump",
+            "player_level_change",
+            "player_gamemode_change",
+            "player_toggle_flight",
+            "player_bed_enter",
+            "player_fish",
+            "player_regain_health",
+            "player_food_change",
+            "player_advancement",
+            "player_swap_hands",
+            "player_armor_change",
+            "player_portal",
+            "player_kick",
+            "player_resource_pack",
+            "player_damage",
+            "player_attack",
+            "player_kill",
+            "player_shoot",
+            "projectile_hit",
+            "block_break",
+            "block_place",
+            "block_interact",
+            "sign_change",
+            "bucket_fill",
+            "bucket_empty",
+            "player_interact",
+            "item_interact",
+            "item_consume",
+            "item_craft",
+            "item_drop",
+            "item_pickup",
+            "item_held",
+            "item_enchant",
+            "item_break",
+            "inventory_open",
+            "inventory_close",
+            "inventory_click",
+            "entity_interact",
+            "entity_spawn",
+            "entity_death",
+            "console_command",
+            "server_start",
+            "server_stop",
+            "timer",
+            "clock",
+            "call",
+            "command",
+            "state",
+            "var_expire",
+            "custom",
+            "player_kill_entity",
+            "player_leave",
+            "repetitive",
+            "repetitive_server"
+          ],
+          "enumDescriptions": [
+            "Un jugador entra al servidor (first_join: si es su primera vez).",
+            "Un jugador sale del servidor.",
+            "Antes de entrar, en un hilo asíncrono: aún no hay jugador, solo name, uuid e ip (deny_join lo rechaza).",
+            "Un jugador reaparece tras morir.",
+            "Un jugador muere (killer: quien lo mató, si fue otro jugador).",
+            "Un jugador escribe en el chat (asíncrono; message es el texto, sin formato).",
+            "Un jugador escribe un comando, de cualquier plugin (cmd.name, args).",
+            "Un jugador se mueve (move_mode: block, chunk o any).",
+            "Un jugador es teletransportado.",
+            "Un jugador cambia de mundo (from_world: de dónde viene).",
+            "Un jugador empieza o deja de agacharse (sneaking).",
+            "Un jugador empieza o deja de correr (sprinting).",
+            "Un jugador salta.",
+            "Cambia el nivel de experiencia de un jugador.",
+            "Un jugador cambia de modo de juego (new_mode).",
+            "Un jugador empieza o deja de volar (flying).",
+            "Un jugador intenta acostarse en una cama.",
+            "Un jugador pesca (state: estado de la caña; target: lo que sacó).",
+            "Un jugador recupera vida (amount, reason).",
+            "Cambia el hambre de un jugador (old_food, new_food).",
+            "Un jugador consigue un logro (sin las recetas).",
+            "Un jugador cambia los ítems de mano (tecla F).",
+            "Un jugador se pone o se quita una pieza de armadura.",
+            "Un jugador usa un portal.",
+            "Un jugador es expulsado del servidor.",
+            "Un jugador responde al paquete de recursos (status).",
+            "Un jugador recibe daño (cause; damager si fue una entidad o un jugador, también con proyectil).",
+            "Un jugador golpea a una entidad, directo o con un proyectil (target, damage).",
+            "Un jugador mata a una entidad (target).",
+            "Un jugador dispara un arco o una ballesta (force).",
+            "El proyectil de un jugador pega en una entidad o un bloque.",
+            "Un jugador rompe un bloque.",
+            "Un jugador coloca un bloque (against: el bloque en que se apoya).",
+            "Un jugador hace clic en un bloque con la mano principal (action: RIGHT_CLICK, SHIFT_LEFT_CLICK…).",
+            "Un jugador escribe un cartel (lines).",
+            "Un jugador llena un cubo.",
+            "Un jugador vacía un cubo.",
+            "Un jugador hace clic, con o sin bloque, con la mano principal (action).",
+            "Un jugador hace clic con un ítem en la mano principal (action).",
+            "Un jugador come o bebe un ítem.",
+            "Un jugador fabrica un ítem (item: el resultado).",
+            "Un jugador tira un ítem.",
+            "Un jugador recoge un ítem del suelo.",
+            "Un jugador cambia de ranura en la barra (item: el nuevo, previous_item: el anterior).",
+            "Un jugador encanta un ítem en la mesa (enchants, cost).",
+            "Se rompe la herramienta o la armadura de un jugador.",
+            "Un jugador abre un inventario (title, inventory_type).",
+            "Un jugador cierra un inventario.",
+            "Un jugador hace clic en un inventario (slot, raw_slot, click, cursor, title).",
+            "Un jugador hace clic derecho en una entidad (target).",
+            "Aparece una criatura (entity, reason); sin jugador.",
+            "Muere una entidad (entity; player y killer si la mató un jugador).",
+            "La consola ejecuta un comando (cmd, args, sender).",
+            "Al arrancar el servidor, cuando OmniEvents termina de cargar.",
+            "El servidor se apaga.",
+            "Cada cierto tiempo (every); por defecto una vez por jugador conectado (per_player).",
+            "A una hora del día (at: HH:mm, timezone).",
+            "Solo corre cuando otra regla la llama (call) o con /omni call; sus args llegan como var.<nombre>.",
+            "Registra un comando real (command: name, aliases, permission, tab) y corre al usarlo.",
+            "Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende.",
+            "Caduca una variable con expire (spec 009): una pvar de un jugador conectado (con player) o una gvar. variable: el nombre; value: lo último que valía; scope: pvar o gvar.",
+            "Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from).",
+            "Alias de player_kill (ConditionalEvents).",
+            "Alias de player_quit (ConditionalEvents).",
+            "Alias de timer (ConditionalEvents).",
+            "Alias de timer (ConditionalEvents)."
+          ],
+          "markdownEnumDescriptions": [
+            "Un jugador entra al servidor (first_join: si es su primera vez).",
+            "Un jugador sale del servidor.",
+            "Antes de entrar, en un hilo asíncrono: aún no hay jugador, solo name, uuid e ip (deny_join lo rechaza).",
+            "Un jugador reaparece tras morir.",
+            "Un jugador muere (killer: quien lo mató, si fue otro jugador).",
+            "Un jugador escribe en el chat (asíncrono; message es el texto, sin formato).",
+            "Un jugador escribe un comando, de cualquier plugin (cmd.name, args).",
+            "Un jugador se mueve (move_mode: block, chunk o any).",
+            "Un jugador es teletransportado.",
+            "Un jugador cambia de mundo (from_world: de dónde viene).",
+            "Un jugador empieza o deja de agacharse (sneaking).",
+            "Un jugador empieza o deja de correr (sprinting).",
+            "Un jugador salta.",
+            "Cambia el nivel de experiencia de un jugador.",
+            "Un jugador cambia de modo de juego (new_mode).",
+            "Un jugador empieza o deja de volar (flying).",
+            "Un jugador intenta acostarse en una cama.",
+            "Un jugador pesca (state: estado de la caña; target: lo que sacó).",
+            "Un jugador recupera vida (amount, reason).",
+            "Cambia el hambre de un jugador (old_food, new_food).",
+            "Un jugador consigue un logro (sin las recetas).",
+            "Un jugador cambia los ítems de mano (tecla F).",
+            "Un jugador se pone o se quita una pieza de armadura.",
+            "Un jugador usa un portal.",
+            "Un jugador es expulsado del servidor.",
+            "Un jugador responde al paquete de recursos (status).",
+            "Un jugador recibe daño (cause; damager si fue una entidad o un jugador, también con proyectil).",
+            "Un jugador golpea a una entidad, directo o con un proyectil (target, damage).",
+            "Un jugador mata a una entidad (target).",
+            "Un jugador dispara un arco o una ballesta (force).",
+            "El proyectil de un jugador pega en una entidad o un bloque.",
+            "Un jugador rompe un bloque.",
+            "Un jugador coloca un bloque (against: el bloque en que se apoya).",
+            "Un jugador hace clic en un bloque con la mano principal (action: RIGHT_CLICK, SHIFT_LEFT_CLICK…).",
+            "Un jugador escribe un cartel (lines).",
+            "Un jugador llena un cubo.",
+            "Un jugador vacía un cubo.",
+            "Un jugador hace clic, con o sin bloque, con la mano principal (action).",
+            "Un jugador hace clic con un ítem en la mano principal (action).",
+            "Un jugador come o bebe un ítem.",
+            "Un jugador fabrica un ítem (item: el resultado).",
+            "Un jugador tira un ítem.",
+            "Un jugador recoge un ítem del suelo.",
+            "Un jugador cambia de ranura en la barra (item: el nuevo, previous_item: el anterior).",
+            "Un jugador encanta un ítem en la mesa (enchants, cost).",
+            "Se rompe la herramienta o la armadura de un jugador.",
+            "Un jugador abre un inventario (title, inventory_type).",
+            "Un jugador cierra un inventario.",
+            "Un jugador hace clic en un inventario (slot, raw_slot, click, cursor, title).",
+            "Un jugador hace clic derecho en una entidad (target).",
+            "Aparece una criatura (entity, reason); sin jugador.",
+            "Muere una entidad (entity; player y killer si la mató un jugador).",
+            "La consola ejecuta un comando (cmd, args, sender).",
+            "Al arrancar el servidor, cuando OmniEvents termina de cargar.",
+            "El servidor se apaga.",
+            "Cada cierto tiempo (every); por defecto una vez por jugador conectado (per_player).",
+            "A una hora del día (at: HH:mm, timezone).",
+            "Solo corre cuando otra regla la llama (call) o con /omni call; sus args llegan como var.<nombre>.",
+            "Registra un comando real (command: name, aliases, permission, tab) y corre al usarlo.",
+            "Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende.",
+            "Caduca una variable con expire (spec 009): una pvar de un jugador conectado (con player) o una gvar. variable: el nombre; value: lo último que valía; scope: pvar o gvar.",
+            "Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from).",
+            "Alias de player_kill (ConditionalEvents).",
+            "Alias de player_quit (ConditionalEvents).",
+            "Alias de timer (ConditionalEvents).",
+            "Alias de timer (ConditionalEvents)."
+          ],
+          "description": "Sinónimo de trigger. Disparador: el evento que hace correr la regla (/omni triggers los lista)."
+        },
+        "description": {
+          "type": "string",
+          "description": "Nota libre para quien lee la regla; el plugin no la usa."
+        },
+        "enabled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
+          "description": "false apaga la regla sin borrarla."
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "lowest",
+            "low",
+            "normal",
+            "high",
+            "highest",
+            "monitor",
+            "LOWEST",
+            "LOW",
+            "NORMAL",
+            "HIGH",
+            "HIGHEST",
+            "MONITOR"
+          ],
+          "description": "Prioridad del oyente de Bukkit (normal por defecto)."
+        },
+        "ignore_cancelled": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
+          "description": "true: no corre si otro plugin ya canceló el evento."
+        },
+        "worlds": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/texts"
+            }
+          ],
+          "description": "Mundo o lista de mundos donde corre la regla (sin la opción, en todos)."
+        },
+        "permission": {
+          "type": "string",
+          "description": "Permiso que necesita el jugador para que la regla corra."
+        },
+        "bypass_permission": {
+          "type": "string",
+          "description": "Con este permiso, la regla ignora al jugador (no corre para él)."
+        },
+        "ignore_with_permission": {
+          "type": "string",
+          "description": "Sinónimo de bypass_permission. Con este permiso, la regla ignora al jugador (no corre para él)."
+        },
+        "conditions": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/conditions"
+            }
+          ],
+          "description": "Una condición o una lista (todas deben cumplirse). Cada una es una expresión, o un mapa con expr o any + of y su propio deny."
+        },
+        "if": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/conditions"
+            }
+          ],
+          "description": "Sinónimo de conditions. Una condición o una lista (todas deben cumplirse). Cada una es una expresión, o un mapa con expr o any + of y su propio deny."
+        },
+        "actions": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Acciones que corren si se cumplen las condiciones."
+        },
+        "then": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Sinónimo de actions. Acciones que corren si se cumplen las condiciones."
+        },
+        "else": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Acciones que corren si falla una condición sin deny."
+        },
+        "cooldown": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/duration"
+            }
+          ],
+          "description": "Enfriamiento entre usos: 30s, 5m, 1h30m, 2d, 20t (ticks) o un número de segundos."
+        },
+        "cooldown_scope": {
+          "type": "string",
+          "enum": [
+            "player",
+            "jugador",
+            "global",
+            "server",
+            "servidor",
+            "PLAYER",
+            "JUGADOR",
+            "GLOBAL",
+            "SERVER",
+            "SERVIDOR"
+          ],
+          "description": "player (por jugador, por defecto) o global (uno para todo el servidor)."
+        },
+        "on_cooldown": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Acciones si la regla está en enfriamiento (var.cooldown_left tiene los segundos que faltan)."
+        },
+        "limit": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
+          "description": "Usos máximos (0 = sin límite)."
+        },
+        "one_time": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
+          "description": "true equivale a limit: 1 (el one_time de ConditionalEvents)."
+        },
+        "limit_scope": {
+          "type": "string",
+          "enum": [
+            "player",
+            "jugador",
+            "global",
+            "server",
+            "servidor",
+            "PLAYER",
+            "JUGADOR",
+            "GLOBAL",
+            "SERVER",
+            "SERVIDOR"
+          ],
+          "description": "player (por jugador, por defecto) o global."
+        },
+        "limit_reset": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "never",
+                "nunca",
+                "daily",
+                "diario",
+                "weekly",
+                "semanal",
+                "monthly",
+                "mensual",
+                "NEVER",
+                "NUNCA",
+                "DAILY",
+                "DIARIO",
+                "WEEKLY",
+                "SEMANAL",
+                "MONTHLY",
+                "MENSUAL"
+              ]
+            },
+            {
+              "$ref": "#/definitions/duration"
+            }
+          ],
+          "description": "Cuándo se reinician los usos: never, daily, weekly, monthly o una duración (12h)."
+        },
+        "on_limit": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Acciones si ya no quedan usos."
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/test"
+          },
+          "description": "Pruebas de la regla: casos con given (el contexto falso) y expect (lo esperado). Corren con /omni test y al cargar, sin efectos."
+        },
+        "template": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
+          "description": "true: la regla es una plantilla; no corre sola (no necesita trigger) y otras la usan con extends."
+        },
+        "extends": {
+          "type": "string",
+          "description": "Plantilla de la que hereda (template: true): copia sus claves y las que escribe esta regla las reemplazan enteras. En un paquete busca primero en el paquete; paquete:plantilla es absoluto."
+        },
+        "with": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9_\\-]+$"
+          },
+          "description": "Valores de los parámetros ${nombre} para la plantilla de extends (ganan a los params de la plantilla y del paquete)."
+        },
+        "params": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9_\\-]+$"
+          },
+          "description": "Valores por defecto de los parámetros ${nombre} de esta regla o plantilla."
+        },
+        "budget": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/budget"
+            }
+          ],
+          "description": "Presupuesto de tiempo por disparo: 0.5ms o 200us. Avisa en consola si el promedio reciente lo pasa."
+        },
+        "every": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/duration"
+            }
+          ],
+          "description": "Cada cuánto corre el timer (10s, 5m; mínimo 1 tick). (para trigger: timer)"
+        },
+        "repetitive_time": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
+          "description": "Ticks entre ejecuciones (forma de ConditionalEvents; mejor every). (para trigger: timer)"
+        },
+        "per_player": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
+          "description": "true (por defecto): una ejecución (o un estado) por cada jugador conectado; false: una sola, sin jugador. (para trigger: timer, state)"
+        },
+        "at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^([01]?\\d|2[0-3]):[0-5]\\d$"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^([01]?\\d|2[0-3]):[0-5]\\d$"
+              }
+            }
+          ],
+          "description": "Hora u horas del día, HH:mm (\"08:00\" o [\"08:00\", \"20:30\"]). (para trigger: clock)"
+        },
+        "timezone": {
+          "type": "string",
+          "description": "Zona horaria de at (p. ej. America/Mexico_City); por defecto, la del servidor. (para trigger: clock)"
+        },
+        "command": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_\\-]{1,32}$"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9_\\-]{1,32}$",
+                  "description": "Nombre del comando, sin la barra (letras, números, _ y -)."
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Otros nombres del comando."
+                },
+                "permission": {
+                  "type": "string",
+                  "description": "Permiso para usarlo (sin él, no aparece en el autocompletado)."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Descripción que muestra /help."
+                },
+                "usage": {
+                  "type": "string",
+                  "description": "Uso que se muestra al equivocarse."
+                },
+                "tab": {
+                  "type": "array",
+                  "description": "Autocompletado: una lista por argumento; \"{players}\" son los jugadores conectados."
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "additionalProperties": false
+            }
+          ],
+          "description": "El comando real que registra la regla: un nombre, o un mapa con name, aliases, permission, description, usage y tab. (para trigger: command)"
+        },
+        "when": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/conditions"
+            }
+          ],
+          "description": "El estado: una expresión o una lista de condiciones (todas). Se revisa solo cuando puede haber cambiado. (para trigger: state)"
+        },
+        "on_enter": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Acciones cuando when pasa a ser verdad (una vez; pasan por permiso, límite y enfriamiento). (para trigger: state)"
+        },
+        "on_exit": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Acciones cuando when deja de ser verdad, si corrió su on_enter (var.state_seconds: cuánto duró). (para trigger: state)"
+        },
+        "check_every": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/duration"
+            }
+          ],
+          "description": "Respaldo por intervalo para lo que no se puede deducir (placeholders, perm(), la hora): 5s, 1m. (para trigger: state)"
+        },
+        "watch": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/texts"
+            }
+          ],
+          "description": "Disparadores extra que hacen revisar el estado (p. ej. [player_interact]). (para trigger: state)"
+        },
+        "initial": {
+          "type": "string",
+          "enum": [
+            "enter",
+            "silent",
+            "ENTER",
+            "SILENT"
+          ],
+          "description": "Al entrar al servidor con el estado ya verdadero: enter (corre on_enter, por defecto) o silent. (para trigger: state)"
+        },
+        "variables": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/texts"
+            }
+          ],
+          "description": "Variables que hacen correr la regla (p. ej. [racha, bono]); sin la opción, todas. (para trigger: var_expire)"
+        },
+        "event": {
+          "type": "string",
+          "description": "Nombre completo de la clase del evento (p. ej. org.bukkit.event.player.PlayerEggThrowEvent). (para trigger: custom)"
+        },
+        "player_from": {
+          "type": "string",
+          "description": "Ruta al jugador dentro del evento (p. ej. getPlayer o entity); por defecto player o entity. (para trigger: custom)"
+        },
+        "move_mode": {
+          "type": "string",
+          "enum": [
+            "block",
+            "chunk",
+            "any",
+            "BLOCK",
+            "CHUNK",
+            "ANY"
+          ],
+          "description": "Cuándo cuenta un movimiento: block (cambia de bloque, por defecto), chunk o any. (para trigger: player_move)"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Parámetros de la regla call; llegan como var.<nombre>. (para trigger: call)"
+        }
+      },
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "trigger"
+          ]
+        },
+        {
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "required": [
+            "extends"
+          ]
+        },
+        {
+          "properties": {
+            "template": {
+              "const": true
+            }
+          },
+          "required": [
+            "template"
+          ]
+        }
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "trigger": {
+                "enum": [
+                  "timer",
+                  "repetitive",
+                  "repetitive_server"
+                ]
+              }
+            },
+            "required": [
+              "trigger"
+            ],
+            "not": {
+              "properties": {
+                "template": {
+                  "const": true
+                }
+              },
+              "required": [
+                "template"
+              ]
+            }
+          },
+          "then": {
+            "anyOf": [
+              {
+                "required": [
+                  "every"
+                ]
+              },
+              {
+                "required": [
+                  "repetitive_time"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "trigger": {
+                "enum": [
+                  "clock"
+                ]
+              }
+            },
+            "required": [
+              "trigger"
+            ],
+            "not": {
+              "properties": {
+                "template": {
+                  "const": true
+                }
+              },
+              "required": [
+                "template"
+              ]
+            }
+          },
+          "then": {
+            "required": [
+              "at"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "trigger": {
+                "enum": [
+                  "command"
+                ]
+              }
+            },
+            "required": [
+              "trigger"
+            ],
+            "not": {
+              "properties": {
+                "template": {
+                  "const": true
+                }
+              },
+              "required": [
+                "template"
+              ]
+            }
+          },
+          "then": {
+            "required": [
+              "command"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "trigger": {
+                "enum": [
+                  "custom"
+                ]
+              }
+            },
+            "required": [
+              "trigger"
+            ],
+            "not": {
+              "properties": {
+                "template": {
+                  "const": true
+                }
+              },
+              "required": [
+                "template"
+              ]
+            }
+          },
+          "then": {
+            "required": [
+              "event"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "trigger": {
+                "enum": [
+                  "state"
+                ]
+              }
+            },
+            "required": [
+              "trigger"
+            ],
+            "not": {
+              "properties": {
+                "template": {
+                  "const": true
+                }
+              },
+              "required": [
+                "template"
+              ]
+            }
+          },
+          "then": {
+            "required": [
+              "when"
+            ]
+          }
+        }
+      ]
+    },
+    "expression": {
+      "type": [
+        "string",
+        "number",
+        "boolean"
+      ],
+      "description": "Expresión de OmniEvents (el editor no la revisa: usa /omni validate). Operadores: && || ! == != < <= > >= ~= contains startsWith endsWith matches in, + - * / %, c ? a : b. Variables: var.x, pvar.x, gvar.x. Funciones: abs(x), bool(x), ceil(x), chance(p), clamp(x, min, max), cooldown(regla), date([patrón]), default(x, otro), distance(a, b), floor(x), format(x[, decimales]), has_item(material[, n]), hour(), if(condición, a, b), in_area(mundo, x1, y1, z1, x2, y2, z2), in_state(regla), int(x), join(lista[, separador]), len(x), lower(t), max(a, b, …), min(a, b, …), minute(), now(), num(x), online(nombre), papi(texto[, jugador]), perm(permiso[, jugador]), player(nombre), players(), pow(x, y), pvar_of(jugador, nombre), random(a, b), randomf(a, b), replace(t, buscar, poner), round(x[, decimales]), size(x), split(t, separador), sqrt(x), str(x), strip(t), substr(t, desde[, hasta]), trim(t), ttl(variable), upper(t), uses(regla), weekday()."
+    },
+    "duration": {
+      "description": "Duración: 10s, 5m, 1h30m, 2d, 1w, 20t (ticks), 500ms, o un número de segundos.",
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": 0
+        },
+        {
+          "type": "string",
+          "pattern": "^\\s*(\\d+(\\.\\d+)?|(\\d+(\\.\\d+)?\\s*([mM][sS]|[tTsSmMhHdDwW])\\s*)+)$"
+        },
+        {
+          "type": "string",
+          "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+          "description": "Parámetro ${nombre}: se reemplaza al cargar."
+        }
+      ]
+    },
+    "budget": {
+      "description": "Presupuesto de tiempo: 0.5ms, 200us o 200µs.",
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^\\s*(\\d+(\\.\\d+)?|\\.\\d+)\\s*([mM][sS]|[uUµ][sS])\\s*$"
+        },
+        {
+          "type": "string",
+          "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+          "description": "Parámetro ${nombre}: se reemplaza al cargar."
+        }
+      ]
+    },
+    "texts": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "conditions": {
+      "description": "Una condición o una lista (todas deben cumplirse). Cada una es una expresión, o un mapa con expr o any + of y su propio deny.",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/condition"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/condition"
+          }
+        }
+      ]
+    },
+    "condition": {
+      "description": "Una condición: una expresión, o un mapa con expr o any + of, y deny opcional.",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/expression"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "expr": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/expression"
+                }
+              ],
+              "description": "Expresión que debe cumplirse."
+            },
+            "deny": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/actions"
+                }
+              ],
+              "description": "Acciones si esta condición es la primera que falla; reemplazan al else de la regla. Dentro de of se ignoran."
+            }
+          },
+          "required": [
+            "expr"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "any": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Cuántas de las condiciones de of deben cumplirse como mínimo (entero entre 1 y el tamaño de of)."
+            },
+            "of": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/definitions/condition"
+              },
+              "description": "Condiciones del grupo any (textos o mapas; se puede anidar otro any)."
+            },
+            "deny": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/actions"
+                }
+              ],
+              "description": "Acciones si esta condición es la primera que falla; reemplazan al else de la regla. Dentro de of se ignoran."
+            }
+          },
+          "required": [
+            "any",
+            "of"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "test": {
+      "type": "object",
+      "description": "Pruebas de la regla: casos con given (el contexto falso) y expect (lo esperado). Corren con /omni test y al cargar, sin efectos.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Nombre del caso (sin él: caso 1, caso 2…)."
+        },
+        "given": {
+          "type": "object",
+          "description": "Contexto falso: rutas con puntos y su valor (block.type: DIAMOND_ORE, player.level: 12, event.damage: 5), variables iniciales (pvar.x, gvar.x, var.x, block.data.x) y placeholders (\"%vault_eco_balance%\": 100)."
+        },
+        "expect": {
+          "type": "object",
+          "description": "Lo esperado: fired, branch, variables, messages, commands, actions, cancelled y assert.",
+          "properties": {
+            "fired": {
+              "type": "boolean",
+              "description": "true si corrieron las acciones principales (actions, u on_enter en un state)."
+            },
+            "branch": {
+              "type": "string",
+              "pattern": "^(actions|else|deny|deny .+|none|on_enter)$",
+              "description": "La rama que corrió: actions, else, deny (o deny conditions[1]), none, u on_enter en un state."
+            },
+            "messages": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/texts"
+                }
+              ],
+              "description": "Textos que deben aparecer, en orden y sin formato, en los mensajes que mandaría (message, broadcast, actionbar, title…)."
+            },
+            "commands": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/texts"
+                }
+              ],
+              "description": "Textos que deben aparecer, en orden, en los comandos que correría (console, command)."
+            },
+            "actions": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/texts"
+                }
+              ],
+              "description": "Acciones que correría, en orden: el tipo (give_item) o el tipo y un texto (\"sound: LEVELUP\")."
+            },
+            "cancelled": {
+              "type": "boolean",
+              "description": "true si cancela el evento."
+            },
+            "assert": {
+              "description": "Expresión o lista de expresiones que deben dar verdadero al terminar (\"pvar.d >= 10\").",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/expression"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/expression"
+                  }
+                }
+              ]
+            }
+          },
+          "patternProperties": {
+            "^((pvar|gvar|var)\\.[A-Za-z0-9_\\-]+|.+\\.data\\.[^.\\s]+)$": {
+              "description": "Valor esperado de la variable al terminar (null: que no exista)."
+            }
+          },
+          "additionalProperties": false
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Semilla de random en este caso (0 por defecto): el mismo número elige siempre la misma rama."
+        }
+      },
+      "required": [
+        "expect"
+      ],
+      "additionalProperties": false
+    },
+    "actions": {
+      "description": "Una acción o una lista de acciones.",
+      "anyOf": [
+        {
+          "$ref": "#/definitions/action"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/action"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "action": {
+      "description": "Una acción: un texto \"tipo: valor\" o un mapa con la acción y sus modificadores (to, where, chance, when).",
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^\\s*(?:(?:to_all|to_target)\\s*:\\s*|(?:to_player|to_range|to_world)\\s*:[^:]*:\\s*)?(?:actionbar|bossbar|broadcast|call|cancel|cancel_drops|chat|clear_inventory|close_inventory|command|console|console_message|damage|delay|deny_join|drop_item|effect|explosion|feed|fire|fly|for_each|freeze|gamemode|give_exp|give_item|give_level|heal|if|keep_inventory|kick|launch|lightning|log|message|no_cooldown|particle|random|remove_effect|remove_item|repeat|reset_cooldown|send_to_server|set|set_block|set_damage|set_death_message|set_event|set_food|set_join_message|set_message|set_quit_message|sound|stop|stop_sound|summon|teleport|title|unset|velocity|wait_ticks|while|bc|call_event|cancel_event|centered_message|console_command|execute|give_potion_effect|json_message|lightning_strike|mini_message|msg|player_command|player_send_chat|playsound|potion|prevent_join|remove_potion_effect|set_on_fire|stopsound|tp|wait)\\s*(?::[\\s\\S]*)?$",
+          "description": "Forma corta: \"tipo: valor\" (p. ej. \"message: hola\" o \"cancel\")."
+        },
+        {
+          "type": "object",
+          "properties": {
+            "actionbar": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Muestra un texto en la barra de acción. Valor: texto."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "actionbar"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "bossbar": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Muestra una barra de jefe por unos segundos. Valor: texto;segundos;color;progreso (0 a 1)."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "bossbar"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "broadcast": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Envía un mensaje a todo el servidor. Valor: texto."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "broadcast"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "call": {
+              "anyOf": [
+                {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "rule": {
+                      "description": "Regla que se llama."
+                    },
+                    "args": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "$ref": "#/definitions/expression"
+                      },
+                      "description": "Mapa nombre: expresión con los argumentos."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "description": "Corre otra regla (trigger: call) con argumentos, que llegan como var.<nombre>. Valor: regla; nombre=expresión… o un mapa con rule y args."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "call"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "cancel": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Cancela el evento (o no, con false o una expresión). Valor: (sin valor) o expresión."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "cancel"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "cancel_drops": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "El evento no suelta ítems (block_break, entity_death, player_kill). Valor: (sin valor) o expresión."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "cancel_drops"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "chat": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Hace que el jugador escriba en el chat. Valor: texto."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "chat"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "clear_inventory": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Vacía el inventario. Valor: (sin valor)."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "clear_inventory"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "close_inventory": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Cierra el inventario abierto. Valor: (sin valor)."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "close_inventory"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "command": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Hace que el jugador ejecute un comando. Valor: comando."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "command"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "console": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Ejecuta un comando como la consola (sin la barra). Lo que escribió el jugador pierde los saltos de línea. Valor: comando."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "console"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "console_message": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Escribe un mensaje en la consola. Valor: texto."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "console_message"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "damage": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Hace daño. Valor: expresión."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "damage"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "delay": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Espera antes de seguir con las acciones siguientes. Valor: duración (10s, 5m, 20t)."
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "delay"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "deny_join": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Rechaza la entrada con un mensaje (player_pre_login). Valor: texto."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "deny_join"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "drop_item": {
+              "anyOf": [
+                {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "material": {
+                      "description": "Material (DIAMOND, IRON_SWORD…)."
+                    },
+                    "id": {
+                      "description": "Sinónimo de material."
+                    },
+                    "amount": {
+                      "description": "Cantidad."
+                    },
+                    "name": {
+                      "description": "Nombre (MiniMessage, & y {expresiones})."
+                    },
+                    "lore": {
+                      "description": "Líneas de descripción: una lista, o un texto con |."
+                    },
+                    "model": {
+                      "description": "custom_model_data."
+                    },
+                    "enchants": {
+                      "description": "Encantamientos: mapa encantamiento: nivel, o lista \"SHARPNESS:2\"."
+                    },
+                    "glow": {
+                      "description": "Brillo de encantado sin encantamientos."
+                    },
+                    "unbreakable": {
+                      "description": "Irrompible."
+                    },
+                    "hide_flags": {
+                      "description": "Oculta los atributos."
+                    },
+                    "saved": {
+                      "description": "Ítem guardado con /omni item save."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "description": "Suelta un ítem en el suelo, donde está el jugador o en location. Valor: como give_item."
+            },
+            "location": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "description": "Dónde soltarlo: mundo;x;y;z (~ relativo)."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "drop_item"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "effect": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Da un efecto de poción (segundos negativos: infinito). Valor: EFECTO;segundos;nivel;partículas."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "effect"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "explosion": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Explosión donde está el jugador (potencia máxima 10). Valor: potencia;fuego;romper bloques."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "explosion"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "feed": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Da comida (sin valor, la llena). Valor: expresión."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "feed"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "fire": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Prende fuego por N ticks. Valor: expresión (ticks)."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "fire"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "fly": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Permite volar o lo quita (sin valor, lo permite). Valor: expresión (true o false)."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "fly"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "for_each": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Corre do para cada destinatario; dentro, player es cada uno y source el original (con as, el destinatario queda en ese nombre). var.index es la vuelta. Valor: destinatarios (all, world:<mundo>, radius:<n>, nearby:<n> o una expresión)."
+            },
+            "do": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/actions"
+                }
+              ],
+              "description": "Acciones para cada destinatario."
+            },
+            "as": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "description": "Nombre de la raíz con el destinatario (sin as: player y source)."
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "for_each"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "freeze": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Congela (como la nieve en polvo) por N ticks. Valor: expresión (ticks)."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "freeze"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "gamemode": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Cambia el modo de juego. Valor: SURVIVAL, CREATIVE, ADVENTURE o SPECTATOR."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "gamemode"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "give_exp": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Da puntos de experiencia. Valor: expresión."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "give_exp"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "give_item": {
+              "anyOf": [
+                {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "material": {
+                      "description": "Material (DIAMOND, IRON_SWORD…)."
+                    },
+                    "id": {
+                      "description": "Sinónimo de material."
+                    },
+                    "amount": {
+                      "description": "Cantidad."
+                    },
+                    "name": {
+                      "description": "Nombre (MiniMessage, & y {expresiones})."
+                    },
+                    "lore": {
+                      "description": "Líneas de descripción: una lista, o un texto con |."
+                    },
+                    "model": {
+                      "description": "custom_model_data."
+                    },
+                    "enchants": {
+                      "description": "Encantamientos: mapa encantamiento: nivel, o lista \"SHARPNESS:2\"."
+                    },
+                    "glow": {
+                      "description": "Brillo de encantado sin encantamientos."
+                    },
+                    "unbreakable": {
+                      "description": "Irrompible."
+                    },
+                    "hide_flags": {
+                      "description": "Oculta los atributos."
+                    },
+                    "saved": {
+                      "description": "Ítem guardado con /omni item save."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "description": "Da un ítem; lo que no cabe cae al suelo. Valor: MATERIAL;cantidad;nombre;lore1|lore2, saved:<nombre> o un mapa."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "give_item"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "give_level": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Da niveles de experiencia. Valor: expresión."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "give_level"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "heal": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Cura (sin valor, por completo). Valor: expresión (vida)."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "heal"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "if": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Si la expresión se cumple corre then; si no, else. Valor: expresión."
+            },
+            "then": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/actions"
+                }
+              ],
+              "description": "Acciones si se cumple."
+            },
+            "else": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/actions"
+                }
+              ],
+              "description": "Acciones si no se cumple."
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "if"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "keep_inventory": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "El jugador conserva el inventario y el nivel al morir (player_death). Valor: (sin valor) o expresión."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "keep_inventory"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kick": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Expulsa al jugador con un mensaje. Valor: texto."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "kick"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "launch": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Impulsa hacia donde mira (sin valor, fuerza 1.5; máximo 10). Valor: expresión (fuerza)."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "launch"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "lightning": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Cae un rayo (solo el efecto, sin daño) donde está el jugador o en mundo;x;y;z. Valor: (sin valor) o mundo;x;y;z."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "lightning"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "log": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Escribe en el log del servidor, con el nombre de la regla. Valor: texto."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "log"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Envía un mensaje al jugador (sin jugador, a quien ejecutó o a la consola). Acepta MiniMessage, & y {expresiones}. Valor: texto."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "message"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "no_cooldown": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Esta ejecución no cuenta para el enfriamiento ni para el límite. Valor: (sin valor)."
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "no_cooldown"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "particle": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Partículas donde está el jugador (DUST lleva el color r;g;b). Valor: PARTÍCULA;cantidad;dx;dy;dz;velocidad[;r;g;b]."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "particle"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "random": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "weight": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "Peso de la rama (1 por defecto)."
+                  },
+                  "do": {
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/actions"
+                      }
+                    ],
+                    "description": "Acciones de la rama."
+                  }
+                },
+                "additionalProperties": false
+              },
+              "description": "Elige una rama al azar según su weight (1 por defecto) y corre su do. Valor: lista de ramas con weight y do."
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "random"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "remove_effect": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Quita un efecto, o todos (all). Valor: EFECTO o all."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "remove_effect"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "remove_item": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Quita ítems por material, tengan o no nombre. Valor: MATERIAL;cantidad."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "remove_item"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "repeat": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Repite do N veces; la vuelta (desde 0) está en var.i, o en var.<as>. Valor: expresión (veces)."
+            },
+            "do": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/actions"
+                }
+              ],
+              "description": "Acciones de cada vuelta."
+            },
+            "as": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "description": "Nombre de la variable con el número de vuelta (i por defecto)."
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "repeat"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "reset_cooldown": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Reinicia el enfriamiento de una regla para el jugador (o el global, sin jugador). Valor: regla."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "reset_cooldown"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "send_to_server": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Manda al jugador a otro servidor de la red (BungeeCord o Velocity). Valor: servidor."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "send_to_server"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "set": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Asigna una variable: var (de la ejecución), pvar (del jugador, persistente), gvar (global, persistente) u objeto.data.nombre (de un bloque, entidad o ítem, guardada en el objeto); también +=, -=, *= y /=. Valor: ámbito.nombre = expresión, u objeto.data.nombre = expresión."
+            },
+            "expire": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "description": "Duración tras la que la variable se borra sola (10m, 1h; spec 009). Cada set la vuelve a contar; un set sin expire la quita."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "set"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "set_block": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Cambia un bloque: con solo el material, el bloque del evento; con coordenadas, ese (~ relativo). Valor: [mundo;]x;y;z;MATERIAL o MATERIAL."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "set_block"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "set_damage": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Fija el daño del evento: un número o un porcentaje del actual. Valor: número o porcentaje (150%)."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "set_damage"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "set_death_message": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Cambia el mensaje de muerte (none lo oculta). Valor: texto o none."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "set_death_message"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "set_event": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Cambia una propiedad del evento con su setter. Valor: propiedad = expresión."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "set_event"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "set_food": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Fija el hambre (0 a 20). Valor: expresión."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "set_food"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "set_join_message": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Cambia el mensaje de entrada (none lo oculta). Valor: texto o none."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "set_join_message"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "set_message": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Cambia el mensaje de chat (player_chat). Valor: texto."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "set_message"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "set_quit_message": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Cambia el mensaje de salida (none lo oculta). Valor: texto o none."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "set_quit_message"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "sound": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Reproduce un sonido al jugador (o en la ubicación); también acepta claves como minecraft:block.note_block.pling. Valor: SONIDO;volumen;tono."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "sound"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "stop": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Detiene las acciones que faltan de esta ejecución. Valor: (sin valor)."
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "stop"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "stop_sound": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Detiene un sonido del jugador, o todos (all o sin valor). Valor: SONIDO o all."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "stop_sound"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "summon": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Invoca una entidad donde está el jugador o en mundo;x;y;z. Valor: TIPO[;mundo;x;y;z]."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "summon"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "teleport": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Teletransporta al jugador o la entidad; ~ es relativo a su posición. Valor: mundo;x;y;z;yaw;pitch."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "teleport"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Muestra un título y un subtítulo (none deja uno vacío); los tiempos van en ticks. Valor: título;subtítulo;entrada;estancia;salida."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "title"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "unset": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Borra una variable (y su caducidad). Valor: ámbito.nombre u objeto.data.nombre."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "unset"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "velocity": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Fija la velocidad. Valor: x;y;z."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "velocity"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "wait_ticks": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Espera N ticks (20 = 1 segundo). Valor: expresión (ticks)."
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "wait_ticks"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "while": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Repite do mientras la expresión se cumpla, con tope de iteraciones (config.yml). Valor: expresión."
+            },
+            "do": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/actions"
+                }
+              ],
+              "description": "Acciones de cada vuelta."
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "while"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "bc": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Alias de broadcast (ConditionalEvents). Envía un mensaje a todo el servidor. Valor: texto."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "bc"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "call_event": {
+              "anyOf": [
+                {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "rule": {
+                      "description": "Regla que se llama."
+                    },
+                    "args": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "$ref": "#/definitions/expression"
+                      },
+                      "description": "Mapa nombre: expresión con los argumentos."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "description": "Alias de call (ConditionalEvents). Corre otra regla (trigger: call) con argumentos, que llegan como var.<nombre>. Valor: regla; nombre=expresión… o un mapa con rule y args."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "call_event"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "cancel_event": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Alias de cancel (ConditionalEvents). Cancela el evento (o no, con false o una expresión). Valor: (sin valor) o expresión."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "cancel_event"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "centered_message": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Alias de message (ConditionalEvents). Envía un mensaje al jugador (sin jugador, a quien ejecutó o a la consola). Acepta MiniMessage, & y {expresiones}. Valor: texto."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "centered_message"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "console_command": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Alias de console (ConditionalEvents). Ejecuta un comando como la consola (sin la barra). Lo que escribió el jugador pierde los saltos de línea. Valor: comando."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "console_command"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "execute": {
+              "anyOf": [
+                {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "rule": {
+                      "description": "Regla que se llama."
+                    },
+                    "args": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "$ref": "#/definitions/expression"
+                      },
+                      "description": "Mapa nombre: expresión con los argumentos."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "description": "Alias de call (ConditionalEvents). Corre otra regla (trigger: call) con argumentos, que llegan como var.<nombre>. Valor: regla; nombre=expresión… o un mapa con rule y args."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "execute"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "give_potion_effect": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Alias de effect (ConditionalEvents). Da un efecto de poción (segundos negativos: infinito). Valor: EFECTO;segundos;nivel;partículas."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "give_potion_effect"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "json_message": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Alias de message (ConditionalEvents). Envía un mensaje al jugador (sin jugador, a quien ejecutó o a la consola). Acepta MiniMessage, & y {expresiones}. Valor: texto."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "json_message"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "lightning_strike": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Alias de lightning (ConditionalEvents). Cae un rayo (solo el efecto, sin daño) donde está el jugador o en mundo;x;y;z. Valor: (sin valor) o mundo;x;y;z."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "lightning_strike"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "mini_message": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Alias de message (ConditionalEvents). Envía un mensaje al jugador (sin jugador, a quien ejecutó o a la consola). Acepta MiniMessage, & y {expresiones}. Valor: texto."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "mini_message"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "msg": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Alias de message (ConditionalEvents). Envía un mensaje al jugador (sin jugador, a quien ejecutó o a la consola). Acepta MiniMessage, & y {expresiones}. Valor: texto."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "msg"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "player_command": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Alias de command (ConditionalEvents). Hace que el jugador ejecute un comando. Valor: comando."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "player_command"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "player_send_chat": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Alias de chat (ConditionalEvents). Hace que el jugador escriba en el chat. Valor: texto."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "player_send_chat"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "playsound": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Alias de sound (ConditionalEvents). Reproduce un sonido al jugador (o en la ubicación); también acepta claves como minecraft:block.note_block.pling. Valor: SONIDO;volumen;tono."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "playsound"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "potion": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Alias de effect (ConditionalEvents). Da un efecto de poción (segundos negativos: infinito). Valor: EFECTO;segundos;nivel;partículas."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "potion"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "prevent_join": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Alias de deny_join (ConditionalEvents). Rechaza la entrada con un mensaje (player_pre_login). Valor: texto."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "prevent_join"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "remove_potion_effect": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Alias de remove_effect (ConditionalEvents). Quita un efecto, o todos (all). Valor: EFECTO o all."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "remove_potion_effect"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "set_on_fire": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Alias de fire (ConditionalEvents). Prende fuego por N ticks. Valor: expresión (ticks)."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "set_on_fire"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "stopsound": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Alias de stop_sound (ConditionalEvents). Detiene un sonido del jugador, o todos (all o sin valor). Valor: SONIDO o all."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "stopsound"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "tp": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Alias de teleport (ConditionalEvents). Teletransporta al jugador o la entidad; ~ es relativo a su posición. Valor: mundo;x;y;z;yaw;pitch."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "tp"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "wait": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Alias de delay (ConditionalEvents). Espera antes de seguir con las acciones siguientes. Valor: duración (10s, 5m, 20t)."
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "wait"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "modifier_to": {
+      "type": "string",
+      "description": "A quién se aplica: self, target, all, world:<mundo>, radius:<n>, nearby:<n>, player:<nombre> o una expresión."
+    },
+    "modifier_where": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/expression"
+        }
+      ],
+      "description": "Filtro por destinatario de to (expresión; player es cada destinatario)."
+    },
+    "modifier_chance": {
+      "anyOf": [
+        {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        {
+          "type": "string",
+          "pattern": "^\\s*\\d+(\\.\\d+)?\\s*%?\\s*$"
+        }
+      ],
+      "description": "Probabilidad de que corra, en porcentaje (0 a 100)."
+    },
+    "modifier_when": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/expression"
+        }
+      ],
+      "description": "Guarda: la acción solo corre si la expresión se cumple."
+    }
+  }
+}

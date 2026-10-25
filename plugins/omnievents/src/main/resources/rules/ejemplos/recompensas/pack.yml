@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents-pack.schema.json
+# Paquete de ejemplo (spec 011): esta carpeta tiene pack.yml, así que sus reglas se llaman recompensas:<regla>.
+# Copia la carpeta a otro servidor y sus nombres no chocan con los de allá.
+name: recompensas
+version: 1.1.0
+description: Fichas por comando, con una plantilla y parámetros
+author: OmniEvents
+# ${moneda} en cualquier regla del paquete se reemplaza al cargar: cambia aquí la variable de todas a la vez.
+params:
+  moneda: pvar.fichas
+requires:
+  omnievents: ">=1.6.0"
+# Corren una vez, al subir a esa versión (la primera vez que se carga el paquete solo se guarda su versión).
+migrations:
+  "1.1.0":
+    - log: "recompensas: de {var.from} a {var.to}"

@@ -1,0 +1,21 @@
+# Plantilla con parámetros y un call relativo: avisar es e2epack:avisar (el paquete recompensas tiene otro avisar).
+plantilla:
+  template: true
+  params: { cantidad: 1 }
+  trigger: command
+  actions:
+    - set: "${variable} = default(${variable}, 0) + ${cantidad}"
+    - call: avisar
+
+sumar:
+  extends: plantilla
+  with: { cantidad: 3 }
+  command: e2epaquete
+  tests:
+    - given: { player.name: Ana, pvar.e2e_paquete: 1 }
+      expect: { pvar.e2e_paquete: 4, messages: ["e2e paquete: Ana tiene 4"] }
+
+avisar:
+  trigger: call
+  actions:
+    - message: "e2e paquete: {player.name} tiene {${variable}}"

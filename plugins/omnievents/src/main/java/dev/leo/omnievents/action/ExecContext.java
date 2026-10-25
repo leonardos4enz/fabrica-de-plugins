@@ -257,9 +257,10 @@ public final class ExecContext implements EvalContext {
         Player p = playerOrNull();
         UUID id = p == null ? null : p.getUniqueId();
         return switch (name) {
-            case "cooldown" -> plugin.rules().cooldownLeftSeconds(String.valueOf(args[0]), id);
-            case "uses" -> (double) plugin.rules().uses(String.valueOf(args[0]), id);
-            case "in_state" -> plugin.states().isIn(String.valueOf(args[0]), id);
+            // Spec 011: un nombre sin paquete se busca primero en el paquete de la regla.
+            case "cooldown" -> plugin.rules().cooldownLeftSeconds(plugin.rules().resolveName(String.valueOf(args[0]), rule), id);
+            case "uses" -> (double) plugin.rules().uses(plugin.rules().resolveName(String.valueOf(args[0]), rule), id);
+            case "in_state" -> plugin.states().isIn(plugin.rules().resolveName(String.valueOf(args[0]), rule), id);
             case "ttl" -> {
                 Scope scope = (Scope) args[0];
                 DataStore.Holder h = scope == Scope.GLOBAL ? plugin.data().global() : id == null ? null : plugin.data().player(id);

@@ -1,0 +1,14 @@
+# Paquete de la suite (spec 011): sus reglas se llaman e2epack:<regla>. El escenario 011 pone en data/packs.yml la
+# versión 1.0.0 y recarga: la migración 1.1.0 corre una vez.
+name: e2epack
+version: 1.1.0
+description: Paquete de la suite en el juego
+params:
+  variable: pvar.e2e_paquete
+requires:
+  omnievents: ">=1.6.0"
+  packs: { recompensas: ">=1.0.0" }
+migrations:
+  "1.1.0":
+    - set: "gvar.e2e_migrado = var.from + ' a ' + var.to"
+    - log: "e2e migración {var.from} → {var.to}"

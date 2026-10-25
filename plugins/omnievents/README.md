@@ -6,8 +6,9 @@ variables persistentes y herramientas de diagnóstico. Specs: [001](../../docs/s
 [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/spec.md) (herramientas de autor),
 [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/spec.md) (esquema para el editor y referencia generada),
 [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/spec.md) (disparador de estado, sin sondeo),
-[009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/spec.md) (variables que caducan y variables en bloques, entidades e ítems) y
-[010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/spec.md) (pruebas de reglas en el YAML: `tests:` y `/omni test`).
+[009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/spec.md) (variables que caducan y variables en bloques, entidades e ítems),
+[010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/spec.md) (pruebas de reglas en el YAML: `tests:` y `/omni test`) y
+[011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/spec.md) (paquetes, plantillas y versión).
 
 **[Referencia completa](../../docs/omnievents/referencia.md)**: cada opción, disparador, acción y función, generada del
 código (nunca queda desactualizada). **[Autocompletado en VS Code](#editor-autocompletado-y-errores-en-vs-code)** con
@@ -22,8 +23,8 @@ Minecraft 1.21.4 ([spec 004](../../docs/sdd/specs/004-fabrica-capturas-en-juego/
 ## Compatibilidad
 | Servidor | Estado | Evidencia |
 |---|---|---|
-| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.5.0) | Compuertas 1, 2 y 3a: 123 unitarias, servidor real y 38/38 escenarios en el juego dos veces (2026-10-25, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md) y [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md)) |
-| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.5.0) | 38/38 escenarios en el juego dos veces con el mismo jar (2026-10-25, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md) y [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md)) |
+| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.6.0) | Compuertas 1, 2 y 3a: 143 unitarias, servidor real y 39/39 escenarios en el juego dos veces (2026-10-25, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md) y [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md)) |
+| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.6.0) | 39/39 escenarios en el juego dos veces con el mismo jar (2026-10-25, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md) y [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md)) |
 | Paper 1.21.5 – 1.21.11 | Sin verificar | Debería funcionar (misma API, sin NMS), pero no se probó |
 | Paper 26.2 y 26.3 | Sin verificar | El bot de pruebas (mineflayer 4.39) llega hasta 26.1 |
 | Paper 1.21.3 o anterior | No soportada | Se compila contra la API de 1.21.4 |
@@ -107,6 +108,8 @@ Imágenes de `cooldown`, `on_cooldown`, `limit` y `on_limit`: [galería](../../d
 | `args` | Para `call`: parámetros (llegan como `var.<nombre>`) |
 | `when`, `on_enter`, `on_exit`, `check_every`, `watch`, `initial`, `per_player` | Para `state` ([abajo](#disparador-de-estado-trigger-state)) |
 | `budget` | Presupuesto de tiempo: `0.5ms` o `200us`; avisa en consola si el promedio reciente lo pasa ([abajo](#rendimiento-omni-cpu-y-budget)) |
+| `tests` | Pruebas de la regla con `given` y `expect` ([abajo](#pruebas-de-reglas-tests-y-omni-test)) |
+| `template`, `extends`, `with`, `params` | Plantillas y parámetros `${nombre}` ([abajo](#paquetes-plantillas-y-versión)) |
 
 ## Condiciones con deny y «N de M»
 Cada condición puede ser un texto (como siempre) o un mapa con `expr` y sus propias acciones `deny`. Si falla, corren
@@ -360,9 +363,71 @@ Descripción, forma del valor, claves y un ejemplo de cada acción: [referencia]
 Siempre disponibles: `player`, `event`, `world`, `location`, `item` (mano principal), `server`, `online`, `rule`.
 Las raíces de cada disparador y si se puede cancelar: [referencia](../../docs/omnievents/referencia.md#disparadores).
 
+## Paquetes, plantillas y versión
+Desde la 1.6.0 ([spec 011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/spec.md)). Una carpeta de
+`rules/` con un `pack.yml` es un **paquete**: sus reglas se llaman `paquete:regla`, así que se puede copiar la carpeta
+de otro servidor sin que sus nombres choquen con los tuyos. Sin `pack.yml` todo sigue como antes. Ejemplo completo:
+`rules/ejemplos/recompensas/`.
+```yaml
+# rules/recompensas/pack.yml (esquema: docs/omnievents/omnievents-pack.schema.json)
+name: recompensas                 # opcional: por defecto, el nombre de la carpeta (minúsculas, números, _ y -)
+version: 1.1.0                    # x.y.z
+description: Fichas por comando
+author: Leo
+enabled: true                     # false: sus reglas cargan desactivadas
+params: { moneda: pvar.fichas }   # ${moneda} en cualquier regla del paquete
+requires:
+  omnievents: ">=1.6.0"           # >=, >, <=, <, =, separadas por coma: ">=1.2.0, <2.0.0"
+  packs: { plantillas: ">=1.0.0" }
+migrations:                       # corren una vez al subir a esa versión
+  "1.1.0":
+    - set: "gvar.temporada = 2"
+    - log: "recompensas {var.from} → {var.to}"
+```
+```yaml
+# rules/recompensas/reglas.yml → recompensas:base (plantilla), recompensas:diaria, recompensas:avisar
+base:
+  template: true                  # no corre sola ni necesita trigger: la usan otras con extends
+  params: { cantidad: 1, espera: 1h }
+  trigger: command
+  cooldown: ${espera}             # un texto que es solo ${x} toma el valor con su tipo
+  actions:
+    - set: "${moneda} = default(${moneda}, 0) + ${cantidad}"
+    - call: avisar                # busca recompensas:avisar y, si no existe, una regla global avisar
+diaria:
+  extends: base                   # copia las claves de base; las que escribe diaria las reemplazan enteras
+  with: { cantidad: 10, espera: 1d }
+  command: fichasdiarias
+avisar:
+  trigger: call
+  actions: ["message: <green>Ahora tienes {${moneda}} fichas."]
+```
+- **Nombres:** desde una regla de un paquete, un nombre sin paquete (`call`, `cooldown()`, `uses()`, `in_state()`,
+  `extends`) se busca primero en el paquete y luego entre las globales; `otro:regla` es absoluto. Los comandos
+  (`/omni info recompensas:diaria`, `call`, `test`…) usan el nombre completo y lo autocompletan. Dentro de un paquete
+  una clave con `:` es un error; fuera de un paquete solo avisa (se reserva para paquetes).
+- **Plantillas:** `template: true` + `extends: nombre`. Se puede heredar en cadena hasta 8 niveles; un ciclo, una
+  plantilla que no existe o heredar de una regla que no es plantilla son errores con la ruta y «¿quisiste decir?».
+  `tests:` no se hereda (cada regla trae las suyas, y pueden usar `${x}`).
+- **Parámetros `${nombre}`:** se reemplazan al cargar en todos los textos de la regla, buscando en `with`, en
+  `params` de la regla y de sus plantillas, y en `params` del paquete, en ese orden. Un parámetro que no existe es un
+  error (`recompensas:diaria.actions[1].message: parámetro desconocido ${cantida} (¿quisiste decir 'cantidad'?)`);
+  `\${` deja `${` tal cual. Solo se reemplaza en reglas de un paquete, que usan `extends` o que declaran `params`: una
+  regla de antes con `${` en un texto no cambia.
+- **Versión y migraciones:** el plugin recuerda la última versión cargada de cada paquete en `data/packs.yml`. La
+  primera vez solo la guarda; al subir de versión corren, en orden, las `migrations` mayores que la guardada y menores
+  o iguales que la nueva (acciones de servidor, con `var.from` y `var.to`), y la consola dice
+  `Paquete recompensas: 1.0.0 → 1.1.0 (1 migraciones)`. Bajar de versión avisa y no corre nada. Si `requires` no se
+  cumple, el paquete no carga y el error dice qué falta y qué versión hay.
+- **`/omni pack list|info|enable|disable <paquete>`** (permiso `omnievents.command.pack`): la lista con versión,
+  reglas, plantillas y errores; el detalle con parámetros, requisitos, migraciones y versión guardada; activar o
+  desactivar todas sus reglas hasta el próximo `reload` (para dejarlo fijo, `enabled: false` en `pack.yml`).
+- **Mover una regla a un paquete** le cambia el nombre (`diaria` → `recompensas:diaria`): sus enfriamientos, usos y
+  estado guardados quedan con el nombre viejo.
+
 ## Comandos (`/omni`, alias `/oe`)
 `reload` · `validate` · `list [filtro]` · `info <regla>` · `enable|disable <regla>` · `debug <regla|all|off|export>` ·
-`check <regla> [jugador]` · `test [regla]` · `run <regla> <jugador> [--simular]` · `state <regla>` · `cpu [on|off|reset]` ·
+`check <regla> [jugador]` · `test [regla]` · `pack list|info|enable|disable [paquete]` · `run <regla> <jugador> [--simular]` · `state <regla>` · `cpu [on|off|reset]` ·
 `eval <expr>` · `call <regla> [jugador] [k=v…]` · `var get|set|del|list <jugador|global> [nombre] [valor] [--expire 10m]` ·
 `data [bloque|entidad|mano]` ·
 `cooldown reset <regla> [jugador|global]` · `limit reset <regla> [jugador|global]` · `stats` · `triggers` · `actions` ·

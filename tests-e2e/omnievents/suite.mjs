@@ -834,6 +834,56 @@ export default {
       }
     },
     {
+      id: '011 H1 CA1 · H1 CA2 · H2 CA3 · H3 CA2 · H4 CA1 · H4 CA3',
+      nombre: 'paquete: plantilla con parámetros y call relativo; /omni pack list|disable|enable; migración al subir de versión',
+      timeoutMs: 30000,
+      async fn ({ srv, bots }) {
+        const ana = bots[ANA]
+        await srv.consola(`omni var del ${ANA} e2e_paquete`)
+        await srv.sincronizar() // la consola no espera (002 F-03)
+        let m = ana.marca()
+        ana.comando('e2epaquete')
+        await ana.esperar('chat', /^e2e paquete: Ana_e2e tiene 3$/, { desde: m })
+        // avisar es e2epack:avisar, no el de recompensas (ni una global).
+        await ana.nunca('chat', /fichas/, { desde: m, ms: 200 })
+        await esperarVar(srv, ANA, 'e2e_paquete', 3)
+        m = ana.marca()
+        ana.comando('omni pack list')
+        await ana.esperar('chat', /e2epack 1\.1\.0 · 2 reglas · 1 plantillas$/, { desde: m })
+        await ana.esperar('chat', /recompensas 1\.1\.0 · 3 reglas · 1 plantillas$/, { desde: m })
+        m = ana.marca()
+        ana.comando('omni pack disable e2epack')
+        await ana.esperar('chat', /Paquete e2epack desactivado: 2 reglas\./, { desde: m })
+        m = ana.marca()
+        ana.comando('e2epaquete')
+        await ana.nunca('chat', /^e2e paquete:/, { desde: m, ms: 500 })
+        m = ana.marca()
+        ana.comando('omni pack enable e2epack')
+        await ana.esperar('chat', /Paquete e2epack activado: 2 reglas\./, { desde: m })
+        m = ana.marca()
+        ana.comando('e2epaquete')
+        await ana.esperar('chat', /^e2e paquete: Ana_e2e tiene 6$/, { desde: m })
+        await srv.consola(`omni var del ${ANA} e2e_paquete`)
+
+        // Migración: la última versión cargada vuelve a 1.0.0 y un reload sube a 1.1.0 (una vez).
+        const archivo = path.join(srv.run, 'plugins', 'OmniEvents', 'data', 'packs.yml')
+        const texto = fs.existsSync(archivo) ? fs.readFileSync(archivo, 'utf8') : 'packs:\n'
+        fs.writeFileSync(archivo, /^ {2}e2epack: .*$/m.test(texto) ? texto.replace(/^ {2}e2epack: .*$/m, '  e2epack: 1.0.0') : texto.replace(/^packs:.*$/m, 'packs:\n  e2epack: 1.0.0'))
+        await srv.consola('omni var del global e2e_migrado')
+        let ml = srv.marca()
+        await srv.consola('omni reload', { espera: /Recargado en/ })
+        await srv.esperarLog(/e2e migración 1\.0\.0 → 1\.1\.0/, { desde: ml })
+        await srv.esperarLog(/Paquete e2epack: 1\.0\.0 → 1\.1\.0 \(1 migraciones\)/, { desde: ml })
+        await srv.consola('omni var get global e2e_migrado', { espera: /e2e_migrado = '?1\.0\.0 a 1\.1\.0'?\s*$/ })
+        ml = srv.marca()
+        await srv.consola('omni reload', { espera: /Recargado en/ })
+        await srv.sincronizar()
+        await srv.consola('list', { espera: /players online/ })
+        if (srv.lineas.slice(ml).some(l => /e2e migración/.test(l))) throw new Error('la migración corrió dos veces')
+        await srv.consola('omni var del global e2e_migrado')
+      }
+    },
+    {
       id: 'H4 CA11 · H8 CA1',
       nombre: 'delay en spawnvip: el teletransporte llega a los 3 s sin bloquear el servidor; luego enfriamiento',
       timeoutMs: 30000,

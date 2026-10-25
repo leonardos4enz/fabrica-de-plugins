@@ -433,7 +433,16 @@
           "description": "Nota libre para quien lee la regla; el plugin no la usa."
         },
         "enabled": {
-          "type": "boolean",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
           "description": "false apaga la regla sin borrarla."
         },
         "priority": {
@@ -455,7 +464,16 @@
           "description": "Prioridad del oyente de Bukkit (normal por defecto)."
         },
         "ignore_cancelled": {
-          "type": "boolean",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
           "description": "true: no corre si otro plugin ya canceló el evento."
         },
         "worlds": {
@@ -551,12 +569,30 @@
           "description": "Acciones si la regla está en enfriamiento (var.cooldown_left tiene los segundos que faltan)."
         },
         "limit": {
-          "type": "integer",
-          "minimum": 0,
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
           "description": "Usos máximos (0 = sin límite)."
         },
         "one_time": {
-          "type": "boolean",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
           "description": "true equivale a limit: 1 (el one_time de ConditionalEvents)."
         },
         "limit_scope": {
@@ -619,6 +655,37 @@
           },
           "description": "Pruebas de la regla: casos con given (el contexto falso) y expect (lo esperado). Corren con /omni test y al cargar, sin efectos."
         },
+        "template": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
+          "description": "true: la regla es una plantilla; no corre sola (no necesita trigger) y otras la usan con extends."
+        },
+        "extends": {
+          "type": "string",
+          "description": "Plantilla de la que hereda (template: true): copia sus claves y las que escribe esta regla las reemplazan enteras. En un paquete busca primero en el paquete; paquete:plantilla es absoluto."
+        },
+        "with": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9_\\-]+$"
+          },
+          "description": "Valores de los parámetros ${nombre} para la plantilla de extends (ganan a los params de la plantilla y del paquete)."
+        },
+        "params": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9_\\-]+$"
+          },
+          "description": "Valores por defecto de los parámetros ${nombre} de esta regla o plantilla."
+        },
         "budget": {
           "allOf": [
             {
@@ -636,12 +703,30 @@
           "description": "Cada cuánto corre el timer (10s, 5m; mínimo 1 tick). (para trigger: timer)"
         },
         "repetitive_time": {
-          "type": "integer",
-          "minimum": 0,
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
           "description": "Ticks entre ejecuciones (forma de ConditionalEvents; mejor every). (para trigger: timer)"
         },
         "per_player": {
-          "type": "boolean",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+              "description": "Parámetro ${nombre}: se reemplaza al cargar."
+            }
+          ],
           "description": "true (por defecto): una ejecución (o un estado) por cada jugador conectado; false: una sola, sin jugador. (para trigger: timer, state)"
         },
         "at": {
@@ -807,6 +892,21 @@
           "required": [
             "type"
           ]
+        },
+        {
+          "required": [
+            "extends"
+          ]
+        },
+        {
+          "properties": {
+            "template": {
+              "const": true
+            }
+          },
+          "required": [
+            "template"
+          ]
         }
       ],
       "allOf": [
@@ -823,7 +923,17 @@
             },
             "required": [
               "trigger"
-            ]
+            ],
+            "not": {
+              "properties": {
+                "template": {
+                  "const": true
+                }
+              },
+              "required": [
+                "template"
+              ]
+            }
           },
           "then": {
             "anyOf": [
@@ -851,7 +961,17 @@
             },
             "required": [
               "trigger"
-            ]
+            ],
+            "not": {
+              "properties": {
+                "template": {
+                  "const": true
+                }
+              },
+              "required": [
+                "template"
+              ]
+            }
           },
           "then": {
             "required": [
@@ -870,7 +990,17 @@
             },
             "required": [
               "trigger"
-            ]
+            ],
+            "not": {
+              "properties": {
+                "template": {
+                  "const": true
+                }
+              },
+              "required": [
+                "template"
+              ]
+            }
           },
           "then": {
             "required": [
@@ -889,7 +1019,17 @@
             },
             "required": [
               "trigger"
-            ]
+            ],
+            "not": {
+              "properties": {
+                "template": {
+                  "const": true
+                }
+              },
+              "required": [
+                "template"
+              ]
+            }
           },
           "then": {
             "required": [
@@ -908,7 +1048,17 @@
             },
             "required": [
               "trigger"
-            ]
+            ],
+            "not": {
+              "properties": {
+                "template": {
+                  "const": true
+                }
+              },
+              "required": [
+                "template"
+              ]
+            }
           },
           "then": {
             "required": [
@@ -936,13 +1086,27 @@
         {
           "type": "string",
           "pattern": "^\\s*(\\d+(\\.\\d+)?|(\\d+(\\.\\d+)?\\s*([mM][sS]|[tTsSmMhHdDwW])\\s*)+)$"
+        },
+        {
+          "type": "string",
+          "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+          "description": "Parámetro ${nombre}: se reemplaza al cargar."
         }
       ]
     },
     "budget": {
-      "type": "string",
-      "pattern": "^\\s*(\\d+(\\.\\d+)?|\\.\\d+)\\s*([mM][sS]|[uUµ][sS])\\s*$",
-      "description": "Presupuesto de tiempo: 0.5ms, 200us o 200µs."
+      "description": "Presupuesto de tiempo: 0.5ms, 200us o 200µs.",
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^\\s*(\\d+(\\.\\d+)?|\\.\\d+)\\s*([mM][sS]|[uUµ][sS])\\s*$"
+        },
+        {
+          "type": "string",
+          "pattern": "^\\$\\{[A-Za-z0-9_\\-]+}$",
+          "description": "Parámetro ${nombre}: se reemplaza al cargar."
+        }
+      ]
     },
     "texts": {
       "anyOf": [

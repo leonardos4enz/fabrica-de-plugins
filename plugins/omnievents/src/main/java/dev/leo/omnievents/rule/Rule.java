@@ -47,6 +47,8 @@ public final class Rule {
     Set<String> expireVariables = Set.of();
     /** Spec 010: los casos de tests (los inválidos ya se descartaron al cargar). */
     List<RuleTest> tests = List.of();
+    /** Spec 011: el paquete de la regla (null si es global). */
+    String pack;
     private final Stats stats = new Stats();
     private final Budget budget = new Budget();
 
@@ -182,6 +184,25 @@ public final class Rule {
 
     public Budget budget() {
         return budget;
+    }
+
+    /** Paquete de la regla (spec 011), o null si es global. */
+    public String pack() {
+        return pack;
+    }
+
+    /**
+     * Busca una regla por nombre desde otra (spec 011, H1 CA2): paquete:regla es absoluto; un nombre sin paquete,
+     * desde una regla de un paquete, prueba primero en ese paquete y luego entre las globales.
+     */
+    public static Rule resolve(String name, Rule from, java.util.function.Function<String, Rule> lookup) {
+        if (name == null) return null;
+        String n = name.trim();
+        if (from != null && from.pack != null && n.indexOf(':') < 0) {
+            Rule r = lookup.apply(from.pack + ":" + n);
+            if (r != null) return r;
+        }
+        return lookup.apply(n);
     }
 
     public java.util.List<ActionNode> actions() {

@@ -11,7 +11,7 @@ Autocompletado y errores en VS Code (extensión YAML de Red Hat): pon esta líne
 
 El editor revisa opciones, disparadores, acciones y la forma de las condiciones; las expresiones, los materiales, los sonidos y los efectos se revisan con `/omni validate`. Los nombres van en minúsculas.
 
-Contenido: [opciones de una regla](#opciones-de-una-regla) · [condiciones](#condiciones) · [disparadores](#disparadores) · [acciones](#acciones) · [funciones](#funciones)
+Contenido: [opciones de una regla](#opciones-de-una-regla) · [paquetes y plantillas](#paquetes-y-plantillas) · [condiciones](#condiciones) · [disparadores](#disparadores) · [acciones](#acciones) · [funciones](#funciones)
 
 ## Opciones de una regla
 | Opción | Valor | Disparador | Qué hace |
@@ -40,6 +40,10 @@ Contenido: [opciones de una regla](#opciones-de-una-regla) · [condiciones](#con
 | `limit_reset` | `never`, `nunca`, `daily`, `diario`, `weekly`, `semanal`, `monthly`, `mensual` o una duración | todos | Cuándo se reinician los usos: never, daily, weekly, monthly o una duración (12h). |
 | `on_limit` | acciones | todos | Acciones si ya no quedan usos. |
 | `tests` | lista de casos | todos | Pruebas de la regla: casos con given (el contexto falso) y expect (lo esperado). Corren con /omni test y al cargar, sin efectos. |
+| `template` | `true` / `false` | todos | true: la regla es una plantilla; no corre sola (no necesita trigger) y otras la usan con extends. |
+| `extends` | texto | todos | Plantilla de la que hereda (template: true): copia sus claves y las que escribe esta regla las reemplazan enteras. En un paquete busca primero en el paquete; paquete:plantilla es absoluto. |
+| `with` | mapa nombre: valor | todos | Valores de los parámetros ${nombre} para la plantilla de extends (ganan a los params de la plantilla y del paquete). |
+| `params` | mapa nombre: valor | todos | Valores por defecto de los parámetros ${nombre} de esta regla o plantilla. |
 | `budget` | `0.5ms`, `200us` | todos | Presupuesto de tiempo por disparo: 0.5ms o 200us. Avisa en consola si el promedio reciente lo pasa. |
 | `every` | duración | `timer` | Cada cuánto corre el timer (10s, 5m; mínimo 1 tick). |
 | `repetitive_time` | entero | `timer` | Ticks entre ejecuciones (forma de ConditionalEvents; mejor every). |
@@ -90,6 +94,47 @@ Claves de `expect` (además, variables: `pvar.x`, `gvar.x`, `var.x`, `block.data
 | `actions` | Acciones que correría, en orden: el tipo (give_item) o el tipo y un texto ("sound: LEVELUP"). |
 | `cancelled` | true si cancela el evento. |
 | `assert` | Expresión o lista de expresiones que deben dar verdadero al terminar ("pvar.d >= 10"). |
+
+## Paquetes y plantillas
+Una carpeta de `rules/` con un `pack.yml` es un paquete (spec 011): sus reglas se llaman `paquete:regla` y, desde ellas, un nombre sin paquete (`call`, `cooldown()`, `uses()`, `in_state()`, `extends`) se busca primero en el paquete y luego entre las globales. `${nombre}` en los textos de una regla de un paquete, que usa `extends` o que declara `params` se reemplaza al cargar con `with`, `params` de la regla y de sus plantillas, y `params` del paquete, en ese orden; `\${` deja `${`. Esquema de `pack.yml`: `https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents-pack.schema.json`.
+
+| Clave de `pack.yml` | Qué hace |
+|---|---|
+| `name` | Nombre del paquete (por defecto, el de la carpeta): minúsculas, números, _ y -. Sus reglas se llaman nombre:regla. |
+| `version` | Versión del paquete, x.y.z (1.0.0 por defecto). Al subirla corren las migrations que correspondan. |
+| `description` | Qué hace el paquete (lo muestra /omni pack info). |
+| `author` | Quién lo hizo. |
+| `enabled` | false: sus reglas cargan desactivadas y no corren sus migraciones. |
+| `params` | Parámetros de todas las reglas del paquete: ${nombre} en sus textos se reemplaza al cargar. |
+| `requires` | Lo que necesita para cargar: omnievents y packs, con restricciones como ">=1.2.0, &lt;2.0.0". |
+| `migrations` | Versión → acciones de servidor que corren una vez al subir a esa versión (var.from y var.to: de qué versión a cuál). |
+
+Claves de `requires`:
+
+| Clave | Qué hace |
+|---|---|
+| `omnievents` | Versión de OmniEvents que necesita (p. ej. ">=1.6.0"). |
+| `packs` | Otros paquetes que necesita: nombre → restricción (p. ej. plantillas: ">=1.0.0"). |
+
+```yaml
+# rules/recompensas/pack.yml
+version: 1.1.0
+params: { moneda: pvar.monedas }
+migrations:
+  "1.1.0":
+    - log: "recompensas {var.from} → {var.to}"
+# rules/recompensas/reglas.yml → recompensas:base (plantilla) y recompensas:diaria
+base:
+  template: true
+  params: { cantidad: 1 }
+  trigger: command
+  actions:
+    - set: "${moneda} += ${cantidad}"
+diaria:
+  extends: base
+  with: { cantidad: 50 }
+  command: diaria
+```
 
 ## Condiciones
 Cada elemento de `conditions` es una expresión, o un mapa con estas claves:

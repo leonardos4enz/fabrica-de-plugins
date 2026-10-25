@@ -98,7 +98,7 @@ public final class RuleTester {
         ExecContext ctx = new ExecContext(rule, bindings, sb);
         ctx.locals().putAll(locals);
         sb.caller((name, from, args, depth, tr) -> {
-            Rule target = rules.apply(name);
+            Rule target = Rule.resolve(name, from.rule(), rules);
             if (target == null) throw new ActionException("no existe la regla '" + name + "' para call");
             ExecContext c = from.forCall(target, new LinkedHashMap<>(args));
             if (from.rule() != null) c.locals().putIfAbsent("caller", from.rule().name());

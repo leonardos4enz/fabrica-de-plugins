@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { Servidor, uuidOffline, jarMasNuevo } from './servidor.mjs'
+import { Servidor, uuidOffline, jarMasNuevo, copiarCarpeta } from './servidor.mjs'
 
 const carpeta = () => fs.mkdtempSync(path.join(os.tmpdir(), 'e2e-'))
 
@@ -63,4 +63,19 @@ test('005 F-01: con varias versiones en dist/ se instala el jar más reciente, n
   } finally {
     fs.rmSync(dir, { recursive: true, force: true })
   }
+})
+
+// Regresión (spec 011, F-01): los ejemplos traen un paquete en una subcarpeta (ejemplos/recompensas/) y la copia
+// de la suite no entraba en subcarpetas (copyFileSync de una carpeta revienta).
+test('copiarCarpeta copia también las subcarpetas', () => {
+  const de = carpeta()
+  const a = path.join(carpeta(), 'destino')
+  fs.writeFileSync(path.join(de, 'uno.yml'), 'a: 1\n')
+  fs.mkdirSync(path.join(de, 'paquete', 'sub'), { recursive: true })
+  fs.writeFileSync(path.join(de, 'paquete', 'pack.yml'), 'version: 1.0.0\n')
+  fs.writeFileSync(path.join(de, 'paquete', 'sub', 'dos.yml'), 'b: 2\n')
+  copiarCarpeta(de, a)
+  assert.equal(fs.readFileSync(path.join(a, 'uno.yml'), 'utf8'), 'a: 1\n')
+  assert.equal(fs.readFileSync(path.join(a, 'paquete', 'pack.yml'), 'utf8'), 'version: 1.0.0\n')
+  assert.equal(fs.readFileSync(path.join(a, 'paquete', 'sub', 'dos.yml'), 'utf8'), 'b: 2\n')
 })

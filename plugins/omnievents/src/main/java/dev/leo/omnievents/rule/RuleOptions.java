@@ -11,7 +11,7 @@ import java.util.Set;
  */
 public final class RuleOptions {
     /** Qué tipo de valor lleva una opción (decide su forma en el esquema). */
-    public enum Kind { TRIGGER, BOOLEAN, INTEGER, TEXT, TEXTS, ENUM, DURATION, RESET, TIMES, CONDITIONS, ACTIONS, COMMAND, BUDGET, LIST, TESTS }
+    public enum Kind { TRIGGER, BOOLEAN, INTEGER, TEXT, TEXTS, ENUM, DURATION, RESET, TIMES, CONDITIONS, ACTIONS, COMMAND, BUDGET, LIST, TESTS, PARAMS }
 
     /**
      * @param values  valores permitidos (ENUM y RESET)
@@ -30,6 +30,10 @@ public final class RuleOptions {
     public static final Map<String, String> EXPECT_KEYS = new LinkedHashMap<>();
     /** Claves del bloque command de un trigger command. */
     public static final Map<String, String> COMMAND_KEYS = new LinkedHashMap<>();
+    /** Claves de pack.yml (spec 011). */
+    public static final Map<String, String> PACK_KEYS = new LinkedHashMap<>();
+    /** Claves de requires en pack.yml (spec 011). */
+    public static final Map<String, String> REQUIRES_KEYS = new LinkedHashMap<>();
 
     private RuleOptions() {
     }
@@ -76,7 +80,11 @@ public final class RuleOptions {
         values("limit_reset", Kind.RESET, "Cuándo se reinician los usos: never, daily, weekly, monthly o una duración (12h).", "never", "nunca", "daily", "diario", "weekly", "semanal", "monthly", "mensual");
         add("on_limit", Kind.ACTIONS, "Acciones si ya no quedan usos.");
         add("tests", Kind.TESTS, "Pruebas de la regla: casos con given (el contexto falso) y expect (lo esperado). Corren con /omni test y al cargar, sin efectos.");
-        add("budget", Kind.BUDGET, "Presupuesto de tiempo por disparo: 0.5ms o 200us. Avisa en consola si el promedio reciente lo pasa.");
+        add("template", Kind.BOOLEAN, "true: la regla es una plantilla; no corre sola (no necesita trigger) y otras la usan con extends.");
+        add("extends", Kind.TEXT, "Plantilla de la que hereda (template: true): copia sus claves y las que escribe esta regla las reemplazan enteras. En un paquete busca primero en el paquete; paquete:plantilla es absoluto.");
+        add("with", Kind.PARAMS, "Valores de los parámetros ${nombre} para la plantilla de extends (ganan a los params de la plantilla y del paquete).");
+        add("params", Kind.PARAMS, "Valores por defecto de los parámetros ${nombre} de esta regla o plantilla.");
+        add("budget", Kind.BUDGET,"Presupuesto de tiempo por disparo: 0.5ms o 200us. Avisa en consola si el promedio reciente lo pasa.");
         only("timer", "every", Kind.DURATION, "Cada cuánto corre el timer (10s, 5m; mínimo 1 tick).");
         only("timer", "repetitive_time", Kind.INTEGER, "Ticks entre ejecuciones (forma de ConditionalEvents; mejor every).");
         only("timer, state", "per_player", Kind.BOOLEAN, "true (por defecto): una ejecución (o un estado) por cada jugador conectado; false: una sola, sin jugador.");
@@ -118,6 +126,17 @@ public final class RuleOptions {
         COMMAND_KEYS.put("description", "Descripción que muestra /help.");
         COMMAND_KEYS.put("usage", "Uso que se muestra al equivocarse.");
         COMMAND_KEYS.put("tab", "Autocompletado: una lista por argumento; \"{players}\" son los jugadores conectados.");
+
+        PACK_KEYS.put("name", "Nombre del paquete (por defecto, el de la carpeta): minúsculas, números, _ y -. Sus reglas se llaman nombre:regla.");
+        PACK_KEYS.put("version", "Versión del paquete, x.y.z (1.0.0 por defecto). Al subirla corren las migrations que correspondan.");
+        PACK_KEYS.put("description", "Qué hace el paquete (lo muestra /omni pack info).");
+        PACK_KEYS.put("author", "Quién lo hizo.");
+        PACK_KEYS.put("enabled", "false: sus reglas cargan desactivadas y no corren sus migraciones.");
+        PACK_KEYS.put("params", "Parámetros de todas las reglas del paquete: ${nombre} en sus textos se reemplaza al cargar.");
+        PACK_KEYS.put("requires", "Lo que necesita para cargar: omnievents y packs, con restricciones como \">=1.2.0, <2.0.0\".");
+        PACK_KEYS.put("migrations", "Versión → acciones de servidor que corren una vez al subir a esa versión (var.from y var.to: de qué versión a cuál).");
+        REQUIRES_KEYS.put("omnievents", "Versión de OmniEvents que necesita (p. ej. \">=1.6.0\").");
+        REQUIRES_KEYS.put("packs", "Otros paquetes que necesita: nombre → restricción (p. ej. plantillas: \">=1.0.0\").");
     }
 
     public static Map<String, Option> all() {
