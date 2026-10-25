@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
 # Ejemplos de OmniEvents: entrada y salida de jugadores.
 # Cada clave de primer nivel es una regla. Los nombres son únicos en todo el plugin.
 

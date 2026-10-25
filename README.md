@@ -7,7 +7,7 @@ tarea y no se da por terminada sin una fase de verificación en un servidor real
 ## Plugins
 | Plugin | Qué hace | Versión | Paper verificado | Java |
 |---|---|---|---|---|
-| [OmniEvents](plugins/omnievents/README.md) | Eventos condicionales: «cuando pase X, si se cumple Y, haz Z». Versión propia y ampliada de ConditionalEvents ([galería](docs/omnievents/galeria.md)) | 1.1.0 | 1.21.4 y 26.1.2 ([detalle](plugins/omnievents/README.md#compatibilidad)) | 21+ |
+| [OmniEvents](plugins/omnievents/README.md) | Eventos condicionales: «cuando pase X, si se cumple Y, haz Z». Versión propia y ampliada de ConditionalEvents ([galería](docs/omnievents/galeria.md), [referencia](docs/omnievents/referencia.md), autocompletado en VS Code) | 1.2.0 | 1.21.4 y 26.1.2 ([detalle](plugins/omnievents/README.md#compatibilidad)) | 21+ |
 
 «Verificado» quiere decir que el plugin pasó la suite en el juego en esa versión; las demás están «sin verificar» en
 el README de cada plugin.
@@ -19,6 +19,7 @@ docs/sdd/                 constitución, metodología, verificación, roadmap, p
 docs/adr/                 decisiones de arquitectura
 docs/investigacion/       investigaciones para decidir specs (p. ej. plugins exitosos y propuestas)
 docs/<plugin>/galeria.md  una imagen por capacidad, generada en el juego (spec 004); imágenes en docs/img/<plugin>/
+docs/omnievents/          también referencia.md y omnievents.schema.json, generados del código (spec 007)
 plugins/<nombre>/         un proyecto Gradle por plugin
 tools/nuevo-plugin.ps1    crea un plugin nuevo con su spec
 tests-e2e/                pruebas en el juego con bots (compuerta 3a): npm --prefix tests-e2e test

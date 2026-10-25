@@ -8,6 +8,7 @@
 | 004 Fábrica: capturas en el juego | Verificado: `npm --prefix tests-e2e run capturas` genera la [galería de OmniEvents](../omnievents/galeria.md) ([verify](specs/004-fabrica-capturas-en-juego/verify.md)). Desde ahora, capturas solo puntuales (lección del dueño) |
 | 005 OmniEvents: enable/disable sin re-sincronizar comandos | Verificado: 1.0.1, F-01 de la 004 resuelto; `npm --prefix tests-e2e test` 22/22 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/005-omnievents-comandos-sin-resync/verify.md)) |
 | 006 OmniEvents: herramientas de autor (P1, P2, P4) | Verificado: 1.1.0; 62 unitarias; 27/27 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/006-omnievents-herramientas-de-autor/verify.md)) |
+| 007 OmniEvents: esquema JSON y referencia generada (P3) | Verificado: 1.2.0; esquema y [referencia](../omnievents/referencia.md) generados del registro; 73 unitarias; 27/27 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/007-omnievents-esquema-y-referencia/verify.md)) |
 
 ## Por qué empezamos con OmniEvents
 OmniEvents es la versión propia de *ConditionalEvents* (Ajneb97): «cuando pase X, si se cumple Y, haz Z». Es el
@@ -28,6 +29,7 @@ los siguientes plugins de la fábrica.
 | Un solo `deny` por evento; para decir qué falta hay que duplicar eventos | `deny` por condición y grupos «al menos N de M» | 006 |
 | No se puede probar un evento sin dispararlo | `/omni check` (condiciones con valores, sin efectos), `/omni run --simular` y `/omni debug export` | 006 |
 | Sin medición de costo | `/omni cpu` por regla, condición y acción (muestreo) y `budget` con aviso | 006 |
+| Sin ayuda al escribir el YAML; la documentación se queda atrás | Esquema JSON para VS Code (autocompletado y errores) y referencia generados del código, con prueba que falla si se desactualizan | 007 |
 | Errores de configuración poco precisos | Validación al cargar con archivo, ruta y «¿quisiste decir?»; `/omni validate` | 001 |
 | Oyentes siempre registrados | Solo se escucha un evento si alguna regla lo usa | 001 |
 | — | Importador de configuraciones de ConditionalEvents | 001 |
@@ -36,7 +38,7 @@ los siguientes plugins de la fábrica.
 Elegidas por el dueño tras la [investigación de plugins exitosos](../investigacion/plugins-exitosos.md) (§6; todas
 menos el editor visual), una por sesión. El número de cada una se asigna al abrirla:
 1. ~~**OmniEvents: herramientas de autor** (P1, P2, P4)~~: hecha en la [006](specs/006-omnievents-herramientas-de-autor/spec.md).
-2. **OmniEvents: esquema JSON y referencia generada** (P3).
+2. ~~**OmniEvents: esquema JSON y referencia generada** (P3)~~: hecha en la [007](specs/007-omnievents-esquema-y-referencia/spec.md). Las specs siguientes documentan su sintaxis nueva al registrarla (descripción en `Triggers`, `Actions`, `Functions` o `RuleOptions`) y regeneran con `./gradlew :omnievents:schema`.
 3. **OmniEvents: disparador de estado** `trigger: state` con `on_enter` y `on_exit`, sin sondeo (P6).
 4. **OmniEvents: variables con caducidad y en bloques, entidades e ítems** (P5).
 5. **OmniEvents: pruebas de reglas en el YAML** `tests:` y `/omni test` (P7).

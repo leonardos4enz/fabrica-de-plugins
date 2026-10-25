@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
 # Ejemplos de OmniEvents: comandos reales con alias, permiso y autocompletado; reglas que llaman a otras.
 
 spawn_vip:

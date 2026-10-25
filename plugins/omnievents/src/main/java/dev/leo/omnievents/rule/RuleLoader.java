@@ -37,12 +37,12 @@ import java.util.function.Predicate;
 
 /** Lee rules/**\/*.yml y compila cada regla, juntando todos los problemas (H1, H2 CA5, H3 CA4, H5 CA6). */
 public final class RuleLoader {
-    private static final Set<String> KNOWN_KEYS = Set.of(
-            "trigger", "type", "enabled", "priority", "ignore_cancelled", "worlds", "permission", "bypass_permission",
-            "ignore_with_permission", "conditions", "if", "cooldown", "cooldown_scope", "limit", "limit_scope", "limit_reset",
-            "one_time", "actions", "then", "else", "on_cooldown", "on_limit", "every", "repetitive_time", "per_player", "at",
-            "timezone", "move_mode", "command", "event", "player_from", "args", "description", "budget");
-    private static final Set<String> CONDITION_KEYS = Set.of("expr", "any", "of", "deny");
+    /** Opciones de regla que se aceptan: salen del registro de {@link RuleOptions} (spec 007). */
+    public static final Set<String> KNOWN_KEYS = RuleOptions.names();
+    private static final Set<String> CONDITION_KEYS = RuleOptions.CONDITION_KEYS.keySet();
+    /** Nombres de ConditionalEvents y sinónimos de disparadores → nombre propio. */
+    public static final Map<String, String> TRIGGER_ALIASES = Map.of(
+            "repetitive", "timer", "repetitive_server", "timer", "player_leave", "player_quit", "player_kill_entity", "player_kill");
 
     private final Actions actions;
     private final Triggers triggers;
@@ -303,12 +303,7 @@ public final class RuleLoader {
 
     private static String alias(String t) {
         String l = t.toLowerCase(Locale.ROOT);
-        return switch (l) {
-            case "repetitive", "repetitive_server" -> "timer";
-            case "player_leave" -> "player_quit";
-            case "player_kill_entity" -> "player_kill";
-            default -> l;
-        };
+        return TRIGGER_ALIASES.getOrDefault(l, l);
     }
 
     private static boolean scope(String v, String path, Problems problems) {

@@ -22,6 +22,8 @@ cpu-disabled: "{prefix} <gray>El perfilador está apagado. Enciéndelo con <yell
 export-done: "{prefix} <green>{traces} trazas guardadas en <white>{file}</white>. Revísalas antes de compartirlas: llevan nombres y mensajes de jugadores."
 export-empty: "{prefix} <gray>No hay trazas guardadas. Primero depura una regla con <yellow>/omni debug</yellow> o simúlala con <yellow>/omni run … --simular</yellow>."
 export-busy: "{prefix} <gray>Ya se está guardando una traza; espera un momento."
+schema-done: "{prefix} <green>Esquema y referencia escritos en <white>{schema}</white> y <white>{reference}</white>. Para el autocompletado en VS Code, pon al inicio de un archivo de <white>rules/</white>: <yellow># yaml-language-server: $schema=../omnievents.schema.json</yellow> (en subcarpetas, agrega ../)."
+schema-busy: "{prefix} <gray>Ya se está escribiendo el esquema; espera un momento."
 debug-status: "{prefix} <gray>Depuración: <white>{rule}</white>"
 call-done: "{prefix} <green>Regla <white>{rule}</white> ejecutada."
 var-set: "{prefix} <green>{target}.{name}</green> <gray>=</gray> <white>{value}</white>"

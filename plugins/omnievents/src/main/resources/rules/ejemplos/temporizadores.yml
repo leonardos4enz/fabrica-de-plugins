@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
 # Ejemplos de OmniEvents: temporizadores, horas del día y arranque del servidor.
 
 anuncio:

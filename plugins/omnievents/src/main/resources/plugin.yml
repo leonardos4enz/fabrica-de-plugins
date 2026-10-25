@@ -37,6 +37,7 @@ permissions:
       omnievents.command.item: true
       omnievents.command.import: true
       omnievents.command.selftest: true
+      omnievents.command.schema: true
   omnievents.command.help: {default: op}
   omnievents.command.reload: {default: op}
   omnievents.command.validate: {default: op}
@@ -59,3 +60,4 @@ permissions:
   omnievents.command.item: {default: op}
   omnievents.command.import: {default: op}
   omnievents.command.selftest: {default: op}
+  omnievents.command.schema: {default: op}

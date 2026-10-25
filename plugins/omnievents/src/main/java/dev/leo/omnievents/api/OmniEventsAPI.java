@@ -36,12 +36,22 @@ public final class OmniEventsAPI {
         plugin().actions().register(name, factory);
     }
 
+    /** Acción nueva con su documentación para /omni schema (spec 007), p. ej. {@code new Actions.Doc("mi plugin", …)}. */
+    public static void registerAction(String name, Actions.Doc doc, Actions.Factory factory) {
+        plugin().actions().register(name, doc, factory);
+    }
+
     /** Función nueva del lenguaje de expresiones. */
     public static void registerFunction(String name, int minArgs, int maxArgs, Functions.Impl impl) {
         Functions.register(name, minArgs, maxArgs, impl);
     }
 
-    /** Disparador nuevo (TriggerType.event(...)). */
+    /** Función nueva con su firma («saldo(jugador)») y descripción para /omni schema (spec 007). */
+    public static void registerFunction(String signature, String description, int minArgs, int maxArgs, Functions.Impl impl) {
+        Functions.register(signature, description, minArgs, maxArgs, impl);
+    }
+
+    /** Disparador nuevo (TriggerType.event(...)); con {@code .doc("…")} se describe en /omni schema. */
     public static void registerTrigger(TriggerType type) {
         plugin().triggers().register(type);
     }

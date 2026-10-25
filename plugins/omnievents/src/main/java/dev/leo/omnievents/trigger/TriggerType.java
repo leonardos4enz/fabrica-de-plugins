@@ -27,6 +27,7 @@ public final class TriggerType {
     private final Predicate<Event> filter;
     private final Set<String> roots;
     private final boolean async;
+    private String description = "";
 
     private TriggerType(String name, Kind kind, String group, Class<? extends Event> eventClass, Function<Event, Object> player,
                         BiConsumer<Event, Map<String, Object>> binder, Predicate<Event> filter, Set<String> roots, boolean async) {
@@ -66,6 +67,16 @@ public final class TriggerType {
 
     private static boolean isSyncEvent(Class<? extends Event> type) {
         return !type.getSimpleName().startsWith("Async");
+    }
+
+    /** Descripción para el esquema y la referencia (spec 007). Se pone una vez, al registrar. */
+    public TriggerType doc(String description) {
+        this.description = description;
+        return this;
+    }
+
+    public String description() {
+        return description;
     }
 
     public String name() {

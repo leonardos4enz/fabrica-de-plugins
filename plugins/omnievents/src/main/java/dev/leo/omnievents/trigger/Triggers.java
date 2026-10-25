@@ -139,82 +139,82 @@ public final class Triggers {
 
     private void player() {
         String g = "jugador";
-        register(TriggerType.event("player_join", g, PlayerJoinEvent.class, PlayerJoinEvent::getPlayer, (e, m) -> m.put("first_join", !e.getPlayer().hasPlayedBefore()), null, false, "first_join"));
-        register(TriggerType.event("player_quit", g, PlayerQuitEvent.class, PlayerQuitEvent::getPlayer, (e, m) -> m.put("reason", e.getReason()), null, false, "reason"));
+        register(TriggerType.event("player_join", g, PlayerJoinEvent.class, PlayerJoinEvent::getPlayer, (e, m) -> m.put("first_join", !e.getPlayer().hasPlayedBefore()), null, false, "first_join").doc("Un jugador entra al servidor (first_join: si es su primera vez)."));
+        register(TriggerType.event("player_quit", g, PlayerQuitEvent.class, PlayerQuitEvent::getPlayer, (e, m) -> m.put("reason", e.getReason()), null, false, "reason").doc("Un jugador sale del servidor."));
         register(TriggerType.event("player_pre_login", g, AsyncPlayerPreLoginEvent.class, null, (e, m) -> {
             m.put("name", e.getName());
             m.put("uuid", e.getUniqueId().toString());
             m.put("ip", e.getAddress().getHostAddress());
-        }, null, true, "name", "uuid", "ip"));
+        }, null, true, "name", "uuid", "ip").doc("Antes de entrar, en un hilo asíncrono: aún no hay jugador, solo name, uuid e ip (deny_join lo rechaza)."));
         register(TriggerType.event("player_respawn", g, PlayerRespawnEvent.class, PlayerRespawnEvent::getPlayer, (e, m) -> {
             m.put("location", e.getRespawnLocation());
             m.put("reason", e.getRespawnReason());
-        }, null, false, "reason"));
+        }, null, false, "reason").doc("Un jugador reaparece tras morir."));
         register(TriggerType.event("player_death", g, PlayerDeathEvent.class, PlayerDeathEvent::getPlayer, (e, m) -> {
             m.put("killer", e.getPlayer().getKiller());
             m.put("cause", e.getPlayer().getLastDamageCause() == null ? null : e.getPlayer().getLastDamageCause().getCause());
-        }, null, false, "killer", "cause"));
-        register(TriggerType.event("player_chat", g, AsyncChatEvent.class, AsyncChatEvent::getPlayer, (e, m) -> m.put("message", plain(e.message())), null, true, "message"));
+        }, null, false, "killer", "cause").doc("Un jugador muere (killer: quien lo mató, si fue otro jugador)."));
+        register(TriggerType.event("player_chat", g, AsyncChatEvent.class, AsyncChatEvent::getPlayer, (e, m) -> m.put("message", plain(e.message())), null, true, "message").doc("Un jugador escribe en el chat (asíncrono; message es el texto, sin formato)."));
         register(TriggerType.event("player_command", g, PlayerCommandPreprocessEvent.class, PlayerCommandPreprocessEvent::getPlayer, (e, m) -> {
             Map<String, Object> cmd = command(e.getMessage());
             m.put("cmd", cmd);
             m.put("args", cmd.get("args"));
-        }, null, false, "cmd", "args"));
+        }, null, false, "cmd", "args").doc("Un jugador escribe un comando, de cualquier plugin (cmd.name, args)."));
         register(TriggerType.event("player_move", g, PlayerMoveEvent.class, PlayerMoveEvent::getPlayer, (e, m) -> {
             m.put("from", e.getFrom());
             m.put("to", e.getTo());
-        }, null, false, "from", "to"));
+        }, null, false, "from", "to").doc("Un jugador se mueve (move_mode: block, chunk o any)."));
         register(TriggerType.event("player_teleport", g, PlayerTeleportEvent.class, PlayerTeleportEvent::getPlayer, (e, m) -> {
             m.put("from", e.getFrom());
             m.put("to", e.getTo());
             m.put("cause", e.getCause());
-        }, null, false, "from", "to", "cause"));
-        register(TriggerType.event("player_world_change", g, PlayerChangedWorldEvent.class, PlayerChangedWorldEvent::getPlayer, (e, m) -> m.put("from_world", e.getFrom()), null, false, "from_world"));
-        register(TriggerType.event("player_sneak", g, PlayerToggleSneakEvent.class, PlayerToggleSneakEvent::getPlayer, (e, m) -> m.put("sneaking", e.isSneaking()), null, false, "sneaking"));
-        register(TriggerType.event("player_sprint", g, PlayerToggleSprintEvent.class, PlayerToggleSprintEvent::getPlayer, (e, m) -> m.put("sprinting", e.isSprinting()), null, false, "sprinting"));
+        }, null, false, "from", "to", "cause").doc("Un jugador es teletransportado."));
+        register(TriggerType.event("player_world_change", g, PlayerChangedWorldEvent.class, PlayerChangedWorldEvent::getPlayer, (e, m) -> m.put("from_world", e.getFrom()), null, false, "from_world").doc("Un jugador cambia de mundo (from_world: de dónde viene)."));
+        register(TriggerType.event("player_sneak", g, PlayerToggleSneakEvent.class, PlayerToggleSneakEvent::getPlayer, (e, m) -> m.put("sneaking", e.isSneaking()), null, false, "sneaking").doc("Un jugador empieza o deja de agacharse (sneaking)."));
+        register(TriggerType.event("player_sprint", g, PlayerToggleSprintEvent.class, PlayerToggleSprintEvent::getPlayer, (e, m) -> m.put("sprinting", e.isSprinting()), null, false, "sprinting").doc("Un jugador empieza o deja de correr (sprinting)."));
         register(TriggerType.event("player_jump", g, PlayerJumpEvent.class, PlayerJumpEvent::getPlayer, (e, m) -> {
             m.put("from", e.getFrom());
             m.put("to", e.getTo());
-        }, null, false, "from", "to"));
+        }, null, false, "from", "to").doc("Un jugador salta."));
         register(TriggerType.event("player_level_change", g, PlayerLevelChangeEvent.class, PlayerLevelChangeEvent::getPlayer, (e, m) -> {
             m.put("old_level", e.getOldLevel());
             m.put("new_level", e.getNewLevel());
-        }, null, false, "old_level", "new_level"));
-        register(TriggerType.event("player_gamemode_change", g, PlayerGameModeChangeEvent.class, PlayerGameModeChangeEvent::getPlayer, (e, m) -> m.put("new_mode", e.getNewGameMode()), null, false, "new_mode"));
-        register(TriggerType.event("player_toggle_flight", g, PlayerToggleFlightEvent.class, PlayerToggleFlightEvent::getPlayer, (e, m) -> m.put("flying", e.isFlying()), null, false, "flying"));
+        }, null, false, "old_level", "new_level").doc("Cambia el nivel de experiencia de un jugador."));
+        register(TriggerType.event("player_gamemode_change", g, PlayerGameModeChangeEvent.class, PlayerGameModeChangeEvent::getPlayer, (e, m) -> m.put("new_mode", e.getNewGameMode()), null, false, "new_mode").doc("Un jugador cambia de modo de juego (new_mode)."));
+        register(TriggerType.event("player_toggle_flight", g, PlayerToggleFlightEvent.class, PlayerToggleFlightEvent::getPlayer, (e, m) -> m.put("flying", e.isFlying()), null, false, "flying").doc("Un jugador empieza o deja de volar (flying)."));
         register(TriggerType.event("player_bed_enter", g, PlayerBedEnterEvent.class, PlayerBedEnterEvent::getPlayer, (e, m) -> {
             m.put("block", e.getBed());
             m.put("result", e.getBedEnterResult());
-        }, null, false, "block", "result"));
+        }, null, false, "block", "result").doc("Un jugador intenta acostarse en una cama."));
         register(TriggerType.event("player_fish", g, PlayerFishEvent.class, PlayerFishEvent::getPlayer, (e, m) -> {
             m.put("target", e.getCaught());
             m.put("state", e.getState());
-        }, null, false, "target", "state"));
+        }, null, false, "target", "state").doc("Un jugador pesca (state: estado de la caña; target: lo que sacó)."));
         register(TriggerType.event("player_regain_health", g, EntityRegainHealthEvent.class, e -> (Player) e.getEntity(), (e, m) -> {
             m.put("amount", e.getAmount());
             m.put("reason", e.getRegainReason());
-        }, e -> e.getEntity() instanceof Player, false, "amount", "reason"));
+        }, e -> e.getEntity() instanceof Player, false, "amount", "reason").doc("Un jugador recupera vida (amount, reason)."));
         register(TriggerType.event("player_food_change", g, FoodLevelChangeEvent.class, e -> (Player) e.getEntity(), (e, m) -> {
             m.put("old_food", ((Player) e.getEntity()).getFoodLevel());
             m.put("new_food", e.getFoodLevel());
-        }, e -> e.getEntity() instanceof Player, false, "old_food", "new_food"));
-        register(TriggerType.event("player_advancement", g, PlayerAdvancementDoneEvent.class, PlayerAdvancementDoneEvent::getPlayer, (e, m) -> m.put("advancement", e.getAdvancement().getKey().toString()), e -> !e.getAdvancement().getKey().getKey().startsWith("recipes/"), false, "advancement"));
+        }, e -> e.getEntity() instanceof Player, false, "old_food", "new_food").doc("Cambia el hambre de un jugador (old_food, new_food)."));
+        register(TriggerType.event("player_advancement", g, PlayerAdvancementDoneEvent.class, PlayerAdvancementDoneEvent::getPlayer, (e, m) -> m.put("advancement", e.getAdvancement().getKey().toString()), e -> !e.getAdvancement().getKey().getKey().startsWith("recipes/"), false, "advancement").doc("Un jugador consigue un logro (sin las recetas)."));
         register(TriggerType.event("player_swap_hands", g, PlayerSwapHandItemsEvent.class, PlayerSwapHandItemsEvent::getPlayer, (e, m) -> {
             m.put("item", e.getMainHandItem());
             m.put("offhand", e.getOffHandItem());
-        }, null, false, "item", "offhand"));
+        }, null, false, "item", "offhand").doc("Un jugador cambia los ítems de mano (tecla F)."));
         register(TriggerType.event("player_armor_change", g, PlayerArmorChangeEvent.class, PlayerArmorChangeEvent::getPlayer, (e, m) -> {
             m.put("item", e.getNewItem());
             m.put("old_item", e.getOldItem());
             m.put("slot", e.getSlotType());
-        }, null, false, "item", "old_item", "slot"));
+        }, null, false, "item", "old_item", "slot").doc("Un jugador se pone o se quita una pieza de armadura."));
         register(TriggerType.event("player_portal", g, PlayerPortalEvent.class, PlayerPortalEvent::getPlayer, (e, m) -> {
             m.put("from", e.getFrom());
             m.put("to", e.getTo());
             m.put("cause", e.getCause());
-        }, null, false, "from", "to", "cause"));
-        register(TriggerType.event("player_kick", g, PlayerKickEvent.class, PlayerKickEvent::getPlayer, (e, m) -> m.put("reason", plain(e.reason())), null, false, "reason"));
-        register(TriggerType.event("player_resource_pack", g, PlayerResourcePackStatusEvent.class, PlayerResourcePackStatusEvent::getPlayer, (e, m) -> m.put("status", e.getStatus()), null, false, "status"));
+        }, null, false, "from", "to", "cause").doc("Un jugador usa un portal."));
+        register(TriggerType.event("player_kick", g, PlayerKickEvent.class, PlayerKickEvent::getPlayer, (e, m) -> m.put("reason", plain(e.reason())), null, false, "reason").doc("Un jugador es expulsado del servidor."));
+        register(TriggerType.event("player_resource_pack", g, PlayerResourcePackStatusEvent.class, PlayerResourcePackStatusEvent::getPlayer, (e, m) -> m.put("status", e.getStatus()), null, false, "status").doc("Un jugador responde al paquete de recursos (status)."));
     }
 
     private void combat() {
@@ -226,54 +226,54 @@ public final class Triggers {
                 Player a = attacker(b.getDamager());
                 m.put("damager", a != null ? a : b.getDamager());
             }
-        }, e -> e.getEntity() instanceof Player, false, "cause", "damage", "damager"));
+        }, e -> e.getEntity() instanceof Player, false, "cause", "damage", "damager").doc("Un jugador recibe daño (cause; damager si fue una entidad o un jugador, también con proyectil)."));
         register(TriggerType.event("player_attack", g, EntityDamageByEntityEvent.class, e -> attacker(e.getDamager()), (e, m) -> {
             m.put("target", e.getEntity());
             m.put("damage", e.getDamage());
             m.put("projectile", e.getDamager() instanceof Projectile ? e.getDamager() : null);
-        }, e -> attacker(e.getDamager()) != null, false, "target", "damage", "projectile", "item"));
+        }, e -> attacker(e.getDamager()) != null, false, "target", "damage", "projectile", "item").doc("Un jugador golpea a una entidad, directo o con un proyectil (target, damage)."));
         register(TriggerType.event("player_kill", g, EntityDeathEvent.class, e -> e.getEntity().getKiller(), (e, m) -> m.put("target", e.getEntity()),
-                e -> e.getEntity().getKiller() != null, false, "target", "item"));
+                e -> e.getEntity().getKiller() != null, false, "target", "item").doc("Un jugador mata a una entidad (target)."));
         register(TriggerType.event("player_shoot", g, EntityShootBowEvent.class, e -> (Player) e.getEntity(), (e, m) -> {
             m.put("item", e.getBow());
             m.put("projectile", e.getProjectile());
             m.put("force", e.getForce());
-        }, e -> e.getEntity() instanceof Player, false, "item", "projectile", "force"));
+        }, e -> e.getEntity() instanceof Player, false, "item", "projectile", "force").doc("Un jugador dispara un arco o una ballesta (force)."));
         register(TriggerType.event("projectile_hit", g, ProjectileHitEvent.class, e -> (Player) e.getEntity().getShooter(), (e, m) -> {
             m.put("target", e.getHitEntity());
             m.put("block", e.getHitBlock());
             m.put("projectile", e.getEntity());
-        }, e -> e.getEntity().getShooter() instanceof Player, false, "target", "block", "projectile"));
+        }, e -> e.getEntity().getShooter() instanceof Player, false, "target", "block", "projectile").doc("El proyectil de un jugador pega en una entidad o un bloque."));
     }
 
     private void blocks() {
         String g = "bloques";
-        register(TriggerType.event("block_break", g, BlockBreakEvent.class, BlockBreakEvent::getPlayer, (e, m) -> m.put("block", e.getBlock()), null, false, "block", "item"));
+        register(TriggerType.event("block_break", g, BlockBreakEvent.class, BlockBreakEvent::getPlayer, (e, m) -> m.put("block", e.getBlock()), null, false, "block", "item").doc("Un jugador rompe un bloque."));
         register(TriggerType.event("block_place", g, BlockPlaceEvent.class, BlockPlaceEvent::getPlayer, (e, m) -> {
             m.put("block", e.getBlockPlaced());
             m.put("against", e.getBlockAgainst());
             m.put("item", e.getItemInHand());
-        }, null, false, "block", "against", "item"));
+        }, null, false, "block", "against", "item").doc("Un jugador coloca un bloque (against: el bloque en que se apoya)."));
         register(TriggerType.event("block_interact", g, PlayerInteractEvent.class, PlayerInteractEvent::getPlayer, (e, m) -> {
             m.put("block", e.getClickedBlock());
             m.put("action", clickAction(e));
             m.put("face", e.getBlockFace());
             if (e.getItem() != null) m.put("item", e.getItem());
-        }, e -> e.getClickedBlock() != null && mainHand(e.getHand()), false, "block", "action", "face", "item"));
+        }, e -> e.getClickedBlock() != null && mainHand(e.getHand()), false, "block", "action", "face", "item").doc("Un jugador hace clic en un bloque con la mano principal (action: RIGHT_CLICK, SHIFT_LEFT_CLICK…)."));
         register(TriggerType.event("sign_change", g, SignChangeEvent.class, SignChangeEvent::getPlayer, (e, m) -> {
             List<Object> lines = new ArrayList<>();
             for (net.kyori.adventure.text.Component c : e.lines()) lines.add(plain(c));
             m.put("lines", lines);
             m.put("block", e.getBlock());
-        }, null, false, "lines", "block"));
+        }, null, false, "lines", "block").doc("Un jugador escribe un cartel (lines)."));
         register(TriggerType.event("bucket_fill", g, PlayerBucketFillEvent.class, PlayerBucketFillEvent::getPlayer, (e, m) -> {
             m.put("block", e.getBlockClicked());
             m.put("item", e.getItemStack());
-        }, null, false, "block", "item"));
+        }, null, false, "block", "item").doc("Un jugador llena un cubo."));
         register(TriggerType.event("bucket_empty", g, PlayerBucketEmptyEvent.class, PlayerBucketEmptyEvent::getPlayer, (e, m) -> {
             m.put("block", e.getBlockClicked());
             m.put("bucket", e.getBucket());
-        }, null, false, "block", "bucket"));
+        }, null, false, "block", "bucket").doc("Un jugador vacía un cubo."));
     }
 
     private void items() {
@@ -282,38 +282,38 @@ public final class Triggers {
             m.put("action", clickAction(e));
             m.put("block", e.getClickedBlock());
             if (e.getItem() != null) m.put("item", e.getItem());
-        }, e -> mainHand(e.getHand()), false, "action", "block", "item"));
+        }, e -> mainHand(e.getHand()), false, "action", "block", "item").doc("Un jugador hace clic, con o sin bloque, con la mano principal (action)."));
         register(TriggerType.event("item_interact", g, PlayerInteractEvent.class, PlayerInteractEvent::getPlayer, (e, m) -> {
             m.put("item", e.getItem());
             m.put("action", clickAction(e));
             m.put("block", e.getClickedBlock());
-        }, e -> e.getItem() != null && mainHand(e.getHand()) && e.getAction() != Action.PHYSICAL, false, "item", "action", "block"));
-        register(TriggerType.event("item_consume", g, PlayerItemConsumeEvent.class, PlayerItemConsumeEvent::getPlayer, (e, m) -> m.put("item", e.getItem()), null, false, "item"));
+        }, e -> e.getItem() != null && mainHand(e.getHand()) && e.getAction() != Action.PHYSICAL, false, "item", "action", "block").doc("Un jugador hace clic con un ítem en la mano principal (action)."));
+        register(TriggerType.event("item_consume", g, PlayerItemConsumeEvent.class, PlayerItemConsumeEvent::getPlayer, (e, m) -> m.put("item", e.getItem()), null, false, "item").doc("Un jugador come o bebe un ítem."));
         register(TriggerType.event("item_craft", g, CraftItemEvent.class, e -> (Player) e.getWhoClicked(), (e, m) -> {
             m.put("item", e.getRecipe().getResult());
             m.put("click", e.getClick());
-        }, e -> e.getWhoClicked() instanceof Player, false, "item", "click"));
+        }, e -> e.getWhoClicked() instanceof Player, false, "item", "click").doc("Un jugador fabrica un ítem (item: el resultado)."));
         register(TriggerType.event("item_drop", g, PlayerDropItemEvent.class, PlayerDropItemEvent::getPlayer, (e, m) -> {
             m.put("item", e.getItemDrop().getItemStack());
             m.put("entity", e.getItemDrop());
-        }, null, false, "item", "entity"));
+        }, null, false, "item", "entity").doc("Un jugador tira un ítem."));
         register(TriggerType.event("item_pickup", g, EntityPickupItemEvent.class, e -> (Player) e.getEntity(), (e, m) -> {
             m.put("item", e.getItem().getItemStack());
             m.put("entity", e.getItem());
-        }, e -> e.getEntity() instanceof Player, false, "item", "entity"));
+        }, e -> e.getEntity() instanceof Player, false, "item", "entity").doc("Un jugador recoge un ítem del suelo."));
         register(TriggerType.event("item_held", g, PlayerItemHeldEvent.class, PlayerItemHeldEvent::getPlayer, (e, m) -> {
             m.put("item", e.getPlayer().getInventory().getItem(e.getNewSlot()));
             m.put("previous_item", e.getPlayer().getInventory().getItem(e.getPreviousSlot()));
             m.put("slot", e.getNewSlot());
-        }, null, false, "item", "previous_item", "slot"));
+        }, null, false, "item", "previous_item", "slot").doc("Un jugador cambia de ranura en la barra (item: el nuevo, previous_item: el anterior)."));
         register(TriggerType.event("item_enchant", g, EnchantItemEvent.class, EnchantItemEvent::getEnchanter, (e, m) -> {
             m.put("item", e.getItem());
             Map<String, Object> ench = new LinkedHashMap<>();
             e.getEnchantsToAdd().forEach((k, v) -> ench.put(k.getKey().getKey(), v));
             m.put("enchants", ench);
             m.put("cost", e.getExpLevelCost());
-        }, null, false, "item", "enchants", "cost"));
-        register(TriggerType.event("item_break", g, PlayerItemBreakEvent.class, PlayerItemBreakEvent::getPlayer, (e, m) -> m.put("item", e.getBrokenItem()), null, false, "item"));
+        }, null, false, "item", "enchants", "cost").doc("Un jugador encanta un ítem en la mesa (enchants, cost)."));
+        register(TriggerType.event("item_break", g, PlayerItemBreakEvent.class, PlayerItemBreakEvent::getPlayer, (e, m) -> m.put("item", e.getBrokenItem()), null, false, "item").doc("Se rompe la herramienta o la armadura de un jugador."));
     }
 
     private void inventory() {
@@ -321,11 +321,11 @@ public final class Triggers {
         register(TriggerType.event("inventory_open", g, InventoryOpenEvent.class, e -> (Player) e.getPlayer(), (e, m) -> {
             m.put("title", plain(e.getView().title()));
             m.put("inventory_type", e.getInventory().getType());
-        }, e -> e.getPlayer() instanceof Player, false, "title", "inventory_type"));
+        }, e -> e.getPlayer() instanceof Player, false, "title", "inventory_type").doc("Un jugador abre un inventario (title, inventory_type)."));
         register(TriggerType.event("inventory_close", g, InventoryCloseEvent.class, e -> (Player) e.getPlayer(), (e, m) -> {
             m.put("title", plain(e.getView().title()));
             m.put("inventory_type", e.getInventory().getType());
-        }, e -> e.getPlayer() instanceof Player, false, "title", "inventory_type"));
+        }, e -> e.getPlayer() instanceof Player, false, "title", "inventory_type").doc("Un jugador cierra un inventario."));
         register(TriggerType.event("inventory_click", g, InventoryClickEvent.class, e -> (Player) e.getWhoClicked(), (e, m) -> {
             m.put("item", e.getCurrentItem());
             m.put("cursor", e.getCursor());
@@ -334,25 +334,25 @@ public final class Triggers {
             m.put("click", e.getClick());
             m.put("title", plain(e.getView().title()));
             m.put("inventory_type", e.getView().getTopInventory().getType());
-        }, e -> e.getWhoClicked() instanceof Player, false, "item", "cursor", "slot", "raw_slot", "click", "title", "inventory_type"));
+        }, e -> e.getWhoClicked() instanceof Player, false, "item", "cursor", "slot", "raw_slot", "click", "title", "inventory_type").doc("Un jugador hace clic en un inventario (slot, raw_slot, click, cursor, title)."));
     }
 
     private void entities() {
         String g = "entidades";
         register(TriggerType.event("entity_interact", g, PlayerInteractEntityEvent.class, PlayerInteractEntityEvent::getPlayer, (e, m) -> m.put("target", e.getRightClicked()),
-                e -> mainHand(e.getHand()), false, "target", "item"));
+                e -> mainHand(e.getHand()), false, "target", "item").doc("Un jugador hace clic derecho en una entidad (target)."));
         register(TriggerType.event("entity_spawn", g, CreatureSpawnEvent.class, null, (e, m) -> {
             m.put("entity", e.getEntity());
             m.put("reason", e.getSpawnReason());
             m.put("world", e.getEntity().getWorld());
             m.put("location", e.getLocation());
-        }, null, false, "entity", "reason"));
+        }, null, false, "entity", "reason").doc("Aparece una criatura (entity, reason); sin jugador."));
         register(TriggerType.event("entity_death", g, EntityDeathEvent.class, e -> e.getEntity().getKiller(), (e, m) -> {
             m.put("entity", e.getEntity());
             m.put("killer", e.getEntity().getKiller());
             m.put("world", e.getEntity().getWorld());
             m.put("location", e.getEntity().getLocation());
-        }, null, false, "entity", "killer"));
+        }, null, false, "entity", "killer").doc("Muere una entidad (entity; player y killer si la mató un jugador)."));
     }
 
     private void server() {
@@ -362,14 +362,14 @@ public final class Triggers {
             m.put("cmd", cmd);
             m.put("args", cmd.get("args"));
             m.put("sender", e.getSender());
-        }, null, false, "cmd", "args", "sender"));
-        register(TriggerType.special("server_start", TriggerType.Kind.SERVER_START, g));
-        register(TriggerType.special("server_stop", TriggerType.Kind.SERVER_STOP, g));
-        register(TriggerType.special("timer", TriggerType.Kind.TIMER, g, "player", "world", "location"));
-        register(TriggerType.special("clock", TriggerType.Kind.CLOCK, g, "player", "world", "location", "time"));
-        register(TriggerType.special("call", TriggerType.Kind.CALL, g, "player", "event", "world", "location", "sender", "caller"));
-        register(TriggerType.special("command", TriggerType.Kind.COMMAND, g, "player", "sender", "cmd", "args", "world", "location"));
-        register(TriggerType.special("custom", TriggerType.Kind.CUSTOM, g, "player", "event", "world", "location"));
+        }, null, false, "cmd", "args", "sender").doc("La consola ejecuta un comando (cmd, args, sender)."));
+        register(TriggerType.special("server_start", TriggerType.Kind.SERVER_START, g).doc("Al arrancar el servidor, cuando OmniEvents termina de cargar."));
+        register(TriggerType.special("server_stop", TriggerType.Kind.SERVER_STOP, g).doc("El servidor se apaga."));
+        register(TriggerType.special("timer", TriggerType.Kind.TIMER, g, "player", "world", "location").doc("Cada cierto tiempo (every); por defecto una vez por jugador conectado (per_player)."));
+        register(TriggerType.special("clock", TriggerType.Kind.CLOCK, g, "player", "world", "location", "time").doc("A una hora del día (at: HH:mm, timezone)."));
+        register(TriggerType.special("call", TriggerType.Kind.CALL, g, "player", "event", "world", "location", "sender", "caller").doc("Solo corre cuando otra regla la llama (call) o con /omni call; sus args llegan como var.<nombre>."));
+        register(TriggerType.special("command", TriggerType.Kind.COMMAND, g, "player", "sender", "cmd", "args", "world", "location").doc("Registra un comando real (command: name, aliases, permission, tab) y corre al usarlo."));
+        register(TriggerType.special("custom", TriggerType.Kind.CUSTOM, g, "player", "event", "world", "location").doc("Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from)."));
     }
 
     /** Raíces comunes que cualquier contexto ofrece. */

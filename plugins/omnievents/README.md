@@ -3,7 +3,12 @@
 Eventos condicionales para **Paper 1.21.4 y 26.1** (ver [Compatibilidad](#compatibilidad)): «cuando pase X, si se cumple Y, haz Z», declarado en YAML.
 Es la versión propia de la fábrica de *ConditionalEvents*, con un lenguaje de expresiones real, control de flujo,
 variables persistentes y herramientas de diagnóstico. Specs: [001](../../docs/sdd/specs/001-omnievents-nucleo/spec.md) (núcleo) y
-[006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/spec.md) (herramientas de autor).
+[006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/spec.md) (herramientas de autor) y
+[007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/spec.md) (esquema para el editor y referencia generada).
+
+**[Referencia completa](../../docs/omnievents/referencia.md)**: cada opción, disparador, acción y función, generada del
+código (nunca queda desactualizada). **[Autocompletado en VS Code](#editor-autocompletado-y-errores-en-vs-code)** con
+el esquema JSON.
 
 ![El ejemplo bienvenida: anuncio de primera entrada en el chat y el título «Bienvenido · 2 jugadores en línea»](../../docs/img/omnievents/ejemplo-bienvenida.png)
 
@@ -14,8 +19,8 @@ Minecraft 1.21.4 ([spec 004](../../docs/sdd/specs/004-fabrica-capturas-en-juego/
 ## Compatibilidad
 | Servidor | Estado | Evidencia |
 |---|---|---|
-| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.1.0) | Compuertas 1, 2 y 3a: 62 unitarias, servidor real y 27/27 escenarios en el juego dos veces (2026-10-24, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md) y [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md)) |
-| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.1.0) | 27/27 escenarios en el juego dos veces con el mismo jar (2026-10-24, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md) y [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md)) |
+| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.2.0) | Compuertas 1, 2 y 3a: 73 unitarias, servidor real (con `/omni schema`) y 27/27 escenarios en el juego dos veces (2026-10-24, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md) y [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md)) |
+| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.2.0) | 27/27 escenarios en el juego dos veces con el mismo jar (2026-10-24, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md) y [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md)) |
 | Paper 1.21.5 – 1.21.11 | Sin verificar | Debería funcionar (misma API, sin NMS), pero no se probó |
 | Paper 26.2 y 26.3 | Sin verificar | El bot de pruebas (mineflayer 4.39) llega hasta 26.1 |
 | Paper 1.21.3 o anterior | No soportada | Se compila contra la API de 1.21.4 |
@@ -33,6 +38,24 @@ Minecraft 1.21.4 ([spec 004](../../docs/sdd/specs/004-fabrica-capturas-en-juego/
 3. Edita o agrega archivos en `rules/` y usa `/omni reload`.
 
 ¿Vienes de ConditionalEvents? `/omni import conditionalevents` convierte tus eventos a `rules/importado/`.
+
+## Editor: autocompletado y errores en VS Code
+Con la extensión **YAML** de Red Hat, pon esta línea al inicio de cada archivo de reglas (los ejemplos ya la traen):
+```yaml
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
+```
+Al escribir `trigger: blo` te sugiere `block_break`, `block_place`… con su descripción; lo mismo con las opciones de la
+regla y las acciones (con su forma y sus claves: `then`, `do`, `as`…), y al pasar el ratón ves qué hace cada una. Se
+marcan como error, antes de cargar: una opción o acción desconocida (`cooldwon`, `mesage`), un mapa de condición sin
+`expr` ni `any`, `any: 0`, `budget: 5` sin unidad, un `timer` sin `every` o una hora `25:00`.
+- Las **expresiones** dentro de los textos, los materiales, los sonidos y los efectos no se revisan en el editor
+  (dependen de la versión de Paper): para eso sigue `/omni validate`.
+- El editor espera los nombres en minúsculas (`message:`); el plugin también acepta `Message:`.
+- `/omni schema` escribe `plugins/OmniEvents/omnievents.schema.json` y `referencia.md` con lo que tiene **tu**
+  servidor, incluidas las acciones y funciones que agreguen otros plugins. Para usarlo en lugar del publicado:
+  `# yaml-language-server: $schema=../omnievents.schema.json` (desde un archivo de `rules/`; en subcarpetas, agrega `../`).
+  Solo escribe esos dos archivos: nunca toca tus reglas.
+- Desarrollo: `./gradlew :omnievents:schema` regenera `docs/omnievents/`; una prueba falla si quedan desactualizados.
 
 ## Una regla
 ```yaml
@@ -120,7 +143,7 @@ cargar).
   `weekday()` `date(patrón)` `cooldown(regla)` `uses(regla)` `distance(a,b)` `in_area(mundo,x1,y1,z1,x2,y2,z2)`
   `has_item(material[,n])` `pvar_of(jugador,nombre)` `size(x)`.
 
-Prueba cualquier expresión en el juego: `/omni eval player.location.biome`.
+Firma y descripción de cada función: [referencia](../../docs/omnievents/referencia.md#funciones). Prueba cualquier expresión en el juego: `/omni eval player.location.biome`.
 
 ![Salida de /omni eval con tres expresiones, su resultado y su tipo](../../docs/img/omnievents/comando-eval.png)
 
@@ -153,6 +176,8 @@ Control de flujo: `if/then/else`, `repeat/do` (`var.i`), `while/do`, `for_each/a
 |---|---|
 | ![Título «¡Victoria!» con el subtítulo «Ganaste la ronda 3»](../../docs/img/omnievents/accion-title.png) | ![Bossbar roja «El Guardián del Bosque» al 65 %](../../docs/img/omnievents/accion-bossbar.png) |
 
+Descripción, forma del valor, claves y un ejemplo de cada acción: [referencia](../../docs/omnievents/referencia.md#acciones).
+
 Ítems: `give_item: "DIAMOND;2;<aqua>Nombre;<gray>Lore 1|<gray>Lore 2"`, en mapa (`material`, `amount`, `name`,
 `lore`, `model`, `enchants`, `glow`, `unbreakable`, `hide_flags`) o `saved:<nombre>` (guardado con `/omni item save`).
 
@@ -168,13 +193,14 @@ Control de flujo: `if/then/else`, `repeat/do` (`var.i`), `while/do`, `for_each/a
 | [Servidor](../../docs/omnievents/galeria.md#disparadores--servidor) | `console_command` `server_start` `server_stop` `timer` `clock` `call` `command` `custom` |
 
 Siempre disponibles: `player`, `event`, `world`, `location`, `item` (mano principal), `server`, `online`, `rule`.
+Las raíces de cada disparador y si se puede cancelar: [referencia](../../docs/omnievents/referencia.md#disparadores).
 
 ## Comandos (`/omni`, alias `/oe`)
 `reload` · `validate` · `list [filtro]` · `info <regla>` · `enable|disable <regla>` · `debug <regla|all|off|export>` ·
 `check <regla> [jugador]` · `run <regla> <jugador> [--simular]` · `cpu [on|off|reset]` ·
 `eval <expr>` · `call <regla> [jugador] [k=v…]` · `var get|set|del|list <jugador|global> [nombre] [valor]` ·
 `cooldown reset <regla> [jugador|global]` · `limit reset <regla> [jugador|global]` · `stats` · `triggers` · `actions` ·
-`item save|delete|list` · `import conditionalevents` · `selftest`.
+`item save|delete|list` · `import conditionalevents` · `selftest` · `schema` (esquema JSON y referencia, [arriba](#editor-autocompletado-y-errores-en-vs-code)).
 Permisos: `omnievents.command.<sub>` (por defecto solo OP) o `omnievents.command.*`. Cómo se ve cada uno: [galería](../../docs/omnievents/galeria.md#comandos-de-omni).
 
 `enable|disable` duran hasta el próximo `reload` y se pueden encadenar sin costo: si la regla no es un comando, no se
@@ -229,6 +255,10 @@ debug:
 ```java
 OmniEventsAPI.registerFunction("doble", 1, 1, (ctx, a) -> Values.num(a[0]) * 2);
 OmniEventsAPI.registerAction("mi_accion", args -> Action.of(ctx -> ctx.requirePlayer().sendMessage("hola")));
+// Con documentación para /omni schema (sin ella aparecen en «otros plugins» con una descripción genérica):
+OmniEventsAPI.registerFunction("doble(x)", "El doble de x.", 1, 1, (ctx, a) -> Values.num(a[0]) * 2);
+OmniEventsAPI.registerAction("saludar", new Actions.Doc("mi plugin", "Saluda al jugador.", "texto", Actions.Shape.SCALAR,
+        Map.of(), Map.of(), "saludar: hola"), args -> Action.of(ctx -> ctx.requirePlayer().sendMessage("hola")));
 OmniEventsAPI.registerProperty(Player.class, "clan", p -> MiPlugin.clanDe(p));
 OmniEventsAPI.callRule("recompensa", jugador, Map.of("cantidad", 5));
 ```

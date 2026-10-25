@@ -15,9 +15,21 @@ import java.util.Set;
 
 /** Convierte las listas de acciones del YAML en {@link ActionNode}s, validando todo al cargar. */
 public final class ActionParser {
-    private static final Set<String> MODIFIERS = Set.of("to", "where", "chance", "when");
+    /** Modificadores que acepta cualquier acción, con su descripción (spec 007: esquema y referencia). */
+    public static final Map<String, String> MODIFIER_DOCS = new java.util.LinkedHashMap<>();
+
+    static {
+        MODIFIER_DOCS.put("to", "A quién se aplica: self, target, all, world:<mundo>, radius:<n>, nearby:<n>, player:<nombre> o una expresión.");
+        MODIFIER_DOCS.put("where", "Filtro por destinatario de to (expresión; player es cada destinatario).");
+        MODIFIER_DOCS.put("chance", "Probabilidad de que corra, en porcentaje (0 a 100).");
+        MODIFIER_DOCS.put("when", "Guarda: la acción solo corre si la expresión se cumple.");
+    }
+
+    private static final Set<String> MODIFIERS = MODIFIER_DOCS.keySet();
+    /** Prefijos de destino de ConditionalEvents en la forma corta ("to_all: message: hola"). */
+    public static final Set<String> CE_TARGET_PREFIXES = Set.of("to_all", "to_target", "to_world", "to_player", "to_range");
     /** Nombres de ConditionalEvents y sinónimos → nombre propio. */
-    private static final Map<String, String> ALIASES = Map.ofEntries(
+    public static final Map<String, String> ALIASES = Map.ofEntries(
             Map.entry("cancel_event", "cancel"), Map.entry("console_command", "console"), Map.entry("player_command", "command"),
             Map.entry("playsound", "sound"), Map.entry("give_potion_effect", "effect"), Map.entry("remove_potion_effect", "remove_effect"),
             Map.entry("wait", "delay"), Map.entry("player_send_chat", "chat"), Map.entry("centered_message", "message"),

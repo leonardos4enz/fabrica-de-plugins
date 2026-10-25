@@ -65,6 +65,7 @@ public final class OmniCommand implements TabExecutor {
         SUBS.put("item", "save|delete|list <nombre>: ítems para saved:nombre");
         SUBS.put("import", "import conditionalevents");
         SUBS.put("selftest", "Autoprueba del motor en este servidor");
+        SUBS.put("schema", "Escribe el esquema JSON y la referencia para el editor");
     }
 
     private final OmniEvents plugin;
@@ -124,6 +125,7 @@ public final class OmniCommand implements TabExecutor {
                 case "item" -> item(s, a);
                 case "import" -> importCe(s, a);
                 case "selftest" -> selftest(s);
+                case "schema" -> schema(s);
                 default -> help(s, label);
             }
         } catch (ExprException | IllegalArgumentException e) {
@@ -548,6 +550,33 @@ public final class OmniCommand implements TabExecutor {
     }
 
     private volatile boolean exporting;
+    private volatile boolean writingSchema;
+
+    /**
+     * /omni schema (spec 007, H3 CA2): arma los textos en el hilo principal (lee el registro vivo, con lo que agregaron
+     * otros plugins) y los escribe en un hilo asíncrono, de forma atómica. Solo dos nombres fijos en la carpeta del plugin.
+     */
+    private void schema(CommandSender s) {
+        if (writingSchema) {
+            send(s, "schema-busy");
+            return;
+        }
+        Map<String, String> files = dev.leo.omnievents.schema.SchemaFiles.render(plugin.triggers(), plugin.actions());
+        java.nio.file.Path folder = plugin.getDataFolder().toPath();
+        writingSchema = true;
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try {
+                dev.leo.omnievents.schema.SchemaFiles.write(folder, files);
+                String base = "plugins/" + plugin.getDataFolder().getName() + "/";
+                Bukkit.getScheduler().runTask(plugin, () -> send(s, "schema-done",
+                        "schema", base + dev.leo.omnievents.schema.SchemaFiles.SCHEMA, "reference", base + dev.leo.omnievents.schema.SchemaFiles.REFERENCE));
+            } catch (IOException e) {
+                Bukkit.getScheduler().runTask(plugin, () -> send(s, "error", "message", "no se pudo escribir el esquema: " + e.getMessage()));
+            } finally {
+                writingSchema = false;
+            }
+        });
+    }
 
     /** /omni debug export (H5): arma el texto en el hilo principal y lo escribe en otro hilo, sin red. */
     private void export(CommandSender s) {

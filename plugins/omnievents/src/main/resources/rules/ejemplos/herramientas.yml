@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
 # Ejemplos de OmniEvents: herramientas de autor (spec 006).
 # - Cada condición puede llevar su propio deny: le dice al jugador exactamente qué le falta.
 # - any: N / of: [...] pide «al menos N de estas».

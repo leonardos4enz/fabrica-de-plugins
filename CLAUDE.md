@@ -24,6 +24,7 @@ Cada plugin vive en `plugins/<nombre>/`. Idioma del proyecto: **español** (cód
 ./gradlew build                      # compila y prueba todos los plugins
 ./gradlew :omnievents:test           # unitarias de un plugin
 ./gradlew :omnievents:dist           # jar en dist/
+./gradlew :omnievents:schema         # esquema JSON y referencia en docs/omnievents/ (spec 007; una prueba exige que estén al día)
 bash tools/compuerta-servidor.sh omnievents "omni selftest"   # Paper real (el EULA lo acepta el dueño)
 npm --prefix tests-e2e test          # compuerta 3a: bots de mineflayer en el Paper de prueba (spec 002)
 npm --prefix tests-e2e test -- --sin-build --solo "H5 CA3"     # un subconjunto

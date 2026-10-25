@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
 # Ejemplos de OmniEvents: combate, daño, muertes y un evento cualquiera de Bukkit (custom).
 
 golpe_critico:
