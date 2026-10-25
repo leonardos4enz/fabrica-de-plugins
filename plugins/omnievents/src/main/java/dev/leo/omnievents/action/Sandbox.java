@@ -127,6 +127,133 @@ public final class Sandbox {
         return now;
     }
 
+    // ----- dinero, inventario y regiones (spec 012): given.money, given.inventory y given.regions
+
+    private Double money;
+    private final Map<String, Integer> inventory = new HashMap<>();
+    private List<String> regions = List.of();
+
+    /** Saldo del caso; null si el caso no lo da (como sin economía). */
+    public Double money() {
+        return money;
+    }
+
+    public void money(Double value) {
+        money = value;
+    }
+
+    public void inventory(String material, int amount) {
+        inventory.put(material.toUpperCase(java.util.Locale.ROOT), amount);
+    }
+
+    public void regions(List<String> ids) {
+        regions = List.copyOf(ids);
+    }
+
+    public List<String> regions() {
+        return regions;
+    }
+
+    /** El bolsillo de la prueba: nada se cobra de verdad (H2 CA5). Niveles y experiencia, del mapa player de given. */
+    public Purse purse(ExecContext ctx) {
+        return new Purse() {
+            @SuppressWarnings("unchecked")
+            private Map<String, Object> player() {
+                return Values.raw(ctx.resolve("player")) instanceof Map<?, ?> m ? (Map<String, Object>) m : null;
+            }
+
+            private int read(String key) {
+                Map<String, Object> p = player();
+                Object v = p == null ? null : p.get(key);
+                return v == null ? 0 : (int) Values.num(v);
+            }
+
+            private void write(String key, int value) {
+                Map<String, Object> p = player();
+                if (p != null) p.put(key, (double) value);
+            }
+
+            @Override
+            public Double money() {
+                return money;
+            }
+
+            @Override
+            public boolean takeMoney(double n) {
+                if (money == null || money < n) return false;
+                money -= n;
+                return true;
+            }
+
+            @Override
+            public boolean giveMoney(double n) {
+                if (money == null) return false;
+                money += n;
+                return true;
+            }
+
+            @Override
+            public String formatMoney(double n) {
+                return Values.formatNumber(Values.round(n, 2));
+            }
+
+            @Override
+            public int levels() {
+                return read("level");
+            }
+
+            @Override
+            public void setLevels(int levels) {
+                write("level", levels);
+            }
+
+            @Override
+            public int exp() {
+                return read("total_exp");
+            }
+
+            @Override
+            public void setExp(int total) {
+                write("total_exp", total);
+            }
+
+            @Override
+            public int count(String material) {
+                return inventory.getOrDefault(material.toUpperCase(java.util.Locale.ROOT), 0);
+            }
+
+            @Override
+            public Object takeItems(String material, int n) {
+                String m = material.toUpperCase(java.util.Locale.ROOT);
+                int have = inventory.getOrDefault(m, 0);
+                if (have < n) return null;
+                inventory.put(m, have - n);
+                return Map.entry(m, n);
+            }
+
+            @Override
+            public void giveBack(Object taken) {
+                Map.Entry<?, ?> e = (Map.Entry<?, ?>) taken;
+                inventory.merge(String.valueOf(e.getKey()), (Integer) e.getValue(), Integer::sum);
+            }
+
+            @Override
+            public Object var(Scope scope, String name) {
+                return get(scope, name);
+            }
+
+            @Override
+            public void setVar(Scope scope, String name, Object value) {
+                put(scope, name, value, 0);
+            }
+
+            @Override
+            public String who() {
+                return "(prueba)";
+            }
+        };
+    }
+
     // ----- lo que la regla habría hecho
 
     public void effect(String type, String path, String text) {

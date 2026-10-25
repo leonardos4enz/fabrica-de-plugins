@@ -77,6 +77,12 @@ con `--release 21`.
   ocupar el puerto 25599 de la suite: mirar `netstat -ano | grep :25599` antes de culpar al plugin (006).
 - Las reglas pueden vivir en subcarpetas (paquetes con `pack.yml`, spec 011): toda copia de `rules/` en la suite o
   las herramientas debe ser recursiva (`copiarCarpeta` de `tests-e2e/lib/servidor.mjs`; 011 F-01).
+- **Plugins de terceros en el Paper de prueba (spec 012):** `tests-e2e/lib/plugins-extra.mjs` los baja con sha256 fijado
+  (solo lo aprobado por el dueño). EssentialsX reemplaza `list`, `give`, `tp`, `clear`… y cambia su salida: la suite
+  se los desactiva (`comandosDeMinecraft`, 012 F-03). WorldEdit 7.4 necesita Java 25 y Citizens solo soporta el último
+  parche de cada versión: 1.21.4 usa WorldEdit 7.3.19 y Citizens b3760 (012 F-04).
+- Bukkit lee `pvar.x: 1` dentro de un mapa como una sección anidada (`pvar` → `x`): volver a juntar (012 F-01). YAML se
+  queda en silencio con la última de dos claves iguales: el cargador avisa de reglas repetidas en un archivo (012 F-02).
 - En 26.x las reglas de juego van en snake_case (`natural_health_regeneration`, `advance_time`…): los nombres de
   1.21.4 fallan con «Incorrect argument» y el servidor sigue como si nada. La suite manda las dos formas (008 F-02).
 

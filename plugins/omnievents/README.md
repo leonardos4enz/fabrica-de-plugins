@@ -7,8 +7,9 @@ variables persistentes y herramientas de diagnóstico. Specs: [001](../../docs/s
 [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/spec.md) (esquema para el editor y referencia generada),
 [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/spec.md) (disparador de estado, sin sondeo),
 [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/spec.md) (variables que caducan y variables en bloques, entidades e ítems),
-[010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/spec.md) (pruebas de reglas en el YAML: `tests:` y `/omni test`) y
-[011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/spec.md) (paquetes, plantillas y versión).
+[010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/spec.md) (pruebas de reglas en el YAML: `tests:` y `/omni test`),
+[011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/spec.md) (paquetes, plantillas y versión) y
+[012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/spec.md) (costos todo o nada, Vault, WorldGuard y Citizens).
 
 **[Referencia completa](../../docs/omnievents/referencia.md)**: cada opción, disparador, acción y función, generada del
 código (nunca queda desactualizada). **[Autocompletado en VS Code](#editor-autocompletado-y-errores-en-vs-code)** con
@@ -23,8 +24,8 @@ Minecraft 1.21.4 ([spec 004](../../docs/sdd/specs/004-fabrica-capturas-en-juego/
 ## Compatibilidad
 | Servidor | Estado | Evidencia |
 |---|---|---|
-| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.6.0) | Compuertas 1, 2 y 3a: 143 unitarias, servidor real y 39/39 escenarios en el juego dos veces (2026-10-25, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md) y [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md)) |
-| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.6.0) | 39/39 escenarios en el juego dos veces con el mismo jar (2026-10-25, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md) y [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md)) |
+| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.7.0) | Compuertas 1, 2 y 3a: 155 unitarias, servidor real y 42/42 escenarios en el juego dos veces (2026-10-25, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md), [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md) y [012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/verify.md)) |
+| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.7.0) | 42/42 escenarios en el juego dos veces con el mismo jar (2026-10-25, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md), [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md) y [012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/verify.md)) |
 | Paper 1.21.5 – 1.21.11 | Sin verificar | Debería funcionar (misma API, sin NMS), pero no se probó |
 | Paper 26.2 y 26.3 | Sin verificar | El bot de pruebas (mineflayer 4.39) llega hasta 26.1 |
 | Paper 1.21.3 o anterior | No soportada | Se compila contra la API de 1.21.4 |
@@ -32,13 +33,22 @@ Minecraft 1.21.4 ([spec 004](../../docs/sdd/specs/004-fabrica-capturas-en-juego/
 | Folia | No soportada | Planificada para una spec futura |
 
 - **Java:** el jar necesita Java 21 o más; usa el Java que pida tu versión de Paper (las pruebas en 26.x usaron Java 25).
-- **Opcional:** PlaceholderAPI. Probada a mano con la 2.12.3 en Paper 1.21.4 (2026-10-25): la expansión `omni` se
-  registra y `%omni_state_<regla>%` y `%omni_var_<n>%` responden; no está en la suite automática.
+- **Dependencias opcionales** (`softdepend`; sin ellas OmniEvents funciona y las reglas que las usan avisan al cargar):
+
+  | Plugin | Para qué | Probado en la suite (2026-10-25) |
+  |---|---|---|
+  | Vault + una economía | `cost.money`, `give_money`, `take_money`, `money()` | Vault 1.7.3 con EssentialsX 2.21.0 (Paper 1.21.4) y 2.22.0 (26.1.2) |
+  | WorldGuard (con WorldEdit) | `region_enter`, `region_leave`, `in_region()`, `regions()` | WorldGuard 7.0.13 + WorldEdit 7.3.19 (1.21.4); WorldGuard 7.0.18 + WorldEdit 7.4.6 (26.1.2) |
+  | Citizens | `npc_click`, `npc_left_click`, `is_npc()` | Citizens 2.0.37-b3760 (1.21.4) y 2.0.44-b4268 (26.1.2) |
+  | PlaceholderAPI | `%placeholders%` y la expansión `%omni_…%` | Probada a mano con la 2.12.3 en Paper 1.21.4: `%omni_state_<regla>%` y `%omni_var_<n>%` responden; no está en la suite |
+
+  Otras economías de Vault (CMI…) y otras versiones de estos plugins: sin verificar.
 - Para verificar otra versión: `npm --prefix tests-e2e test -- --paper <versión> --version-bot <versión> --java-servidor <JDK>`
   (ver [verificacion.md](../../docs/sdd/verificacion.md#3a-en-el-juego-automática)).
 
 ## Instalación
-1. Copia `OmniEvents-x.y.z.jar` a `plugins/` (opcional: PlaceholderAPI).
+1. Copia `OmniEvents-x.y.z.jar` a `plugins/` (opcionales: PlaceholderAPI, Vault con un plugin de economía, WorldGuard y
+   Citizens; ver [Integraciones](#integraciones-costos-vault-worldguard-y-citizens)).
 2. Arranca el servidor: se crean `config.yml`, `messages.yml` y ejemplos en `plugins/OmniEvents/rules/ejemplos/`.
 3. Edita o agrega archivos en `rules/` y usa `/omni reload`.
 
@@ -110,6 +120,7 @@ Imágenes de `cooldown`, `on_cooldown`, `limit` y `on_limit`: [galería](../../d
 | `budget` | Presupuesto de tiempo: `0.5ms` o `200us`; avisa en consola si el promedio reciente lo pasa ([abajo](#rendimiento-omni-cpu-y-budget)) |
 | `tests` | Pruebas de la regla con `given` y `expect` ([abajo](#pruebas-de-reglas-tests-y-omni-test)) |
 | `template`, `extends`, `with`, `params` | Plantillas y parámetros `${nombre}` ([abajo](#paquetes-plantillas-y-versión)) |
+| `cost`, `on_cost_fail` | Lo que cuesta la regla, todo o nada (dinero, niveles, experiencia, ítems, variables) y qué hacer si no alcanza ([abajo](#integraciones-costos-vault-worldguard-y-citizens)) |
 
 ## Condiciones con deny y «N de M»
 Cada condición puede ser un texto (como siempre) o un mapa con `expr` y sus propias acciones `deny`. Si falla, corren
@@ -336,7 +347,7 @@ Control de flujo: `if/then/else`, `repeat/do` (`var.i`), `while/do`, `for_each/a
 |---|---|
 | [Mensajes](../../docs/omnievents/galeria.md#acciones--mensajes) | `message` `broadcast` `actionbar` `title` (`título;subtítulo;in;stay;out`) `bossbar` (`texto;segundos;color;progreso`) `sound` (`SONIDO;vol;tono`) `stop_sound` `console_message` `log` |
 | [Comandos](../../docs/omnievents/galeria.md#acciones--comandos) | `console` `command` `chat` `send_to_server` |
-| [Jugador](../../docs/omnievents/galeria.md#acciones--jugador) | `teleport` (`mundo;x;y;z;yaw;pitch`, `~` relativo) `heal` `damage` `feed` `set_food` `gamemode` `fly` `effect` (`EFECTO;segundos;nivel;partículas`) `remove_effect` `fire` `freeze` `velocity` `launch` `give_item` `drop_item` `remove_item` (`MATERIAL;cantidad`: por material, aunque el ítem tenga nombre) `clear_inventory` `close_inventory` `give_exp` `give_level` `kick` |
+| [Jugador](../../docs/omnievents/galeria.md#acciones--jugador) | `teleport` (`mundo;x;y;z;yaw;pitch`, `~` relativo) `heal` `damage` `feed` `set_food` `gamemode` `fly` `effect` (`EFECTO;segundos;nivel;partículas`) `remove_effect` `fire` `freeze` `velocity` `launch` `give_item` `drop_item` `remove_item` (`MATERIAL;cantidad`: por material, aunque el ítem tenga nombre) `clear_inventory` `close_inventory` `give_exp` `give_level` `give_money` `take_money` (Vault) `kick` |
 | [Mundo](../../docs/omnievents/galeria.md#acciones--mundo) | `set_block` `lightning` `explosion` (`potencia;fuego;romper`) `particle` (`PARTÍCULA;n;dx;dy;dz;vel[;r;g;b]`) `summon` |
 | [Evento](../../docs/omnievents/galeria.md#acciones--evento) | `cancel` `set_event` (`propiedad = expresión`) `set_damage` (`10` o `150%`) `set_message` `set_join_message` `set_quit_message` `set_death_message` (`none` la oculta) `keep_inventory` `cancel_drops` `deny_join` |
 
@@ -359,9 +370,71 @@ Descripción, forma del valor, claves y un ejemplo de cada acción: [referencia]
 | [Inventario](../../docs/omnievents/galeria.md#disparadores--inventario) | `inventory_open` `inventory_close` `inventory_click` (`slot`, `click`, `title`, `cursor`) |
 | [Entidades](../../docs/omnievents/galeria.md#disparadores--entidades) | `entity_interact` `entity_spawn` `entity_death` |
 | [Servidor](../../docs/omnievents/galeria.md#disparadores--servidor) | `console_command` `server_start` `server_stop` `timer` `clock` `call` `command` `custom` `state` ([arriba](#disparador-de-estado-trigger-state)) |
+| Integraciones ([abajo](#integraciones-costos-vault-worldguard-y-citizens)) | `region_enter` `region_leave` (`region`; WorldGuard) `npc_click` `npc_left_click` (`npc`, `target`; Citizens) |
 
 Siempre disponibles: `player`, `event`, `world`, `location`, `item` (mano principal), `server`, `online`, `rule`.
 Las raíces de cada disparador y si se puede cancelar: [referencia](../../docs/omnievents/referencia.md#disparadores).
+
+## Integraciones: costos, Vault, WorldGuard y Citizens
+Desde la 1.7.0 ([spec 012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/spec.md)). Los tres plugins son
+**opcionales** (`softdepend`): sin ellos OmniEvents carga igual y una regla que los usa carga con un aviso
+(«necesita Vault, que no está instalado») y no hace esa parte. `/omni stats` dice qué integraciones detectó.
+
+**Costos todo o nada.** `cost` se revisa después de las condiciones, el límite y el enfriamiento. Si todo alcanza se
+cobra y corren las acciones; si algo falta **no se cobra nada**, no cuenta como uso ni activa el enfriamiento y corre
+`on_cost_fail`. Si un cobro falla a mitad (la economía lo rechaza, el inventario cambió), lo ya cobrado se devuelve
+(los ítems vuelven tal cual, con su nombre y encantamientos).
+```yaml
+tienda_arco:
+  trigger: command
+  command: comprar_arco
+  cost:
+    money: 500                    # Vault (EssentialsX, CMI…)
+    items: "DIAMOND;3"            # o una lista: ["DIAMOND;3", "STICK;1"]; por material, sin la armadura
+    levels: 5                     # niveles de experiencia
+    exp: 100                      # puntos de experiencia
+    pvar.fichas: 1                # variables numéricas (pvar o gvar); nula cuenta como 0
+  actions:
+    - give_item: "BOW;1;<aqua>Arco de la tienda"
+    - message: "<green>Compraste el arco. Te quedan {money_format(money())}."
+  on_cost_fail:
+    - message: "<red>Te falta: {var.cost_missing}"     # «200 de dinero, 2 × DIAMOND»; var.cost_missing_list: [money, items]
+```
+- Cada cantidad es una expresión (`money: "var.precio * 2"`) y se evalúa **una vez**: lo cobrado es lo cotizado.
+- `cost` no sirve en disparadores asíncronos (`player_chat`, `player_pre_login`): cobrar necesita el hilo principal
+  (usa `call` a una regla `call` con el costo). Sin jugador (`server_start`, `timer` global) solo cobra `gvar`.
+- `/omni check <regla> <jugador>` muestra cada parte (`✘ costo items DIAMOND: 1 / 3`) y la rama `on_cost_fail`;
+  `/omni run … --simular` no cobra.
+- En `tests:` el costo se cobra sobre el contexto falso: `given: { money: 800, inventory: { DIAMOND: 5 }, player.level: 6 }`
+  y `expect: { branch: on_cost_fail }` cuando falta algo. Nada se cobra de verdad.
+
+**Dinero (Vault).** `give_money: 100` y `take_money: "var.precio"` (si no alcanza, es un error y no retira nada);
+`money()` es el saldo y `money_format(n)` lo escribe con la moneda de la economía. La economía se busca al usarla:
+sirve aunque tu plugin de economía arranque después de OmniEvents.
+
+**Regiones (WorldGuard).** `region_enter` y `region_leave` corren por cada región en la que el jugador entra o de la
+que sale (al moverse de bloque, al teletransportarse, al entrar al servidor y al cambiar de mundo). `region.id`,
+`region.priority`; `cancel` deja al jugador donde estaba. `in_region(id)` y `regions()` (en estas reglas, miran el
+destino). Solo se escucha el movimiento si hay reglas de región activas.
+```yaml
+zona_vip:
+  trigger: region_enter
+  conditions: ["region.id == 'vip'", "!perm('rango.vip')"]
+  actions: [cancel, message: "<red>Esa zona es solo para VIP."]
+```
+
+**NPC (Citizens).** `npc_click` (clic derecho) y `npc_left_click` (golpe), con `npc.id`, `npc.name` y
+`npc.entity`; se pueden cancelar. `is_npc(entidad)` sirve en cualquier regla (`entity_interact`, `player_attack`).
+```yaml
+guia:
+  trigger: npc_click
+  conditions: "npc.name == 'Guía'"
+  cooldown: 1h
+  actions:
+    - message: "<yellow>[Guía]</yellow> Hola, {player.name}. Estás en: {regions()}"
+    - give_money: 10
+```
+Ejemplo completo: `rules/ejemplos/integraciones.yml`.
 
 ## Paquetes, plantillas y versión
 Desde la 1.6.0 ([spec 011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/spec.md)). Una carpeta de

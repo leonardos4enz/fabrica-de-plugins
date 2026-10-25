@@ -236,6 +236,7 @@ public final class OmniCommand implements TabExecutor {
         plugin.listeners().register(plugin.rules().all(), new Problems());
         plugin.timers().start();
         plugin.states().register(plugin.rules().all());
+        plugin.regionService().register(plugin.rules().all());
         // Solo registra si cambió el conjunto de comandos; si no, como mucho reenvía el árbol una vez (spec 005).
         plugin.ruleCommands().refresh();
     }
@@ -520,7 +521,8 @@ public final class OmniCommand implements TabExecutor {
 
     private void stats(CommandSender s) {
         raw(s, "<gold>Rendimiento</gold> <gray>· " + plugin.listeners().count() + " oyentes · " + plugin.timers().count()
-                + " temporizadores · " + plugin.states().listenerCount() + " oyentes y " + plugin.states().taskCount() + " tareas de estado · " + plugin.ruleCommands().count() + " comandos · " + plugin.data().loadedPlayers().size() + " jugadores en memoria");
+                + " temporizadores · " + plugin.states().listenerCount() + " oyentes y " + plugin.states().taskCount() + " tareas de estado · " + plugin.ruleCommands().count() + " comandos · " + plugin.regionService().count() + " oyentes de regiones · " + plugin.data().loadedPlayers().size() + " jugadores en memoria");
+        raw(s, "<dark_gray>  integraciones: " + esc(plugin.integrationsLine()));
         for (String l : plugin.listeners().describe()) raw(s, "<dark_gray>  " + esc(l));
         raw(s, "<dark_gray>  variables: " + plugin.data().pendingExpiries() + " caducidades en cola · limpieza de datos de bloques " + (plugin.blockCleaner().registered() ? "activa" : "apagada"));
         List<Rule> rs = new ArrayList<>(plugin.rules().all());

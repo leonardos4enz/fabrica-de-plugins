@@ -136,6 +136,10 @@
             "state",
             "var_expire",
             "custom",
+            "region_enter",
+            "region_leave",
+            "npc_click",
+            "npc_left_click",
             "player_kill_entity",
             "player_leave",
             "repetitive",
@@ -204,6 +208,10 @@
             "Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende.",
             "Caduca una variable con expire (spec 009): una pvar de un jugador conectado (con player) o una gvar. variable: el nombre; value: lo último que valía; scope: pvar o gvar.",
             "Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from).",
+            "El jugador entra a una región de WorldGuard (region.id, region.priority); cancel impide la entrada. Necesita WorldGuard.",
+            "El jugador sale de una región de WorldGuard (region.id); cancel lo deja dentro. Necesita WorldGuard.",
+            "Un jugador hace clic derecho en un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
+            "Un jugador golpea (clic izquierdo) un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
             "Alias de player_kill (ConditionalEvents).",
             "Alias de player_quit (ConditionalEvents).",
             "Alias de timer (ConditionalEvents).",
@@ -272,6 +280,10 @@
             "Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende.",
             "Caduca una variable con expire (spec 009): una pvar de un jugador conectado (con player) o una gvar. variable: el nombre; value: lo último que valía; scope: pvar o gvar.",
             "Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from).",
+            "El jugador entra a una región de WorldGuard (region.id, region.priority); cancel impide la entrada. Necesita WorldGuard.",
+            "El jugador sale de una región de WorldGuard (region.id); cancel lo deja dentro. Necesita WorldGuard.",
+            "Un jugador hace clic derecho en un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
+            "Un jugador golpea (clic izquierdo) un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
             "Alias de player_kill (ConditionalEvents).",
             "Alias de player_quit (ConditionalEvents).",
             "Alias de timer (ConditionalEvents).",
@@ -344,6 +356,10 @@
             "state",
             "var_expire",
             "custom",
+            "region_enter",
+            "region_leave",
+            "npc_click",
+            "npc_left_click",
             "player_kill_entity",
             "player_leave",
             "repetitive",
@@ -412,6 +428,10 @@
             "Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende.",
             "Caduca una variable con expire (spec 009): una pvar de un jugador conectado (con player) o una gvar. variable: el nombre; value: lo último que valía; scope: pvar o gvar.",
             "Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from).",
+            "El jugador entra a una región de WorldGuard (region.id, region.priority); cancel impide la entrada. Necesita WorldGuard.",
+            "El jugador sale de una región de WorldGuard (region.id); cancel lo deja dentro. Necesita WorldGuard.",
+            "Un jugador hace clic derecho en un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
+            "Un jugador golpea (clic izquierdo) un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
             "Alias de player_kill (ConditionalEvents).",
             "Alias de player_quit (ConditionalEvents).",
             "Alias de timer (ConditionalEvents).",
@@ -480,6 +500,10 @@
             "Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende.",
             "Caduca una variable con expire (spec 009): una pvar de un jugador conectado (con player) o una gvar. variable: el nombre; value: lo último que valía; scope: pvar o gvar.",
             "Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from).",
+            "El jugador entra a una región de WorldGuard (region.id, region.priority); cancel impide la entrada. Necesita WorldGuard.",
+            "El jugador sale de una región de WorldGuard (region.id); cancel lo deja dentro. Necesita WorldGuard.",
+            "Un jugador hace clic derecho en un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
+            "Un jugador golpea (clic izquierdo) un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
             "Alias de player_kill (ConditionalEvents).",
             "Alias de player_quit (ConditionalEvents).",
             "Alias de timer (ConditionalEvents).",
@@ -706,6 +730,88 @@
             }
           ],
           "description": "Acciones si ya no quedan usos."
+        },
+        "cost": {
+          "type": "object",
+          "properties": {
+            "money": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "$ref": "#/definitions/expression"
+                }
+              ],
+              "description": "Dinero de la economía de Vault (expresión, > 0). Necesita Vault y un plugin de economía."
+            },
+            "levels": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "$ref": "#/definitions/expression"
+                }
+              ],
+              "description": "Niveles de experiencia (entero > 0)."
+            },
+            "exp": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "$ref": "#/definitions/expression"
+                }
+              ],
+              "description": "Puntos de experiencia (entero > 0)."
+            },
+            "items": {
+              "description": "Ítems por material, tengan o no nombre: \"MATERIAL;cantidad\" o una lista de esos (sin la armadura). Al devolver, vuelven las mismas pilas.",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[^;]+(;.+)?$"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[^;]+(;.+)?$"
+                  }
+                }
+              ]
+            }
+          },
+          "patternProperties": {
+            "^(pvar|gvar)\\.[A-Za-z0-9_\\-]+$": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                {
+                  "$ref": "#/definitions/expression"
+                }
+              ],
+              "description": "Variable numérica del jugador (expresión, > 0); nula cuenta como 0."
+            }
+          },
+          "additionalProperties": false,
+          "minProperties": 1,
+          "description": "Lo que cuesta la regla, todo o nada: money (Vault), levels, exp, items y variables pvar.x o gvar.x. Se cobra después de las condiciones, el límite y el enfriamiento; si algo no alcanza no se cobra nada ni cuenta el uso."
+        },
+        "on_cost_fail": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/actions"
+            }
+          ],
+          "description": "Acciones si el costo no alcanza o un cobro falla (lo cobrado se devuelve). var.cost_missing dice qué falta; var.cost_missing_list, las claves."
         },
         "tests": {
           "type": "array",
@@ -1133,7 +1239,7 @@
         "number",
         "boolean"
       ],
-      "description": "Expresión de OmniEvents (el editor no la revisa: usa /omni validate). Operadores: && || ! == != < <= > >= ~= contains startsWith endsWith matches in, + - * / %, c ? a : b. Variables: var.x, pvar.x, gvar.x. Funciones: abs(x), bool(x), ceil(x), chance(p), clamp(x, min, max), cooldown(regla), date([patrón]), default(x, otro), distance(a, b), floor(x), format(x[, decimales]), has_item(material[, n]), hour(), if(condición, a, b), in_area(mundo, x1, y1, z1, x2, y2, z2), in_state(regla), int(x), join(lista[, separador]), len(x), lower(t), max(a, b, …), min(a, b, …), minute(), now(), num(x), online(nombre), papi(texto[, jugador]), perm(permiso[, jugador]), player(nombre), players(), pow(x, y), pvar_of(jugador, nombre), random(a, b), randomf(a, b), replace(t, buscar, poner), round(x[, decimales]), size(x), split(t, separador), sqrt(x), str(x), strip(t), substr(t, desde[, hasta]), trim(t), ttl(variable), upper(t), uses(regla), weekday()."
+      "description": "Expresión de OmniEvents (el editor no la revisa: usa /omni validate). Operadores: && || ! == != < <= > >= ~= contains startsWith endsWith matches in, + - * / %, c ? a : b. Variables: var.x, pvar.x, gvar.x. Funciones: abs(x), bool(x), ceil(x), chance(p), clamp(x, min, max), cooldown(regla), date([patrón]), default(x, otro), distance(a, b), floor(x), format(x[, decimales]), has_item(material[, n]), hour(), if(condición, a, b), in_area(mundo, x1, y1, z1, x2, y2, z2), in_region(id), in_state(regla), int(x), is_npc(entidad), join(lista[, separador]), len(x), lower(t), max(a, b, …), min(a, b, …), minute(), money(), money_format(n), now(), num(x), online(nombre), papi(texto[, jugador]), perm(permiso[, jugador]), player(nombre), players(), pow(x, y), pvar_of(jugador, nombre), random(a, b), randomf(a, b), regions(), replace(t, buscar, poner), round(x[, decimales]), size(x), split(t, separador), sqrt(x), str(x), strip(t), substr(t, desde[, hasta]), trim(t), ttl(variable), upper(t), uses(regla), weekday()."
     },
     "duration": {
       "description": "Duración: 10s, 5m, 1h30m, 2d, 1w, 20t (ticks), 500ms, o un número de segundos.",
@@ -1268,7 +1374,7 @@
         },
         "given": {
           "type": "object",
-          "description": "Contexto falso: rutas con puntos y su valor (block.type: DIAMOND_ORE, player.level: 12, event.damage: 5), variables iniciales (pvar.x, gvar.x, var.x, block.data.x) y placeholders (\"%vault_eco_balance%\": 100)."
+          "description": "Contexto falso: rutas con puntos y su valor (block.type: DIAMOND_ORE, player.level: 12, event.damage: 5), variables iniciales (pvar.x, gvar.x, var.x, block.data.x), placeholders (\"%vault_eco_balance%\": 100) y, para cost y las integraciones (spec 012), money (saldo), inventory (material: cantidad) y regions (ids)."
         },
         "expect": {
           "type": "object",
@@ -1280,8 +1386,8 @@
             },
             "branch": {
               "type": "string",
-              "pattern": "^(actions|else|deny|deny .+|none|on_enter)$",
-              "description": "La rama que corrió: actions, else, deny (o deny conditions[1]), none, u on_enter en un state."
+              "pattern": "^(actions|else|deny|deny .+|none|on_enter|on_cost_fail)$",
+              "description": "La rama que corrió: actions, else, deny (o deny conditions[1]), none, on_cost_fail (el costo no alcanzó) u on_enter en un state."
             },
             "messages": {
               "allOf": [
@@ -1365,7 +1471,7 @@
       "anyOf": [
         {
           "type": "string",
-          "pattern": "^\\s*(?:(?:to_all|to_target)\\s*:\\s*|(?:to_player|to_range|to_world)\\s*:[^:]*:\\s*)?(?:actionbar|bossbar|broadcast|call|cancel|cancel_drops|chat|clear_inventory|close_inventory|command|console|console_message|damage|delay|deny_join|drop_item|effect|explosion|feed|fire|fly|for_each|freeze|gamemode|give_exp|give_item|give_level|heal|if|keep_inventory|kick|launch|lightning|log|message|no_cooldown|particle|random|remove_effect|remove_item|repeat|reset_cooldown|send_to_server|set|set_block|set_damage|set_death_message|set_event|set_food|set_join_message|set_message|set_quit_message|sound|stop|stop_sound|summon|teleport|title|unset|velocity|wait_ticks|while|bc|call_event|cancel_event|centered_message|console_command|execute|give_potion_effect|json_message|lightning_strike|mini_message|msg|player_command|player_send_chat|playsound|potion|prevent_join|remove_potion_effect|set_on_fire|stopsound|tp|wait)\\s*(?::[\\s\\S]*)?$",
+          "pattern": "^\\s*(?:(?:to_all|to_target)\\s*:\\s*|(?:to_player|to_range|to_world)\\s*:[^:]*:\\s*)?(?:actionbar|bossbar|broadcast|call|cancel|cancel_drops|chat|clear_inventory|close_inventory|command|console|console_message|damage|delay|deny_join|drop_item|effect|explosion|feed|fire|fly|for_each|freeze|gamemode|give_exp|give_item|give_level|give_money|heal|if|keep_inventory|kick|launch|lightning|log|message|no_cooldown|particle|random|remove_effect|remove_item|repeat|reset_cooldown|send_to_server|set|set_block|set_damage|set_death_message|set_event|set_food|set_join_message|set_message|set_quit_message|sound|stop|stop_sound|summon|take_money|teleport|title|unset|velocity|wait_ticks|while|bc|call_event|cancel_event|centered_message|console_command|execute|give_potion_effect|json_message|lightning_strike|mini_message|msg|player_command|player_send_chat|playsound|potion|prevent_join|remove_potion_effect|set_on_fire|stopsound|tp|wait)\\s*(?::[\\s\\S]*)?$",
           "description": "Forma corta: \"tipo: valor\" (p. ej. \"message: hola\" o \"cancel\")."
         },
         {
@@ -2303,6 +2409,36 @@
         {
           "type": "object",
           "properties": {
+            "give_money": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Deposita dinero en la economía de Vault (necesita Vault y un plugin de economía). Valor: expresión (cantidad > 0)."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "give_money"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
             "heal": {
               "type": [
                 "string",
@@ -3205,6 +3341,36 @@
           },
           "required": [
             "summon"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "take_money": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Retira dinero de la economía de Vault; si no alcanza, es un error y no retira nada. Valor: expresión (cantidad > 0)."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "take_money"
           ],
           "additionalProperties": false
         },

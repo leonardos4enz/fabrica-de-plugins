@@ -49,6 +49,9 @@ public final class Rule {
     List<RuleTest> tests = List.of();
     /** Spec 011: el paquete de la regla (null si es global). */
     String pack;
+    /** Spec 012: el costo (null si no tiene) y lo que corre si no alcanza. */
+    Cost cost;
+    List<ActionNode> onCostFail = List.of();
     private final Stats stats = new Stats();
     private final Budget budget = new Budget();
 
@@ -142,7 +145,7 @@ public final class Rule {
     }
 
     public int actionCount() {
-        int n = actions.size() + elseActions.size() + onCooldown.size() + onLimit.size();
+        int n = actions.size() + elseActions.size() + onCooldown.size() + onLimit.size() + onCostFail.size();
         for (Condition c : conditions) n += c.deny().size();
         if (state != null) n += state.onExit().size();
         return n;
@@ -184,6 +187,15 @@ public final class Rule {
 
     public Budget budget() {
         return budget;
+    }
+
+    /** Costo de la regla (spec 012), o null. */
+    public Cost cost() {
+        return cost;
+    }
+
+    public List<ActionNode> onCostFail() {
+        return onCostFail;
     }
 
     /** Paquete de la regla (spec 011), o null si es global. */

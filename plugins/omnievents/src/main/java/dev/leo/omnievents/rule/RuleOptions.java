@@ -11,7 +11,7 @@ import java.util.Set;
  */
 public final class RuleOptions {
     /** Qué tipo de valor lleva una opción (decide su forma en el esquema). */
-    public enum Kind { TRIGGER, BOOLEAN, INTEGER, TEXT, TEXTS, ENUM, DURATION, RESET, TIMES, CONDITIONS, ACTIONS, COMMAND, BUDGET, LIST, TESTS, PARAMS }
+    public enum Kind { TRIGGER, BOOLEAN, INTEGER, TEXT, TEXTS, ENUM, DURATION, RESET, TIMES, CONDITIONS, ACTIONS, COMMAND, BUDGET, LIST, TESTS, PARAMS, COST }
 
     /**
      * @param values  valores permitidos (ENUM y RESET)
@@ -30,6 +30,8 @@ public final class RuleOptions {
     public static final Map<String, String> EXPECT_KEYS = new LinkedHashMap<>();
     /** Claves del bloque command de un trigger command. */
     public static final Map<String, String> COMMAND_KEYS = new LinkedHashMap<>();
+    /** Claves de cost (spec 012); además pvar.x y gvar.x. */
+    public static final Map<String, String> COST_KEYS = new LinkedHashMap<>();
     /** Claves de pack.yml (spec 011). */
     public static final Map<String, String> PACK_KEYS = new LinkedHashMap<>();
     /** Claves de requires en pack.yml (spec 011). */
@@ -79,6 +81,8 @@ public final class RuleOptions {
         values("limit_scope", Kind.ENUM, "player (por jugador, por defecto) o global.", "player", "jugador", "global", "server", "servidor");
         values("limit_reset", Kind.RESET, "Cuándo se reinician los usos: never, daily, weekly, monthly o una duración (12h).", "never", "nunca", "daily", "diario", "weekly", "semanal", "monthly", "mensual");
         add("on_limit", Kind.ACTIONS, "Acciones si ya no quedan usos.");
+        add("cost", Kind.COST, "Lo que cuesta la regla, todo o nada: money (Vault), levels, exp, items y variables pvar.x o gvar.x. Se cobra después de las condiciones, el límite y el enfriamiento; si algo no alcanza no se cobra nada ni cuenta el uso.");
+        add("on_cost_fail", Kind.ACTIONS, "Acciones si el costo no alcanza o un cobro falla (lo cobrado se devuelve). var.cost_missing dice qué falta; var.cost_missing_list, las claves.");
         add("tests", Kind.TESTS, "Pruebas de la regla: casos con given (el contexto falso) y expect (lo esperado). Corren con /omni test y al cargar, sin efectos.");
         add("template", Kind.BOOLEAN, "true: la regla es una plantilla; no corre sola (no necesita trigger) y otras la usan con extends.");
         add("extends", Kind.TEXT, "Plantilla de la que hereda (template: true): copia sus claves y las que escribe esta regla las reemplazan enteras. En un paquete busca primero en el paquete; paquete:plantilla es absoluto.");
@@ -109,16 +113,23 @@ public final class RuleOptions {
         CONDITION_KEYS.put("deny", "Acciones si esta condición es la primera que falla; reemplazan al else de la regla. Dentro de of se ignoran.");
 
         TEST_KEYS.put("name", "Nombre del caso (sin él: caso 1, caso 2…).");
-        TEST_KEYS.put("given", "Contexto falso: rutas con puntos y su valor (block.type: DIAMOND_ORE, player.level: 12, event.damage: 5), variables iniciales (pvar.x, gvar.x, var.x, block.data.x) y placeholders (\"%vault_eco_balance%\": 100).");
+        TEST_KEYS.put("given", "Contexto falso: rutas con puntos y su valor (block.type: DIAMOND_ORE, player.level: 12, event.damage: 5), variables iniciales (pvar.x, gvar.x, var.x, block.data.x), placeholders (\"%vault_eco_balance%\": 100) y, para cost y las integraciones (spec 012), money (saldo), inventory (material: cantidad) y regions (ids).");
         TEST_KEYS.put("expect", "Lo esperado: fired, branch, variables, messages, commands, actions, cancelled y assert.");
         TEST_KEYS.put("seed", "Semilla de random en este caso (0 por defecto): el mismo número elige siempre la misma rama.");
         EXPECT_KEYS.put("fired", "true si corrieron las acciones principales (actions, u on_enter en un state).");
-        EXPECT_KEYS.put("branch", "La rama que corrió: actions, else, deny (o deny conditions[1]), none, u on_enter en un state.");
+        EXPECT_KEYS.put("branch", "La rama que corrió: actions, else, deny (o deny conditions[1]), none, on_cost_fail (el costo no alcanzó) u on_enter en un state.");
         EXPECT_KEYS.put("messages", "Textos que deben aparecer, en orden y sin formato, en los mensajes que mandaría (message, broadcast, actionbar, title…).");
         EXPECT_KEYS.put("commands", "Textos que deben aparecer, en orden, en los comandos que correría (console, command).");
         EXPECT_KEYS.put("actions", "Acciones que correría, en orden: el tipo (give_item) o el tipo y un texto (\"sound: LEVELUP\").");
         EXPECT_KEYS.put("cancelled", "true si cancela el evento.");
         EXPECT_KEYS.put("assert", "Expresión o lista de expresiones que deben dar verdadero al terminar (\"pvar.d >= 10\").");
+
+        COST_KEYS.put("money", "Dinero de la economía de Vault (expresión, > 0). Necesita Vault y un plugin de economía.");
+        COST_KEYS.put("levels", "Niveles de experiencia (entero > 0).");
+        COST_KEYS.put("exp", "Puntos de experiencia (entero > 0).");
+        COST_KEYS.put("items", "Ítems por material, tengan o no nombre: \"MATERIAL;cantidad\" o una lista de esos (sin la armadura). Al devolver, vuelven las mismas pilas.");
+        COST_KEYS.put("pvar.<nombre>", "Variable numérica del jugador (expresión, > 0); nula cuenta como 0.");
+        COST_KEYS.put("gvar.<nombre>", "Variable numérica global (expresión, > 0); sirve también sin jugador.");
 
         COMMAND_KEYS.put("name", "Nombre del comando, sin la barra (letras, números, _ y -).");
         COMMAND_KEYS.put("aliases", "Otros nombres del comando.");

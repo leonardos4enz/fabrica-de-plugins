@@ -4,7 +4,7 @@ main: dev.leo.omnievents.OmniEvents
 api-version: '1.21'
 author: Leo
 description: Eventos condicionales declarados en YAML, con lenguaje de expresiones, control de flujo y variables persistentes.
-softdepend: [PlaceholderAPI]
+softdepend: [PlaceholderAPI, Vault, WorldGuard, Citizens]
 commands:
   omni:
     description: Administración de OmniEvents

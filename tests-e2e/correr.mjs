@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url'
 import { Servidor, dormir, jarMasNuevo, copiarCarpeta } from './lib/servidor.mjs'
 import { conectar } from './lib/bot.mjs'
 import { prepararPaper } from './lib/paper.mjs'
+import { instalarPluginsExtra, configurarEssentials } from './lib/plugins-extra.mjs'
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url))
 const RAIZ = path.resolve(AQUI, '..')
@@ -62,6 +63,11 @@ async function principal () {
   const jar = jarMasNuevo(path.join(RAIZ, 'dist'), suite.jar)
   if (!jar) throw new Error(`No hay ${suite.jar} en dist/: compila con gradlew :${o.plugin}:dist`)
   fs.copyFileSync(path.join(RAIZ, 'dist', jar), path.join(pluginsDir, jar))
+  // Spec 012: plugins de terceros de las integraciones (Vault, EssentialsX, WorldEdit, WorldGuard, Citizens).
+  if (suite.pluginsExtra) {
+    await instalarPluginsExtra(o.paper ?? suite.versionPorDefecto, pluginsDir, path.join(AQUI, '.cache', 'plugins'))
+    configurarEssentials(pluginsDir, suite.comandosDeMinecraft ?? [])
+  }
   // Configuración que se copia en cada corrida (origen relativo a la raíz del repositorio, destino a run/): los
   // ejemplos del plugin tal como están en el código fuente y las reglas propias de la suite.
   for (const { de, a } of suite.copiar) {

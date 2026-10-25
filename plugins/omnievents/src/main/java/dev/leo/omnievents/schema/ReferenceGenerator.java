@@ -38,6 +38,8 @@ public final class ReferenceGenerator {
         }
         sb.append("\nBloque `command` (para `trigger: command`):\n\n| Clave | Qué hace |\n|---|---|\n");
         RuleOptions.COMMAND_KEYS.forEach((k, d) -> sb.append("| `").append(k).append("` | ").append(cell(d)).append(" |\n"));
+        sb.append("\nClaves de `cost` (spec 012; todo o nada, con `on_cost_fail` si algo no alcanza):\n\n| Clave | Qué cobra |\n|---|---|\n");
+        RuleOptions.COST_KEYS.forEach((k, d) -> sb.append("| `").append(k).append("` | ").append(cell(d)).append(" |\n"));
         sb.append("\nCada caso de `tests` (spec 010; corren con `/omni test` y al cargar):\n\n| Clave | Qué hace |\n|---|---|\n");
         RuleOptions.TEST_KEYS.forEach((k, d) -> sb.append("| `").append(k).append("` | ").append(cell(d)).append(" |\n"));
         sb.append("\nClaves de `expect` (además, variables: `pvar.x`, `gvar.x`, `var.x`, `block.data.x`; `null` = que no exista):\n\n| Clave | Qué hace |\n|---|---|\n");
@@ -167,6 +169,7 @@ public final class ReferenceGenerator {
             case LIST -> "lista de nombres";
             case TESTS -> "lista de casos";
             case PARAMS -> "mapa nombre: valor";
+            case COST -> "mapa (ver abajo)";
         };
         return o.aliasOf() == null ? k : k + " (sinónimo de `" + o.aliasOf() + "`)";
     }

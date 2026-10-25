@@ -13,6 +13,7 @@
 | 009 OmniEvents: variables con caducidad y en objetos (P5) | Verificado: 1.4.0; `expire` y `ttl()`, `trigger: var_expire`, `objeto.data.nombre` en bloques, entidades e ítems (PDC), `/omni data` y migración de `data/` con respaldo; 113 unitarias; 37/37 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/009-omnievents-variables-caducidad-y-objetos/verify.md)) |
 | 010 OmniEvents: pruebas de reglas en el YAML (P7) | Verificado: 1.5.0; `tests:` con `given` y `expect` sin servidor ni efectos, `/omni test`, pruebas al cargar y de los ejemplos en gradle; 123 unitarias; 38/38 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/010-omnievents-pruebas-de-reglas/verify.md)) |
 | 011 OmniEvents: paquetes, plantillas y versión (P8) | Verificado: 1.6.0; carpetas con `pack.yml` y nombres `paquete:regla` con búsqueda relativa, `template`/`extends` con parámetros `${nombre}`, `requires` y `migrations` al subir de versión (`data/packs.yml`), `/omni pack`; 143 unitarias; 39/39 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/011-omnievents-paquetes-plantillas-version/verify.md)) |
+| 012 OmniEvents: integraciones con costos (P9, Vault, WorldGuard, Citizens) | Verificado: 1.7.0; `cost` todo o nada con `on_cost_fail` y devolución, dinero de Vault, `region_enter`/`region_leave` e `in_region()`, `npc_click`/`npc_left_click` e `is_npc()`; 155 unitarias; 42/42 dos veces en Paper 1.21.4 y en 26.1.2 con EssentialsX, WorldGuard y Citizens ([verify](specs/012-omnievents-integraciones-con-costos/verify.md)) |
 
 ## Por qué empezamos con OmniEvents
 OmniEvents es la versión propia de *ConditionalEvents* (Ajneb97): «cuando pase X, si se cumple Y, haz Z». Es el
@@ -38,6 +39,7 @@ los siguientes plugins de la fábrica.
 | Variables sin caducidad y solo en el jugador o el servidor; los datos de un ítem o un bloque necesitan otro plugin | `expire:` con aviso `var_expire` sin sondeo, `ttl()`, y `objeto.data.nombre` en el PDC de bloques, entidades e ítems | 009 |
 | Una regla se prueba jugando; al actualizar nadie vuelve a probar lo que ya andaba | `tests:` en la regla (`given` y `expect`) que corren sin servidor ni efectos con `/omni test`, al cargar y en gradle | 010 |
 | Sin espacios de nombres: dos reglas `diaria` chocan; lo que se repite se copia y pega; una configuración compartida no dice su versión ni qué necesita | Paquetes (`pack.yml`, `paquete:regla`), plantillas con `extends` y `${parámetros}`, `requires` y migraciones al subir de versión | 011 |
+| Cobrar algo es encadenar condiciones y comandos de consola: si uno falla a mitad, ya se cobró una parte; las regiones de WorldGuard necesitan otro plugin | `cost:` todo o nada con `on_cost_fail` y devolución (Vault, niveles, ítems, variables), `region_enter`/`region_leave`, `npc_click` | 012 |
 | Errores de configuración poco precisos | Validación al cargar con archivo, ruta y «¿quisiste decir?»; `/omni validate` | 001 |
 | Oyentes siempre registrados | Solo se escucha un evento si alguna regla lo usa | 001 |
 | — | Importador de configuraciones de ConditionalEvents | 001 |
@@ -51,7 +53,7 @@ menos el editor visual), una por sesión. El número de cada una se asigna al ab
 4. ~~**OmniEvents: variables con caducidad y en bloques, entidades e ítems** (P5)~~: hecha en la [009](specs/009-omnievents-variables-caducidad-y-objetos/spec.md).
 5. ~~**OmniEvents: pruebas de reglas en el YAML** `tests:` y `/omni test` (P7)~~: hecha en la [010](specs/010-omnievents-pruebas-de-reglas/spec.md).
 6. ~~**OmniEvents: paquetes, plantillas y versión** (P8)~~: hecha en la [011](specs/011-omnievents-paquetes-plantillas-version/spec.md).
-7. **OmniEvents: integraciones con costos**: Vault, `cost:` todo o nada (P9), WorldGuard y Citizens (abajo).
+7. ~~**OmniEvents: integraciones con costos**: Vault, `cost:` todo o nada (P9), WorldGuard y Citizens~~: hecha en la [012](specs/012-omnievents-integraciones-con-costos/spec.md).
 8. **OmniEvents: menús de inventario y formularios de Bedrock** (P10).
 
 Otras pendientes:
@@ -59,7 +61,7 @@ Otras pendientes:
   Con la suite en el juego (002) es menos urgente: queda para la persistencia y los casos de bordes.
 - **Fábrica: más escenarios en el juego** — las acciones y disparadores sin escenario (riesgos de la 002) y
   PlaceholderAPI con su jar en el servidor de prueba.
-- **OmniEvents: integraciones** — WorldGuard (disparadores de región sin plugins extra) y Citizens (NPC); Vault va en la n.º 7.
+- **OmniEvents: más integraciones** — lo que la 012 dejó fuera: acciones sobre NPC (`npc_say`, `npc_teleport`) y regiones (banderas), bancos de Vault.
 - **OmniEvents: editor en el juego** — inventario para ver, activar y probar reglas sin editar YAML.
 - **OmniEvents: almacenamiento SQL** — MySQL/MariaDB para redes con varios servidores (variables compartidas).
 - Después: el siguiente plugin de la fábrica, reutilizando el motor de expresiones de OmniEvents como biblioteca

@@ -186,6 +186,12 @@ public final class RuleManager {
                     return false;
                 }
             }
+            // Spec 012, H2: el costo, todo o nada, antes de contar el uso.
+            if (rule.cost != null && !pay(rule, ctx, trace, ind, sim)) {
+                if (!rule.onCostFail.isEmpty()) execute(rule, rule.onCostFail, ctx, depth, trace, null, parentTrace == null, sampled);
+                else plugin.debugger().flush(parentTrace == null ? trace : null);
+                return false;
+            }
             Runnable revert = sim ? null : registerUsage(rule, cdHolder, limitHolder, now, bypassCd);
             if (!sim) rule.stats().passed();
             if (trace != null) trace.add(ind + "→ actions");
@@ -195,6 +201,52 @@ public final class RuleManager {
         } finally {
             if (!sim) finished(rule, System.nanoTime() - t0, sampled);
         }
+    }
+
+    /**
+     * Cotiza y cobra el costo (plan 012 §1.3). Devuelve true si se cobró todo (o, en una simulación, si alcanzaría);
+     * si no, deja var.cost_missing y var.cost_missing_list para on_cost_fail. Nunca cobra fuera del hilo principal.
+     */
+    private boolean pay(Rule rule, ExecContext ctx, Trace trace, String ind, boolean sim) {
+        if (!org.bukkit.Bukkit.isPrimaryThread()) {
+            plugin.getLogger().warning("La regla '" + rule.name() + "' tiene cost y corrió fuera del hilo principal: no se cobra (llámala desde un disparador síncrono)");
+            return fail(ctx, trace, ind, "el cobro necesita el hilo principal", List.of("thread"));
+        }
+        if (rule.cost.needsPlayer() && ctx.playerOrNull() == null) return fail(ctx, trace, ind, "un jugador que pague", List.of("player"));
+        dev.leo.omnievents.action.Purse purse = ctx.purse();
+        Cost.Quote q;
+        try {
+            q = rule.cost.quote(ctx, purse);
+        } catch (dev.leo.omnievents.action.ActionException | dev.leo.omnievents.expr.ExprException e) {
+            if (!sim) rule.stats().error();
+            plugin.getLogger().warning("Error en el cost de la regla '" + rule.name() + "': " + e.getMessage());
+            return fail(ctx, trace, ind, "(error: " + e.getMessage() + ")", List.of("error"));
+        }
+        if (!q.ok()) {
+            RuleTester.costFailed(ctx, q, null, purse);
+            if (trace != null) trace.add(ind + "✘ costo: falta " + ctx.locals().get("cost_missing") + (rule.onCostFail.isEmpty() ? "" : " → on_cost_fail"));
+            return false;
+        }
+        if (sim) {
+            if (trace != null) trace.add(ind + "✔ costo: se cobraría " + String.join(", ", q.lines().stream().map(l -> Cost.describe(l, l.amount(), purse)).toList()));
+            return true;
+        }
+        Cost.Line failed = rule.cost.charge(q, purse, (l, why) -> plugin.getLogger().severe("No se pudo devolver " + Cost.describe(l, l.amount(), purse)
+                + " a " + purse.who() + " (regla '" + rule.name() + "'): " + why));
+        if (failed != null) {
+            RuleTester.costFailed(ctx, q, failed, purse);
+            if (trace != null) trace.add(ind + "✘ costo: no se pudo cobrar " + failed.key() + "; se devolvió lo cobrado");
+            return false;
+        }
+        if (trace != null) trace.add(ind + "✔ costo cobrado: " + String.join(", ", q.lines().stream().map(l -> Cost.describe(l, l.amount(), purse)).toList()));
+        return true;
+    }
+
+    private static boolean fail(ExecContext ctx, Trace trace, String ind, String missing, List<Object> keys) {
+        ctx.locals().put("cost_missing", missing);
+        ctx.locals().put("cost_missing_list", new ArrayList<>(keys));
+        if (trace != null) trace.add(ind + "✘ costo: falta " + missing);
+        return false;
     }
 
     /** Tiempo del disparo: estadísticas, perfilador (si se midió) y presupuesto (spec 006, H6 y H7). */
@@ -271,6 +323,23 @@ public final class RuleManager {
             long left = until == null || bypassCd ? 0 : Math.max(0, until - System.currentTimeMillis());
             out.add((left == 0 ? "✔ " : "✘ ") + "enfriamiento: " + (left == 0 ? "libre" + (bypassCd ? " (OP)" : "") : "faltan " + Values.formatNumber(Math.ceil(left / 1000.0)) + "s"));
             if (left > 0 && branch == null) branch = rule.onCooldown.isEmpty() ? "nada (en enfriamiento)" : "on_cooldown (" + rule.onCooldown.size() + " acciones)";
+        }
+        // Spec 012, H2 CA5: cada parte del costo con lo que tiene y lo que pide.
+        if (rule.cost != null) {
+            if (rule.cost.needsPlayer() && p == null) {
+                out.add("✘ costo: sin jugador que pague");
+                if (branch == null) branch = "on_cost_fail (" + rule.onCostFail.size() + " acciones)";
+            } else {
+                try {
+                    Cost.Quote q = rule.cost.quote(ctx, ctx.purse());
+                    if (q.noEconomy()) out.add("✘ costo money: no hay economía (Vault)");
+                    for (Cost.Line l : q.lines()) if (!(q.noEconomy() && l.key().equals("money"))) out.add(Cost.checkLine(l));
+                    if (!q.ok() && branch == null) branch = "on_cost_fail (" + rule.onCostFail.size() + " acciones)";
+                } catch (dev.leo.omnievents.action.ActionException | dev.leo.omnievents.expr.ExprException e) {
+                    out.add("✘ costo: " + e.getMessage());
+                    if (branch == null) branch = "nada (error en cost)";
+                }
+            }
         }
         out.add("→ correría: " + (branch == null ? "actions (" + rule.actions.size() + " acciones)" : branch));
         java.util.Set<String> used = new java.util.TreeSet<>();

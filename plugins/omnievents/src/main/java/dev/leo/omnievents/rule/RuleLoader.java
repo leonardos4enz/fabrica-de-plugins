@@ -65,6 +65,21 @@ public final class RuleLoader {
         this.pluginVersion = pluginVersion == null ? null : pluginVersion.replaceFirst("[-+].*$", "");
     }
 
+    /** Spec 012: plugins de integración instalados (Vault, WorldGuard, Citizens); null = no avisar (unitarias). */
+    private Set<String> integrations;
+
+    public RuleLoader integrations(Set<String> installed) {
+        this.integrations = installed;
+        return this;
+    }
+
+    /** H1 CA2, H3 CA3, H4 CA3: la regla usa una integración que no está; carga igual, con un aviso. */
+    private void needs(String plugin, String name, String what, Problems problems) {
+        if (integrations != null && !integrations.contains(plugin)) {
+            problems.warn(name, what + " necesita " + plugin + ", que no está instalado: la regla carga pero no hará eso");
+        }
+    }
+
     /** Los paquetes de la última carga, también los que no cargaron (con su error). */
     public List<Pack> packs() {
         return List.copyOf(packs);
@@ -96,7 +111,11 @@ public final class RuleLoader {
             problems.file(rel);
             YamlConfiguration y = new YamlConfiguration();
             try {
-                y.loadFromString(Files.readString(f.toPath(), StandardCharsets.UTF_8));
+                String text = Files.readString(f.toPath(), StandardCharsets.UTF_8);
+                y.loadFromString(text);
+                for (String dup : duplicateTopKeys(text)) {
+                    problems.warn(pack == null ? dup : pack.name + ":" + dup, "la regla está dos veces en este archivo: solo cuenta la última (YAML no avisa); cámbiale el nombre a una");
+                }
             } catch (IOException | InvalidConfigurationException e) {
                 problems.error("", "YAML inválido: " + firstLine(e.getMessage()));
                 continue;
@@ -243,6 +262,21 @@ public final class RuleLoader {
             if (!p.loaded() && p.error != null && !p.error.startsWith("necesita")) problems.file(p.file).error("", "el paquete no carga: sus reglas se omiten");
         }
         return byDir;
+    }
+
+    /**
+     * Claves de primer nivel repetidas en un archivo. Regresión (spec 012, F-02): YAML se queda con la última sin avisar,
+     * y una regla de la suite tapó a otra del mismo nombre con 0 avisos.
+     */
+    static List<String> duplicateTopKeys(String text) {
+        Set<String> seen = new HashSet<>();
+        Set<String> dups = new java.util.LinkedHashSet<>();
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?m)^([^\\s#\\-][^:\\r\\n]*?)\\s*:(\\s|$)").matcher(text);
+        while (m.find()) {
+            String k = m.group(1).trim().replaceAll("^[\"']|[\"']$", "");
+            if (!seen.add(k)) dups.add(k);
+        }
+        return List.copyOf(dups);
     }
 
     private Pack readPack(File f, String dir, String file, String folderName, Problems problems) {
@@ -441,7 +475,8 @@ public final class RuleLoader {
         Expression.startCollecting();
         ActionParser parser = new ActionParser(actions, problems);
         List<Condition> conditions = new ArrayList<>();
-        List<ActionNode> act, els, onCd, onLim, onExit;
+        List<ActionNode> act, els, onCd, onLim, onExit, onCostFail;
+        Cost cost = null;
         List<Expression> collected = List.of();
         try {
             Object cond = isState ? s.get("when") : s.get("conditions", s.get("if"));
@@ -456,6 +491,9 @@ public final class RuleLoader {
             onExit = isState ? parser.parseList(s.get("on_exit"), name + ".on_exit") : List.of();
             onCd = parser.parseList(s.get("on_cooldown"), name + ".on_cooldown");
             onLim = parser.parseList(s.get("on_limit"), name + ".on_limit");
+            // Spec 012, H2: el costo y su rama; sus expresiones cuentan para validar las raíces.
+            if (s.contains("cost")) cost = Cost.parse(s.get("cost"), name + ".cost", problems);
+            onCostFail = parser.parseList(s.get("on_cost_fail"), name + ".on_cost_fail");
         } finally {
             collected = Expression.stopCollecting();
             validateRoots(name, trigger, parser, collected, problems);
@@ -471,6 +509,14 @@ public final class RuleLoader {
         if (parser.usedTypes().contains("cancel") && trigger.kind() == TriggerType.Kind.EVENT && !trigger.cancellable()) {
             problems.warn(name, "'cancel' no tiene efecto: el evento de " + trigger.name() + " no se puede cancelar");
         }
+        costChecks(name, s, trigger, isState, cost, !onCostFail.isEmpty(), problems);
+        boolean usesMoney = cost != null && cost.usesMoney() || parser.usedTypes().contains("give_money") || parser.usedTypes().contains("take_money")
+                || collected.stream().anyMatch(e -> e.source().contains("money("));
+        if (usesMoney) needs("Vault", name, "el dinero (cost.money, give_money, take_money o money())", problems);
+        if (trigger.kind() == TriggerType.Kind.REGION || collected.stream().anyMatch(e -> e.source().contains("in_region(") || e.source().contains("regions("))) {
+            needs("WorldGuard", name, "las regiones (" + (trigger.kind() == TriggerType.Kind.REGION ? trigger.name() : "in_region o regions") + ")", problems);
+        }
+        if (trigger.name().startsWith("npc_")) needs("Citizens", name, "el disparador " + trigger.name(), problems);
 
         long cooldown = 0;
         if (s.contains("cooldown")) {
@@ -559,10 +605,27 @@ public final class RuleLoader {
         rule.writesObjectData = parser.writesObjectData();
         rule.expireVariables = expireVars;
         rule.pack = pack == null ? null : pack.name;
+        rule.cost = cost;
+        rule.onCostFail = onCostFail;
         // Spec 010: después de compilar la regla (assert no cuenta para las dependencias de un estado). Un caso mal
         // escrito se descarta con su error, pero la regla carga (H1 CA3).
         if (s.contains("tests")) rule.tests = tests(name, s.get("tests"), trigger, problems);
         return rule;
+    }
+
+    /** Spec 012, H2 CA4: dónde puede ir un cost. */
+    private static void costChecks(String name, ConfigurationSection s, TriggerType trigger, boolean isState, Cost cost, boolean hasFail, Problems problems) {
+        if (cost == null) {
+            if (hasFail && !s.contains("cost")) problems.warn(name + ".on_cost_fail", "on_cost_fail no se usa sin cost (se ignora)");
+            return;
+        }
+        if (isState) {
+            problems.error(name + ".cost", "una regla state no usa cost: cobra con take_money o set en on_enter");
+        } else if (trigger.async()) {
+            problems.error(name + ".cost", "cost no sirve en " + trigger.name() + " (asíncrono): cobrar necesita el hilo principal; usa call a una regla call con el cost");
+        } else if (cost.needsPlayer() && !trigger.hasPlayer()) {
+            problems.error(name + ".cost", "el disparador " + trigger.name() + " no tiene jugador: cost solo puede cobrar variables gvar");
+        }
     }
 
     // ------------------------------------------------------------------ pruebas (spec 010)
@@ -571,7 +634,9 @@ public final class RuleLoader {
     public static final String TEST_VAR_PATTERN = "^((pvar|gvar|var)\\.[A-Za-z0-9_\\-]+|.+\\.data\\.[^.\\s]+)$";
     private static final java.util.regex.Pattern TEST_SCOPED = java.util.regex.Pattern.compile("^(pvar|gvar|var)\\.([A-Za-z0-9_\\-]+)$");
     private static final java.util.regex.Pattern TEST_DATA = java.util.regex.Pattern.compile("^(.+?)\\.data\\.([\\p{L}0-9_]+)$");
-    private static final Set<String> BRANCHES = Set.of("actions", "else", "deny", "none", "on_enter");
+    private static final Set<String> BRANCHES = Set.of("actions", "else", "deny", "none", "on_enter", "on_cost_fail");
+    /** Claves de given que no son rutas (spec 012): saldo, inventario (material: cantidad) y regiones. */
+    public static final Set<String> GIVEN_SPECIAL = Set.of("money", "inventory", "regions");
 
     private List<RuleTest> tests(String rule, Object raw, TriggerType trigger, Problems problems) {
         String base = rule + ".tests";
@@ -600,7 +665,27 @@ public final class RuleLoader {
                 for (Map.Entry<?, ?> e : gm.entrySet()) {
                     String key = String.valueOf(e.getKey()).trim();
                     testRoot(key, path + ".given." + key, roots, anyRoot, problems);
-                    given.add(Map.entry(key, e.getValue() == null ? NULL : e.getValue()));
+                    Object gv = e.getValue();
+                    switch (key) {
+                        case "money" -> {
+                            if (Values.toNumberOrNull(gv) == null) problems.error(path + ".given.money", "money es un número (el saldo del caso)");
+                        }
+                        case "inventory" -> {
+                            if (!(gv instanceof Map<?, ?> inv)) problems.error(path + ".given.inventory", "inventory es un mapa material: cantidad (p. ej. { DIAMOND: 3 })");
+                            else for (Map.Entry<?, ?> ie : inv.entrySet()) {
+                                if (org.bukkit.Material.matchMaterial(String.valueOf(ie.getKey())) == null) {
+                                    problems.error(path + ".given.inventory." + ie.getKey(), "material desconocido '" + ie.getKey() + "'");
+                                } else if (Values.toNumberOrNull(ie.getValue()) == null) {
+                                    problems.error(path + ".given.inventory." + ie.getKey(), "la cantidad es un número");
+                                }
+                            }
+                        }
+                        case "regions" -> {
+                            if (!(gv instanceof List<?>) && !(gv instanceof String)) problems.error(path + ".given.regions", "regions es una lista de ids (p. ej. [spawn, mina])");
+                        }
+                        default -> { }
+                    }
+                    given.add(Map.entry(key, gv == null ? NULL : gv));
                 }
             } else if (g != null) {
                 problems.error(path + ".given", "given es un mapa ruta: valor (p. ej. block.type: DIAMOND_ORE)");
@@ -646,7 +731,7 @@ public final class RuleLoader {
                 case "branch" -> {
                     branch = Values.str(v).trim().toLowerCase(Locale.ROOT);
                     if (!BRANCHES.contains(branch) && !branch.startsWith("deny ")) {
-                        problems.error(p, "rama desconocida '" + branch + "'" + Suggest.hint(branch, BRANCHES) + " (actions, else, deny, deny conditions[1], none, on_enter)");
+                        problems.error(p, "rama desconocida '" + branch + "'" + Suggest.hint(branch, BRANCHES) + " (actions, else, deny, deny conditions[1], none, on_enter, on_cost_fail)");
                     }
                 }
                 case "messages" -> messages = texts(v, p, problems);
@@ -694,6 +779,8 @@ public final class RuleLoader {
     /** La raíz de una clave de given o de una variable de expect existe (H1 CA3). */
     private static void testRoot(String key, String path, Set<String> roots, boolean anyRoot, Problems problems) {
         if (key.startsWith("%") && key.endsWith("%") && key.length() > 2) return;
+        // Spec 012: el saldo, el inventario y las regiones del caso.
+        if (GIVEN_SPECIAL.contains(key)) return;
         java.util.regex.Matcher sc = TEST_SCOPED.matcher(key);
         if (sc.matches()) return;
         java.util.regex.Matcher d = TEST_DATA.matcher(key);

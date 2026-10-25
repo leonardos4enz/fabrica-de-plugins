@@ -2,6 +2,7 @@ package dev.leo.omnievents.trigger;
 
 import com.destroystokyo.paper.event.player.PlayerArmorChangeEvent;
 import com.destroystokyo.paper.event.player.PlayerJumpEvent;
+import dev.leo.omnievents.hook.Npcs;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.block.Block;
@@ -80,6 +81,7 @@ public final class Triggers {
         inventory();
         entities();
         server();
+        integrations();
     }
 
     public void register(TriggerType t) {
@@ -379,5 +381,19 @@ public final class Triggers {
 
     static Block blockOf(Object o) {
         return o instanceof Block b ? b : null;
+    }
+    /** Spec 012: WorldGuard y Citizens. Se registran siempre; sin el plugin, la regla avisa al cargar y nunca corre. */
+    private void integrations() {
+        String g = "integraciones";
+        register(TriggerType.special("region_enter", TriggerType.Kind.REGION, g, "player", "world", "location", "region", "event").doc("El jugador entra a una región de WorldGuard (region.id, region.priority); cancel impide la entrada. Necesita WorldGuard."));
+        register(TriggerType.special("region_leave", TriggerType.Kind.REGION, g, "player", "world", "location", "region", "event").doc("El jugador sale de una región de WorldGuard (region.id); cancel lo deja dentro. Necesita WorldGuard."));
+        register(TriggerType.event("npc_click", g, PlayerInteractEntityEvent.class, PlayerInteractEntityEvent::getPlayer, (e, m) -> {
+            m.put("target", e.getRightClicked());
+            m.put("npc", Npcs.info(e.getRightClicked()));
+        }, e -> mainHand(e.getHand()) && Npcs.isNpc(e.getRightClicked()), false, "npc", "target", "item").doc("Un jugador hace clic derecho en un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens."));
+        register(TriggerType.event("npc_left_click", g, EntityDamageByEntityEvent.class, e -> (Player) e.getDamager(), (e, m) -> {
+            m.put("target", e.getEntity());
+            m.put("npc", Npcs.info(e.getEntity()));
+        }, e -> e.getDamager() instanceof Player && Npcs.isNpc(e.getEntity()), false, "npc", "target", "item").doc("Un jugador golpea (clic izquierdo) un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens."));
     }
 }

@@ -4,6 +4,7 @@ import dev.leo.omnievents.action.ActionException;
 import dev.leo.omnievents.action.ActionNode;
 import dev.leo.omnievents.action.ExecContext;
 import dev.leo.omnievents.action.Execution;
+import dev.leo.omnievents.action.Purse;
 import dev.leo.omnievents.action.Sandbox;
 import dev.leo.omnievents.debug.Trace;
 import dev.leo.omnievents.expr.Expression;
@@ -128,6 +129,22 @@ public final class RuleTester {
                 sb.placeholder(key, value);
                 continue;
             }
+            // Spec 012: saldo, inventario y regiones del caso.
+            switch (key) {
+                case "money" -> {
+                    sb.money(Values.num(value));
+                    continue;
+                }
+                case "inventory" -> {
+                    if (e.getValue() instanceof Map<?, ?> inv) inv.forEach((m, n) -> sb.inventory(String.valueOf(m), (int) Values.num(n)));
+                    continue;
+                }
+                case "regions" -> {
+                    sb.regions(Values.list(e.getValue()).stream().map(Values::str).toList());
+                    continue;
+                }
+                default -> { }
+            }
             Matcher sc = SCOPED.matcher(key);
             if (sc.matches()) {
                 String name = sc.group(2);
@@ -219,9 +236,33 @@ public final class RuleTester {
             execute(rule, branch, ctx, sb, depth, trace);
             return name;
         }
+        // Spec 012, H2 CA5: el costo se cobra sobre el Sandbox; si falta algo, la rama es on_cost_fail.
+        if (rule.cost != null) {
+            Purse purse = sb.purse(ctx);
+            Cost.Quote q = rule.cost.quote(ctx, purse);
+            Cost.Line failed = q.ok() ? rule.cost.charge(q, purse, (l, why) -> sb.error("devolución de " + l.key() + ": " + why)) : null;
+            if (!q.ok() || failed != null) {
+                costFailed(ctx, q, failed, purse);
+                trace.add(ind + "✘ costo: falta " + ctx.locals().get("cost_missing") + " → on_cost_fail");
+                execute(rule, rule.onCostFail, ctx, sb, depth, trace);
+                return "on_cost_fail";
+            }
+            trace.add(ind + "✔ costo cobrado");
+        }
         trace.add(ind + "→ " + (state ? "on_enter" : "actions"));
         execute(rule, rule.actions, ctx, sb, depth, trace);
         return state ? "on_enter" : "actions";
+    }
+
+    /** var.cost_missing y var.cost_missing_list (H2 CA2): lo que falta, o la parte que no se pudo cobrar. */
+    static void costFailed(ExecContext ctx, Cost.Quote q, Cost.Line failed, Purse purse) {
+        if (failed == null) {
+            ctx.locals().put("cost_missing", Cost.missingText(q, purse));
+            ctx.locals().put("cost_missing_list", Cost.missingKeys(q));
+        } else {
+            ctx.locals().put("cost_missing", Cost.describe(failed, failed.amount(), purse) + " (no se pudo cobrar)");
+            ctx.locals().put("cost_missing_list", new ArrayList<Object>(List.of(failed.key())));
+        }
     }
 
     private static void execute(Rule rule, List<ActionNode> nodes, ExecContext ctx, Sandbox sb, int depth, Trace trace) {

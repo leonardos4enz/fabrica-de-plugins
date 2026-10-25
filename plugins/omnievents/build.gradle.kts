@@ -1,7 +1,15 @@
-version = "1.6.0"
+version = "1.7.0"
+
+repositories {
+    // Integraciones opcionales (spec 012): solo para compilar, no se empaquetan.
+    maven("https://jitpack.io") { content { includeGroup("com.github.MilkBowl") } }
+    maven("https://maven.enginehub.org/repo/")
+}
 
 dependencies {
     compileOnly("me.clip:placeholderapi:2.11.6")
+    compileOnly("com.github.MilkBowl:VaultAPI:1.7.1") { isTransitive = false }
+    compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.13") { exclude(group = "org.bukkit"); exclude(group = "io.papermc.paper") }
     // Valida los ejemplos contra el esquema generado (spec 007); solo en pruebas.
     testImplementation("com.networknt:json-schema-validator:1.5.6")
 }

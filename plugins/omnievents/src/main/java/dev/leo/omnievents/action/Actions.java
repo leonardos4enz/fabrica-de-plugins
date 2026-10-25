@@ -681,10 +681,34 @@ public final class Actions {
             Expression n = a.expr();
             return Action.of(ctx -> ctx.requirePlayer().giveExpLevels((int) Values.num(n.eval(ctx))));
         });
+        // Spec 012, H1: dinero con Vault. En una prueba mueven el saldo de given.money.
+        register("give_money", doc("Deposita dinero en la economía de Vault (necesita Vault y un plugin de economía).", "expresión (cantidad > 0)", "give_money: 100"), a -> money(a, true));
+        register("take_money", doc("Retira dinero de la economía de Vault; si no alcanza, es un error y no retira nada.", "expresión (cantidad > 0)", "take_money: \"var.precio\""), a -> money(a, false));
         register("kick", doc("Expulsa al jugador con un mensaje.", "texto", "kick: \"<red>Vuelve pronto\""), a -> {
             Template t = a.template();
             return Action.of(ctx -> ctx.requirePlayer().kick(t.component(ctx)));
         });
+    }
+
+    private static Action money(Args a, boolean give) {
+        Expression n = a.expr();
+        String type = give ? "give_money" : "take_money";
+        return (ctx, exec) -> {
+            double amount = Values.num(n.eval(ctx));
+            if (!(amount > 0)) throw new ActionException(type + " dio " + Values.formatNumber(amount) + ": la cantidad debe ser mayor que 0");
+            if (exec.testing()) exec.sandbox().effect(type, "", Values.formatNumber(amount));
+            if (ctx.sandbox() == null) ctx.requirePlayer();
+            Purse purse = ctx.purse();
+            Double balance = purse.money();
+            if (balance == null) throw new ActionException(ctx.sandbox() != null ? type + ": la prueba no tiene saldo (given.money)" : dev.leo.omnievents.hook.Economy.MISSING);
+            if (!give && balance < amount) {
+                throw new ActionException("take_money: no alcanza (tiene " + purse.formatMoney(balance) + ", pide " + purse.formatMoney(amount) + ")");
+            }
+            boolean ok = give ? purse.giveMoney(amount) : purse.takeMoney(amount);
+            if (!ok) throw new ActionException(type + ": la economía rechazó la operación de " + purse.formatMoney(amount));
+            exec.trace("    " + type + " " + purse.formatMoney(amount));
+            return 0;
+        };
     }
 
     /**

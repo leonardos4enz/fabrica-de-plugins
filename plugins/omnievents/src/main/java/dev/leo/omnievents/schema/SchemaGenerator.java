@@ -181,6 +181,19 @@ public final class SchemaGenerator {
             case LIST -> map("type", "array", "items", map("type", "string"));
             case TESTS -> map("type", "array", "items", ref("test"));
             case PARAMS -> map("type", "object", "propertyNames", map("pattern", "^[A-Za-z0-9_\\-]+$"));
+            case COST -> {
+                // Spec 012: money, levels, exp, items y variables pvar.x / gvar.x.
+                Map<String, String> k = RuleOptions.COST_KEYS;
+                Map<String, Object> amount = map("anyOf", List.of(map("type", "number", "exclusiveMinimum", 0), ref("expression")));
+                Map<String, Object> item = map("type", "string", "pattern", "^[^;]+(;.+)?$");
+                yield map("type", "object", "properties", map(
+                                "money", with(amount, k.get("money")),
+                                "levels", with(amount, k.get("levels")),
+                                "exp", with(amount, k.get("exp")),
+                                "items", map("description", k.get("items"), "anyOf", List.of(item, map("type", "array", "items", item)))),
+                        "patternProperties", map("^(pvar|gvar)\\.[A-Za-z0-9_\\-]+$", with(amount, k.get("pvar.<nombre>"))),
+                        "additionalProperties", false, "minProperties", 1);
+            }
         };
     }
 
@@ -222,7 +235,7 @@ public final class SchemaGenerator {
         Map<String, String> t = RuleOptions.TEST_KEYS, e = RuleOptions.EXPECT_KEYS;
         Map<String, Object> expect = map("type", "object", "description", t.get("expect"), "properties", map(
                         "fired", map("type", "boolean", "description", e.get("fired")),
-                        "branch", map("type", "string", "pattern", "^(actions|else|deny|deny .+|none|on_enter)$", "description", e.get("branch")),
+                        "branch", map("type", "string", "pattern", "^(actions|else|deny|deny .+|none|on_enter|on_cost_fail)$", "description", e.get("branch")),
                         "messages", with(ref("texts"), e.get("messages")),
                         "commands", with(ref("texts"), e.get("commands")),
                         "actions", with(ref("texts"), e.get("actions")),

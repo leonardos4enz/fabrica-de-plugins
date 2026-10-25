@@ -13,8 +13,10 @@ import dev.leo.omnievents.debug.Debugger;
 import dev.leo.omnievents.debug.Profiler;
 import dev.leo.omnievents.expr.BukkitProperties;
 import dev.leo.omnievents.expr.Properties;
+import dev.leo.omnievents.hook.Economy;
 import dev.leo.omnievents.hook.PapiHook;
 import dev.leo.omnievents.hook.Placeholders;
+import dev.leo.omnievents.hook.Regions;
 import dev.leo.omnievents.rule.Problems;
 import dev.leo.omnievents.rule.Rule;
 import dev.leo.omnievents.rule.RuleLoader;
@@ -44,7 +46,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
     private static final List<String> EXAMPLES = List.of(
             "rules/ejemplos/bienvenida.yml", "rules/ejemplos/mineria.yml", "rules/ejemplos/comandos.yml",
             "rules/ejemplos/combate.yml", "rules/ejemplos/chat.yml", "rules/ejemplos/temporizadores.yml",
-            "rules/ejemplos/herramientas.yml", "rules/ejemplos/estados.yml", "rules/ejemplos/variables.yml",
+            "rules/ejemplos/herramientas.yml", "rules/ejemplos/estados.yml", "rules/ejemplos/variables.yml", "rules/ejemplos/integraciones.yml",
             "rules/ejemplos/recompensas/pack.yml", "rules/ejemplos/recompensas/reglas.yml");
 
     private Settings settings;
@@ -64,6 +66,11 @@ public final class OmniEvents extends JavaPlugin implements Listener {
     private TimerService timers;
     private StateService states;
     private RuleCommands ruleCommands;
+    private dev.leo.omnievents.trigger.RegionService regionService;
+    private Economy economy = Economy.NONE;
+    private Regions regions = Regions.NONE;
+    /** Spec 012: Vault, WorldGuard y Citizens, si están instalados. */
+    private java.util.Set<String> integrations = java.util.Set.of();
     private BukkitTask autosave;
     private Problems lastProblems = new Problems();
     private PackVersions packVersions;
@@ -90,12 +97,14 @@ public final class OmniEvents extends JavaPlugin implements Listener {
         timers = new TimerService(this);
         states = new StateService(this);
         ruleCommands = new RuleCommands(this);
+        regionService = new dev.leo.omnievents.trigger.RegionService(this);
         loadSettings();
 
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             PapiHook.install(this);
             getLogger().info("PlaceholderAPI detectado: %placeholders% y %omni_...% activos");
         }
+        detectIntegrations();
         getServer().getMessenger().registerOutgoingPluginChannel(this, "BungeeCord");
         getServer().getPluginManager().registerEvents(this, this);
         for (Player p : Bukkit.getOnlinePlayers()) data.preload(p.getUniqueId());
@@ -133,6 +142,9 @@ public final class OmniEvents extends JavaPlugin implements Listener {
             });
             step("estados", () -> {
                 if (states != null) states.unregister();
+            });
+            step("regiones", () -> {
+                if (regionService != null) regionService.unregister();
             });
             step("comandos", () -> {
                 if (ruleCommands != null) ruleCommands.unregister();
@@ -174,7 +186,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
         File folder = new File(getDataFolder(), "rules");
         folder.mkdirs();
         Problems p = new Problems();
-        RuleLoader loader = new RuleLoader(actions, triggers, getPluginMeta().getVersion());
+        RuleLoader loader = new RuleLoader(actions, triggers, getPluginMeta().getVersion()).integrations(integrations);
         Map<String, Rule> loaded = loader.loadFolder(folder, p);
         // Cada servicio por separado: si uno falla, los demás quedan activos (H1 CA3; regresión 001 F-03).
         listeners.unregister();
@@ -184,6 +196,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
         guarded(p, "oyentes", () -> listeners.register(rules.all(), p));
         guarded(p, "temporizadores", timers::start);
         guarded(p, "estados", () -> states.register(rules.all()));
+        guarded(p, "regiones", () -> regionService.register(rules.all()));
         guarded(p, "comandos", ruleCommands::register);
         guarded(p, "datos de bloques", () -> blockCleaner.update(rules.all()));
         lastProblems = p;
@@ -279,7 +292,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
     /** Valida sin aplicar (H9 CA4). */
     public Problems validate() {
         Problems p = new Problems();
-        new RuleLoader(actions, triggers, getPluginMeta().getVersion()).loadFolder(new File(getDataFolder(), "rules"), p);
+        new RuleLoader(actions, triggers, getPluginMeta().getVersion()).integrations(integrations).loadFolder(new File(getDataFolder(), "rules"), p);
         return p;
     }
 
@@ -347,6 +360,53 @@ public final class OmniEvents extends JavaPlugin implements Listener {
     }
 
     // ------------------------------------------------------------------ accesores
+
+    /**
+     * Spec 012 (constitución VI.2): cada integración solo se instancia si su plugin está; la economía de Vault se busca
+     * en cada uso, así que una que se registra después también sirve.
+     */
+    private void detectIntegrations() {
+        var pm = Bukkit.getPluginManager();
+        java.util.Set<String> found = new java.util.LinkedHashSet<>();
+        if (pm.getPlugin("Vault") != null) {
+            economy = new dev.leo.omnievents.hook.VaultEconomy();
+            found.add("Vault");
+        }
+        if (pm.getPlugin("WorldGuard") != null) {
+            try {
+                regions = new dev.leo.omnievents.hook.WorldGuardRegions();
+                found.add("WorldGuard");
+            } catch (LinkageError e) {
+                getLogger().warning("WorldGuard está pero no se pudo usar su API: " + e);
+            }
+        }
+        if (pm.getPlugin("Citizens") != null) found.add("Citizens");
+        integrations = java.util.Collections.unmodifiableSet(found);
+        if (!found.isEmpty()) getLogger().info("Integraciones detectadas: " + String.join(", ", found));
+    }
+
+    public Economy economy() {
+        return economy;
+    }
+
+    public Regions regions() {
+        return regions;
+    }
+
+    public dev.leo.omnievents.trigger.RegionService regionService() {
+        return regionService;
+    }
+
+    /** /omni stats: lo detectado y, con Vault, el plugin de economía de ahora. */
+    public String integrationsLine() {
+        if (integrations.isEmpty()) return "ninguna (Vault, WorldGuard y Citizens son opcionales)";
+        List<String> out = new java.util.ArrayList<>();
+        for (String i : integrations) {
+            if (i.equals("Vault")) out.add("Vault (" + (economy.available() ? economy.provider() : "sin economía") + ")");
+            else out.add(i);
+        }
+        return String.join(", ", out);
+    }
 
     public Settings settings() {
         return settings;

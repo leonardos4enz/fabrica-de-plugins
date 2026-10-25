@@ -319,3 +319,56 @@ e2e_probada_falla:
   tests:
     - name: espera mal
       expect: {pvar.e2e_x: 2}
+
+# Spec 012: cost todo o nada con el dinero de EssentialsX (por Vault), give_money, regiones de WorldGuard y NPC de
+# Citizens.
+e2e_costo:
+  trigger: command
+  command: e2ecosto
+  cost:
+    money: 300
+    items: "DIAMOND;2"
+    pvar.e2e_fichas: 1
+  actions:
+    - message: "e2e costo comprado, saldo {money()}"
+  on_cost_fail:
+    - message: "e2e costo falta: {var.cost_missing} (saldo {money()})"
+
+e2e_pagar:
+  trigger: command
+  command: e2epagar
+  actions:
+    - give_money: 50
+    - message: "e2e pagado, saldo {money()}"
+
+e2e_region_entra:
+  trigger: region_enter
+  conditions: "region.id == 'e2ezona'"
+  actions:
+    - message: "e2e entra {region.id}, regiones {regions()}, dentro {in_region('e2ezona')}"
+
+e2e_region_sale:
+  trigger: region_leave
+  conditions: "region.id == 'e2ezona'"
+  actions:
+    - message: "e2e sale {region.id}"
+
+e2e_region_bloqueo:
+  trigger: region_enter
+  conditions: "region.id == 'e2ebloqueo'"
+  actions:
+    - cancel
+    - message: "e2e bloqueado {region.id}"
+
+e2e_npc_clic:
+  trigger: npc_click
+  conditions: "npc.name == 'E2eGuia'"
+  actions:
+    - message: "e2e npc clic {npc.name} id {npc.id} es_npc {is_npc(target)}"
+
+e2e_npc_golpe:
+  trigger: npc_left_click
+  conditions: "npc.name == 'E2eGuia'"
+  actions:
+    - cancel
+    - message: "e2e npc golpe {npc.name}"

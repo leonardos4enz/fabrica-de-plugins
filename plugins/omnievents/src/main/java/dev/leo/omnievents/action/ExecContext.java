@@ -242,6 +242,21 @@ public final class ExecContext implements EvalContext {
         return plugin.placeholders().resolve(raw, p instanceof OfflinePlayer op ? op : null, this);
     }
 
+    /**
+     * Dónde miran in_region y regions (spec 012): en region_enter y region_leave, el destino del movimiento (el jugador
+     * todavía no llegó); en los demás, donde está el jugador.
+     */
+    private Location regionPlace() {
+        if (rule != null && rule.trigger().kind() == dev.leo.omnievents.trigger.TriggerType.Kind.REGION
+                && Values.raw(resolve("location")) instanceof Location l) return l;
+        return location();
+    }
+
+    /** De dónde cobra un cost o take_money (spec 012): el jugador real o el Sandbox de una prueba. */
+    public Purse purse() {
+        return sandbox != null ? sandbox.purse(this) : new PlayerPurse(this, plugin.economy());
+    }
+
     @Override
     public Object service(String name, Object... args) {
         if (sandbox != null) {
@@ -249,6 +264,11 @@ public final class ExecContext implements EvalContext {
             return switch (name) {
                 case "cooldown", "uses" -> 0.0;
                 case "in_state" -> false;
+                // Spec 012: dinero y regiones de given.money y given.regions.
+                case "money" -> sandbox.money();
+                case "money_format" -> Values.formatNumber(Values.round(Values.num(args[0]), 2));
+                case "in_region" -> sandbox.regions().stream().anyMatch(r -> r.equalsIgnoreCase(String.valueOf(args[0])));
+                case "regions" -> new java.util.ArrayList<Object>(sandbox.regions());
                 case "ttl" -> sandbox.ttl((Scope) args[0], String.valueOf(args[1]));
                 case "ttl_data" -> Sandbox.isObject(Values.raw(args[0])) && sandbox.objectGet(Values.raw(args[0]), String.valueOf(args[1])) != null ? -1.0 : null;
                 default -> null;
@@ -267,6 +287,20 @@ public final class ExecContext implements EvalContext {
                 yield h == null ? null : h.ttl(String.valueOf(args[1]));
             }
             case "ttl_data" -> ObjectData.supports(Values.raw(args[0])) ? plugin.objectData().ttl(args[0], String.valueOf(args[1])) : null;
+            // Spec 012: sin economía money() vale nulo; sin WorldGuard, ninguna región.
+            case "money" -> p == null || !plugin.economy().available() ? null : plugin.economy().balance(p);
+            case "money_format" -> plugin.economy().format(Values.num(args[0]));
+            case "in_region" -> {
+                String want = String.valueOf(args[0]);
+                Location at = regionPlace();
+                yield at != null && plugin.regions().at(at).stream().anyMatch(r -> r.id().equalsIgnoreCase(want));
+            }
+            case "regions" -> {
+                java.util.List<Object> ids = new java.util.ArrayList<>();
+                Location at = regionPlace();
+                if (at != null) for (var r : plugin.regions().at(at)) ids.add(r.id());
+                yield ids;
+            }
             case "pvar_of" -> {
                 Object target = Values.raw(args[0]);
                 OfflinePlayer op = target instanceof OfflinePlayer o ? o : Bukkit.getPlayerExact(Values.str(target));

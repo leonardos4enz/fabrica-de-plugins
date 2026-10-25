@@ -1,0 +1,74 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
+# Integraciones (spec 012): costos todo o nada con Vault, regiones de WorldGuard y NPC de Citizens. Los tres plugins
+# son opcionales: sin ellos estas reglas cargan con un aviso y no hacen eso.
+
+# Una tienda: se cobra todo (dinero, diamantes y una ficha) o nada. Si falta algo, on_cost_fail dice qué.
+tienda_arco:
+  trigger: command
+  command:
+    name: comprar_arco
+    description: Compra el arco de la tienda
+  cost:
+    money: 500
+    items: "DIAMOND;3"
+    pvar.fichas: 1
+  actions:
+    - give_item: "BOW;1;<aqua>Arco de la tienda"
+    - message: "<green>Compraste el arco. Te quedan {money_format(money())}."
+  on_cost_fail:
+    - message: "<red>Te falta: {var.cost_missing}"
+  tests:
+    - name: alcanza y se cobra todo
+      given: { player.name: Ana, money: 800, inventory: { DIAMOND: 5 }, pvar.fichas: 2 }
+      expect:
+        branch: actions
+        pvar.fichas: 1
+        actions: [give_item]
+        messages: ["Te quedan 300"]
+        assert: "money() == 300"
+    - name: sin diamantes no se cobra nada
+      given: { player.name: Ana, money: 800, inventory: { DIAMOND: 1 }, pvar.fichas: 2 }
+      expect:
+        branch: on_cost_fail
+        pvar.fichas: 2
+        messages: ["Te falta: 2 × DIAMOND"]
+        assert: ["money() == 800", "var.cost_missing_list == ['items']"]
+
+# Regiones: un saludo al entrar al spawn y una zona solo para VIP (cancel impide la entrada).
+saludo_spawn:
+  trigger: region_enter
+  conditions: "region.id == 'spawn'"
+  actions:
+    - actionbar: "<gold>Bienvenido al spawn, {player.name}"
+  tests:
+    - given: { player.name: Ana, region.id: spawn }
+      expect: { fired: true, messages: ["Bienvenido al spawn, Ana"] }
+    - given: { player.name: Ana, region.id: mina }
+      expect: { fired: false }
+
+zona_vip:
+  trigger: region_enter
+  conditions:
+    - "region.id == 'vip'"
+    - "!perm('rango.vip')"
+  actions:
+    - cancel
+    - message: "<red>Esa zona es solo para VIP."
+  tests:
+    - given: { region.id: vip }
+      expect: { cancelled: true, messages: ["solo para VIP"] }
+
+# Un NPC guía: al hacerle clic derecho saluda, dice dónde estás y da 10 de dinero una vez por hora.
+guia:
+  trigger: npc_click
+  conditions: "npc.name == 'Guía'"
+  cooldown: 1h
+  actions:
+    - message: "<yellow>[Guía]</yellow> Hola, {player.name}. Estás en: {regions()}"
+    - give_money: 10
+  tests:
+    - given: { player.name: Ana, npc.name: Guía, money: 0, regions: [spawn] }
+      expect:
+        messages: ["Estás en: spawn"]
+        actions: [give_money]
+        assert: "money() == 10"

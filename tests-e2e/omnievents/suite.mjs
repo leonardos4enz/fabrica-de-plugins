@@ -36,6 +36,10 @@ async function limpiarArea (srv) {
 
 export default {
   jar: /^OmniEvents-.*\.jar$/,
+  // Spec 012: Vault, EssentialsX, WorldEdit, WorldGuard y Citizens en el servidor de prueba (lib/plugins-extra.mjs).
+  pluginsExtra: true,
+  // Comandos de Minecraft que usa la suite y que EssentialsX reemplazaría (con otra salida): se le desactivan.
+  comandosDeMinecraft: ['clear', 'clearinventory', 'gamemode', 'give', 'item', 'kill', 'list', 'time', 'tp', 'weather', 'xp', 'exp'],
   // Los ejemplos se toman siempre del código fuente: OmniEvents solo los crea si rules/ no existe, así que en un
   // servidor de prueba ya usado (o recién creado por la suite) podrían faltar o estar viejos.
   copiar: [
@@ -881,6 +885,106 @@ export default {
         await srv.consola('list', { espera: /players online/ })
         if (srv.lineas.slice(ml).some(l => /e2e migración/.test(l))) throw new Error('la migración corrió dos veces')
         await srv.consola('omni var del global e2e_migrado')
+      }
+    },
+    {
+      id: '012 H1 CA1 · H2 CA1 · H2 CA2',
+      nombre: 'cost todo o nada con el dinero de EssentialsX (Vault): cobra todo; si falta algo no cobra nada y corre on_cost_fail; give_money',
+      timeoutMs: 30000,
+      async fn (ctx) {
+        const { srv } = ctx
+        await prepararJugador(ctx, ANA)
+        const ana = ctx.bots[ANA]
+        await srv.consola(`eco set ${ANA} 1000`)
+        await srv.consola(`give ${ANA} diamond 3`)
+        await srv.consola(`omni var set ${ANA} e2e_fichas 1`, { espera: /e2e_fichas = 1/ })
+        await srv.sincronizar() // la consola no espera (002 F-03)
+        await ana.hasta('tener 3 diamantes', () => ana.cantidad('diamond') === 3)
+        let m = ana.marca()
+        ana.comando('e2ecosto')
+        await ana.esperar('chat', /^e2e costo comprado, saldo 700$/, { desde: m })
+        await ana.hasta('quedar con 1 diamante', () => ana.cantidad('diamond') === 1)
+        await esperarVar(srv, ANA, 'e2e_fichas', 0)
+        // Falta un diamante y la ficha: no se cobra nada (el saldo sigue en 700).
+        m = ana.marca()
+        ana.comando('e2ecosto')
+        await ana.esperar('chat', /^e2e costo falta: 1 × DIAMOND, 1 de pvar\.e2e_fichas \(saldo 700\)$/, { desde: m })
+        await dormir(300)
+        if (ana.cantidad('diamond') !== 1) throw new Error(`se cobraron diamantes sin alcanzar el costo: quedan ${ana.cantidad('diamond')}`)
+        m = ana.marca()
+        ana.comando('e2epagar')
+        await ana.esperar('chat', /^e2e pagado, saldo 750$/, { desde: m })
+        await srv.consola(`omni var del ${ANA} e2e_fichas`)
+      }
+    },
+    {
+      id: '012 H3 CA1 · H3 CA2',
+      nombre: 'WorldGuard: region_enter y region_leave al teletransportarse, in_region y regions; cancel impide entrar',
+      timeoutMs: 40000,
+      async fn (ctx) {
+        const { srv } = ctx
+        await prepararJugador(ctx, ANA, 'creative')
+        const ana = ctx.bots[ANA]
+        for (const r of ['e2ezona', 'e2ebloqueo']) await srv.consola(`rg remove -w world ${r}`)
+        await srv.sincronizar()
+        // Las regiones se marcan con WorldEdit como Ana (OP): la consola no tiene selección.
+        for (const [id, x] of [['e2ezona', 30], ['e2ebloqueo', 40]]) {
+          let m = ana.marca()
+          ana.comando(`/pos1 ${x},-61,30`)
+          await ana.esperar('chat', /First position set/i, { desde: m })
+          m = ana.marca()
+          ana.comando(`/pos2 ${x + 4},-55,34`)
+          await ana.esperar('chat', /Second position set/i, { desde: m })
+          m = ana.marca()
+          ana.comando(`rg define ${id}`)
+          await ana.esperar('chat', new RegExp(`region.*${id}|${id}.*region`, 'i'), { desde: m })
+        }
+        await srv.consola(`tp ${ANA} 32 -60 20`)
+        await srv.sincronizar()
+        await ana.hasta('estar fuera de la zona', b => cerca(b.entity.position, 32, -60, 20))
+        let m = ana.marca()
+        await srv.consola(`tp ${ANA} 32 -60 32`)
+        await ana.esperar('chat', /^e2e entra e2ezona, regiones e2ezona, dentro true$/, { desde: m })
+        await ana.hasta('estar en la zona', b => cerca(b.entity.position, 32, -60, 32))
+        m = ana.marca()
+        await srv.consola(`tp ${ANA} 32 -60 20`)
+        await ana.esperar('chat', /^e2e sale e2ezona$/, { desde: m })
+        await ana.hasta('volver afuera', b => cerca(b.entity.position, 32, -60, 20))
+        // La zona bloqueada cancela el teletransporte: Ana se queda donde estaba.
+        m = ana.marca()
+        await srv.consola(`tp ${ANA} 42 -60 32`)
+        await ana.esperar('chat', /^e2e bloqueado e2ebloqueo$/, { desde: m })
+        await dormir(500)
+        if (!cerca(ana.bot.entity.position, 32, -60, 20)) throw new Error(`entró a la zona bloqueada: ${ana.bot.entity.position}`)
+        await ana.nunca('chat', /^e2e entra/, { desde: m, ms: 200 })
+        for (const r of ['e2ezona', 'e2ebloqueo']) await srv.consola(`rg remove -w world ${r}`)
+        await prepararJugador(ctx, ANA)
+      }
+    },
+    {
+      id: '012 H4 CA1 · H4 CA2',
+      nombre: 'Citizens: npc_click y npc_left_click con npc.name, npc.id e is_npc',
+      timeoutMs: 30000,
+      async fn (ctx) {
+        const { srv } = ctx
+        await prepararJugador(ctx, ANA)
+        const ana = ctx.bots[ANA]
+        await srv.consola('npc remove all')
+        await srv.consola('npc create E2eGuia --at 15:-60:12:world', { espera: /E2eGuia/ })
+        await srv.sincronizar()
+        let npc
+        await ana.hasta('ver al NPC', b => {
+          npc = Object.values(b.entities).find(e => e.type === 'player' && e !== b.entity && cerca(e.position, 15.5, -60, 12.5, 1.5))
+          return npc != null
+        })
+        let m = ana.marca()
+        await ana.bot.lookAt(npc.position.offset(0, 1.6, 0))
+        ana.bot.activateEntity(npc)
+        await ana.esperar('chat', /^e2e npc clic E2eGuia id \d+ es_npc true$/, { desde: m })
+        m = ana.marca()
+        ana.bot.attack(npc)
+        await ana.esperar('chat', /^e2e npc golpe E2eGuia$/, { desde: m })
+        await srv.consola('npc remove all')
       }
     },
     {

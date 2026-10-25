@@ -181,6 +181,16 @@ public final class Functions {
             return target == null ? null : c.service("ttl_data", target, d.name());
         });
         doc("pvar_of(jugador, nombre)", "Variable pvar de otro jugador (por nombre).", 2, 2, (c, a) -> c.service("pvar_of", a[0], s(a, 1)));
+        // Integraciones (spec 012)
+        doc("money()", "Saldo del jugador en la economía de Vault; nulo sin Vault o sin jugador. En tests:, el de given.money.", 0, 0, (c, a) -> c.service("money"));
+        doc("money_format(n)", "La cantidad con la moneda de la economía (p. ej. $1,500.00); sin economía, el número.", 1, 1, (c, a) -> c.service("money_format", a[0]));
+        doc("in_region(id)", "true si el jugador está en esa región de WorldGuard (sin WorldGuard, false). En tests:, given.regions.", 1, 1, (c, a) -> c.service("in_region", s(a, 0)));
+        doc("regions()", "Ids de las regiones de WorldGuard donde está el jugador, de mayor a menor prioridad (sin WorldGuard, vacía).", 0, 0, (c, a) -> c.service("regions"));
+        doc("is_npc(entidad)", "true si la entidad es un NPC de Citizens. En tests:, un objeto de given con npc: true.", 1, 1, (c, a) -> {
+            Object o = Values.raw(a[0]);
+            if (o instanceof Map<?, ?> m) return Boolean.TRUE.equals(m.get("npc"));
+            return dev.leo.omnievents.hook.Npcs.isNpc(o);
+        });
     }
 
     private static boolean between(double v, double a, double b) {

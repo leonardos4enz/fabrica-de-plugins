@@ -39,6 +39,8 @@ Contenido: [opciones de una regla](#opciones-de-una-regla) · [paquetes y planti
 | `limit_scope` | `player`, `jugador`, `global`, `server`, `servidor` | todos | player (por jugador, por defecto) o global. |
 | `limit_reset` | `never`, `nunca`, `daily`, `diario`, `weekly`, `semanal`, `monthly`, `mensual` o una duración | todos | Cuándo se reinician los usos: never, daily, weekly, monthly o una duración (12h). |
 | `on_limit` | acciones | todos | Acciones si ya no quedan usos. |
+| `cost` | mapa (ver abajo) | todos | Lo que cuesta la regla, todo o nada: money (Vault), levels, exp, items y variables pvar.x o gvar.x. Se cobra después de las condiciones, el límite y el enfriamiento; si algo no alcanza no se cobra nada ni cuenta el uso. |
+| `on_cost_fail` | acciones | todos | Acciones si el costo no alcanza o un cobro falla (lo cobrado se devuelve). var.cost_missing dice qué falta; var.cost_missing_list, las claves. |
 | `tests` | lista de casos | todos | Pruebas de la regla: casos con given (el contexto falso) y expect (lo esperado). Corren con /omni test y al cargar, sin efectos. |
 | `template` | `true` / `false` | todos | true: la regla es una plantilla; no corre sola (no necesita trigger) y otras la usan con extends. |
 | `extends` | texto | todos | Plantilla de la que hereda (template: true): copia sus claves y las que escribe esta regla las reemplazan enteras. En un paquete busca primero en el paquete; paquete:plantilla es absoluto. |
@@ -74,12 +76,23 @@ Bloque `command` (para `trigger: command`):
 | `usage` | Uso que se muestra al equivocarse. |
 | `tab` | Autocompletado: una lista por argumento; "{players}" son los jugadores conectados. |
 
+Claves de `cost` (spec 012; todo o nada, con `on_cost_fail` si algo no alcanza):
+
+| Clave | Qué cobra |
+|---|---|
+| `money` | Dinero de la economía de Vault (expresión, > 0). Necesita Vault y un plugin de economía. |
+| `levels` | Niveles de experiencia (entero > 0). |
+| `exp` | Puntos de experiencia (entero > 0). |
+| `items` | Ítems por material, tengan o no nombre: "MATERIAL;cantidad" o una lista de esos (sin la armadura). Al devolver, vuelven las mismas pilas. |
+| `pvar.<nombre>` | Variable numérica del jugador (expresión, > 0); nula cuenta como 0. |
+| `gvar.<nombre>` | Variable numérica global (expresión, > 0); sirve también sin jugador. |
+
 Cada caso de `tests` (spec 010; corren con `/omni test` y al cargar):
 
 | Clave | Qué hace |
 |---|---|
 | `name` | Nombre del caso (sin él: caso 1, caso 2…). |
-| `given` | Contexto falso: rutas con puntos y su valor (block.type: DIAMOND_ORE, player.level: 12, event.damage: 5), variables iniciales (pvar.x, gvar.x, var.x, block.data.x) y placeholders ("%vault_eco_balance%": 100). |
+| `given` | Contexto falso: rutas con puntos y su valor (block.type: DIAMOND_ORE, player.level: 12, event.damage: 5), variables iniciales (pvar.x, gvar.x, var.x, block.data.x), placeholders ("%vault_eco_balance%": 100) y, para cost y las integraciones (spec 012), money (saldo), inventory (material: cantidad) y regions (ids). |
 | `expect` | Lo esperado: fired, branch, variables, messages, commands, actions, cancelled y assert. |
 | `seed` | Semilla de random en este caso (0 por defecto): el mismo número elige siempre la misma rama. |
 
@@ -88,7 +101,7 @@ Claves de `expect` (además, variables: `pvar.x`, `gvar.x`, `var.x`, `block.data
 | Clave | Qué hace |
 |---|---|
 | `fired` | true si corrieron las acciones principales (actions, u on_enter en un state). |
-| `branch` | La rama que corrió: actions, else, deny (o deny conditions[1]), none, u on_enter en un state. |
+| `branch` | La rama que corrió: actions, else, deny (o deny conditions[1]), none, on_cost_fail (el costo no alcanzó) u on_enter en un state. |
 | `messages` | Textos que deben aparecer, en orden y sin formato, en los mensajes que mandaría (message, broadcast, actionbar, title…). |
 | `commands` | Textos que deben aparecer, en orden, en los comandos que correría (console, command). |
 | `actions` | Acciones que correría, en orden: el tipo (give_item) o el tipo y un texto ("sound: LEVELUP"). |
@@ -248,6 +261,14 @@ Raíces que todos ofrecen además de las suyas: `server` `rule` `online` `source
 | `state` | `player` `world` `location` | Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende. |
 | `var_expire` | `player` `world` `location` `variable` `value` `scope` | Caduca una variable con expire (spec 009): una pvar de un jugador conectado (con player) o una gvar. variable: el nombre; value: lo último que valía; scope: pvar o gvar. |
 | `custom` | `player` `event` `world` `location` | Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from). |
+
+### Integraciones
+| Disparador | Raíces | Qué es |
+|---|---|---|
+| `region_enter` | `player` `world` `location` `region` `event` | El jugador entra a una región de WorldGuard (region.id, region.priority); cancel impide la entrada. Necesita WorldGuard. |
+| `region_leave` | `player` `world` `location` `region` `event` | El jugador sale de una región de WorldGuard (region.id); cancel lo deja dentro. Necesita WorldGuard. |
+| `npc_click` | `event` `world` `location` `player` `npc` `target` `item` | Un jugador hace clic derecho en un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens. *(se puede cancelar)* |
+| `npc_left_click` | `event` `world` `location` `player` `npc` `target` `item` | Un jugador golpea (clic izquierdo) un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens. *(se puede cancelar)* |
 
 Alias: `player_kill_entity` → `player_kill`, `player_leave` → `player_quit`, `repetitive` → `timer`, `repetitive_server` → `timer`.
 
@@ -695,6 +716,15 @@ Valor: expresión.
 - give_level: 5
 ```
 
+#### `give_money`
+Deposita dinero en la economía de Vault (necesita Vault y un plugin de economía).
+
+Valor: expresión (cantidad > 0).
+
+```yaml
+- give_money: 100
+```
+
 #### `heal`
 Cura (sin valor, por completo).
 
@@ -747,6 +777,15 @@ Valor: expresión.
 
 ```yaml
 - set_food: 20
+```
+
+#### `take_money`
+Retira dinero de la economía de Vault; si no alcanza, es un error y no retira nada.
+
+Valor: expresión (cantidad > 0).
+
+```yaml
+- take_money: "var.precio"
 ```
 
 #### `teleport`
@@ -928,14 +967,18 @@ Operadores: `&&` `||` `!` (`and` `or` `not`), `==` `!=` `<` `<=` `>` `>=`, `~=` 
 | `hour()` | Hora del día del servidor (0 a 23). |
 | `if(condición, a, b)` | a si la condición se cumple, si no b (solo evalúa la rama elegida). |
 | `in_area(mundo, x1, y1, z1, x2, y2, z2)` | true si el jugador está dentro del cubo. |
+| `in_region(id)` | true si el jugador está en esa región de WorldGuard (sin WorldGuard, false). En tests:, given.regions. |
 | `in_state(regla)` | true si el jugador está en el estado de esa regla state (o si el estado del servidor está activo). |
 | `int(x)` | Convierte a entero, sin decimales (0 si no se puede). |
+| `is_npc(entidad)` | true si la entidad es un NPC de Citizens. En tests:, un objeto de given con npc: true. |
 | `join(lista[, separador])` | Une una lista en un texto (", " por defecto). |
 | `len(x)` | Largo de un texto, o tamaño de una lista o un mapa. |
 | `lower(t)` | Texto en minúsculas. |
 | `max(a, b, …)` | El mayor de los números (o de una lista). |
 | `min(a, b, …)` | El menor de los números (o de una lista). |
 | `minute()` | Minuto de la hora (0 a 59). |
+| `money()` | Saldo del jugador en la economía de Vault; nulo sin Vault o sin jugador. En tests:, el de given.money. |
+| `money_format(n)` | La cantidad con la moneda de la economía (p. ej. $1,500.00); sin economía, el número. |
 | `now()` | Milisegundos desde 1970 (hora del servidor). |
 | `num(x)` | Convierte a número (0 si no se puede). |
 | `online(nombre)` | true si ese jugador está conectado. |
@@ -947,6 +990,7 @@ Operadores: `&&` `||` `!` (`and` `or` `not`), `==` `!=` `<` `<=` `>` `>=`, `~=` 
 | `pvar_of(jugador, nombre)` | Variable pvar de otro jugador (por nombre). |
 | `random(a, b)` | Entero al azar entre a y b, ambos incluidos. |
 | `randomf(a, b)` | Decimal al azar entre a y b. |
+| `regions()` | Ids de las regiones de WorldGuard donde está el jugador, de mayor a menor prioridad (sin WorldGuard, vacía). |
 | `replace(t, buscar, poner)` | Reemplaza cada aparición de buscar. |
 | `round(x[, decimales])` | Redondea (a 0 decimales por defecto). |
 | `size(x)` | Igual que len. |

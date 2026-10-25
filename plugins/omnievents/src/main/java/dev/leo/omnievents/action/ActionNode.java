@@ -22,7 +22,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public record ActionNode(String type, String path, Action action, TargetSpec to, Expression where, double chance, Expression when,
                          boolean control, String source, Template preview) {
     /** Acciones que en una prueba corren de verdad, porque solo tocan el Sandbox. */
-    public static final Set<String> SANDBOXED = Set.of("set", "unset", "cancel");
+    public static final Set<String> SANDBOXED = Set.of("set", "unset", "cancel", "give_money", "take_money");
     /** Acciones cuyo texto es un comando (se arma como comando, sin formato que quitar). */
     public static final Set<String> COMMANDS = Set.of("console", "command");
 
