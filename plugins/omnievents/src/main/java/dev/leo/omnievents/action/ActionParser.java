@@ -54,6 +54,17 @@ public final class ActionParser {
         return declared;
     }
 
+    private boolean writesObjectData;
+
+    /** Una acción escribe variables de objetos (spec 009): hace falta limpiar las de bloques rotos. */
+    public void markObjectData() {
+        writesObjectData = true;
+    }
+
+    public boolean writesObjectData() {
+        return writesObjectData;
+    }
+
     /** Tipos de acción usados en todo lo analizado (para validaciones de la regla). */
     public Set<String> usedTypes() {
         return usedTypes;

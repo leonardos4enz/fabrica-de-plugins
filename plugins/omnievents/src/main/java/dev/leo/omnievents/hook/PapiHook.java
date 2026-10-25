@@ -52,8 +52,8 @@ public final class PapiHook {
             String kind = params.substring(0, u), arg = params.substring(u + 1);
             return switch (kind) {
                 case "var", "pvar" -> player == null || !plugin.data().isLoaded(player.getUniqueId()) ? ""
-                        : Values.str(plugin.data().player(player.getUniqueId()).vars().get(arg));
-                case "gvar" -> Values.str(plugin.data().global().vars().get(arg));
+                        : Values.str(plugin.data().player(player.getUniqueId()).get(arg));
+                case "gvar" -> Values.str(plugin.data().global().get(arg));
                 case "cooldown" -> Values.formatNumber(plugin.rules().cooldownLeftSeconds(arg, player == null ? null : player.getUniqueId()));
                 case "uses" -> String.valueOf(plugin.rules().uses(arg, player == null ? null : player.getUniqueId()));
                 case "state" -> String.valueOf(plugin.states().isIn(arg, player == null ? null : player.getUniqueId()));

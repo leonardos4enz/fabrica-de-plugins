@@ -280,11 +280,21 @@ public final class RuleLoader {
             }
         }
 
+        Set<String> expireVars = Set.of();
+        if (trigger.kind() == TriggerType.Kind.VAR_EXPIRE && s.contains("variables")) {
+            Object v = s.get("variables");
+            if (v instanceof List<?> l) expireVars = l.stream().map(String::valueOf).collect(java.util.stream.Collectors.toUnmodifiableSet());
+            else if (v instanceof String one) expireVars = Set.of(one);
+            else problems.error(name + ".variables", "variables es una lista de nombres (p. ej. variables: [racha, bono])");
+        }
         if (problems.hasErrorsSince(mark)) return null;
-        return new Rule(name, file, trigger, s.getBoolean("enabled", true), priority, s.getBoolean("ignore_cancelled", false),
+        Rule rule = new Rule(name, file, trigger, s.getBoolean("enabled", true), priority, s.getBoolean("ignore_cancelled", false),
                 worlds(s), s.getString("permission"), s.getString("bypass_permission", s.getString("ignore_with_permission")),
                 isState ? List.of() : List.copyOf(conditions), cooldown, cdGlobal, limit, limGlobal, reset, resetMs, act, els, onCd, onLim, filter, s,
                 s.getStringList("args"), budget, state);
+        rule.writesObjectData = parser.writesObjectData();
+        rule.expireVariables = expireVars;
+        return rule;
     }
 
     /** Lo propio de una regla state (spec 008, H1 CA5, H2 CA3–CA4, H6 CA2). Los errores quedan en problems. */

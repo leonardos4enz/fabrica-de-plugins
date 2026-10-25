@@ -84,6 +84,7 @@ public final class RuleOptions {
         only("state", "check_every", Kind.DURATION, "Respaldo por intervalo para lo que no se puede deducir (placeholders, perm(), la hora): 5s, 1m.");
         only("state", "watch", Kind.TEXTS, "Disparadores extra que hacen revisar el estado (p. ej. [player_interact]).");
         only("state", "initial", Kind.ENUM, "Al entrar al servidor con el estado ya verdadero: enter (corre on_enter, por defecto) o silent.", "enter", "silent");
+        only("var_expire", "variables", Kind.TEXTS, "Variables que hacen correr la regla (p. ej. [racha, bono]); sin la opción, todas.");
         only("custom", "event", Kind.TEXT, "Nombre completo de la clase del evento (p. ej. org.bukkit.event.player.PlayerEggThrowEvent).");
         only("custom", "player_from", Kind.TEXT, "Ruta al jugador dentro del evento (p. ej. getPlayer o entity); por defecto player o entity.");
         only("player_move", "move_mode", Kind.ENUM, "Cuándo cuenta un movimiento: block (cambia de bloque, por defecto), chunk o any.", "block", "chunk", "any");

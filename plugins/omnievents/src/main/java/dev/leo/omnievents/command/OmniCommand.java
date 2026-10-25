@@ -3,6 +3,7 @@ package dev.leo.omnievents.command;
 import dev.leo.omnievents.OmniEvents;
 import dev.leo.omnievents.action.ExecContext;
 import dev.leo.omnievents.data.DataStore;
+import dev.leo.omnievents.data.ObjectData;
 import dev.leo.omnievents.debug.SelfTest;
 import dev.leo.omnievents.debug.Stats;
 import dev.leo.omnievents.expr.ExprException;
@@ -58,7 +59,8 @@ public final class OmniCommand implements TabExecutor {
         SUBS.put("state", "Quién está en el estado de una regla state: <regla>");
         SUBS.put("eval", "Evalúa una expresión con tu contexto");
         SUBS.put("call", "Ejecuta una regla call: <regla> [jugador] [k=v…]");
-        SUBS.put("var", "Variables: get|set|del|list <jugador|global> [nombre] [valor]");
+        SUBS.put("var", "Variables: get|set|del|list <jugador|global> [nombre] [valor] [--expire 10m]");
+        SUBS.put("data", "Variables de un objeto: [bloque|entidad|mano]");
         SUBS.put("cooldown", "reset <regla> [jugador|global]");
         SUBS.put("limit", "reset <regla> [jugador|global]");
         SUBS.put("stats", "Rendimiento por regla, oyentes y tareas");
@@ -121,6 +123,7 @@ public final class OmniCommand implements TabExecutor {
                 case "eval" -> eval(s, a);
                 case "call" -> call(s, a);
                 case "var" -> var(s, a);
+                case "data" -> data(s, a);
                 case "cooldown" -> resetUsage(s, a, true);
                 case "limit" -> resetUsage(s, a, false);
                 case "stats" -> stats(s);
@@ -327,20 +330,31 @@ public final class OmniCommand implements TabExecutor {
         String who = global ? "global" : a[1];
         switch (op) {
             case "list" -> {
-                raw(s, "<gold>Variables de " + esc(who) + "</gold> <gray>(" + h.vars().size() + ")");
-                new TreeMap<>(h.vars()).forEach((k, v) -> raw(s, "<gray>  " + esc(k) + " <dark_gray>=</dark_gray> <white>" + esc(Node.show(v))));
+                Map<String, Object> live = new TreeMap<>(h.live());
+                raw(s, "<gold>Variables de " + esc(who) + "</gold> <gray>(" + live.size() + ")");
+                live.forEach((k, v) -> raw(s, "<gray>  " + esc(k) + " <dark_gray>=</dark_gray> <white>" + esc(Node.show(v)) + expiresIn(h.expiresAt(k))));
             }
             case "get" -> {
                 String n = need(a, 2, "nombre");
-                raw(s, "<gray>" + esc(who) + "." + esc(n) + " <dark_gray>=</dark_gray> <white>" + esc(Node.show(h.vars().get(n))));
+                raw(s, "<gray>" + esc(who) + "." + esc(n) + " <dark_gray>=</dark_gray> <white>" + esc(Node.show(h.get(n))) + expiresIn(h.get(n) == null ? 0 : h.expiresAt(n)));
             }
             case "set" -> {
                 String n = need(a, 2, "nombre");
-                String src = String.join(" ", Arrays.copyOfRange(a, 3, a.length));
+                List<String> rest = new ArrayList<>(Arrays.asList(a).subList(Math.min(3, a.length), a.length));
+                long expireAt = 0;
+                int flag = rest.indexOf("--expire");
+                if (flag >= 0) {
+                    // Spec 009, H1 CA5: /omni var set <quién> <nombre> <valor…> --expire 10m
+                    if (flag + 1 >= rest.size()) throw new IllegalArgumentException("--expire necesita una duración (10m, 1h)");
+                    long ms = Durations.parseMillis(rest.get(flag + 1));
+                    if (ms <= 0) throw new IllegalArgumentException("--expire debe ser una duración positiva");
+                    expireAt = plugin.data().now() + ms;
+                    rest.subList(flag, flag + 2).clear();
+                }
+                String src = String.join(" ", rest);
                 if (src.isBlank()) throw new IllegalArgumentException("falta el valor (una expresión: 10, 'texto', pvar_of('Leo','x') + 1)");
                 Object v = Expression.compile(src).eval(senderContext(s));
-                h.vars().put(n, DataStore.storable(v));
-                h.markDirty();
+                h.put(n, DataStore.storable(v), expireAt);
                 plugin.states().varChanged(global ? Scope.GLOBAL : Scope.PLAYER, id, n);
                 if (!loaded) plugin.data().writeOffline(h);
                 plugin.getLogger().info(s.getName() + " asignó " + who + "." + n + " = " + Values.str(v));
@@ -348,8 +362,7 @@ public final class OmniCommand implements TabExecutor {
             }
             case "del" -> {
                 String n = need(a, 2, "nombre");
-                boolean had = h.vars().remove(n) != null;
-                h.markDirty();
+                boolean had = h.remove(n);
                 plugin.states().varChanged(global ? Scope.GLOBAL : Scope.PLAYER, id, n);
                 if (!loaded) plugin.data().writeOffline(h);
                 plugin.getLogger().info(s.getName() + " borró " + who + "." + n);
@@ -357,6 +370,49 @@ public final class OmniCommand implements TabExecutor {
             }
             default -> throw new IllegalArgumentException("usa get, set, del o list");
         }
+    }
+
+    /** « (caduca en 4m 12s)» o nada (spec 009). */
+    private String expiresIn(long at) {
+        if (at == 0) return "";
+        long s = Math.max(0, (at - plugin.data().now()) / 1000);
+        String left = s >= 3600 ? s / 3600 + "h " + s % 3600 / 60 + "m" : s >= 60 ? s / 60 + "m " + s % 60 + "s" : s + "s";
+        return " <dark_gray>(caduca en " + left + ")";
+    }
+
+    /** /omni data [bloque|entidad|mano]: variables del objeto (spec 009, H3 CA6). */
+    private void data(CommandSender s, String[] a) {
+        if (!(s instanceof Player p)) throw new IllegalArgumentException("solo un jugador: mira el bloque o la entidad, o toma el ítem");
+        String what = a.length == 0 ? "" : a[0].toLowerCase(Locale.ROOT);
+        Object target;
+        String label;
+        switch (what) {
+            case "bloque", "block" -> {
+                target = p.getTargetBlockExact(6);
+                label = "el bloque que miras";
+            }
+            case "entidad", "entity" -> {
+                target = p.getTargetEntity(6);
+                label = "la entidad que miras";
+            }
+            case "mano", "hand", "item" -> {
+                target = p.getInventory().getItemInMainHand();
+                label = "el ítem en tu mano";
+            }
+            case "" -> {
+                target = p.getTargetBlockExact(6);
+                label = "el bloque que miras";
+                if (target == null) {
+                    target = p.getInventory().getItemInMainHand();
+                    label = "el ítem en tu mano";
+                }
+            }
+            default -> throw new IllegalArgumentException("usa bloque, entidad o mano");
+        }
+        if (target == null || target instanceof ItemStack st && st.getType().isAir()) throw new IllegalArgumentException("no hay " + label.replaceFirst("^el |^la ", "") + " (a 6 bloques como máximo)");
+        Map<String, ObjectData.Entry> entries = plugin.objectData().entries(target);
+        raw(s, "<gold>Variables de " + esc(label) + "</gold> <gray>(" + entries.size() + ")");
+        entries.forEach((k, e) -> raw(s, "<gray>  " + esc(k) + " <dark_gray>=</dark_gray> <white>" + esc(Node.show(e.value())) + expiresIn(e.expireAt())));
     }
 
     private static String need(String[] a, int i, String what) {
@@ -379,6 +435,7 @@ public final class OmniCommand implements TabExecutor {
         raw(s, "<gold>Rendimiento</gold> <gray>· " + plugin.listeners().count() + " oyentes · " + plugin.timers().count()
                 + " temporizadores · " + plugin.states().listenerCount() + " oyentes y " + plugin.states().taskCount() + " tareas de estado · " + plugin.ruleCommands().count() + " comandos · " + plugin.data().loadedPlayers().size() + " jugadores en memoria");
         for (String l : plugin.listeners().describe()) raw(s, "<dark_gray>  " + esc(l));
+        raw(s, "<dark_gray>  variables: " + plugin.data().pendingExpiries() + " caducidades en cola · limpieza de datos de bloques " + (plugin.blockCleaner().registered() ? "activa" : "apagada"));
         List<Rule> rs = new ArrayList<>(plugin.rules().all());
         rs.sort((x, y) -> Double.compare(y.stats().totalMillis(), x.stats().totalMillis()));
         int n = 0;
@@ -643,7 +700,8 @@ public final class OmniCommand implements TabExecutor {
     }
 
     private void selftest(CommandSender s) {
-        List<SelfTest.Result> res = SelfTest.run();
+        List<SelfTest.Result> res = new ArrayList<>(SelfTest.run());
+        res.addAll(SelfTest.objectData(plugin.objectData()));
         long fail = res.stream().filter(r -> !r.ok()).count();
         for (SelfTest.Result r : res) raw(s, (r.ok() ? "<green>✔ " : "<red>✘ ") + esc(r.name()) + " <dark_gray>" + esc(r.detail()));
         Problems p = plugin.validate();
@@ -688,6 +746,9 @@ public final class OmniCommand implements TabExecutor {
                 case "call" -> {
                     if (i == 1) for (Rule r : plugin.rules().byKind(TriggerType.Kind.CALL)) opts.add(r.name());
                     if (i == 2) Bukkit.getOnlinePlayers().forEach(p -> opts.add(p.getName()));
+                }
+                case "data" -> {
+                    if (i == 1) opts.addAll(List.of("bloque", "entidad", "mano"));
                 }
                 case "var" -> {
                     if (i == 1) opts.addAll(List.of("get", "set", "del", "list"));

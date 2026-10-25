@@ -370,6 +370,7 @@ public final class Triggers {
         register(TriggerType.special("call", TriggerType.Kind.CALL, g, "player", "event", "world", "location", "sender", "caller").doc("Solo corre cuando otra regla la llama (call) o con /omni call; sus args llegan como var.<nombre>."));
         register(TriggerType.special("command", TriggerType.Kind.COMMAND, g, "player", "sender", "cmd", "args", "world", "location").doc("Registra un comando real (command: name, aliases, permission, tab) y corre al usarlo."));
         register(TriggerType.special("state", TriggerType.Kind.STATE, g, "player", "world", "location").doc("Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende."));
+        register(TriggerType.special("var_expire", TriggerType.Kind.VAR_EXPIRE, g, "player", "world", "location", "variable", "value", "scope").doc("Caduca una variable con expire (spec 009): una pvar de un jugador conectado (con player) o una gvar. variable: el nombre; value: lo último que valía; scope: pvar o gvar."));
         register(TriggerType.special("custom", TriggerType.Kind.CUSTOM, g, "player", "event", "world", "location").doc("Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from)."));
     }
 

@@ -142,6 +142,11 @@ public final class StateDeps {
                 }
             }
             case Node.Placeholder p -> unknown.add("el placeholder " + p.raw());
+            case Node.DataRef d -> {
+                // Spec 009: nadie avisa cuando cambia una variable de un objeto.
+                unknown.add("la variable de objeto " + d.text());
+                walk(d.target());
+            }
             case Node.Prop p -> prop(p);
             case Node.Index i -> {
                 if (i.target() instanceof Node.Ident id && i.index() instanceof Node.Literal lit && lit.value() instanceof String s) {
@@ -263,6 +268,7 @@ public final class StateDeps {
                 sources.add(Source.INVENTORY);
             }
             case "online", "players" -> sources.add(Source.ONLINE);
+            case "ttl" -> unknown.add("ttl() (cambia con el reloj)");
             default -> {
                 if (!PURE.contains(name)) {
                     unknown.add("la función " + name + "()");

@@ -26,6 +26,14 @@ public interface EvalContext {
         return resolve("player");
     }
 
+    /** Lo que devuelve {@link #objectVar} cuando el objeto no admite variables (spec 009). */
+    Object NOT_OBJECT = new Object();
+
+    /** Variable de un bloque, entidad o ítem ({@code X.data.nombre}); {@link #NOT_OBJECT} si no es uno de esos. */
+    default Object objectVar(Object target, String name) {
+        return NOT_OBJECT;
+    }
+
     /** Servicios del plugin para funciones (cooldown, uses, pvar_of…); null si no hay. */
     default Object service(String name, Object... args) {
         return null;

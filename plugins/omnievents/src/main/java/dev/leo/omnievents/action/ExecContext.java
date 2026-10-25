@@ -2,6 +2,7 @@ package dev.leo.omnievents.action;
 
 import dev.leo.omnievents.OmniEvents;
 import dev.leo.omnievents.data.DataStore;
+import dev.leo.omnievents.data.ObjectData;
 import dev.leo.omnievents.expr.EvalContext;
 import dev.leo.omnievents.expr.Scope;
 import dev.leo.omnievents.expr.Values;
@@ -150,15 +151,20 @@ public final class ExecContext implements EvalContext {
     public Object getVar(Scope scope, String name) {
         return switch (scope) {
             case LOCAL -> locals.get(name);
-            case GLOBAL -> plugin.data().global().vars().get(name);
+            case GLOBAL -> plugin.data().global().get(name);
             case PLAYER -> {
                 Player p = playerOrNull();
-                yield p == null ? null : plugin.data().player(p.getUniqueId()).vars().get(name);
+                yield p == null ? null : plugin.data().player(p.getUniqueId()).get(name);
             }
         };
     }
 
     public void setVar(Scope scope, String name, Object value) {
+        setVar(scope, name, value, 0);
+    }
+
+    /** Asigna (value null = borra); expireAt en ms de época, 0 = no caduca (spec 009). */
+    public void setVar(Scope scope, String name, Object value, long expireAt) {
         DataStore.Holder holder = switch (scope) {
             case LOCAL -> null;
             case GLOBAL -> plugin.data().global();
@@ -171,15 +177,22 @@ public final class ExecContext implements EvalContext {
                 yield plugin.data().player(p.getUniqueId());
             }
         };
-        Map<String, Object> target = holder == null ? locals : holder.vars();
-        if (value == null) target.remove(name);
-        else target.put(name, DataStore.storable(value));
-        if (holder != null) {
-            holder.markDirty();
+        if (holder == null) {
+            if (value == null) locals.remove(name);
+            else locals.put(name, DataStore.storable(value));
+        } else {
+            if (value == null) holder.remove(name);
+            else holder.put(name, DataStore.storable(value), expireAt);
             // Spec 008: los estados que leen esta variable se revisan al final del tick.
             Player p = scope == Scope.PLAYER ? playerOrNull() : null;
             plugin.states().varChanged(scope, p == null ? null : p.getUniqueId(), name);
         }
+    }
+
+    @Override
+    public Object objectVar(Object target, String name) {
+        Object raw = Values.raw(target);
+        return ObjectData.supports(raw) ? plugin.objectData().get(raw, name) : NOT_OBJECT;
     }
 
     @Override
@@ -196,10 +209,16 @@ public final class ExecContext implements EvalContext {
             case "cooldown" -> plugin.rules().cooldownLeftSeconds(String.valueOf(args[0]), id);
             case "uses" -> (double) plugin.rules().uses(String.valueOf(args[0]), id);
             case "in_state" -> plugin.states().isIn(String.valueOf(args[0]), id);
+            case "ttl" -> {
+                Scope scope = (Scope) args[0];
+                DataStore.Holder h = scope == Scope.GLOBAL ? plugin.data().global() : id == null ? null : plugin.data().player(id);
+                yield h == null ? null : h.ttl(String.valueOf(args[1]));
+            }
+            case "ttl_data" -> ObjectData.supports(Values.raw(args[0])) ? plugin.objectData().ttl(args[0], String.valueOf(args[1])) : null;
             case "pvar_of" -> {
                 Object target = Values.raw(args[0]);
                 OfflinePlayer op = target instanceof OfflinePlayer o ? o : Bukkit.getPlayerExact(Values.str(target));
-                yield op == null ? null : plugin.data().player(op.getUniqueId()).vars().get(String.valueOf(args[1]));
+                yield op == null ? null : plugin.data().player(op.getUniqueId()).get(String.valueOf(args[1]));
             }
             default -> null;
         };

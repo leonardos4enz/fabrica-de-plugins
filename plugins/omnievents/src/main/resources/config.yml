@@ -30,3 +30,11 @@ debug:
 
 # Registra los placeholders %omni_var_x%, %omni_gvar_x%, %omni_cooldown_regla% y %omni_uses_regla%.
 placeholderapi: true
+
+# Variables de bloques, entidades e ítems (<objeto>.data.<nombre>, spec 009). Viven en el objeto (los de un ítem
+# viajan con él en los paquetes): estos topes evitan que una regla los infle.
+object-data:
+  # Largo máximo de un texto guardado en un objeto.
+  max-text-length: 256
+  # Variables por objeto.
+  max-vars: 32

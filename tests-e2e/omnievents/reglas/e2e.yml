@@ -260,3 +260,38 @@ e2e_estado_silencio:
   initial: silent
   on_enter:
     - message: "e2e silencio entra"
+
+# Spec 009: caducidad con aviso (var_expire y on_exit de un estado) y variables de bloques e ítems.
+e2e_racha:
+  trigger: call
+  actions:
+    - set: "pvar.e2e_racha = default(pvar.e2e_racha, 0) + 1"
+      expire: 2s
+    - message: "e2e racha {pvar.e2e_racha} ttl {ttl(pvar.e2e_racha) > 1 && ttl(pvar.e2e_racha) <= 2}"
+e2e_racha_perdida:
+  trigger: var_expire
+  variables: [e2e_racha]
+  actions:
+    - message: "e2e racha perdida {value} {scope} {variable}"
+e2e_estado_racha:
+  trigger: state
+  when: "default(pvar.e2e_racha, 0) >= 2"
+  on_enter:
+    - message: "e2e racha entra"
+  on_exit:
+    - message: "e2e racha sale"
+e2e_bloque_marca:
+  trigger: block_interact
+  conditions: "block.type == 'EMERALD_BLOCK' && action == 'RIGHT_CLICK'"
+  actions:
+    - if: "block.data.e2e_dueño == null"
+      then:
+        - set: "block.data.e2e_dueño = player.name"
+        - message: "e2e bloque marcado"
+      else:
+        - message: "e2e bloque de {block.data.e2e_dueño}"
+e2e_bloque_roto:
+  trigger: block_break
+  conditions: "block.type == 'EMERALD_BLOCK'"
+  actions:
+    - message: "e2e roto con {default(block.data.e2e_dueño, 'nadie')}"

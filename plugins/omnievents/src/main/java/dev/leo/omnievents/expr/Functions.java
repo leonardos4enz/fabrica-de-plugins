@@ -174,6 +174,12 @@ public final class Functions {
         doc("cooldown(regla)", "Segundos de enfriamiento que le quedan al jugador en esa regla.", 1, 1, (c, a) -> c.service("cooldown", s(a, 0)));
         doc("uses(regla)", "Usos que lleva el jugador en esa regla.", 1, 1, (c, a) -> c.service("uses", s(a, 0)));
         doc("in_state(regla)", "true si el jugador está en el estado de esa regla state (o si el estado del servidor está activo).", 1, 1, (c, a) -> c.service("in_state", s(a, 0)));
+        lazyDoc("ttl(variable)", "Segundos que le quedan a una variable con expire (pvar.x, gvar.x u objeto.data.x); -1 si no caduca; nulo si no existe.", 1, 1, (c, a) -> {
+            if (a[0] instanceof Node.VarRef v) return c.service("ttl", v.scope(), v.name());
+            Node.DataRef d = (Node.DataRef) a[0];
+            Object target = d.target().eval(c);
+            return target == null ? null : c.service("ttl_data", target, d.name());
+        });
         doc("pvar_of(jugador, nombre)", "Variable pvar de otro jugador (por nombre).", 2, 2, (c, a) -> c.service("pvar_of", a[0], s(a, 1)));
     }
 

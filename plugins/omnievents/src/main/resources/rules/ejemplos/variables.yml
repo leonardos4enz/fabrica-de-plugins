@@ -1,0 +1,54 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
+# Ejemplos de OmniEvents: variables que caducan y variables guardadas en bloques, entidades e ítems (spec 009).
+# - expire: en un set hace que la variable se borre sola; ttl(pvar.x) dice cuántos segundos le quedan.
+# - trigger: var_expire corre cuando una pvar o gvar caduca (variable, value y scope).
+# - objeto.data.nombre guarda la variable en el objeto: un bloque (en su chunk; se borra al romperlo), una
+#   entidad o un ítem (viaja con el ítem). Míralas con /omni data.
+
+# Una racha de zombis que se pierde tras 2 minutos sin matar otro.
+racha_sube:
+  trigger: player_kill
+  conditions: "target.type == 'ZOMBIE'"
+  actions:
+    - set: "pvar.racha = default(pvar.racha, 0) + 1"
+      expire: 2m
+    - actionbar: "<gold>Racha x{pvar.racha} <gray>· se pierde en {round(ttl(pvar.racha))}s"
+
+racha_perdida:
+  trigger: var_expire
+  variables: [racha]
+  actions:
+    - message: "<red>Perdiste tu racha de {value} zombis."
+
+# Un cofre recuerda quién lo puso; nadie más lo abre.
+cofre_con_dueno:
+  trigger: block_place
+  conditions: "block.type == 'CHEST'"
+  actions:
+    - set: "block.data.dueño = player.name"
+    - message: "<gray>Este cofre es tuyo."
+
+cofre_ajeno:
+  trigger: block_interact
+  conditions:
+    - "block.type == 'CHEST' && action == 'RIGHT_CLICK'"
+    - "block.data.dueño != null && block.data.dueño != player.name"
+    - "!perm('omnievents.admin')"
+  actions:
+    - cancel
+    - message: "<red>Este cofre es de {block.data.dueño}."
+
+# /ligar: el ítem en la mano recuerda a su dueño, aunque cambie de manos.
+ligar:
+  trigger: command
+  command:
+    name: ligar
+    description: Liga el ítem en tu mano a tu nombre
+  conditions:
+    - "player != null"
+    - expr: "player.item.type != 'AIR'"
+      deny:
+        - message: "<red>Toma un ítem en la mano."
+  actions:
+    - set: "player.item.data.dueño = player.name"
+    - message: "<green>{player.item.type} ligado a {player.item.data.dueño}."

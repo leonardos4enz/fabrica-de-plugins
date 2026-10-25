@@ -75,6 +75,7 @@
             "call",
             "command",
             "state",
+            "var_expire",
             "custom",
             "player_kill_entity",
             "player_leave",
@@ -142,6 +143,7 @@
             "Solo corre cuando otra regla la llama (call) o con /omni call; sus args llegan como var.<nombre>.",
             "Registra un comando real (command: name, aliases, permission, tab) y corre al usarlo.",
             "Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende.",
+            "Caduca una variable con expire (spec 009): una pvar de un jugador conectado (con player) o una gvar. variable: el nombre; value: lo último que valía; scope: pvar o gvar.",
             "Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from).",
             "Alias de player_kill (ConditionalEvents).",
             "Alias de player_quit (ConditionalEvents).",
@@ -209,6 +211,7 @@
             "Solo corre cuando otra regla la llama (call) o con /omni call; sus args llegan como var.<nombre>.",
             "Registra un comando real (command: name, aliases, permission, tab) y corre al usarlo.",
             "Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende.",
+            "Caduca una variable con expire (spec 009): una pvar de un jugador conectado (con player) o una gvar. variable: el nombre; value: lo último que valía; scope: pvar o gvar.",
             "Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from).",
             "Alias de player_kill (ConditionalEvents).",
             "Alias de player_quit (ConditionalEvents).",
@@ -280,6 +283,7 @@
             "call",
             "command",
             "state",
+            "var_expire",
             "custom",
             "player_kill_entity",
             "player_leave",
@@ -347,6 +351,7 @@
             "Solo corre cuando otra regla la llama (call) o con /omni call; sus args llegan como var.<nombre>.",
             "Registra un comando real (command: name, aliases, permission, tab) y corre al usarlo.",
             "Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende.",
+            "Caduca una variable con expire (spec 009): una pvar de un jugador conectado (con player) o una gvar. variable: el nombre; value: lo último que valía; scope: pvar o gvar.",
             "Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from).",
             "Alias de player_kill (ConditionalEvents).",
             "Alias de player_quit (ConditionalEvents).",
@@ -414,6 +419,7 @@
             "Solo corre cuando otra regla la llama (call) o con /omni call; sus args llegan como var.<nombre>.",
             "Registra un comando real (command: name, aliases, permission, tab) y corre al usarlo.",
             "Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende.",
+            "Caduca una variable con expire (spec 009): una pvar de un jugador conectado (con player) o una gvar. variable: el nombre; value: lo último que valía; scope: pvar o gvar.",
             "Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from).",
             "Alias de player_kill (ConditionalEvents).",
             "Alias de player_quit (ConditionalEvents).",
@@ -747,6 +753,14 @@
           ],
           "description": "Al entrar al servidor con el estado ya verdadero: enter (corre on_enter, por defecto) o silent. (para trigger: state)"
         },
+        "variables": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/texts"
+            }
+          ],
+          "description": "Variables que hacen correr la regla (p. ej. [racha, bono]); sin la opción, todas. (para trigger: var_expire)"
+        },
         "event": {
           "type": "string",
           "description": "Nombre completo de la clase del evento (p. ej. org.bukkit.event.player.PlayerEggThrowEvent). (para trigger: custom)"
@@ -903,7 +917,7 @@
         "number",
         "boolean"
       ],
-      "description": "Expresión de OmniEvents (el editor no la revisa: usa /omni validate). Operadores: && || ! == != < <= > >= ~= contains startsWith endsWith matches in, + - * / %, c ? a : b. Variables: var.x, pvar.x, gvar.x. Funciones: abs(x), bool(x), ceil(x), chance(p), clamp(x, min, max), cooldown(regla), date([patrón]), default(x, otro), distance(a, b), floor(x), format(x[, decimales]), has_item(material[, n]), hour(), if(condición, a, b), in_area(mundo, x1, y1, z1, x2, y2, z2), in_state(regla), int(x), join(lista[, separador]), len(x), lower(t), max(a, b, …), min(a, b, …), minute(), now(), num(x), online(nombre), papi(texto[, jugador]), perm(permiso[, jugador]), player(nombre), players(), pow(x, y), pvar_of(jugador, nombre), random(a, b), randomf(a, b), replace(t, buscar, poner), round(x[, decimales]), size(x), split(t, separador), sqrt(x), str(x), strip(t), substr(t, desde[, hasta]), trim(t), upper(t), uses(regla), weekday()."
+      "description": "Expresión de OmniEvents (el editor no la revisa: usa /omni validate). Operadores: && || ! == != < <= > >= ~= contains startsWith endsWith matches in, + - * / %, c ? a : b. Variables: var.x, pvar.x, gvar.x. Funciones: abs(x), bool(x), ceil(x), chance(p), clamp(x, min, max), cooldown(regla), date([patrón]), default(x, otro), distance(a, b), floor(x), format(x[, decimales]), has_item(material[, n]), hour(), if(condición, a, b), in_area(mundo, x1, y1, z1, x2, y2, z2), in_state(regla), int(x), join(lista[, separador]), len(x), lower(t), max(a, b, …), min(a, b, …), minute(), now(), num(x), online(nombre), papi(texto[, jugador]), perm(permiso[, jugador]), player(nombre), players(), pow(x, y), pvar_of(jugador, nombre), random(a, b), randomf(a, b), replace(t, buscar, poner), round(x[, decimales]), size(x), split(t, separador), sqrt(x), str(x), strip(t), substr(t, desde[, hasta]), trim(t), ttl(variable), upper(t), uses(regla), weekday()."
     },
     "duration": {
       "description": "Duración: 10s, 5m, 1h30m, 2d, 1w, 20t (ticks), 500ms, o un número de segundos.",
@@ -2495,7 +2509,14 @@
                 "boolean",
                 "null"
               ],
-              "description": "Asigna una variable: var (de la ejecución), pvar (del jugador, persistente) o gvar (global, persistente); también +=, -=, *= y /=. Valor: ámbito.nombre = expresión."
+              "description": "Asigna una variable: var (de la ejecución), pvar (del jugador, persistente), gvar (global, persistente) u objeto.data.nombre (de un bloque, entidad o ítem, guardada en el objeto); también +=, -=, *= y /=. Valor: ámbito.nombre = expresión, u objeto.data.nombre = expresión."
+            },
+            "expire": {
+              "type": [
+                "string",
+                "number"
+              ],
+              "description": "Duración tras la que la variable se borra sola (10m, 1h; spec 009). Cada set la vuelve a contar; un set sin expire la quita."
             },
             "to": {
               "$ref": "#/definitions/modifier_to"
@@ -2942,7 +2963,7 @@
                 "boolean",
                 "null"
               ],
-              "description": "Borra una variable. Valor: ámbito.nombre."
+              "description": "Borra una variable (y su caducidad). Valor: ámbito.nombre u objeto.data.nombre."
             },
             "to": {
               "$ref": "#/definitions/modifier_to"

@@ -52,6 +52,7 @@ Contenido: [opciones de una regla](#opciones-de-una-regla) · [condiciones](#con
 | `check_every` | duración | `state` | Respaldo por intervalo para lo que no se puede deducir (placeholders, perm(), la hora): 5s, 1m. |
 | `watch` | texto o lista | `state` | Disparadores extra que hacen revisar el estado (p. ej. [player_interact]). |
 | `initial` | `enter`, `silent` | `state` | Al entrar al servidor con el estado ya verdadero: enter (corre on_enter, por defecto) o silent. |
+| `variables` | texto o lista | `var_expire` | Variables que hacen correr la regla (p. ej. [racha, bono]); sin la opción, todas. |
 | `event` | texto | `custom` | Nombre completo de la clase del evento (p. ej. org.bukkit.event.player.PlayerEggThrowEvent). |
 | `player_from` | texto | `custom` | Ruta al jugador dentro del evento (p. ej. getPlayer o entity); por defecto player o entity. |
 | `move_mode` | `block`, `chunk`, `any` | `player_move` | Cuándo cuenta un movimiento: block (cambia de bloque, por defecto), chunk o any. |
@@ -178,6 +179,7 @@ Raíces que todos ofrecen además de las suyas: `server` `rule` `online` `source
 | `call` | `player` `event` `world` `location` `sender` `caller` | Solo corre cuando otra regla la llama (call) o con /omni call; sus args llegan como var.&lt;nombre>. |
 | `command` | `player` `sender` `cmd` `args` `world` `location` | Registra un comando real (command: name, aliases, permission, tab) y corre al usarlo. |
 | `state` | `player` `world` `location` | Cuando la expresión de when pasa a ser verdad (on_enter) o deja de serlo (on_exit), por jugador; sin sondeo: se revisa solo con los eventos de los que depende. |
+| `var_expire` | `player` `world` `location` `variable` `value` `scope` | Caduca una variable con expire (spec 009): una pvar de un jugador conectado (con player) o una gvar. variable: el nombre; value: lo último que valía; scope: pvar o gvar. |
 | `custom` | `player` `event` `world` `location` | Cualquier evento de Bukkit o de otro plugin por su clase (event, player_from). |
 
 Alias: `player_kill_entity` → `player_kill`, `player_leave` → `player_quit`, `repetitive` → `timer`, `repetitive_server` → `timer`.
@@ -303,12 +305,16 @@ Valor: regla.
 ```
 
 #### `set`
-Asigna una variable: var (de la ejecución), pvar (del jugador, persistente) o gvar (global, persistente); también +=, -=, *= y /=.
+Asigna una variable: var (de la ejecución), pvar (del jugador, persistente), gvar (global, persistente) u objeto.data.nombre (de un bloque, entidad o ítem, guardada en el objeto); también +=, -=, *= y /=.
 
-Valor: ámbito.nombre = expresión.
+Valor: ámbito.nombre = expresión, u objeto.data.nombre = expresión.
+
+Claves:
+- `expire`: Duración tras la que la variable se borra sola (10m, 1h; spec 009). Cada set la vuelve a contar; un set sin expire la quita.
 
 ```yaml
-- set: "pvar.monedas += 10"
+- set: "pvar.racha += 1"
+  expire: 10m
 ```
 
 #### `stop`
@@ -321,9 +327,9 @@ Valor: (sin valor).
 ```
 
 #### `unset`
-Borra una variable.
+Borra una variable (y su caducidad).
 
-Valor: ámbito.nombre.
+Valor: ámbito.nombre u objeto.data.nombre.
 
 ```yaml
 - unset: "pvar.monedas"
@@ -883,6 +889,7 @@ Operadores: `&&` `||` `!` (`and` `or` `not`), `==` `!=` `<` `<=` `>` `>=`, `~=` 
 | `strip(t)` | Quita los colores & y § y las etiquetas MiniMessage. |
 | `substr(t, desde[, hasta])` | Parte de un texto (posiciones desde 0). |
 | `trim(t)` | Quita los espacios de los extremos. |
+| `ttl(variable)` | Segundos que le quedan a una variable con expire (pvar.x, gvar.x u objeto.data.x); -1 si no caduca; nulo si no existe. |
 | `upper(t)` | Texto en mayúsculas. |
 | `uses(regla)` | Usos que lleva el jugador en esa regla. |
 | `weekday()` | Día de la semana: 1 es lunes, 7 es domingo. |

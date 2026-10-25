@@ -4,8 +4,9 @@ Eventos condicionales para **Paper 1.21.4 y 26.1** (ver [Compatibilidad](#compat
 Es la versión propia de la fábrica de *ConditionalEvents*, con un lenguaje de expresiones real, control de flujo,
 variables persistentes y herramientas de diagnóstico. Specs: [001](../../docs/sdd/specs/001-omnievents-nucleo/spec.md) (núcleo) y
 [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/spec.md) (herramientas de autor),
-[007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/spec.md) (esquema para el editor y referencia generada) y
-[008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/spec.md) (disparador de estado, sin sondeo).
+[007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/spec.md) (esquema para el editor y referencia generada),
+[008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/spec.md) (disparador de estado, sin sondeo) y
+[009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/spec.md) (variables que caducan y variables en bloques, entidades e ítems).
 
 **[Referencia completa](../../docs/omnievents/referencia.md)**: cada opción, disparador, acción y función, generada del
 código (nunca queda desactualizada). **[Autocompletado en VS Code](#editor-autocompletado-y-errores-en-vs-code)** con
@@ -20,8 +21,8 @@ Minecraft 1.21.4 ([spec 004](../../docs/sdd/specs/004-fabrica-capturas-en-juego/
 ## Compatibilidad
 | Servidor | Estado | Evidencia |
 |---|---|---|
-| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.3.0) | Compuertas 1, 2 y 3a: 94 unitarias, servidor real y 34/34 escenarios en el juego dos veces (2026-10-25, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md) y [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md)) |
-| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.3.0) | 34/34 escenarios en el juego dos veces con el mismo jar (2026-10-25, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md) y [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md)) |
+| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.4.0) | Compuertas 1, 2 y 3a: 113 unitarias, servidor real y 37/37 escenarios en el juego dos veces (2026-10-25, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md) y [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md)) |
+| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.4.0) | 37/37 escenarios en el juego dos veces con el mismo jar (2026-10-25, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md) y [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md)) |
 | Paper 1.21.5 – 1.21.11 | Sin verificar | Debería funcionar (misma API, sin NMS), pero no se probó |
 | Paper 26.2 y 26.3 | Sin verificar | El bot de pruebas (mineflayer 4.39) llega hasta 26.1 |
 | Paper 1.21.3 o anterior | No soportada | Se compila contra la API de 1.21.4 |
@@ -172,6 +173,68 @@ vida_baja:
   y desde cuándo; `/omni stats` cuenta revisiones y cambios. `/omni run vida_baja Ana [--simular]` corre su `on_enter`.
 - El estado vive en memoria (una entrada por jugador dentro): no se guarda en disco ni cambia tus datos.
 
+## Variables que caducan y variables de objetos
+Desde la 1.4.0 ([spec 009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/spec.md)). Ejemplos
+completos: [`rules/ejemplos/variables.yml`](src/main/resources/rules/ejemplos/variables.yml).
+```yaml
+racha_sube:
+  trigger: player_kill
+  conditions: "target.type == 'ZOMBIE'"
+  actions:
+    - set: "pvar.racha = default(pvar.racha, 0) + 1"
+      expire: 2m                                  # se pierde tras 2 min sin matar otro
+    - actionbar: "Racha x{pvar.racha} · {round(ttl(pvar.racha))}s"
+
+racha_perdida:
+  trigger: var_expire                             # corre cuando caduca
+  variables: [racha]
+  actions:
+    - message: "<red>Perdiste tu racha de {value}."
+
+cofre_con_dueno:
+  trigger: block_place
+  conditions: "block.type == 'CHEST'"
+  actions:
+    - set: "block.data.dueño = player.name"       # guardada en el bloque
+```
+- **`expire: <duración>`** en un `set` de `pvar`, `gvar` u `objeto.data`: la variable se borra sola pasado ese tiempo
+  (`10m`, `1h`, o una plantilla como `"{gvar.minutos}m"`). Cada `set` con `expire` vuelve a contar; un `set` sin él
+  quita la caducidad. Sobrevive a reinicios: lo que caducó con el servidor apagado ya no está al volver. En `var` es
+  error (no vive lo bastante).
+- **`ttl(pvar.x)`** (también `gvar.x` y `objeto.data.x`): segundos que le quedan; `-1` si no caduca; nulo si no existe.
+- **`trigger: var_expire`** corre cuando caduca una `pvar` de un jugador conectado (con `player`) o una `gvar` (sin
+  jugador). Raíces: `variable`, `value` (lo último que valía) y `scope` (`pvar`/`gvar`); `variables: [..]` lo limita.
+  Los `trigger: state` que leen esa variable se revisan al caducar (su `on_exit` corre). No sondea a nadie: una cola
+  ordenada por hora que se mira una vez por segundo. Una `pvar` de alguien desconectado caduca sin aviso.
+- **`objeto.data.nombre`** lee y escribe una variable de cualquier bloque, entidad (también jugadores) o ítem:
+  `block.data.dueño`, `target.data.marcado`, `player.item.data.ligada`; `unset: "block.data.dueño"` la borra. Vive en el
+  `PersistentDataContainer` de Paper: la del ítem **viaja con el ítem** (si cambia de manos, la lleva), la de la
+  entidad va con la entidad y la del bloque en su chunk. Guarda números, textos y booleanos (lo demás, como texto).
+  Sobre algo que no es bloque, entidad ni ítem, `.data` sigue siendo la propiedad de antes. Para escribir en un ítem
+  usa `player.item` (u `offhand`) o el `item` de un evento que sea el del inventario (romper, colocar, golpear, clic):
+  en otros (consumir, craftear, tirar) el `item` del evento puede ser una copia y lo que guardes ahí se pierde (la
+  suite solo probó `player.item`).
+- Las de un bloque **se borran cuando el bloque deja de estar**: romperlo, explosiones, fuego, hojas que se secan,
+  criaturas que lo cambian y pistones que lo mueven (después de las reglas del evento, que aún las leen). Esos oyentes
+  solo se registran si alguna regla escribe `.data` (`/omni stats` dice si están activos).
+- Las de objetos caducan al leerse (no avisan: no se puede recorrer cada chunk e ítem), y un estado que use `.data` o
+  `ttl()` necesita `check_every`.
+- **Cuidado con creativo:** un jugador en creativo puede fabricar un ítem con cualquier dato; no confíes en
+  `item.data` para ellos. Guardar datos distintos en dos ítems iguales hace que dejen de apilarse.
+- `/omni data [bloque|entidad|mano]` muestra las variables de lo que miras o de tu mano, con lo que les queda;
+  `/omni var list Ana` también dice cuánto le queda a cada una, y `/omni var set Ana bono 2 --expire 1h` asigna con
+  caducidad.
+```yaml
+# config.yml (claves nuevas en 1.4.0; si faltan se usan estos valores)
+object-data:
+  max-text-length: 256   # largo máximo de un texto guardado en un objeto
+  max-vars: 32           # variables por objeto
+```
+- **Actualizar desde 1.3.0 o anterior:** la primera vez que arranca, la 1.4.0 copia `plugins/OmniEvents/data/` a
+  `data/respaldo-formato1-<fecha>/` y desde entonces escribe los archivos con `format: 2` (una sección nueva,
+  `expire`). Tus datos cargan igual; si vuelves a una versión anterior, usa ese respaldo. Un archivo de un formato
+  más nuevo que el que entiende el plugin no se sobrescribe.
+
 ## Expresiones
 - Lógica: `&&` `and`, `||` `or`, `!` `not`, paréntesis, `c ? a : b`.
 - Comparación: `==` `!=` `<` `<=` `>` `>=`, `~=` (igual sin mayúsculas), `contains`, `startsWith`, `endsWith`,
@@ -180,13 +243,15 @@ vida_baja:
 - Datos: `player.health`, `player.location.block.type`, `item.name`, `target.type`, `event.damage`… Cualquier
   getter de la API sirve en estilo `snake_case` (`event.final_damage` → `getFinalDamage()`); los métodos que
   modifican están bloqueados.
-- Variables: `var.x` (de la ejecución), `pvar.x` (del jugador, persistente), `gvar.x` (del servidor, persistente).
+- Variables: `var.x` (de la ejecución), `pvar.x` (del jugador, persistente), `gvar.x` (del servidor, persistente) y
+  `objeto.data.x` (guardada en un bloque, entidad o ítem; ver [abajo](#variables-que-caducan-y-variables-de-objetos)).
+  `ttl(pvar.x)` da los segundos que le quedan a una variable con `expire`.
 - Placeholders: `%vault_eco_balance% > 100` (con PlaceholderAPI; si el resultado es un número, se compara como número).
 - Funciones: `random(a,b)` `chance(p)` `min` `max` `abs` `round(x,d)` `floor` `ceil` `sqrt` `pow` `clamp` `len`
   `lower` `upper` `trim` `replace` `substr` `split` `join` `str` `num` `int` `bool` `strip` `format` `default(a,b)`
   `if(c,a,b)` `papi(t[,jugador])` `online(n)` `player(n)` `players()` `perm(p)` `now()` `hour()` `minute()`
   `weekday()` `date(patrón)` `cooldown(regla)` `uses(regla)` `distance(a,b)` `in_area(mundo,x1,y1,z1,x2,y2,z2)`
-  `has_item(material[,n])` `pvar_of(jugador,nombre)` `in_state(regla)` `size(x)`.
+  `has_item(material[,n])` `pvar_of(jugador,nombre)` `in_state(regla)` `ttl(variable)` `size(x)`.
 
 Firma y descripción de cada función: [referencia](../../docs/omnievents/referencia.md#funciones). Prueba cualquier expresión en el juego: `/omni eval player.location.biome`.
 
@@ -243,7 +308,8 @@ Las raíces de cada disparador y si se puede cancelar: [referencia](../../docs/o
 ## Comandos (`/omni`, alias `/oe`)
 `reload` · `validate` · `list [filtro]` · `info <regla>` · `enable|disable <regla>` · `debug <regla|all|off|export>` ·
 `check <regla> [jugador]` · `run <regla> <jugador> [--simular]` · `state <regla>` · `cpu [on|off|reset]` ·
-`eval <expr>` · `call <regla> [jugador] [k=v…]` · `var get|set|del|list <jugador|global> [nombre] [valor]` ·
+`eval <expr>` · `call <regla> [jugador] [k=v…]` · `var get|set|del|list <jugador|global> [nombre] [valor] [--expire 10m]` ·
+`data [bloque|entidad|mano]` ·
 `cooldown reset <regla> [jugador|global]` · `limit reset <regla> [jugador|global]` · `stats` · `triggers` · `actions` ·
 `item save|delete|list` · `import conditionalevents` · `selftest` · `schema` (esquema JSON y referencia, [arriba](#editor-autocompletado-y-errores-en-vs-code)).
 Permisos: `omnievents.command.<sub>` (por defecto solo OP) o `omnievents.command.*`. Cómo se ve cada uno: [galería](../../docs/omnievents/galeria.md#comandos-de-omni).

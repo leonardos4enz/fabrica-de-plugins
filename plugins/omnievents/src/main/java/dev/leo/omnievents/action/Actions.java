@@ -1,6 +1,7 @@
 package dev.leo.omnievents.action;
 
 import dev.leo.omnievents.OmniEvents;
+import dev.leo.omnievents.data.ObjectData;
 import dev.leo.omnievents.expr.Expression;
 import dev.leo.omnievents.expr.Properties;
 import dev.leo.omnievents.expr.Scope;
@@ -177,6 +178,50 @@ public final class Actions {
 
     private static final Pattern ASSIGN = Pattern.compile("^\\s*(var|pvar|gvar)\\.([A-Za-z0-9_\\-]+)\\s*(=|\\+=|-=|\\*=|/=)\\s*(.+)$", Pattern.DOTALL);
     private static final Pattern VARNAME = Pattern.compile("^\\s*(var|pvar|gvar)\\.([A-Za-z0-9_\\-]+)\\s*$");
+    // Spec 009: objeto.data.nombre; el primer «.data.» seguido de un nombre (y del operador) separa el objeto.
+    private static final Pattern DATA_ASSIGN = Pattern.compile("^\\s*(.+?)\\.data\\.([\\p{L}0-9_]+)\\s*(=|\\+=|-=|\\*=|/=)\\s*(.+)$", Pattern.DOTALL);
+    private static final Pattern DATA_NAME = Pattern.compile("^\\s*(.+?)\\.data\\.([\\p{L}0-9_]+)\\s*$", Pattern.DOTALL);
+
+    /** Valor de set con +=, -=, *= o /= sobre el valor actual. */
+    private static Object combine(String op, Object cur, Object v) {
+        double c = cur == null ? 0 : Values.num(cur), x = Values.num(v);
+        return switch (op) {
+            case "+=" -> cur instanceof String s && !Values.isNumeric(s) ? s + Values.str(v) : (Object) (c + x);
+            case "-=" -> c - x;
+            case "*=" -> c * x;
+            default -> {
+                if (x == 0) throw new ActionException("división entre cero en set");
+                yield c / x;
+            }
+        };
+    }
+
+    /** La clave expire de set (spec 009, H1 CA1–CA2): fija se valida al cargar; en var es error. */
+    private static Template expire(Args a, Scope scope) {
+        Object raw = a.extra("expire");
+        if (raw == null) return null;
+        if (scope == Scope.LOCAL) throw new IllegalArgumentException("expire no sirve en var (vive solo durante la ejecución); usa pvar, gvar u objeto.data");
+        Template t = Template.compile(Values.str(raw));
+        if (t.isConstant() && Durations.parseMillis(t.source()) <= 0) throw new IllegalArgumentException("expire debe ser una duración positiva (10s, 5m, 1h)");
+        return t;
+    }
+
+    private static long expireMillis(Template t, ExecContext ctx) {
+        long ms;
+        try {
+            ms = Durations.parseMillis(t.isConstant() ? t.source() : t.render(ctx, Template.Mode.RAW));
+        } catch (IllegalArgumentException e) {
+            throw new ActionException("expire: " + e.getMessage());
+        }
+        if (ms <= 0) throw new ActionException("expire debe ser una duración positiva y dio " + ms + "ms");
+        return ms;
+    }
+
+    private static Object dataTarget(Expression object, ExecContext ctx) {
+        Object t = Values.raw(object.eval(ctx));
+        if (!ObjectData.supports(t)) throw new ActionException(object.source() + " no es un bloque, una entidad ni un ítem (es " + Values.typeName(t) + "): no guarda variables");
+        return t;
+    }
 
     private void registerFlow() {
         flow("if", doc("Si la expresión se cumple corre then; si no, else.", "expresión", "if: \"player.level >= 10\"\nthen:\n  - message: \"<green>Nivel alto\"\nelse:\n  - message: \"<gray>Sube de nivel\"").keys("then", "Acciones si se cumple.", "else", "Acciones si no se cumple."), a -> {
@@ -279,38 +324,45 @@ public final class Actions {
             exec.cancelUsage();
             return 0;
         }));
-        register("set", doc("Asigna una variable: var (de la ejecución), pvar (del jugador, persistente) o gvar (global, persistente); también +=, -=, *= y /=.", "ámbito.nombre = expresión", "set: \"pvar.monedas += 10\""), a -> {
+        register("set", doc("Asigna una variable: var (de la ejecución), pvar (del jugador, persistente), gvar (global, persistente) u objeto.data.nombre (de un bloque, entidad o ítem, guardada en el objeto); también +=, -=, *= y /=.", "ámbito.nombre = expresión, u objeto.data.nombre = expresión", "set: \"pvar.racha += 1\"\nexpire: 10m").keys("expire", "Duración tras la que la variable se borra sola (10m, 1h; spec 009). Cada set la vuelve a contar; un set sin expire la quita."), a -> {
             Matcher m = ASSIGN.matcher(a.text());
-            if (!m.matches()) throw new IllegalArgumentException("'set' se escribe como 'pvar.nombre = expresión' (también +=, -=, *=, /=); ámbitos: var, pvar, gvar");
-            Scope scope = Scope.byPrefix(m.group(1));
-            String name = m.group(2), op = m.group(3);
-            Expression rhs = Expression.compile(m.group(4));
+            Matcher d = m.matches() ? null : DATA_ASSIGN.matcher(a.text());
+            if (d != null && !d.matches()) throw new IllegalArgumentException("'set' se escribe como 'pvar.nombre = expresión' u 'objeto.data.nombre = expresión' (también +=, -=, *=, /=); ámbitos: var, pvar, gvar");
+            Scope scope = d == null ? Scope.byPrefix(m.group(1)) : null;
+            Expression object = d == null ? null : Expression.compile(d.group(1));
+            String name = d == null ? m.group(2) : d.group(2), op = d == null ? m.group(3) : d.group(3);
+            Expression rhs = Expression.compile(d == null ? m.group(4) : d.group(4));
+            Template expire = expire(a, scope);
+            if (object != null) a.parser().markObjectData();
             return Action.safe((ctx, exec) -> {
                 Object v = rhs.eval(ctx);
-                if (!op.equals("=")) {
-                    Object cur = ctx.getVar(scope, name);
-                    double c = cur == null ? 0 : Values.num(cur), x = Values.num(v);
-                    v = switch (op) {
-                        case "+=" -> cur instanceof String s && !Values.isNumeric(s) ? s + Values.str(v) : (Object) (c + x);
-                        case "-=" -> c - x;
-                        case "*=" -> c * x;
-                        default -> {
-                            if (x == 0) throw new ActionException("división entre cero en set");
-                            yield c / x;
-                        }
-                    };
+                long expireAt = expire == null ? 0 : ctx.plugin().data().now() + expireMillis(expire, ctx);
+                if (object != null) {
+                    Object target = dataTarget(object, ctx);
+                    if (!op.equals("=")) v = combine(op, ctx.plugin().objectData().get(target, name), v);
+                    ctx.plugin().objectData().set(target, name, v, expireAt);
+                    exec.trace("    " + object.source() + ".data." + name + " = " + Values.str(v));
+                    return 0;
                 }
-                ctx.setVar(scope, name, v);
+                if (!op.equals("=")) v = combine(op, ctx.getVar(scope, name), v);
+                ctx.setVar(scope, name, v, expireAt);
                 exec.trace("    " + scope.prefix + "." + name + " = " + Values.str(v));
                 return 0;
             });
         });
-        register("unset", doc("Borra una variable.", "ámbito.nombre", "unset: \"pvar.monedas\""), a -> {
+        register("unset", doc("Borra una variable (y su caducidad).", "ámbito.nombre u objeto.data.nombre", "unset: \"pvar.monedas\""), a -> {
             Matcher m = VARNAME.matcher(a.text());
-            if (!m.matches()) throw new IllegalArgumentException("'unset' recibe una variable como pvar.nombre");
-            Scope scope = Scope.byPrefix(m.group(1));
-            String name = m.group(2);
-            return Action.safe(Action.of(ctx -> ctx.setVar(scope, name, null)));
+            if (m.matches()) {
+                Scope scope = Scope.byPrefix(m.group(1));
+                String name = m.group(2);
+                return Action.safe(Action.of(ctx -> ctx.setVar(scope, name, null)));
+            }
+            Matcher d = DATA_NAME.matcher(a.text());
+            if (!d.matches()) throw new IllegalArgumentException("'unset' recibe una variable como pvar.nombre u objeto.data.nombre");
+            Expression object = Expression.compile(d.group(1));
+            String name = d.group(2);
+            a.parser().markObjectData();
+            return Action.safe(Action.of(ctx -> ctx.plugin().objectData().set(dataTarget(object, ctx), name, null, 0)));
         });
         register("call", doc("Corre otra regla (trigger: call) con argumentos, que llegan como var.<nombre>.", "regla; nombre=expresión… o un mapa con rule y args", "call: \"sumar_monedas; jugador=player.name; cantidad=10\"").shape(Shape.CALL, "rule", "Regla que se llama.", "args", "Mapa nombre: expresión con los argumentos."), a -> {
             Template rule;

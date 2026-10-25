@@ -180,9 +180,17 @@ public final class Parser {
                 String n = def.min() == def.max() ? String.valueOf(def.min()) : def.min() + "–" + (def.max() == Integer.MAX_VALUE ? "∞" : def.max());
                 throw new ExprException("'" + def.name() + "' recibe " + n + " argumentos y le diste " + a.size(), t.pos());
             }
+            if (def.name().equals("ttl")) checkTtl(a.get(0), t);
             return new Node.Call(def.name(), def, a);
         }
         return new Node.Ident(name);
+    }
+
+    /** ttl() recibe una variable que puede caducar, no un valor (spec 009, H1 CA4). */
+    private static void checkTtl(Node arg, Token t) {
+        if (arg instanceof Node.DataRef) return;
+        if (arg instanceof Node.VarRef v && v.scope() != Scope.LOCAL) return;
+        throw new ExprException("'ttl' recibe una variable que puede caducar: pvar.nombre, gvar.nombre u objeto.data.nombre (y le diste " + arg.text() + ")", t.pos());
     }
 
     private List<Node> args(Token.Type close, String closeText) {
@@ -207,6 +215,13 @@ public final class Parser {
             if (t.type() == Token.Type.DOT) {
                 next();
                 Token name = expect(Token.Type.IDENT, "un nombre de propiedad después de '.'");
+                if (name.text().equals("data") && peek().type() == Token.Type.DOT && peek(1).type() == Token.Type.IDENT
+                        && peek(2).type() != Token.Type.LPAREN) {
+                    // Spec 009: X.data.nombre es una variable del objeto (bloque, entidad, ítem).
+                    next();
+                    n = new Node.DataRef(n, next().text());
+                    continue;
+                }
                 if (peek().type() == Token.Type.LPAREN) {
                     next();
                     n = new Node.MethodCall(n, name.text(), args(Token.Type.RPAREN, "')'"));

@@ -29,6 +29,7 @@ permissions:
       omnievents.command.eval: true
       omnievents.command.call: true
       omnievents.command.var: true
+      omnievents.command.data: true
       omnievents.command.cooldown: true
       omnievents.command.limit: true
       omnievents.command.stats: true
@@ -53,6 +54,7 @@ permissions:
   omnievents.command.eval: {default: op}
   omnievents.command.call: {default: op}
   omnievents.command.var: {default: op}
+  omnievents.command.data: {default: op}
   omnievents.command.cooldown: {default: op}
   omnievents.command.limit: {default: op}
   omnievents.command.stats: {default: op}

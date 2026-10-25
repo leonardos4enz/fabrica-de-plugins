@@ -3,9 +3,10 @@ package dev.leo.omnievents;
 import dev.leo.omnievents.util.Durations;
 import org.bukkit.configuration.file.FileConfiguration;
 
-/** Opciones de config.yml (plan 001 §2.1; profiler y debug: spec 006). */
+/** Opciones de config.yml (plan 001 §2.1; profiler y debug: spec 006; object-data: spec 009). */
 public record Settings(boolean cooldownBypassOp, boolean allowUnsafeMethods, int maxLoopIterations, int maxCallDepth,
-                       int autosaveMinutes, boolean placeholderApi, int sampleEvery, long budgetWarnEveryMs, int exportBuffer) {
+                       int autosaveMinutes, boolean placeholderApi, int sampleEvery, long budgetWarnEveryMs, int exportBuffer,
+                       int objectMaxText, int objectMaxVars) {
 
     public static Settings from(FileConfiguration c) {
         long warnEvery;
@@ -23,6 +24,8 @@ public record Settings(boolean cooldownBypassOp, boolean allowUnsafeMethods, int
                 c.getBoolean("placeholderapi", true),
                 Math.max(1, c.getInt("profiler.sample-every", 10)),
                 Math.max(0, warnEvery),
-                Math.max(1, Math.min(5000, c.getInt("debug.export-buffer", 200))));
+                Math.max(1, Math.min(5000, c.getInt("debug.export-buffer", 200))),
+                Math.max(1, Math.min(65536, c.getInt("object-data.max-text-length", 256))),
+                Math.max(1, Math.min(1024, c.getInt("object-data.max-vars", 32))));
     }
 }

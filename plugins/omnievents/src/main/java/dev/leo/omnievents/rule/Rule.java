@@ -41,6 +41,10 @@ public final class Rule {
     final List<String> declaredArgs;
     final long budgetNanos;
     final StateSpec state;
+    /** Spec 009: alguna acción escribe X.data.y (puesto por el cargador). */
+    boolean writesObjectData;
+    /** Spec 009: variables que acepta una regla var_expire (vacío = todas). */
+    Set<String> expireVariables = Set.of();
     private final Stats stats = new Stats();
     private final Budget budget = new Budget();
 
@@ -160,6 +164,14 @@ public final class Rule {
     /** Lo propio de una regla state (spec 008); null en las demás. */
     public StateSpec state() {
         return state;
+    }
+
+    public boolean writesObjectData() {
+        return writesObjectData;
+    }
+
+    public Set<String> expireVariables() {
+        return expireVariables;
     }
 
     public Budget budget() {

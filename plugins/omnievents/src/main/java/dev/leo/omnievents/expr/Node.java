@@ -68,6 +68,24 @@ public sealed interface Node {
         }
     }
 
+    /**
+     * Variable de un bloque, una entidad o un ítem: {@code X.data.nombre} (spec 009). Si X no es ninguno de esos,
+     * conserva el significado anterior (la propiedad data de X y luego nombre).
+     */
+    record DataRef(Node target, String name) implements Node {
+        public Object eval(EvalContext ctx) {
+            Object t = target.eval(ctx);
+            if (t == null) return null;
+            Object v = ctx.objectVar(t, name);
+            if (v != EvalContext.NOT_OBJECT) return Values.normalize(v);
+            return Properties.get().read(Properties.get().read(t, "data"), name);
+        }
+
+        public String text() {
+            return target.text() + ".data." + name;
+        }
+    }
+
     record Placeholder(String raw) implements Node {
         public Object eval(EvalContext ctx) {
             Object v = ctx.placeholder(raw, null);

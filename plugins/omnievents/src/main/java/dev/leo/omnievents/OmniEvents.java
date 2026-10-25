@@ -3,7 +3,9 @@ package dev.leo.omnievents;
 import dev.leo.omnievents.action.Actions;
 import dev.leo.omnievents.api.OmniEventsAPI;
 import dev.leo.omnievents.command.OmniCommand;
+import dev.leo.omnievents.data.BlockDataCleaner;
 import dev.leo.omnievents.data.DataStore;
+import dev.leo.omnievents.data.ObjectData;
 import dev.leo.omnievents.data.SavedItems;
 import dev.leo.omnievents.debug.Debugger;
 import dev.leo.omnievents.debug.Profiler;
@@ -40,11 +42,14 @@ public final class OmniEvents extends JavaPlugin implements Listener {
     private static final List<String> EXAMPLES = List.of(
             "rules/ejemplos/bienvenida.yml", "rules/ejemplos/mineria.yml", "rules/ejemplos/comandos.yml",
             "rules/ejemplos/combate.yml", "rules/ejemplos/chat.yml", "rules/ejemplos/temporizadores.yml",
-            "rules/ejemplos/herramientas.yml", "rules/ejemplos/estados.yml");
+            "rules/ejemplos/herramientas.yml", "rules/ejemplos/estados.yml", "rules/ejemplos/variables.yml");
 
     private Settings settings;
     private Messages messages;
     private DataStore data;
+    private ObjectData objectData;
+    private BlockDataCleaner blockCleaner;
+    private BukkitTask expirySweep;
     private SavedItems savedItems;
     private final Placeholders placeholders = new Placeholders();
     private Debugger debugger;
@@ -68,6 +73,8 @@ public final class OmniEvents extends JavaPlugin implements Listener {
 
         BukkitProperties.register(Properties.get());
         data = new DataStore(getDataFolder(), getLogger());
+        objectData = new ObjectData(data::now, () -> settings.objectMaxText(), () -> settings.objectMaxVars());
+        blockCleaner = new BlockDataCleaner(this);
         savedItems = new SavedItems(getDataFolder());
         debugger = new Debugger(this);
         actions = new Actions(this);
@@ -97,6 +104,8 @@ public final class OmniEvents extends JavaPlugin implements Listener {
 
         Problems p = reload();
         logProblems(p);
+        // Spec 009: caducidad de pvar y gvar, una vez por segundo (sin nada vencido cuesta un peek).
+        expirySweep = Bukkit.getScheduler().runTaskTimer(this, this::sweepExpired, 20, 20);
         // server_start corre en el primer tick, con todos los plugins y mundos cargados.
         Bukkit.getScheduler().runTask(this, () -> fireAll(TriggerType.Kind.SERVER_START));
     }
@@ -124,6 +133,10 @@ public final class OmniEvents extends JavaPlugin implements Listener {
             });
             step("autoguardado", () -> {
                 if (autosave != null) autosave.cancel();
+            });
+            step("caducidad", () -> {
+                if (expirySweep != null) expirySweep.cancel();
+                if (blockCleaner != null) blockCleaner.unregister();
             });
         } finally {
             if (data != null) data.saveAllSync();
@@ -165,6 +178,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
         guarded(p, "temporizadores", timers::start);
         guarded(p, "estados", () -> states.register(rules.all()));
         guarded(p, "comandos", ruleCommands::register);
+        guarded(p, "datos de bloques", () -> blockCleaner.update(rules.all()));
         lastProblems = p;
         return p;
     }
@@ -202,6 +216,30 @@ public final class OmniEvents extends JavaPlugin implements Listener {
         }
     }
 
+    /** Spec 009, H2: lo que caducó avisa a los estados que lo leen y corre las reglas var_expire. */
+    private void sweepExpired() {
+        for (DataStore.Expired x : data.sweep()) {
+            states.varChanged(x.scope(), x.player(), x.name());
+            Player p = x.player() == null ? null : Bukkit.getPlayer(x.player());
+            if (x.player() != null && p == null) continue;
+            for (Rule r : rules.byKind(TriggerType.Kind.VAR_EXPIRE)) {
+                if (!r.expireVariables().isEmpty() && !r.expireVariables().contains(x.name())) continue;
+                Map<String, Object> b = new HashMap<>();
+                b.put("variable", x.name());
+                b.put("value", x.value());
+                b.put("scope", x.scope().prefix);
+                if (p != null) {
+                    b.put("player", p);
+                    b.put("world", p.getWorld());
+                    b.put("location", p.getLocation());
+                } else {
+                    b.put("world", Bukkit.getWorlds().isEmpty() ? null : Bukkit.getWorlds().get(0));
+                }
+                rules.fire(r, b, null);
+            }
+        }
+    }
+
     public void saveAsync() {
         List<DataStore.Snapshot> snaps = data.dirtySnapshots();
         if (snaps.isEmpty()) return;
@@ -236,6 +274,14 @@ public final class OmniEvents extends JavaPlugin implements Listener {
 
     public DataStore data() {
         return data;
+    }
+
+    public ObjectData objectData() {
+        return objectData;
+    }
+
+    public BlockDataCleaner blockCleaner() {
+        return blockCleaner;
     }
 
     public SavedItems savedItems() {

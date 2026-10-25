@@ -723,6 +723,92 @@ export default {
       }
     },
     {
+      id: '009 H1 CA1 · H1 CA4 · H1 CA5 · H2 CA1 · H2 CA2 · H2 CA3',
+      nombre: 'expire: la pvar caduca sola, ttl cuenta, var_expire avisa y el estado que la lee sale',
+      timeoutMs: 25000,
+      async fn (ctx) {
+        const { srv } = ctx
+        const ana = ctx.bots[ANA]
+        await srv.consola(`omni var del ${ANA} e2e_racha`)
+        let m = ana.marca()
+        await srv.consola(`omni call e2e_racha ${ANA}`)
+        await ana.esperar('chat', /^e2e racha 1 ttl true$/, { desde: m })
+        await srv.consola(`omni call e2e_racha ${ANA}`)
+        await ana.esperar('chat', /^e2e racha 2 ttl true$/, { desde: m })
+        await ana.esperar('chat', /^e2e racha entra$/, { desde: m })
+        await srv.consola(`omni var get ${ANA} e2e_racha`, { espera: /e2e_racha = 2(\.0)? \(caduca en [12]s\)/ })
+        m = ana.marca()
+        await ana.esperar('chat', /^e2e racha perdida 2 pvar e2e_racha$/, { desde: m, timeoutMs: 5000 })
+        await ana.esperar('chat', /^e2e racha sale$/, { desde: m })
+        await srv.consola(`omni var get ${ANA} e2e_racha`, { espera: /e2e_racha = nulo/ })
+        // /omni var set … --expire (H1 CA5): caduca sin regla que avise (variables: [e2e_racha] no la incluye).
+        await srv.consola(`omni var set ${ANA} e2e_bono 5 --expire 1s`, { espera: /e2e_bono = 5/ })
+        await srv.consola(`omni var list ${ANA}`, { espera: /e2e_bono = 5(\.0)? \(caduca en [01]s\)/ })
+        await dormir(2200)
+        await srv.consola(`omni var get ${ANA} e2e_bono`, { espera: /e2e_bono = nulo/ })
+      }
+    },
+    {
+      id: '009 H3 CA1 · H3 CA2 · H3 CA3 · H3 CA6',
+      nombre: 'block.data: un bloque recuerda quién lo marcó, /omni data lo muestra y al romperlo se borra',
+      timeoutMs: 25000,
+      async fn (ctx) {
+        const { srv } = ctx
+        await limpiarArea(srv)
+        await prepararJugador(ctx, ANA, 'creative')
+        await srv.consola('setblock 13 -60 12 emerald_block')
+        const ana = ctx.bots[ANA]
+        await ana.hasta('ver el bloque de esmeralda', b => bloque(b, 13, -60, 12) === 'emerald_block')
+        const esmeralda = () => ana.bot.blockAt(new ana.bot.entity.position.constructor(13, -60, 12))
+        let m = ana.marca()
+        await ana.bot.activateBlock(esmeralda())
+        await ana.esperar('chat', /^e2e bloque marcado$/, { desde: m })
+        m = ana.marca()
+        await ana.bot.activateBlock(esmeralda())
+        await ana.esperar('chat', /^e2e bloque de Ana_e2e$/, { desde: m })
+        await ana.bot.lookAt(esmeralda().position.offset(0.5, 0.5, 0.5), true)
+        m = ana.marca()
+        ana.comando('omni data bloque')
+        await ana.esperar('chat', /e2e_dueño = 'Ana_e2e'/, { desde: m })
+        m = ana.marca()
+        await ana.bot.dig(esmeralda(), true).catch(() => {})
+        await ana.esperar('chat', /^e2e roto con Ana_e2e$/, { desde: m })
+        await srv.consola('setblock 13 -60 12 emerald_block')
+        await ana.hasta('ver el bloque nuevo', b => bloque(b, 13, -60, 12) === 'emerald_block')
+        m = ana.marca()
+        await ana.bot.activateBlock(esmeralda())
+        await ana.esperar('chat', /^e2e bloque marcado$/, { desde: m })
+        await limpiarArea(srv)
+      }
+    },
+    {
+      id: '009 H3 CA1 · H3 CA2 · H3 CA6',
+      nombre: 'item.data: /ligar guarda el dueño en el ítem, y el ítem lo lleva a otro jugador',
+      timeoutMs: 25000,
+      async fn (ctx) {
+        const { srv } = ctx
+        await prepararJugador(ctx, ANA)
+        const ana = ctx.bots[ANA]
+        const beto = ctx.bots[BETO]
+        await srv.consola(`clear ${BETO}`)
+        await srv.consola(`give ${ANA} diamond_sword`)
+        await ana.hasta('tener la espada', () => ana.cantidad('diamond_sword') === 1)
+        await ana.bot.equip(ana.items('diamond_sword')[0], 'hand')
+        let m = ana.marca()
+        ana.comando('ligar')
+        await ana.esperar('chat', /ligado a Ana_e2e\.$/, { desde: m })
+        m = ana.marca()
+        ana.comando('omni data mano')
+        await ana.esperar('chat', /dueño = 'Ana_e2e'/, { desde: m })
+        await srv.consola(`item replace entity ${BETO} weapon.mainhand from entity ${ANA} weapon.mainhand`)
+        await beto.hasta('tener la espada copiada', () => beto.cantidad('diamond_sword') === 1)
+        m = beto.marca()
+        beto.comando('omni data mano')
+        await beto.esperar('chat', /dueño = 'Ana_e2e'/, { desde: m })
+        await srv.consola(`clear ${BETO}`)
+      }
+    },
+    {
       id: 'H4 CA11 · H8 CA1',
       nombre: 'delay en spawnvip: el teletransporte llega a los 3 s sin bloquear el servidor; luego enfriamiento',
       timeoutMs: 30000,

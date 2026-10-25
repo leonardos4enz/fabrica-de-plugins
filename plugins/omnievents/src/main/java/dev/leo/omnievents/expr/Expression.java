@@ -64,6 +64,7 @@ public record Expression(String source, Node root) {
             }
             case Node.Literal l -> { }
             case Node.VarRef v -> { }
+            case Node.DataRef d -> collect(d.target(), out);
             case Node.Placeholder p -> { }
         }
     }
