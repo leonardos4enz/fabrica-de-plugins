@@ -64,8 +64,12 @@ con `--release 21`.
   en creativo el bot no aplica la corrección del servidor tras una rotura cancelada (004).
 - prismarine-viewer solo dibuja de y = 0 a 255 y no dibuja bloques con entidad (cofres, camas, carteles), ítems
   tirados, relámpagos ni partículas: las escenas de capturas se montan en y = 100 y lo demás va como texto (004).
-- `/omni enable|disable` seguidos provocan una `ConcurrentModificationException` en el envío asíncrono de comandos de
-  Paper (004 F-01, pendiente): no es un error de la prueba.
+- **Registrar o desregistrar comandos en caliente cambia el árbol que Paper recorre en otro hilo** al mandarlo a los
+  jugadores: dos cambios seguidos dan `ConcurrentModificationException` en `Commands.sendAsync` (004 F-01, resuelto
+  en la 005). Registrar solo si cambia el conjunto, ocultar con `testPermissionSilent` y mandar el árbol una vez:
+  `syncCommands()` ya llama a `sendCommands` por jugador (no sumarle `updateCommands()`).
+- Al subir la versión de un plugin quedan dos jars en `dist/`: la suite y `compuerta-servidor.sh` instalan solo el más
+  reciente (005 F-01; antes la suite probaba el viejo y Paper no cargaba ninguno por «Ambiguous plugin name»).
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

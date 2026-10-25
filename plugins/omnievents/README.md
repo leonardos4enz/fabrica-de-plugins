@@ -13,8 +13,8 @@ Minecraft 1.21.4 ([spec 004](../../docs/sdd/specs/004-fabrica-capturas-en-juego/
 ## Compatibilidad
 | Servidor | Estado | Evidencia |
 |---|---|---|
-| **Paper 1.21.4** (build 232, Java 24) | Verificada | Compuertas 1, 2 y 3a: unitarias, servidor real y 21/21 escenarios en el juego (2026-10-24, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md) y [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md)) |
-| **Paper 26.1.2** (build 74, Java 25) | Verificada | 21/21 escenarios en el juego con el mismo jar (2026-10-24, spec [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md)) |
+| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.0.1) | Compuertas 1, 2 y 3a: unitarias, servidor real y 22/22 escenarios en el juego dos veces (2026-10-24, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md) y [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md)) |
+| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.0.1) | 22/22 escenarios en el juego dos veces con el mismo jar (2026-10-24, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md) y [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md)) |
 | Paper 1.21.5 – 1.21.11 | Sin verificar | Debería funcionar (misma API, sin NMS), pero no se probó |
 | Paper 26.2 y 26.3 | Sin verificar | El bot de pruebas (mineflayer 4.39) llega hasta 26.1 |
 | Paper 1.21.3 o anterior | No soportada | Se compila contra la API de 1.21.4 |
@@ -149,6 +149,11 @@ Siempre disponibles: `player`, `event`, `world`, `location`, `item` (mano princi
 `cooldown reset <regla> [jugador|global]` · `limit reset <regla> [jugador|global]` · `stats` · `triggers` · `actions` ·
 `item save|delete|list` · `import conditionalevents` · `selftest`.
 Permisos: `omnievents.command.<sub>` (por defecto solo OP) o `omnievents.command.*`. Cómo se ve cada uno: [galería](../../docs/omnievents/galeria.md#comandos-de-omni).
+
+`enable|disable` duran hasta el próximo `reload` y se pueden encadenar sin costo: si la regla no es un comando, no se
+toca el árbol de comandos de los jugadores. Si es una regla `trigger: command`, su comando desaparece del
+autocompletado y deja de funcionar («comando desconocido») sin desregistrarse, y vuelve al reactivarla
+([spec 005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/spec.md)).
 
 ## Diagnóstico
 - `/omni debug mi_regla`: en cada disparo ves cada condición con sus valores (`player.level (3) >= 10 → false`),

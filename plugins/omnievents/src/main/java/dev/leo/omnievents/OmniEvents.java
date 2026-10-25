@@ -149,7 +149,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
         // Cada servicio por separado: si uno falla, los demás quedan activos (H1 CA3; regresión 001 F-03).
         listeners.unregister();
         timers.stop();
-        guarded(p, "comandos", ruleCommands::unregister);
+        // Los comandos no se quitan antes: register() concilia y solo registra si cambiaron (spec 005).
         rules.set(loaded);
         guarded(p, "oyentes", () -> listeners.register(rules.all(), p));
         guarded(p, "temporizadores", timers::start);

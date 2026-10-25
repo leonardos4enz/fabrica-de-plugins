@@ -1,6 +1,6 @@
 # Verificación 004 — Fábrica: documentación con imágenes generadas en el juego
 
-**Fecha:** 2026-10-24 · **Resultado:** Aprobada (con el hallazgo F-01 de OmniEvents pendiente para otra spec)
+**Fecha:** 2026-10-24 · **Resultado:** Aprobada (el hallazgo F-01 de OmniEvents se resolvió después en la [spec 005](../005-omnievents-comandos-sin-resync/verify.md))
 
 | Compuerta | Resultado |
 |---|---|
@@ -58,7 +58,7 @@ Las escenas marcadas `varía` (y por qué): `ejemplo-spawn_vip` (segundos de enf
 ## Hallazgos
 | ID | Severidad | Descripción | Evidencia | Prueba de regresión | Estado |
 |---|---|---|---|---|---|
-| F-01 | Media | **OmniEvents**: `/omni enable` y `/omni disable` vuelven a registrar los comandos de reglas y llaman a `syncCommands()` y `updateCommands()` aunque la regla no sea un comando; dos seguidos chocan con el envío asíncrono de Paper (`ConcurrentModificationException` en `Commands.sendAsync`). El jugador puede quedar con el autocompletado viejo | `run/e2e.log` en cada escena que enciende una regla de demostración | Pendiente (código del plugin, fuera de esta spec; propuesta en el roadmap) | Abierto |
+| F-01 | Media | **OmniEvents**: `/omni enable` y `/omni disable` vuelven a registrar los comandos de reglas y llaman a `syncCommands()` y `updateCommands()` aunque la regla no sea un comando; dos seguidos chocan con el envío asíncrono de Paper (`ConcurrentModificationException` en `Commands.sendAsync`). El jugador puede quedar con el autocompletado viejo | `run/e2e.log` en cada escena que enciende una regla de demostración | Escenario `005 H1 CA1 …` de `tests-e2e/omnievents/suite.mjs` (falla con el código anterior: 16 árboles por 4 cambios) | Resuelto en la [005](../005-omnievents-comandos-sin-resync/verify.md) (OmniEvents 1.0.1) |
 | F-02 | Media | El visor se colgaba al reconectar un bot (esperaba cerrar su servidor con la página conectada) y la preparación de la escena no tenía tiempo límite: la corrida quedó parada 14 min | Primera corrida completa, tras `accion-kick` | `Camara.recargar` recarga la página sin cerrar el servidor; `antesDeCada` entra en el tiempo límite. Las corridas siguientes pasan `kick`, `despedida` y `player_kick` | Resuelto |
 | F-03 | Media | En 1.21.4, `spawn-monsters=false` (el de la suite) borra al instante hasta los monstruos invocados: `cazador` no veía su criatura | `Summoned new Creeper` en el log y el bot sin la entidad | `propiedades: { 'spawn-monsters': 'true' }` en las capturas (`Servidor.prepararPropiedades(ademas)`, sin tocar las de seguridad); `ejemplo-cazador` en verde | Resuelto |
 | F-04 | Baja | mineflayer 4.39 en 1.21.4: agacharse se manda con un número donde el protocolo espera el nombre de la acción; volar con `creative.startFlying` no dispara el evento; en creativo no aplica la corrección del servidor tras una rotura cancelada; no logra usar la mesa de encantamientos | Escenas `player_sneak`, `player_toggle_flight`, `bloque_protegido`, `item_enchant` | Paquetes directos (`entity_action` con `start_sneaking`, `abilities`) y reenvío del bloque real; `item_enchant` como solo texto | Resuelto (salvo la mesa, documentada) |

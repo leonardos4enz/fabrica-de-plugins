@@ -395,6 +395,45 @@ export default {
       }
     },
     {
+      id: '005 H1 CA1 · H1 CA2 · H1 CA3 · H2 CA1 · H2 CA2',
+      nombre: '/omni enable|disable seguidos: sin reenviar comandos si no cambian, un árbol por cambio y sin errores',
+      timeoutMs: 30000,
+      async fn ({ srv, bots }) {
+        const ana = bots[ANA]
+        const arboles = (m) => ana.vistos.slice(m).filter(v => v.tipo === 'comandos')
+        const ml = srv.marca()
+        // Regresión (004 F-01): cada cambio re-registraba los comandos y mandaba el árbol 4 veces; dos seguidos
+        // dejaban ConcurrentModificationException en Commands.sendAsync.
+        let m = ana.marca()
+        for (const c of ['disable', 'enable', 'disable', 'enable']) await srv.consola(`omni ${c} e2e_mensajes`)
+        await srv.sincronizar()
+        await dormir(1500)
+        if (arboles(m).length) throw new Error(`una regla que no es comando mandó ${arboles(m).length} árboles de comandos`)
+
+        m = ana.marca()
+        for (const c of ['disable', 'enable', 'disable']) await srv.consola(`omni ${c} e2e`)
+        await srv.sincronizar()
+        await ana.hasta('recibir un árbol por cada cambio de /e2e', () => arboles(m).length >= 3)
+        await dormir(1000)
+        const a = arboles(m)
+        if (a.length !== 3) throw new Error(`se esperaban 3 árboles (uno por cambio) y llegaron ${a.length}`)
+        // Paper arma cada árbol en otro hilo: los tres salen con el estado final (desactivada).
+        if (a.at(-1).texto.includes(' e2e ')) throw new Error('/e2e sigue en el árbol con la regla desactivada')
+        let ma = ana.marca()
+        ana.comando('e2e mensajes')
+        await ana.esperar('chat', /Unknown or incomplete command/i, { desde: ma })
+        await ana.nunca('chat', /e2e mensaje para/, { desde: ma, ms: 500 })
+
+        await srv.consola('omni enable e2e', { espera: /Regla e2e activada/ })
+        await ana.hasta('ver /e2e de nuevo en el árbol', () => arboles(m).length === 4 && arboles(m)[3].texto.includes(' e2e '))
+        ma = ana.marca()
+        ana.comando('e2e mensajes')
+        await ana.esperar('chat', /^e2e mensaje para Ana_e2e$/, { desde: ma })
+        const cme = srv.errores({ desde: ml }).filter(l => /ConcurrentModification/.test(l))
+        if (cme.length) throw new Error('el log tiene ConcurrentModificationException:\n    ' + cme.join('\n    '))
+      }
+    },
+    {
       id: 'H4 CA11 · H8 CA1',
       nombre: 'delay en spawnvip: el teletransporte llega a los 3 s sin bloquear el servidor; luego enfriamiento',
       timeoutMs: 30000,

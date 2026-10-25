@@ -18,7 +18,12 @@ cd "$RUN" || { echo "no existe $RUN"; exit 1; }
 [ -f eula.txt ] && grep -q "eula=true" eula.txt || { echo "el EULA de Minecraft lo acepta el dueño en $RUN/eula.txt"; exit 1; }
 JAR="$(ls paper-*.jar | head -1)"
 mkdir -p plugins
-cp "$ROOT"/dist/*.jar plugins/ 2>/dev/null
+# Solo el jar más reciente de este plugin: con dos versiones en dist/ Paper no carga ninguna («Ambiguous plugin
+# name»; regresión 005 F-01).
+PJAR="$(ls -t "$ROOT"/dist/*.jar 2>/dev/null | grep -i "/$PLUGIN-[^/]*\.jar$" | head -1)"
+[ -n "$PJAR" ] || { echo "no hay jar de $PLUGIN en dist/: ./gradlew :$PLUGIN:dist"; exit 1; }
+find plugins -maxdepth 1 -iname "$PLUGIN-*.jar" -delete
+cp "$PJAR" plugins/
 
 wait_done() {
   for _ in $(seq 1 300); do

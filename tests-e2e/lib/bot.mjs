@@ -64,6 +64,12 @@ export class Jugador {
     bot.on('particle', (p) => registrar('particle', String(p.name ?? p.id)))
     bot._client.on('explosion', () => registrar('explosion', 'explosion'))
     bot._client.on('abilities', (p) => registrar('abilities', `flags=${p.flags}`, p))
+    // Árbol de comandos (spec 005): el texto son los comandos de primer nivel, separados por espacios.
+    bot._client.on('declare_commands', (p) => {
+      const raiz = p.nodes?.[p.rootIndex]
+      const nombres = (raiz?.children ?? []).map(i => p.nodes[i]?.extraNodeData?.name).filter(Boolean)
+      registrar('comandos', ` ${nombres.join(' ')} `, p)
+    })
     bot.on('entitySpawn', (e) => registrar('entity', String(e.name), e))
     bot.on('kicked', (r) => { this.expulsion = texto(r); registrar('kicked', this.expulsion, r) })
     bot.on('error', () => {})

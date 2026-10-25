@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import { Servidor, uuidOffline } from './servidor.mjs'
+import { Servidor, uuidOffline, jarMasNuevo } from './servidor.mjs'
 
 const carpeta = () => fs.mkdtempSync(path.join(os.tmpdir(), 'e2e-'))
 
@@ -48,4 +48,19 @@ test('H1 CA3: olvidar jugadores borra sus datos del mundo y del plugin, y nada m
   assert.equal(fs.existsSync(path.join(run, `world/players/data/${id}.dat`)), false) // formato 26.1
   assert.equal(fs.existsSync(path.join(run, `plugins/X/data/${id}.yml`)), false)
   assert.equal(fs.existsSync(path.join(run, `world/playerdata/${otro}.dat`)), true)
+})
+
+test('005 F-01: con varias versiones en dist/ se instala el jar más reciente, no el primero por nombre', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'e2e-dist-'))
+  try {
+    for (const [f, t] of [['OmniEvents-1.0.0.jar', 1000], ['OmniEvents-1.0.1.jar', 2000], ['otro.jar', 3000]]) {
+      fs.writeFileSync(path.join(dir, f), '')
+      fs.utimesSync(path.join(dir, f), t, t)
+    }
+    const patron = /^OmniEvents-.*.jar$/
+    assert.equal(fs.readdirSync(dir).find(f => patron.test(f)), 'OmniEvents-1.0.0.jar', 'así lo elegía el código anterior')
+    assert.equal(jarMasNuevo(dir, patron), 'OmniEvents-1.0.1.jar')
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
 })

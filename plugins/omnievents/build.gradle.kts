@@ -1,4 +1,4 @@
-version = "1.0.0"
+version = "1.0.1"
 
 dependencies {
     compileOnly("me.clip:placeholderapi:2.11.6")

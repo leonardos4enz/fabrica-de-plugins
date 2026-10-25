@@ -160,4 +160,14 @@ export class Servidor {
   }
 }
 
+/**
+ * El jar del plugin más reciente de una carpeta (dist/ puede tener varias versiones). Regresión (005 F-01): se tomaba
+ * el primero por orden alfabético y, al subir de 1.0.0 a 1.0.1, la suite probaba el jar viejo.
+ */
+export function jarMasNuevo (dir, patron) {
+  const jars = fs.readdirSync(dir).filter(f => patron.test(f))
+  jars.sort((a, b) => fs.statSync(path.join(dir, b)).mtimeMs - fs.statSync(path.join(dir, a)).mtimeMs)
+  return jars[0]
+}
+
 export const dormir = (ms) => new Promise(resolve => setTimeout(resolve, ms))

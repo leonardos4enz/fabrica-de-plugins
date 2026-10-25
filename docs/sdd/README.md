@@ -57,3 +57,4 @@ Al cerrar la spec:
 | 001 | [OmniEvents: núcleo (eventos condicionales)](specs/001-omnievents-nucleo/spec.md) | OmniEvents | Verificado · compuertas 1, 2 y 3a aprobadas |
 | 002 | [Fábrica: pruebas automáticas en el juego](specs/002-fabrica-pruebas-en-juego/spec.md) | fábrica (OmniEvents) | Verificado · 21/21 en Paper 1.21.4 y 26.1.2 |
 | 004 | [Fábrica: documentación con imágenes generadas en el juego](specs/004-fabrica-capturas-en-juego/spec.md) | fábrica (OmniEvents) | Verificado · galería de 147 escenas, dos regeneraciones sin diferencias inesperadas |
+| 005 | [OmniEvents: activar y desactivar reglas sin re-sincronizar comandos](specs/005-omnievents-comandos-sin-resync/spec.md) | OmniEvents | Verificado · 1.0.1, F-01 de la 004 resuelto · 22/22 dos veces |

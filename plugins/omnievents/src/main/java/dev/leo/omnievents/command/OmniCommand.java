@@ -204,7 +204,8 @@ public final class OmniCommand implements TabExecutor {
         // Re-registrar: una regla activada necesita su oyente, una desactivada lo libera (H6 CA5).
         plugin.listeners().register(plugin.rules().all(), new Problems());
         plugin.timers().start();
-        plugin.ruleCommands().register();
+        // Solo registra si cambió el conjunto de comandos; si no, como mucho reenvía el árbol una vez (spec 005).
+        plugin.ruleCommands().refresh();
         send(s, on ? "rule-enabled" : "rule-disabled", "rule", r.name());
         send(s, "toggle-note");
     }

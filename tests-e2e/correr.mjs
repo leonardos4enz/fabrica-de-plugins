@@ -6,7 +6,7 @@ import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Servidor, dormir } from './lib/servidor.mjs'
+import { Servidor, dormir, jarMasNuevo } from './lib/servidor.mjs'
 import { conectar } from './lib/bot.mjs'
 import { prepararPaper } from './lib/paper.mjs'
 
@@ -64,7 +64,7 @@ async function principal () {
   const pluginsDir = path.join(run, 'plugins')
   fs.mkdirSync(pluginsDir, { recursive: true })
   for (const f of fs.readdirSync(pluginsDir)) if (suite.jar.test(f)) fs.rmSync(path.join(pluginsDir, f))
-  const jar = fs.readdirSync(path.join(RAIZ, 'dist')).find(f => suite.jar.test(f))
+  const jar = jarMasNuevo(path.join(RAIZ, 'dist'), suite.jar)
   if (!jar) throw new Error(`No hay ${suite.jar} en dist/: compila con gradlew :${o.plugin}:dist`)
   fs.copyFileSync(path.join(RAIZ, 'dist', jar), path.join(pluginsDir, jar))
   // Configuración que se copia en cada corrida (origen relativo a la raíz del repositorio, destino a run/): los
