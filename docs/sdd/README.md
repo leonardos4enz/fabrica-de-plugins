@@ -21,7 +21,8 @@ constitution.md  (principios fijos de la fábrica, se leen siempre)
       │
  6. VERIFY    specs/NNN-plugin-nombre/verify.md  Ver verificacion.md:
                  a) unitarias  b) servidor Paper real (carga, ejemplos, comandos de consola)
-                 c) revisión exploratoria en el juego → cada hallazgo se vuelve prueba
+                 c) en el juego: suite automática con bots (3a) y revisión exploratoria (3b)
+                    → cada hallazgo se vuelve prueba
 ```
 
 Las plantillas de cada documento están en [plantillas/](plantillas/). Un plugin nuevo se crea con
@@ -51,4 +52,5 @@ Al cerrar la spec:
 ## Índice de specs
 | # | Spec | Plugin | Estado |
 |---|------|--------|--------|
-| 001 | [OmniEvents: núcleo (eventos condicionales)](specs/001-omnievents-nucleo/spec.md) | OmniEvents | Implementado · compuertas 1 y 2 aprobadas, falta la revisión en el juego |
+| 001 | [OmniEvents: núcleo (eventos condicionales)](specs/001-omnievents-nucleo/spec.md) | OmniEvents | Verificado · compuertas 1, 2 y 3a aprobadas |
+| 002 | [Fábrica: pruebas automáticas en el juego](specs/002-fabrica-pruebas-en-juego/spec.md) | fábrica (OmniEvents) | Verificado · 21/21 en Paper 1.21.4 y 26.1.2 |

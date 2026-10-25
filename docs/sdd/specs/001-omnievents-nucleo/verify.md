@@ -1,12 +1,13 @@
 # Verificación 001 — OmniEvents: núcleo
 
-**Fecha:** 2026-10-24 · **Resultado:** Compuertas 1 y 2 aprobadas · compuerta 3 (revisión en el juego) pendiente
+**Fecha:** 2026-10-24 · **Resultado:** Compuertas 1, 2 y 3a aprobadas · la exploratoria humana (3b) queda abierta
 
 | Compuerta | Resultado |
 |---|---|
 | Unitarias | **38/38** (`ExpressionTest` 13, `RuleLoaderTest` 14, `TemplateTest` 8, `ImporterTest` 2, `RuleCommandsTest` 1). `gradlew build` sin errores |
 | Servidor real | **Aprobada** en Paper 1.21.4 build 232 (sha256 verificado), Java 24, EULA aceptado por el dueño (2026-10-24). Ver detalle abajo |
-| Revisión exploratoria | **Pendiente:** necesita un jugador conectado (acciones sobre el mundo, chat, combate) |
+| En el juego (3a) | **Cubierta** por la suite automática de la [spec 002](../002-fabrica-pruebas-en-juego/verify.md): `npm --prefix tests-e2e test`, 21/21 dos veces seguidas en Paper 1.21.4 y en 26.1.2, con bots de mineflayer. Encontró F-06 y F-07 |
+| Exploratoria (3b) | Abierta: lista de comprobación de `verificacion.md` con una persona o un agente manejando el bot |
 
 ## Compuerta 2 — servidor real
 Tres corridas con `tools/compuerta-servidor.sh` (logs en `plugins/omnievents/run/run*.log`, fuera del repositorio).
@@ -43,7 +44,11 @@ Tres corridas con `tools/compuerta-servidor.sh` (logs en `plugins/omnievents/run
 | H9 CA1–CA4 | servidor: `debug`, `eval`, `stats`, `validate` |
 | H10 importador | `ImporterTest.*`; servidor: `/omni import conditionalevents` |
 | H11 comandos | servidor: todos los subcomandos de consola |
-| H5 CA1–CA5, H6 CA1 (eventos de jugador), H7 CA3 (PlaceholderAPI), H12 | Pendientes de la revisión en el juego |
+| H5 CA1–CA5 acciones | Suite en el juego (002): escenarios `H5 CA1`…`H5 CA5` (mensajes, comandos, jugador, mundo, evento) |
+| H6 CA1 eventos de jugador | Suite en el juego (002): `player_join` ×2, `player_chat` ×4, `block_break` ×2, `player_attack`, `player_quit`, `monedas`, `spawnvip` |
+| H4 CA2 `delay`, H4 CA6 escape | Suite en el juego (002): `delay` en `spawnvip`; `{message}` con `<red>`, `<click>` y `&c` literal |
+| H7 CA1, CA4 y H8 CA1–CA2 con jugador | Suite en el juego (002): `pvar` por reglas y por `/omni var set`, `call` entre jugadores, enfriamiento de `spawnvip`, límite diario de `recompensa_diaria` |
+| H7 CA3 (PlaceholderAPI), H12 | Pendientes: necesitan otros plugins en el servidor de prueba |
 
 ## Hallazgos
 | ID | Severidad | Descripción | Evidencia | Prueba de regresión | Estado |
@@ -53,9 +58,12 @@ Tres corridas con `tools/compuerta-servidor.sh` (logs en `plugins/omnievents/run
 | F-03 | Alta | `/omni reload` fallaba con `UnsupportedOperationException` al quitar los comandos de reglas (el mapa de Paper no permite borrar desde el iterador) y dejaba el plugin **sin oyentes ni temporizadores** | Servidor, corrida 1: `stats` con 0 oyentes después del reload | `RuleCommandsTest.quitar_comandos_de_un_mapa_que_no_permite_borrar_desde_el_iterador` (reproduce el fallo del código anterior); además, `reload` ahora registra cada servicio por separado | Resuelto |
 | F-04 | Alta | Al apagar, la misma excepción impedía guardar: **se perdían variables, enfriamientos y usos** | Servidor, corrida 1: no existía `data/global.yml` | Servidor, corrida 2: `global.yml` guardado y `arranques` = 2 al reiniciar. `onDisable` guarda siempre, en un `finally` | Resuelto |
 | F-05 | Media | Un enfriamiento por jugador usado desde la consola se guardaba como **global** y bloqueaba a todos los jugadores | Servidor, corrida 2: `cooldowns: spawn_vip` en `global.yml` | Servidor, corrida 3: dos `spawnvip` seguidos desde la consola corren y `global.yml` no tiene enfriamientos | Resuelto |
+| F-06 | Media | `set: pvar…` después de un `kick` fallaba («ya no está conectado»): el ejemplo `filtro_palabras` nunca reiniciaba los avisos | Suite en el juego (002 F-01) | Escenario `H4 CA9 · H7 CA1` de `tests-e2e` (falla con el código anterior) | Resuelto |
+| F-07 | Media | `remove_item` no quitaba ítems con nombre o lore | Suite en el juego (002 F-02) | Escenario `H5 CA3 — … remove_item …` de `tests-e2e` (falla con el código anterior) | Resuelto |
 
 ## Riesgos residuales
-- Sin jugador conectado no se ejercitaron las acciones sobre el mundo ni los eventos de jugador (compuerta 3).
+- La compuerta 3a cubre las acciones y los eventos de jugador más usados; los que no tienen escenario están en los riesgos de la [002](../002-fabrica-pruebas-en-juego/verify.md).
+- OmniEvents compilado contra 1.21.4 pasa la suite completa en Paper 26.1.2 (2026-10-24).
 - `Sound.valueOf` está obsoleto en 1.21.4; con claves (`entity.player.levelup`) funciona aunque se elimine.
 - PlaceholderAPI no estaba instalado en el servidor de prueba.
 - F-04 y F-05 se verificaron en el servidor y no con una unitaria: necesitarían un servidor simulado (MockBukkit), que se

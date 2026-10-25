@@ -33,6 +33,7 @@ import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
@@ -536,7 +537,7 @@ public final class Actions {
                 Player pl = ctx.requirePlayer();
                 Material m = material(p.get(0).render(ctx, Template.Mode.RAW));
                 int amount = part(p, 1) == null ? 1 : (int) num(p, 1, ctx);
-                pl.getInventory().removeItem(new ItemStack(m, amount));
+                removeByMaterial(pl.getInventory(), m, amount);
             });
         });
         register("clear_inventory", a -> Action.of(ctx -> ctx.requirePlayer().getInventory().clear()));
@@ -553,6 +554,27 @@ public final class Actions {
             Template t = a.template();
             return Action.of(ctx -> ctx.requirePlayer().kick(t.component(ctx)));
         });
+    }
+
+    /**
+     * Quita hasta {@code amount} ítems del material, tengan o no nombre, lore o encantamientos (inventario y mano
+     * secundaria; la armadura no). Regresión (spec 002, F-02): {@code removeItem} de Bukkit solo quita ítems idénticos
+     * y no tocaba los que da el propio plugin con nombre.
+     */
+    private static void removeByMaterial(PlayerInventory inv, Material m, int amount) {
+        int left = amount;
+        for (int i = 0; i < inv.getSize() && left > 0; i++) {
+            if (i >= 36 && i < 40) continue;
+            ItemStack it = inv.getItem(i);
+            if (it == null || it.getType() != m) continue;
+            int take = Math.min(left, it.getAmount());
+            left -= take;
+            if (take == it.getAmount()) inv.setItem(i, null);
+            else {
+                it.setAmount(it.getAmount() - take);
+                inv.setItem(i, it);
+            }
+        }
     }
 
     private static Entity requireEntity(ExecContext ctx) {

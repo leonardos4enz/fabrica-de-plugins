@@ -1,6 +1,6 @@
 # Spec 001 — OmniEvents: núcleo de eventos condicionales
 
-**Estado:** Implementado (pendiente VERIFY en servidor real) · **Plugin:** OmniEvents · **Depende de:** — ·
+**Estado:** Implementado y verificado (compuertas 1, 2 y 3a) · **Plugin:** OmniEvents · **Depende de:** — ·
 **Origen:** pedido del dueño (2026-10-24): «investigar ConditionalEvents y hacer una versión propia, mucho mejor»
 
 ## Problema

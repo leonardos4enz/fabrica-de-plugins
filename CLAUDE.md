@@ -24,6 +24,8 @@ Cada plugin vive en `plugins/<nombre>/`. Idioma del proyecto: **español** (cód
 ./gradlew :omnievents:test           # unitarias de un plugin
 ./gradlew :omnievents:dist           # jar en dist/
 bash tools/compuerta-servidor.sh omnievents "omni selftest"   # Paper real (el EULA lo acepta el dueño)
+npm --prefix tests-e2e test          # compuerta 3a: bots de mineflayer en el Paper de prueba (spec 002)
+npm --prefix tests-e2e test -- --sin-build --solo "H5 CA3"     # un subconjunto
 ```
 Gradle 8.14 no corre sobre Java 25: usar el JDK 24 (`JAVA_HOME=C:\Program Files\Java\jdk-24`). El código se compila
 con `--release 21`.
@@ -41,10 +43,18 @@ con `--release 21`.
 - En Paper, `World` (y las entidades) son `Keyed`: no tratarlos como valores de registro (001 F-01).
 - `run-paper` 2.3.1 no encuentra versiones: bajar Paper de la API Fill y usar `tools/compuerta-servidor.sh`.
 - Sin jugador (consola, temporizador del servidor), un enfriamiento o límite «por jugador» no se aplica (001 F-05).
+- Una acción posterior a un `kick` sigue teniendo al jugador, ya desconectado: `pvar` no debe exigir que esté en línea
+  (002 F-01). `removeItem` de Bukkit solo quita ítems idénticos: para «por material» recorrer el inventario (002 F-02).
+- En la suite en el juego, **la consola no espera**: después de preparar, `srv.sincronizar()` antes de que el bot actúe
+  (002 F-03). mineflayer 4.39 no lee la barra de acción de Paper ni el chat cambiado por el servidor y nombra mal los
+  sonidos de 1.21.4: `tests-e2e/lib/bot.mjs` lee esos paquetes directamente (002 F-04).
+- Un plugin que copia ejemplos solo si su carpeta no existe deja ejemplos viejos en `run/`: la suite los copia del
+  código fuente. En 26.1 los datos del jugador viven en `world/players/` (002 F-05).
+- Paper 26.x necesita Java 25 (`--java-servidor`); el bot usa `--version-bot 26.1` (mismo protocolo que 26.1.2).
 
 ## Antes de cada commit
 - Sin secretos: tokens, contraseñas, claves.
-- Sin artefactos: `build/`, `.gradle/`, `dist/`, `run/` (servidores de prueba), `*.class`.
+- Sin artefactos: `build/`, `.gradle/`, `dist/`, `run/` y `run-*/` (servidores de prueba), `node_modules/`, `*.class`.
 
 ## Commits
 Mensaje en español, describiendo el qué y el porqué, terminando con:

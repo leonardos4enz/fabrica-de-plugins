@@ -3,7 +3,8 @@
 ## Estado
 | Spec | Estado |
 |---|---|
-| 001 OmniEvents: núcleo | Implementado: unitarias 38/38 y servidor real aprobados; falta la revisión en el juego ([verify](specs/001-omnievents-nucleo/verify.md)) |
+| 001 OmniEvents: núcleo | Verificado: unitarias 38/38, servidor real y en el juego (3a) aprobados ([verify](specs/001-omnievents-nucleo/verify.md)) |
+| 002 Fábrica: pruebas en el juego | Verificado: `npm --prefix tests-e2e test` 21/21 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/002-fabrica-pruebas-en-juego/verify.md)) |
 
 ## Por qué empezamos con OmniEvents
 OmniEvents es la versión propia de *ConditionalEvents* (Ajneb97): «cuando pase X, si se cumple Y, haz Z». Es el
@@ -27,9 +28,12 @@ los siguientes plugins de la fábrica.
 
 ## Siguientes specs (propuestas, en orden)
 - **Fábrica: servidor simulado** — MockBukkit para probar en unitarias lo que hoy solo se ve en el servidor real (F-04, F-05 de la 001).
-- **002 OmniEvents: integraciones** — Vault (economía como funciones `money()` y acciones `give_money`), WorldGuard
+  Con la suite en el juego (002) es menos urgente: queda para la persistencia y los casos de bordes.
+- **Fábrica: más escenarios en el juego** — las acciones y disparadores sin escenario (riesgos de la 002) y
+  PlaceholderAPI con su jar en el servidor de prueba.
+- **OmniEvents: integraciones** — Vault (economía como funciones `money()` y acciones `give_money`), WorldGuard
   (disparadores de región sin plugins extra), Citizens (NPC).
-- **003 OmniEvents: editor en el juego** — inventario para ver, activar y probar reglas sin editar YAML.
-- **004 OmniEvents: almacenamiento SQL** — MySQL/MariaDB para redes con varios servidores (variables compartidas).
+- **OmniEvents: editor en el juego** — inventario para ver, activar y probar reglas sin editar YAML.
+- **OmniEvents: almacenamiento SQL** — MySQL/MariaDB para redes con varios servidores (variables compartidas).
 - Después: el siguiente plugin de la fábrica, reutilizando el motor de expresiones de OmniEvents como biblioteca
   común (`libs/`), con su propio ADR.

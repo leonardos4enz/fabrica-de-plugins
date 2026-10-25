@@ -22,5 +22,5 @@
 - [x] T15 `api/` (H12), `plugin.yml`, `config.yml`, `messages.yml`, ejemplos (H1 CA4), README del plugin.
 
 ## Cierre
-- [ ] T16 `gradlew build` en verde (38/38) y servidor real aprobado (carga, validate, selftest, reload ×2, persistencia); revisión exploratoria en el juego **pendiente** (necesita un jugador); `verify.md`.
-- [ ] T17 Roadmap, índice de specs, commit.
+- [x] T16 `gradlew build` en verde (38/38) y servidor real aprobado (carga, validate, selftest, reload ×2, persistencia); revisión en el juego automatizada por la spec 002 (compuerta 3a, 21/21); `verify.md`.
+- [x] T17 Roadmap, índice de specs, commit.

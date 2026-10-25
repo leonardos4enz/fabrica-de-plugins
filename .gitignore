@@ -2,6 +2,8 @@
 build/
 dist/
 run/
+run-*/
+node_modules/
 out/
 .idea/
 *.iml

@@ -159,18 +159,22 @@ public final class ExecContext implements EvalContext {
     }
 
     public void setVar(Scope scope, String name, Object value) {
-        Map<String, Object> target = switch (scope) {
-            case LOCAL -> locals;
-            case GLOBAL -> plugin.data().global().vars();
+        DataStore.Holder holder = switch (scope) {
+            case LOCAL -> null;
+            case GLOBAL -> plugin.data().global();
             case PLAYER -> {
-                Player p = requirePlayer();
-                yield plugin.data().player(p.getUniqueId()).vars();
+                // Regresión (spec 002, F-01): no se exige que siga conectado. Una acción anterior pudo expulsarlo
+                // (filtro_palabras: kick y luego pvar.avisos = 0); sus datos siguen cargados hasta el tick siguiente
+                // a la salida, que los guarda.
+                Player p = playerOrNull();
+                if (p == null) throw new ActionException("pvar necesita un jugador y el disparador no tiene uno (usa 'to:')");
+                yield plugin.data().player(p.getUniqueId());
             }
         };
+        Map<String, Object> target = holder == null ? locals : holder.vars();
         if (value == null) target.remove(name);
         else target.put(name, DataStore.storable(value));
-        if (scope == Scope.GLOBAL) plugin.data().global().markDirty();
-        if (scope == Scope.PLAYER) plugin.data().player(requirePlayer().getUniqueId()).markDirty();
+        if (holder != null) holder.markDirty();
     }
 
     @Override

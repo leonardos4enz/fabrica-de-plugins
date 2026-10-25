@@ -1,0 +1,154 @@
+# Reglas de la suite en el juego (spec 002). Solo cubren las acciones que no usan los ejemplos del plugin; los
+# ejemplos (bienvenida, monedas, spawn_vip, filtro_palabras, menciones, bloque_protegido…) se prueban tal cual.
+# La suite las copia a plugins/OmniEvents/rules/e2e/ al arrancar y las retira al terminar.
+#
+# El bot escribe /e2e <grupo> y la regla llama a e2e_<grupo> con call (el jugador viaja con la llamada).
+
+e2e:
+  trigger: command
+  command:
+    name: e2e
+    permission: omnievents.e2e
+    description: Escenarios de la suite en el juego
+    usage: /e2e <grupo>
+  actions:
+    - if: "player == null || args.size == 0"
+      then:
+        - message: "Uso: /e2e <grupo> (solo jugadores)"
+        - stop
+    - call: "e2e_{args[0]}"
+
+# H5 CA1: mensajes.
+e2e_mensajes:
+  trigger: call
+  actions:
+    - message: "<green>e2e mensaje para {player.name}"
+    - broadcast: "<gold>e2e difusión de {player.name}"
+    - actionbar: "<aqua>e2e barra de {player.name}"
+    - title: "<gold>e2e título;<gray>e2e subtítulo;5;40;5"
+    - bossbar: "<red>e2e jefe;2;RED;0.5"
+    - sound: ENTITY_EXPERIENCE_ORB_PICKUP;1;1.37
+    - console_message: "e2e consola de {player.name}"
+    - log: "e2e registro de {player.name}"
+
+# H5 CA2: comandos. 'command' y 'chat' los hace el propio jugador.
+e2e_comandos:
+  trigger: call
+  actions:
+    - console: "say e2e-console {player.name}"
+    - command: "e2e eco"
+    - chat: "e2e chat de {player.name}"
+
+e2e_eco:
+  trigger: call
+  actions:
+    - message: "<gray>e2e eco desde el comando de {player.name}"
+
+# H5 CA3: jugador. Cada grupo se comprueba por separado desde el bot.
+e2e_salud:
+  trigger: call
+  actions:
+    - damage: 6
+e2e_curar:
+  trigger: call
+  actions:
+    - heal: 4
+e2e_hambre:
+  trigger: call
+  actions:
+    - set_food: 5
+e2e_comer:
+  trigger: call
+  actions:
+    - feed: 4
+e2e_tp:
+  trigger: call
+  actions:
+    - teleport: "world;12.5;-60;12.5"
+e2e_creativo:
+  trigger: call
+  actions:
+    - gamemode: creative
+e2e_supervivencia:
+  trigger: call
+  actions:
+    - gamemode: survival
+e2e_efecto:
+  trigger: call
+  actions:
+    - effect: SPEED;30;2;false
+e2e_sin_efecto:
+  trigger: call
+  actions:
+    - remove_effect: SPEED
+e2e_items:
+  trigger: call
+  actions:
+    - give_item: "DIAMOND;3;<aqua>Diamante e2e;<gray>Línea de lore"
+    - give_item:
+        material: GOLDEN_APPLE
+        amount: 2
+        name: "<gold>Manzana de {player.name}"
+e2e_quitar:
+  trigger: call
+  actions:
+    - remove_item: DIAMOND;2
+e2e_vaciar:
+  trigger: call
+  actions:
+    - clear_inventory
+e2e_experiencia:
+  trigger: call
+  actions:
+    - give_level: 3
+    - give_exp: 5
+e2e_volar:
+  trigger: call
+  actions:
+    - fly: true
+e2e_no_volar:
+  trigger: call
+  actions:
+    - fly: false
+e2e_expulsar:
+  trigger: call
+  actions:
+    - kick: "<red>e2e expulsado por la suite"
+
+# H5 CA4: mundo. Coordenadas cerca del punto de la suite (12, -60, 12).
+e2e_mundo:
+  trigger: call
+  actions:
+    - set_block: "world;14;-60;12;GOLD_BLOCK"
+    - summon: "PIG;world;10.5;-60;14.5"
+    - drop_item: "EMERALD;1"
+      location: "world;12.5;-59;14.5"
+    - lightning: "world;6;-60;6"
+    - particle: FLAME;30
+e2e_explosion:
+  trigger: call
+  actions:
+    - explosion: 1
+
+# H5 CA5 y H6 CA1: player_attack con set_damage sobre una vaca (10 de vida: un golpe normal no la mata).
+e2e_golpe:
+  trigger: player_attack
+  conditions: "target.type == 'COW'"
+  actions:
+    - set_damage: 1000
+    - actionbar: "<red>e2e golpe a {target.type}"
+
+# H5 CA5: set_message en el chat (texto del jugador escapado).
+e2e_megafono:
+  trigger: player_chat
+  conditions: "message startsWith '!megafono '"
+  actions:
+    - set_message: "<gold>[megáfono]</gold> {replace(message, '!megafono ', '')}"
+
+# H4 CA10 (002): el jugador escribe etiquetas y la regla repite su texto.
+e2e_eco_chat:
+  trigger: player_chat
+  conditions: "message startsWith '!eco '"
+  actions:
+    - message: "<gray>eco: <white>{message}"
+    - actionbar: "<gray>eco: {message}"

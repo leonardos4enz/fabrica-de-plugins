@@ -16,6 +16,7 @@ docs/sdd/                 constitución, metodología, verificación, roadmap, p
 docs/adr/                 decisiones de arquitectura
 plugins/<nombre>/         un proyecto Gradle por plugin
 tools/nuevo-plugin.ps1    crea un plugin nuevo con su spec
+tests-e2e/                pruebas en el juego con bots (compuerta 3a): npm --prefix tests-e2e test
 dist/                     jars generados (gradlew dist)
 ```
 

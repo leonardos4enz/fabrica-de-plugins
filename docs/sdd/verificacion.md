@@ -1,8 +1,8 @@
 # Fase VERIFY — cómo se da por terminada una spec
 
-Una spec **no está terminada** hasta pasar las tres compuertas, en este orden. Las dos primeras son automáticas y se
-repiten igual en cada cambio. La tercera es la revisión de una persona o de un agente usando el plugin como lo haría
-un administrador y un jugador.
+Una spec **no está terminada** hasta pasar las tres compuertas, en este orden. Las dos primeras y la 3a son
+automáticas y se repiten igual en cada cambio. La 3b es la revisión de una persona o de un agente usando el plugin
+como lo haría un administrador y un jugador.
 
 ```
  1. Pruebas unitarias         gradlew test             analizador, evaluador, validación, persistencia
@@ -11,7 +11,10 @@ un administrador y un jugador.
       ├─ validación           /<plugin> validate → 0 errores en los ejemplos que trae el plugin
       ├─ autoprueba           /<plugin> selftest → los casos incorporados pasan en el servidor vivo
       └─ recarga              /<plugin> reload dos veces seguidas sin fugas de oyentes ni tareas
- 3. Revisión exploratoria     en el juego (persona) o por consola (agente) + reporte en verify.md
+ 3a. En el juego, automática npm --prefix tests-e2e test   (bots de mineflayer contra el Paper de prueba)
+      ├─ un escenario por criterio que necesita un jugador (acciones, eventos, variables, enfriamientos)
+      └─ el log del servidor sin errores del plugin
+ 3b. Revisión exploratoria    persona en el juego, o agente manejando un bot + reporte en verify.md
 ```
 
 ## 1. Unitarias
@@ -35,7 +38,29 @@ bash tools/compuerta-servidor.sh omnievents "omni validate" "omni selftest" "omn
 - La compuerta pasa si: el log no tiene `ERROR`/`Exception` del plugin, `validate` reporta 0 errores en los ejemplos,
   `selftest` pasa y dos `reload` seguidos dejan el mismo número de oyentes y tareas (lo muestra `/<plugin> stats`).
 
-## 3. Revisión exploratoria
+## 3a. En el juego, automática
+```bash
+npm --prefix tests-e2e install        # una vez (mineflayer 4.39)
+npm --prefix tests-e2e test           # unitarias del arnés + compila + suite completa (≈75 s)
+npm --prefix tests-e2e test -- --sin-build --solo "H5 CA3"     # un subconjunto, sin compilar
+npm --prefix tests-e2e test -- --paper 26.1.2 --version-bot 26.1 --java-servidor "C:utajdk-25"
+```
+- Es el equivalente de Playwright en ERP AI: **los datos de apoyo se preparan por consola** (`op`, `give`,
+  `setblock`, `/omni var set`) y **el bot solo hace lo que se prueba** (chatear, romper, golpear, usar un comando).
+  Se comprueba por lo que recibe el bot (chat, barra de acción, títulos, inventario, vida, bloques, entidades) y por
+  el log del servidor.
+- Usa el mismo servidor de prueba que la compuerta 2 (`plugins/<plugin>/run/`, EULA del dueño). En cada corrida
+  fuerza `server-ip=127.0.0.1` y `online-mode=false` (los bots no tienen cuenta), borra los datos de los bots,
+  copia los ejemplos del código fuente y las reglas de la suite, y al terminar retira las reglas y el OP.
+- Cada plugin tiene su suite en `tests-e2e/<plugin>/suite.mjs` (escenarios con el ID del criterio) y su
+  configuración de prueba en `tests-e2e/<plugin>/reglas/`. Diseño: [spec 002](specs/002-fabrica-pruebas-en-juego/plan.md).
+- La compuerta pasa si todos los escenarios están en verde **dos veces seguidas** y el log no tiene errores del
+  plugin. El log queda en `run/e2e.log`.
+- Otra versión de Paper vive en `run-<versión>/` (jar de la API Fill con sha256 verificado).
+
+## 3b. Revisión exploratoria
+Una persona en el juego, o un agente que maneja un bot con las mismas ayudas de `tests-e2e/lib/`. Lo que encuentre
+se vuelve escenario de la 3a (o unitaria) según la regla de oro.
 
 ### Lista de comprobación
 **Administrador**
@@ -56,8 +81,8 @@ bash tools/compuerta-servidor.sh omnievents "omni validate" "omni selftest" "omn
 ### Regla de oro: cada hallazgo se vuelve prueba
 1. Se registra en `specs/NNN-…/verify.md` con ID (`F-01`, `F-02`…), severidad y evidencia.
 2. Se corrige.
-3. Se agrega una prueba (unitaria o caso de `selftest`) que habría fallado antes de la corrección, con un comentario
-   `// Regresión (revisión exploratoria NNN): …`.
+3. Se agrega una prueba (unitaria, caso de `selftest` o escenario de `tests-e2e`) que habría fallado antes de la
+   corrección, con un comentario `// Regresión (spec NNN, F-0x): …`.
 4. Solo entonces se marca como resuelto.
 
 ### Severidad
