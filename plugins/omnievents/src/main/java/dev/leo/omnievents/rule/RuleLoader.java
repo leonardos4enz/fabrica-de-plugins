@@ -590,6 +590,7 @@ public final class RuleLoader {
             needs("WorldGuard", name, "las regiones (" + (trigger.kind() == TriggerType.Kind.REGION ? trigger.name() : "in_region o regions") + ")", problems);
         }
         if (trigger.name().startsWith("npc_")) needs("Citizens", name, "el disparador " + trigger.name(), problems);
+        if (trigger.name().equals("player_receive_chat")) needs("ProtocolLib", name, "el disparador player_receive_chat (lee los paquetes del chat)", problems);
 
         long cooldown = 0;
         if (s.contains("cooldown")) {

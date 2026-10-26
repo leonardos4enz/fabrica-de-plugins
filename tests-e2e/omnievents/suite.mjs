@@ -679,6 +679,10 @@ export default {
         const { srv } = ctx
         const ana = ctx.bots[ANA]
         const beto = ctx.bots[BETO]
+        // Regresión (spec 016, F-04, arnés): la gvar es persistente; si una corrida cortada la dejó en 1, ponerla en 1
+        // no es un cambio y on_enter no corre. Se parte de cero.
+        await srv.consola('omni var del global e2e_evento')
+        await srv.sincronizar()
         let ma = ana.marca()
         let mb = beto.marca()
         await srv.consola('omni var set global e2e_evento 1')
@@ -1416,6 +1420,47 @@ export default {
         if (JSON.stringify(nombres) !== JSON.stringify(['e2e_tab_alfa', 'e2e_tab_beta'])) {
           throw new Error(`sugerencias: ${JSON.stringify(nombres)} (se esperaban e2e_tab_alfa y e2e_tab_beta)`)
         }
+      }
+    },
+    {
+      id: '016 H1 CA1',
+      nombre: 'actionbar con duración (texto;ticks): la barra se reenvía pasados 2 s',
+      timeoutMs: 15000,
+      async fn (ctx) {
+        const ana = ctx.bots[ANA]
+        const m = ana.marca()
+        ana.comando('e2e barra016')
+        await ana.esperar('actionbar', /^e2e barra larga de Ana_e2e$/, { desde: m })
+        const m2 = ana.marca()
+        // Sin duración llegaría una sola vez: la segunda prueba que se reenvía (cada 40 ticks).
+        await ana.esperar('actionbar', /^e2e barra larga de Ana_e2e$/, { desde: m2, timeoutMs: 4000 })
+      }
+    },
+    {
+      id: '016 H4 CA1',
+      nombre: 'player_receive_chat (ProtocolLib): un mensaje del sistema dispara la regla y cancel lo oculta',
+      timeoutMs: 15000,
+      async fn (ctx) {
+        const { srv } = ctx
+        const ana = ctx.bots[ANA]
+        const beto = ctx.bots[BETO]
+        await srv.consola('omni stats', { espera: /integraciones: .*ProtocolLib/ })
+        let m = ana.marca()
+        await srv.consola(`minecraft:tellraw ${ANA} {"text":"e2e sistema 016 para Ana","color":"gold"}`)
+        await ana.esperar('chat', /^e2e sistema 016 para Ana$/, { desde: m })
+        await ana.esperar('actionbar', /^e2e recibido: e2e sistema 016 para Ana \(SYSTEM\)$/, { desde: m })
+        // Cancelado: Ana no lo ve; lo que viene después sí llega (el canal sigue andando).
+        m = ana.marca()
+        const mb = beto.marca()
+        await srv.consola(`minecraft:tellraw @a {"text":"e2e oculto 016"}`)
+        await srv.consola(`minecraft:tellraw ${ANA} {"text":"e2e visible 016"}`)
+        await ana.esperar('chat', /^e2e visible 016$/, { desde: m })
+        await ana.nunca('chat', /e2e oculto 016/, { desde: m, ms: 500 })
+        await beto.nunca('chat', /e2e oculto 016/, { desde: mb, ms: 300 })
+        // El chat de otro jugador llega en un paquete firmado (regresión F-03: leerlo daba un error en el hilo de red).
+        m = ana.marca()
+        beto.chat('e2e chat 016 hola')
+        await ana.esperar('actionbar', /^e2e chat recibido \(PLAYER\)$/, { desde: m })
       }
     },
     {

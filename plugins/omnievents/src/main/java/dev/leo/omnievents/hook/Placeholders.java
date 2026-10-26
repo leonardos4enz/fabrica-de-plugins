@@ -31,7 +31,7 @@ public final class Placeholders {
             String[] p = k.split("_");
             if (p.length == 3 && Values.isNumeric(p[1]) && Values.isNumeric(p[2])) {
                 long a = (long) Values.num(p[1]), b = (long) Values.num(p[2]);
-                return (double) ThreadLocalRandom.current().nextLong(Math.min(a, b), Math.max(a, b) + 1);
+                return dev.leo.omnievents.expr.Functions.lastRandom((double) ThreadLocalRandom.current().nextLong(Math.min(a, b), Math.max(a, b) + 1));
             }
         }
         if (player instanceof Player pl) {

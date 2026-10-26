@@ -75,6 +75,12 @@ public final class ListenerManager implements Listener {
         groups.clear();
     }
 
+    /** true si alguna regla habilitada escucha esa clase de evento (spec 016: los paquetes de chat solo entonces). */
+    public boolean listens(Class<? extends Event> type) {
+        for (Key k : groups.keySet()) if (k.type() == type) return true;
+        return false;
+    }
+
     /** Oyentes activos (para /omni stats y la compuerta de recarga). */
     public int count() {
         return groups.size();

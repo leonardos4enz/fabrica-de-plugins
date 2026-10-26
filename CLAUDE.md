@@ -97,6 +97,11 @@ con `--release 21`.
   `execute if entity` dice «Test passed. Count: N» (1.21.4: «, count:»). `SchemaTest` necesita 1 GB (el `anyOf` de acciones)
   y un ejemplo de acción inválido daba OOM armando el mensaje: un `OutOfMemoryError` en las pruebas suele ser eso. Tras
   cambiar el código, `./gradlew :omnievents:dist` antes de la compuerta 2 (si no, prueba el jar anterior).
+- **Spec 016 (ProtocolLib):** en el chat firmado (`PLAYER_CHAT`), `getStructures().getValues()` de ProtocolLib revienta
+  con un NPE por el campo de firma nulo: leer cada campo con `readSafely(i)` dentro de un `try` (016 F-03). Del Jenkins de
+  dmulloy2, `ProtocolLib.jar` es un plugin de Paper con `api-version: 26.2` (no carga en 26.1.2): usar `ProtocolLib-Spigot.jar`.
+  Parar una tanda de la suite en segundo plano corta el `bash` pero **no** el `node` de `correr.mjs` ni su Paper: esperar a
+  que libere el puerto 25599 antes de otra corrida (si no, «El servidor se apagó esperando Done» y escenarios rotos).
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

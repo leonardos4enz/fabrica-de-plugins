@@ -212,7 +212,9 @@ class ImporterTest {
                 "damager.type", "target.health", "var.cantidad = 5", "{var.cantidad}", "json_message:", "Clic aquí", "where:"}) {
             assertTrue(yml.contains(s), "falta «" + s + "» en\n" + yml);
         }
-        assertTrue(rep.notes().stream().anyMatch(n -> n.contains("shot_direction")), rep.notes().toString());
+        // Spec 016: shot_direction se traduce (antes era una nota).
+        assertTrue(yml.contains("shot_direction:-1,1;1,1;-1,1;0.5-0.5"), yml);
+        assertTrue(rep.notes().stream().noneMatch(n -> n.contains("shot_direction")), rep.notes().toString());
     }
 
     @Test
@@ -288,5 +290,100 @@ class ImporterTest {
                 "stop_sound: mi_pack:musica", "OAK_STAIRS[facing=north]"}) {
             assertTrue(yml.contains(s), "falta «" + s + "» en\n" + yml);
         }
+    }
+
+    @Test
+    void S016_H2_H4_traduce_variables_acciones_y_el_chat_recibido(@TempDir File dir) throws Exception {
+        File ce = new File(dir, "ConditionalEvents");
+        ce.mkdirs();
+        Files.writeString(new File(ce, "config.yml").toPath(), """
+                Events:
+                  bloques:
+                    type: block_break
+                    conditions:
+                    - "%block_data_at_1_64_2_mi_mundo% contains facing=north"
+                    - "%is_nearby_0_64_0_mi_mundo_10% == true"
+                    - "%block_below_1% == STONE"
+                    - "%block_above_{block_y}% != AIR"
+                    actions:
+                      default: ["actionbar: &6Roto;120", "give_potion_effect: SPEED;200;2;false;false"]
+                  jugador:
+                    type: player_move
+                    conditions:
+                    - "%playerblock_below_1% == GRASS_BLOCK"
+                    - "%playerblock_above_2% == AIR"
+                    - "%playerblock_inside% == WATER"
+                    - "%player_is_outside% == true"
+                    - "%world_time_world_nether% > 1000"
+                    - "%player_location_x_1_0_0% > 0"
+                    - "%player_looking_block_5% == CHEST"
+                    - "%player_looking_entity_10% == ZOMBIE"
+                    actions:
+                      default:
+                      - "message: %random_1_6% y otra vez %random_last%"
+                      - "to_range: 5;false;true: damage: 10"
+                      - "firework: colors:YELLOW type:BALL power:0 shot_direction:-1,1;1,1;-1,1;0.5-1"
+                  comando:
+                    type: player_command
+                    conditions: ["%main_command% == /anuncio", "%args_substring_2-4% contains hola"]
+                    actions:
+                      default: ["message: %args_substring_1-2%"]
+                  soltar:
+                    type: item_select
+                    conditions: ["%select_type% == DESELECT", "%item% == DIAMOND_SWORD"]
+                    actions:
+                      default: ["message: soltaste la espada"]
+                  mano:
+                    type: player_offhand
+                    conditions: ["%movement_type% == PLACE"]
+                    actions:
+                      default: ["message: a la otra mano"]
+                  publicidad:
+                    type: protocollib_receive_message
+                    conditions: ["%normal_message_without_color_codes% contains compra"]
+                    actions:
+                      default: ["cancel_event: true", "console_message: %json_message% / %normal_message%"]
+                  recibido:
+                    type: player_receive_chat
+                    conditions: ["%normal_message% contains &c"]
+                    actions:
+                      default: ["message: rojo"]
+                """, StandardCharsets.UTF_8);
+        File out = new File(dir, "rules");
+        ConditionalEventsImporter.Report rep = new ConditionalEventsImporter().importFolder(ce, out);
+        String yml = Files.readString(new File(out, "config.yml").toPath(), StandardCharsets.UTF_8);
+        assertEquals(0, rep.review(), yml + "\n" + rep.notes());
+        assertTrue(rep.notes().isEmpty(), "sin notas «sin equivalente»: " + rep.notes());
+        Problems p = new Problems();
+        Map<String, Rule> rules = new RuleLoader(new Actions(null), new Triggers()).loadFolder(out, p);
+        assertEquals(0, p.errors(), p.all().stream().map(Object::toString).collect(Collectors.joining("\n")) + "\n" + yml);
+        assertEquals("player_receive_chat", rules.get("publicidad").trigger().name());
+        assertEquals("player_receive_chat", rules.get("recibido").trigger().name());
+        for (String s : new String[]{"block_at('mi_mundo', 1, 64, 2).states", "near(player, location('mi_mundo', 0, 64, 0), 10)",
+                "block_at(block.world, block.x, block.y - 1, block.z).type", "block_at(block.world, block.x, block.y + block.y, block.z).type",
+                "block_at(player.world, player.x, player.y - 1, player.z).type", "block_at(player.world, player.x, player.y + 2, player.z).type",
+                "player.location.block.type == 'WATER'", "is_outside() == 'true'", "world('world_nether').time > 1000",
+                "relative(player, 1, 0, 0).x > 0", "looking_block(5).type == 'CHEST'", "looking_entity(10).type == 'ZOMBIE'",
+                "{random_last()}", "actionbar: &6Roto;120", "effect: SPEED;10;2;false;false", "to: nearby:5", "where: player != source",
+                "shot_direction:-1,1;1,1;-1,1;0.5-1", "join(slice(args, 1, 4), ' ') contains 'hola'", "{join(slice(args, 0, 2), '' '')}",
+                "''DESELECT'' == ''DESELECT''", "previous_item.type == 'DIAMOND_SWORD'", "'PLACE'", "message contains 'compra'",
+                "{json} / {message_legacy}", "message_legacy contains '&c'"}) {
+            assertTrue(yml.contains(s), "falta «" + s + "» en\n" + yml);
+        }
+    }
+
+    /** Regresión (spec 016, F-01): %damage% de CE es el daño final (getFinalDamage); el original es %original_damage%. */
+    @Test
+    void F01_016_damage_es_el_daño_final() {
+        assertEquals("event.final_damage > 5", imp.convertCondition("%damage% > 5"));
+        assertEquals("event.damage > 5", imp.convertCondition("%original_damage% > 5"));
+    }
+
+    /** Regresión (spec 016, F-02): %block_data% de CE es lo de dentro de los corchetes (facing=north), no el BlockData entero. */
+    @Test
+    void F02_016_block_data_son_los_estados() {
+        assertEquals("block.states contains 'facing=north'", imp.convertCondition("%block_data% contains facing=north"));
+        assertEquals("facing=north,half=bottom", dev.leo.omnievents.expr.BukkitProperties.states("minecraft:oak_stairs[facing=north,half=bottom]"));
+        assertEquals("", dev.leo.omnievents.expr.BukkitProperties.states("minecraft:stone"));
     }
 }

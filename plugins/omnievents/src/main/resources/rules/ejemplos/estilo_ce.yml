@@ -78,3 +78,31 @@ enlace_reglas:
   tests:
     - given: {player.name: Leo}
       expect: {messages: ["» Lee las reglas, Leo"]}
+
+# Spec 016: los detalles que faltaban. /anunciar <texto>: el texto queda 6 s en la barra de acción de todos (como el
+# «texto;ticks» de ConditionalEvents), visión nocturna sin ícono y un cohete que sale en ángulo (shot_direction).
+# slice(args, 0, 8) toma hasta 8 palabras, como %args_substring_1-8%.
+anuncio_barra:
+  trigger: command
+  command:
+    name: anunciar
+    description: Anuncia un texto en la barra de acción
+    permission: omnievents.ejemplo.anuncio
+  conditions:
+    - "args.size >= 1"
+  actions:
+    - to: all
+      actionbar: "<gold>» {join(slice(args, 0, 8), ' ')};120"
+    - effect: "NIGHT_VISION;30;1;false;false"
+    - firework: "colors:YELLOW,WHITE type:BALL power:0 shot_direction:-0.3,0.3;1,1;-0.3,0.3;0.5-0.8"
+  else:
+    - message: "<red>Uso: /anunciar <texto>"
+  tests:
+    - name: ocho palabras como mucho
+      given: {args: [a, b, c, d, e, f, g, h, i]}
+      expect:
+        messages: ["» a b c d e f g h"]
+        actions: [actionbar, effect, firework]
+    - name: sin texto
+      given: {args: []}
+      expect: {messages: ["Uso: /anunciar"]}

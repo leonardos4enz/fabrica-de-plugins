@@ -483,9 +483,40 @@ public final class Actions {
             Template t = a.template();
             return Action.safe(Action.of(ctx -> plugin.getLogger().info("[" + (ctx.rule() == null ? "?" : ctx.rule().name()) + "] " + t.render(ctx, Template.Mode.COMMAND))));
         });
-        register("actionbar", doc("Muestra un texto en la barra de acción.", "texto", "actionbar: \"<aqua>Diamantes: {pvar.diamantes}\""), a -> {
-            Template t = a.template();
-            return Action.of(ctx -> ctx.requirePlayer().sendActionBar(t.component(ctx)));
+        register("actionbar", doc("Muestra un texto en la barra de acción; con duración (texto;ticks, como ConditionalEvents, o la clave duration) se reenvía cada 2 s hasta cubrirla (spec 016).",
+                "texto[;ticks]", "actionbar: \"<gold>Evento en 1 minuto\"\nduration: 6s").keys("duration", "Cuánto se mantiene: ticks (120) o con unidad (6s)."), a -> {
+            String text = a.text();
+            String duration = a.extra("duration") == null ? null : Values.str(a.extra("duration"));
+            java.util.regex.Matcher m = ACTIONBAR_TICKS.matcher(text);
+            if (duration == null && m.matches()) {
+                text = m.group(1);
+                duration = m.group(2).trim();
+            }
+            Template t = Template.compile(text);
+            Template d = duration == null ? null : Template.compile(duration);
+            if (d != null && d.isConstant()) {
+                try {
+                    actionbarTicks(d.source());
+                } catch (ActionException e) {
+                    throw new IllegalArgumentException(e.getMessage());
+                }
+            }
+            return Action.of(ctx -> {
+                Player p = ctx.requirePlayer();
+                Component c = t.component(ctx);
+                p.sendActionBar(c);
+                long ticks = d == null ? 0 : actionbarTicks(d.render(ctx, Template.Mode.RAW));
+                if (ticks <= ACTIONBAR_EVERY) return;
+                long[] sent = {0};
+                Bukkit.getScheduler().runTaskTimer(plugin, task -> {
+                    sent[0] += ACTIONBAR_EVERY;
+                    if (sent[0] >= ticks || !p.isOnline()) {
+                        task.cancel();
+                        return;
+                    }
+                    p.sendActionBar(c);
+                }, ACTIONBAR_EVERY, ACTIONBAR_EVERY);
+            });
         });
         register("title", doc("Muestra un título y un subtítulo (none deja uno vacío); los tiempos van en ticks.", "título;subtítulo;entrada;estancia;salida", "title: \"<gold>¡Victoria!;<gray>Ronda 3;10;70;20\""), a -> {
             List<Template> p = a.parts();
@@ -574,6 +605,22 @@ public final class Actions {
 
     private static Template part(List<Template> p, int i) {
         return i < p.size() && !p.get(i).source().isEmpty() ? p.get(i) : null;
+    }
+
+    /** actionbar «texto;ticks» de ConditionalEvents: el último trozo es un número o una {expresión} (spec 016). */
+    public static final Pattern ACTIONBAR_TICKS = Pattern.compile("(?s)^(.*);\\s*(\\d+|\\{[^{}]*})\\s*$");
+    /** Cada cuánto se reenvía la barra de acción (el cliente la muestra unos 3 s). */
+    static final long ACTIONBAR_EVERY = 40;
+
+    /** Duración de actionbar en ticks: un número son ticks; con unidad (6s, 1m), Durations. */
+    public static long actionbarTicks(String s) {
+        String t = s.trim();
+        if (Values.isNumeric(t)) return (long) Values.num(t);
+        try {
+            return Durations.toTicks(Durations.parseMillis(t));
+        } catch (IllegalArgumentException e) {
+            throw new ActionException("duración de actionbar inválida '" + s + "' (ticks, p. ej. 120, o con unidad: 6s)");
+        }
     }
 
     private static long ticks(List<Template> p, int i, ExecContext ctx, long def) {
@@ -673,7 +720,7 @@ public final class Actions {
                 if (!on) p.setFlying(false);
             });
         });
-        register("effect", doc("Da un efecto de poción (segundos negativos: infinito).", "EFECTO;segundos;nivel;partículas", "effect: \"SPEED;30;2;false\""), a -> {
+        register("effect", doc("Da un efecto de poción (segundos negativos: infinito); ícono false lo oculta de la pantalla (spec 016).", "EFECTO;segundos;nivel;partículas;ícono", "effect: \"SPEED;30;2;false;false\""), a -> {
             List<Template> p = a.parts();
             return Action.of(ctx -> {
                 LivingEntity l = requireLiving(ctx);
@@ -681,8 +728,9 @@ public final class Actions {
                 double secs = part(p, 1) == null ? 10 : Values.num(p.get(1).render(ctx, Template.Mode.RAW));
                 int level = part(p, 2) == null ? 1 : (int) Values.num(p.get(2).render(ctx, Template.Mode.RAW));
                 boolean particles = part(p, 3) == null || Values.truthy(p.get(3).render(ctx, Template.Mode.RAW));
+                boolean icon = part(p, 4) == null || Values.truthy(p.get(4).render(ctx, Template.Mode.RAW));
                 int duration = secs < 0 ? PotionEffect.INFINITE_DURATION : (int) Math.round(secs * 20);
-                l.addPotionEffect(new PotionEffect(type, duration, Math.max(0, level - 1), false, particles, true));
+                l.addPotionEffect(new PotionEffect(type, duration, Math.max(0, level - 1), false, particles, icon));
             });
         });
         register("remove_effect", doc("Quita un efecto, o todos (all).", "EFECTO o all", "remove_effect: SPEED"), a -> {
@@ -1047,7 +1095,7 @@ public final class Actions {
             });
         });
         register("firework", doc("Lanza un fuego artificial desde el jugador (o cada destinatario de to) o desde location; sin daño salvo damage:true (spec 014). Forma de ConditionalEvents: pares clave:valor separados por espacios.",
-                "colors:C1,C2 [type:BALL|BALL_LARGE|STAR|BURST|CREEPER] [power:0-3] [fade:C1,C2] [flicker:true] [trail:true] [location:mundo;x;y;z] [damage:true]; colores por nombre (RED, AQUA…) o #RRGGBB",
+                "colors:C1,C2 [type:BALL|BALL_LARGE|STAR|BURST|CREEPER] [power:0-3] [fade:C1,C2] [flicker:true] [trail:true] [location:mundo;x;y;z] [damage:true] [shot_direction:xmin,xmax;ymin,ymax;zmin,zmax;vmin-vmax]; colores por nombre (RED, AQUA…) o #RRGGBB; shot_direction lo dispara en ángulo (spec 016)",
                 "firework: \"colors:RED,#FFAA00 type:STAR power:1 fade:WHITE trail:true\""), a -> {
             Firework fw = Firework.parse(a.text());
             return Action.of(ctx -> {
@@ -1069,11 +1117,16 @@ public final class Actions {
                 org.bukkit.FireworkEffect effect = fw.effect(ctx);
                 int power = fw.power(ctx);
                 boolean damage = fw.damage(ctx);
+                Vector shot = fw.shot(ctx);
                 at.getWorld().spawn(at, org.bukkit.entity.Firework.class, f -> {
                     org.bukkit.inventory.meta.FireworkMeta meta = f.getFireworkMeta();
                     meta.addEffect(effect);
                     meta.setPower(power);
                     f.setFireworkMeta(meta);
+                    if (shot != null) {
+                        f.setShotAtAngle(true);
+                        f.setVelocity(shot);
+                    }
                     if (!damage) fireworkGuard().mark(f);
                 });
             });

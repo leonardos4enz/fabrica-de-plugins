@@ -14,6 +14,11 @@ const WORLDEDIT = { archivo: 'worldedit-bukkit-7.4.6.jar', url: 'https://cdn.mod
 // sola versión de Java: 2.6.2 es la última para 1.21.4 y 2.10.1 la de 26.1.
 const FLOODGATE = { archivo: 'floodgate-spigot-2.2.5-b141.jar', url: 'https://download.geysermc.org/v2/projects/floodgate/versions/2.2.5/builds/141/downloads/spigot', sha256: '21570aff9ce17d6983928e8552777760e1ede5050026b04c686b0ae112e6fd7e' }
 const CITIZENS = { archivo: 'Citizens-2.0.44-b4268.jar', url: 'https://ci.citizensnpcs.co/job/Citizens2/4268/artifact/dist/target/Citizens-2.0.44-b4268.jar', sha256: '908e5c548aebe22cc2d8ca88e0068ccc781ce90509a28758ab6f8dc450256d67' }
+// Spec 016 (ADR 0004): ProtocolLib para player_receive_chat (aprobado por el dueño, CLARIFY 016). 5.4.0 es el último
+// release de GitHub (1.21.4); para 26.1 no hay release: la build de desarrollo #765 del Jenkins oficial
+// (5.5.0-SNAPSHOT), en su variante con plugin.yml (la otra es un plugin de Paper con api-version 26.2).
+const PROTOCOLLIB_121 = { archivo: 'ProtocolLib-5.4.0.jar', url: 'https://github.com/dmulloy2/ProtocolLib/releases/download/5.4.0/ProtocolLib.jar', sha256: 'ee2e7ab9b5386f2d103081c4d108e61b1035df2ca692b53d6e2409fb1f5caccf' }
+const PROTOCOLLIB_26 = { archivo: 'ProtocolLib-5.5.0-b765.jar', url: 'https://ci.dmulloy2.net/job/ProtocolLib/765/artifact/build/libs/ProtocolLib-Spigot.jar', sha256: 'fae0b1673162ea8d80506210154f579a6b966c293a0ca86c70232a03f815b9c3' }
 
 /** Jars por versión de Paper (la de la suite si no se pide otra). */
 export const PLUGINS_EXTRA = {
@@ -24,7 +29,8 @@ export const PLUGINS_EXTRA = {
     { archivo: 'worldguard-bukkit-7.0.13-dist.jar', url: 'https://cdn.modrinth.com/data/DKY9btbd/versions/f9NoeotB/worldguard-bukkit-7.0.13-dist.jar', sha256: '73b43a46aefc76514b90994532ea18bfd6d92e7bc5dcabbef9049a71778b21b5' },
     { archivo: 'Citizens-2.0.37-b3760.jar', url: 'https://ci.citizensnpcs.co/job/Citizens2/3760/artifact/dist/target/Citizens-2.0.37-b3760.jar', sha256: '28221e8fe7c2fe13b25f8644d659695351ab017c028617d39f62c7b42a90a6a5' },
     { archivo: 'Geyser-Spigot-2.6.2-b796.jar', url: 'https://download.geysermc.org/v2/projects/geyser/versions/2.6.2/builds/796/downloads/spigot', sha256: 'fd463346c2f859ae4c7cb0f2a670a92feb3780efb8f15186b17aedab5f39801e' },
-    FLOODGATE
+    FLOODGATE,
+    PROTOCOLLIB_121
   ],
   '26.1.2': [
     VAULT,
@@ -33,7 +39,8 @@ export const PLUGINS_EXTRA = {
     { archivo: 'worldguard-bukkit-7.0.18.jar', url: 'https://cdn.modrinth.com/data/DKY9btbd/versions/btHBavWa/worldguard-bukkit-7.0.18.jar', sha256: '08f3ef58bc521c635d8c78aedaca96f151d2d397e7cd8018584955dd7468eb05' },
     CITIZENS,
     { archivo: 'Geyser-Spigot-2.10.1-b1184.jar', url: 'https://download.geysermc.org/v2/projects/geyser/versions/2.10.1/builds/1184/downloads/spigot', sha256: 'c3bf077b7ea642108fa3bf58e96ec46b876a18d58fc1235b15af4263195620fd' },
-    FLOODGATE
+    FLOODGATE,
+    PROTOCOLLIB_26
   ]
 }
 

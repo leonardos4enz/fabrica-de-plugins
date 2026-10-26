@@ -145,6 +145,7 @@
             "region_leave",
             "npc_click",
             "npc_left_click",
+            "player_receive_chat",
             "menu_open",
             "menu_click",
             "menu_close",
@@ -225,6 +226,7 @@
             "El jugador sale de una región de WorldGuard (region.id); cancel lo deja dentro. Necesita WorldGuard.",
             "Un jugador hace clic derecho en un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
             "Un jugador golpea (clic izquierdo) un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
+            "Un jugador va a recibir un mensaje del chat o del sistema (asíncrono, en el hilo de red): message sin formato, message_legacy con códigos &, json, type (SYSTEM, DISGUISED o PLAYER). cancel hace que no lo vea; la barra de acción no cuenta. Es texto no confiable. Necesita ProtocolLib.",
             "Abrir un menú (open_menu): su permission, conditions y cost son el requisito y on_open las acciones. Lo compila el menú; no se escribe a mano.",
             "Un clic en un ítem de un menú (click, left_click, right_click, shift_click). click: left, right, shift_left, shift_right, middle, number, drop o bedrock. Lo compila el menú; no se escribe a mano.",
             "Cerrar un menú (on_close). Lo compila el menú; no se escribe a mano.",
@@ -305,6 +307,7 @@
             "El jugador sale de una región de WorldGuard (region.id); cancel lo deja dentro. Necesita WorldGuard.",
             "Un jugador hace clic derecho en un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
             "Un jugador golpea (clic izquierdo) un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
+            "Un jugador va a recibir un mensaje del chat o del sistema (asíncrono, en el hilo de red): message sin formato, message_legacy con códigos &, json, type (SYSTEM, DISGUISED o PLAYER). cancel hace que no lo vea; la barra de acción no cuenta. Es texto no confiable. Necesita ProtocolLib.",
             "Abrir un menú (open_menu): su permission, conditions y cost son el requisito y on_open las acciones. Lo compila el menú; no se escribe a mano.",
             "Un clic en un ítem de un menú (click, left_click, right_click, shift_click). click: left, right, shift_left, shift_right, middle, number, drop o bedrock. Lo compila el menú; no se escribe a mano.",
             "Cerrar un menú (on_close). Lo compila el menú; no se escribe a mano.",
@@ -389,6 +392,7 @@
             "region_leave",
             "npc_click",
             "npc_left_click",
+            "player_receive_chat",
             "menu_open",
             "menu_click",
             "menu_close",
@@ -469,6 +473,7 @@
             "El jugador sale de una región de WorldGuard (region.id); cancel lo deja dentro. Necesita WorldGuard.",
             "Un jugador hace clic derecho en un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
             "Un jugador golpea (clic izquierdo) un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
+            "Un jugador va a recibir un mensaje del chat o del sistema (asíncrono, en el hilo de red): message sin formato, message_legacy con códigos &, json, type (SYSTEM, DISGUISED o PLAYER). cancel hace que no lo vea; la barra de acción no cuenta. Es texto no confiable. Necesita ProtocolLib.",
             "Abrir un menú (open_menu): su permission, conditions y cost son el requisito y on_open las acciones. Lo compila el menú; no se escribe a mano.",
             "Un clic en un ítem de un menú (click, left_click, right_click, shift_click). click: left, right, shift_left, shift_right, middle, number, drop o bedrock. Lo compila el menú; no se escribe a mano.",
             "Cerrar un menú (on_close). Lo compila el menú; no se escribe a mano.",
@@ -549,6 +554,7 @@
             "El jugador sale de una región de WorldGuard (region.id); cancel lo deja dentro. Necesita WorldGuard.",
             "Un jugador hace clic derecho en un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
             "Un jugador golpea (clic izquierdo) un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens.",
+            "Un jugador va a recibir un mensaje del chat o del sistema (asíncrono, en el hilo de red): message sin formato, message_legacy con códigos &, json, type (SYSTEM, DISGUISED o PLAYER). cancel hace que no lo vea; la barra de acción no cuenta. Es texto no confiable. Necesita ProtocolLib.",
             "Abrir un menú (open_menu): su permission, conditions y cost son el requisito y on_open las acciones. Lo compila el menú; no se escribe a mano.",
             "Un clic en un ítem de un menú (click, left_click, right_click, shift_click). click: left, right, shift_left, shift_right, middle, number, drop o bedrock. Lo compila el menú; no se escribe a mano.",
             "Cerrar un menú (on_close). Lo compila el menú; no se escribe a mano.",
@@ -1304,7 +1310,7 @@
         "number",
         "boolean"
       ],
-      "description": "Expresión de OmniEvents (el editor no la revisa: usa /omni validate). Operadores: && || ! == != < <= > >= ~= contains startsWith endsWith matches in, + - * / %, c ? a : b. Variables: var.x, pvar.x, gvar.x. Funciones: abs(x), block_at(mundo, x, y, z), bool(x), ceil(x), chance(p), clamp(x, min, max), cooldown(regla), date([patrón]), default(x, otro), distance(a, b), floor(x), format(x[, decimales]), has_item(material[, n]), hour(), if(condición, a, b), in_area(mundo,x1, y1, z1, x2, y2, z2), in_region(id), in_state(regla), int(x), is_bedrock(), is_npc(entidad), is_number(x), join(lista[, separador]), len(x), lower(t), max(a, b, …), min(a, b, …), minute(), money(), money_format(n), now(), num(x), online(nombre), papi(texto[, jugador]), perm(permiso[, jugador]), pick(lista), player(nombre), players(), pow(x, y), pvar_of(jugador, nombre), random(a, b), randomf(a, b), regions(), replace(t, buscar, poner), round(x[, decimales]), size(x), split(t, separador), sqrt(x), str(x), strip(t), substr(t, desde[, hasta]), trim(t), ttl(variable), upper(t), uses(regla), weekday()."
+      "description": "Expresión de OmniEvents (el editor no la revisa: usa /omni validate). Operadores: && || ! == != < <= > >= ~= contains startsWith endsWith matches in, + - * / %, c ? a : b. Variables: var.x, pvar.x, gvar.x. Funciones: abs(x), block_at(mundo, x, y, z), bool(x), ceil(x), chance(p), clamp(x, min, max), cooldown(regla), date([patrón]), default(x, otro), distance(a, b), floor(x), format(x[, decimales]), has_item(material[, n]), hour(), if(condición, a, b), in_area(mundo,x1, y1, z1, x2, y2, z2), in_region(id), in_state(regla), int(x), is_bedrock(), is_npc(entidad), is_number(x), is_outside([entidad]), join(lista[, separador]), len(x), location(mundo, x, y, z), looking_block(distancia[, entidad]), looking_entity(distancia[, entidad]), lower(t), max(a, b, …), min(a, b, …), minute(), money(), money_format(n), near(a, b, radio), now(), num(x), online(nombre), papi(texto[, jugador]), perm(permiso[, jugador]), pick(lista), player(nombre), players(), pow(x, y), pvar_of(jugador, nombre), random(a, b), random_last(), randomf(a, b), regions(), relative(entidad, adelante, lado, arriba), replace(t, buscar, poner), round(x[, decimales]), size(x), slice(x, desde[, hasta]), split(t, separador), sqrt(x), str(x), strip(t), substr(t, desde[, hasta]), trim(t), ttl(variable), upper(t), uses(regla), weekday(), world(nombre)."
     },
     "menu": {
       "type": "object",
@@ -2476,7 +2482,15 @@
                 "boolean",
                 "null"
               ],
-              "description": "Muestra un texto en la barra de acción. Valor: texto."
+              "description": "Muestra un texto en la barra de acción; con duración (texto;ticks, como ConditionalEvents, o la clave duration) se reenvía cada 2 s hasta cubrirla (spec 016). Valor: texto[;ticks]."
+            },
+            "duration": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ],
+              "description": "Cuánto se mantiene: ticks (120) o con unidad (6s)."
             },
             "to": {
               "$ref": "#/definitions/modifier_to"
@@ -3099,7 +3113,7 @@
                 "boolean",
                 "null"
               ],
-              "description": "Da un efecto de poción (segundos negativos: infinito). Valor: EFECTO;segundos;nivel;partículas."
+              "description": "Da un efecto de poción (segundos negativos: infinito); ícono false lo oculta de la pantalla (spec 016). Valor: EFECTO;segundos;nivel;partículas;ícono."
             },
             "to": {
               "$ref": "#/definitions/modifier_to"
@@ -3219,7 +3233,7 @@
                 "boolean",
                 "null"
               ],
-              "description": "Lanza un fuego artificial desde el jugador (o cada destinatario de to) o desde location; sin daño salvo damage:true (spec 014). Forma de ConditionalEvents: pares clave:valor separados por espacios. Valor: colors:C1,C2 [type:BALL|BALL_LARGE|STAR|BURST|CREEPER] [power:0-3] [fade:C1,C2] [flicker:true] [trail:true] [location:mundo;x;y;z] [damage:true]; colores por nombre (RED, AQUA…) o #RRGGBB."
+              "description": "Lanza un fuego artificial desde el jugador (o cada destinatario de to) o desde location; sin daño salvo damage:true (spec 014). Forma de ConditionalEvents: pares clave:valor separados por espacios. Valor: colors:C1,C2 [type:BALL|BALL_LARGE|STAR|BURST|CREEPER] [power:0-3] [fade:C1,C2] [flicker:true] [trail:true] [location:mundo;x;y;z] [damage:true] [shot_direction:xmin,xmax;ymin,ymax;zmin,zmax;vmin-vmax]; colores por nombre (RED, AQUA…) o #RRGGBB; shot_direction lo dispara en ángulo (spec 016)."
             },
             "to": {
               "$ref": "#/definitions/modifier_to"
@@ -5175,7 +5189,7 @@
                 "boolean",
                 "null"
               ],
-              "description": "Alias de effect (ConditionalEvents). Da un efecto de poción (segundos negativos: infinito). Valor: EFECTO;segundos;nivel;partículas."
+              "description": "Alias de effect (ConditionalEvents). Da un efecto de poción (segundos negativos: infinito); ícono false lo oculta de la pantalla (spec 016). Valor: EFECTO;segundos;nivel;partículas;ícono."
             },
             "to": {
               "$ref": "#/definitions/modifier_to"
@@ -5393,7 +5407,7 @@
                 "boolean",
                 "null"
               ],
-              "description": "Alias de effect (ConditionalEvents). Da un efecto de poción (segundos negativos: infinito). Valor: EFECTO;segundos;nivel;partículas."
+              "description": "Alias de effect (ConditionalEvents). Da un efecto de poción (segundos negativos: infinito); ícono false lo oculta de la pantalla (spec 016). Valor: EFECTO;segundos;nivel;partículas;ícono."
             },
             "to": {
               "$ref": "#/definitions/modifier_to"

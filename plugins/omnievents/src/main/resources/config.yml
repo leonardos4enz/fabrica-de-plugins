@@ -43,3 +43,8 @@ tests:
   # Las pruebas de las reglas (tests:, spec 010) corren al arrancar y en cada reload, sin efectos; las que fallan se
   # avisan en la consola. Siempre se pueden correr a mano con /omni test.
   on-load: true
+
+protocollib:
+  # Disparador player_receive_chat (spec 016, necesita ProtocolLib): mensajes por jugador y segundo que pueden
+  # dispararlo. Si una regla responde con un mensaje que la vuelve a disparar, este tope corta el bucle (y se avisa).
+  max-messages-per-second: 20

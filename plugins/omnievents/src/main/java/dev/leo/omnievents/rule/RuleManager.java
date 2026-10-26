@@ -221,6 +221,11 @@ public final class RuleManager {
             Runnable revert = sim ? null : registerUsage(rule, cdHolder, limitHolder, now, bypassCd);
             if (!sim) rule.stats().passed();
             if (trace != null) trace.add(ind + "→ actions");
+            // Spec 016: aviso a otros plugins (como ConditionalEventsEvent), solo si alguno escucha.
+            if (!sim && dev.leo.omnievents.api.OmniRuleFireEvent.listened()) {
+                org.bukkit.Bukkit.getPluginManager().callEvent(new dev.leo.omnievents.api.OmniRuleFireEvent(!org.bukkit.Bukkit.isPrimaryThread(),
+                        rule.name(), rule.trigger().name(), p, "actions"));
+            }
             execute(rule, rule.actions, ctx, depth, trace, revert, parentTrace == null, sampled);
             if (nested) trace.add(ind + "(fin de " + rule.name() + ")");
             return true;

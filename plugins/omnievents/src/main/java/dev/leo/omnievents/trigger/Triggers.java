@@ -469,5 +469,12 @@ public final class Triggers {
             m.put("target", e.getEntity());
             m.put("npc", Npcs.info(e.getEntity()));
         }, e -> e.getDamager() instanceof Player && Npcs.isNpc(e.getEntity()), false, "npc", "target", "item").doc("Un jugador golpea (clic izquierdo) un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens."));
+        // Spec 016: lo que recibe el jugador en el chat, leído de los paquetes con ProtocolLib (hook.ChatPackets).
+        register(TriggerType.event("player_receive_chat", g, ReceivedChatEvent.class, ReceivedChatEvent::getPlayer, (e, m) -> {
+            m.put("message", e.getMessage());
+            m.put("message_legacy", e.getLegacy());
+            m.put("json", e.getJson());
+            m.put("type", e.getType());
+        }, null, true, "message", "message_legacy", "json", "type").doc("Un jugador va a recibir un mensaje del chat o del sistema (asíncrono, en el hilo de red): message sin formato, message_legacy con códigos &, json, type (SYSTEM, DISGUISED o PLAYER). cancel hace que no lo vea; la barra de acción no cuenta. Es texto no confiable. Necesita ProtocolLib."));
     }
 }

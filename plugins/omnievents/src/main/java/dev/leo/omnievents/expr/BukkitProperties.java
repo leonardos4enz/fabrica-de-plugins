@@ -23,6 +23,12 @@ public final class BukkitProperties {
     private BukkitProperties() {
     }
 
+    /** «minecraft:oak_stairs[facing=north]» → «facing=north»; sin corchetes, vacío. */
+    public static String states(String blockData) {
+        int i = blockData.indexOf('[');
+        return i < 0 || !blockData.endsWith("]") ? "" : blockData.substring(i + 1, blockData.length() - 1);
+    }
+
     public static void register(Properties p) {
         p.alias(CommandSender.class, "name", CommandSender::getName);
 
@@ -76,6 +82,8 @@ public final class BukkitProperties {
         p.alias(Block.class, "z", b -> (double) b.getZ());
         p.alias(Block.class, "light", b -> (double) b.getLightLevel());
         p.alias(Block.class, "data", b -> b.getBlockData().getAsString());
+        // Spec 016: lo de dentro de los corchetes (facing=north,half=bottom), como %block_data% de ConditionalEvents.
+        p.alias(Block.class, "states", b -> states(b.getBlockData().getAsString()));
         p.alias(Block.class, "powered", Block::isBlockPowered);
 
         p.alias(ItemStack.class, "type", ItemStack::getType);

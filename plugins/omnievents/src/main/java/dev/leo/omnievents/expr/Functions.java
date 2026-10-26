@@ -33,6 +33,14 @@ public final class Functions {
     public static final String EXTERNAL = "Función registrada por otro plugin.";
 
     private static final Map<String, Def> DEFS = new TreeMap<>();
+    /** Spec 016: el último random(a, b) o %random_a_b% de este hilo, para random_last(). */
+    private static final ThreadLocal<Double> LAST_RANDOM = new ThreadLocal<>();
+
+    /** Guarda el número para random_last() y lo devuelve. */
+    public static double lastRandom(double v) {
+        LAST_RANDOM.set(v);
+        return v;
+    }
 
     private Functions() {
     }
@@ -84,7 +92,7 @@ public final class Functions {
 
     static {
         // Matemáticas
-        doc("random(a, b)", "Entero al azar entre a y b, ambos incluidos.", 2, 2, (c, a) -> (double) ThreadLocalRandom.current().nextLong((long) Math.min(n(a, 0), n(a, 1)), (long) Math.max(n(a, 0), n(a, 1)) + 1));
+        doc("random(a, b)", "Entero al azar entre a y b, ambos incluidos.", 2, 2, (c, a) -> lastRandom((double) ThreadLocalRandom.current().nextLong((long) Math.min(n(a, 0), n(a, 1)), (long) Math.max(n(a, 0), n(a, 1)) + 1)));
         doc("randomf(a, b)", "Decimal al azar entre a y b.", 2, 2, (c, a) -> ThreadLocalRandom.current().nextDouble(Math.min(n(a, 0), n(a, 1)), Math.nextUp(Math.max(n(a, 0), n(a, 1)))));
         // Spec 015: %random_player% y %randomword_…% de ConditionalEvents.
         doc("pick(lista)", "Un elemento al azar de la lista, o de los argumentos con pick(a, b, …); nulo si no hay ninguno. pick(players()).name es un jugador al azar.", 1, Integer.MAX_VALUE, (c, a) -> {
@@ -175,6 +183,54 @@ public final class Functions {
             if (!world.isChunkLoaded(x >> 4, z >> 4)) return null;
             return world.getBlockAt(x, y, z);
         });
+        // Spec 016: las variables de ConditionalEvents que faltaban.
+        doc("world(nombre)", "El mundo con ese nombre, o nulo (world('nether').time).", 1, 1, (c, a) -> Values.raw(a[0]) instanceof org.bukkit.World w ? w : Bukkit.getWorld(s(a, 0)));
+        doc("location(mundo, x, y, z)", "Una ubicación (mundo por nombre o un mundo); nulo si el mundo no existe.", 4, 4, (c, a) -> {
+            Object w = Values.raw(a[0]);
+            org.bukkit.World world = w instanceof org.bukkit.World ww ? ww : Bukkit.getWorld(s(a, 0));
+            return world == null ? null : new Location(world, n(a, 1), n(a, 2), n(a, 3));
+        });
+        doc("near(a, b, radio)", "true si a y b (ubicaciones, entidades o bloques) están en el mismo mundo a radio bloques o menos (%is_nearby_…% de ConditionalEvents).", 3, 3, (c, a) -> {
+            Location x = loc(a[0]), y = loc(a[1]);
+            return x != null && y != null && x.getWorld() == y.getWorld() && x.distanceSquared(y) <= n(a, 2) * n(a, 2);
+        });
+        doc("slice(x, desde[, hasta])", "Parte de una lista (o de un texto): posiciones desde 0, hasta sin incluir y recortado al largo. join(slice(args, 1, 4), ' ') une los argumentos 2 a 4.", 2, 3, (c, a) -> {
+            Object o = Values.raw(a[0]);
+            if (!(o instanceof Collection<?>)) {
+                String str = s(a, 0);
+                int from = Math.max(0, Math.min(str.length(), (int) n(a, 1)));
+                return str.substring(from, a.length > 2 ? Math.max(from, Math.min(str.length(), (int) n(a, 2))) : str.length());
+            }
+            List<Object> l = Values.list(a[0]);
+            int from = Math.max(0, Math.min(l.size(), (int) n(a, 1)));
+            int to = a.length > 2 ? Math.max(from, Math.min(l.size(), (int) n(a, 2))) : l.size();
+            return new ArrayList<Object>(l.subList(from, to));
+        });
+        doc("relative(entidad, adelante, lado, arriba)", "La ubicación de la entidad corrida según hacia dónde mira (solo el giro horizontal): adelante y derecha positivos, arriba positivo (%player_location_…% de ConditionalEvents).", 4, 4, (c, a) -> {
+            Location l = loc(a[0]);
+            return l == null ? null : relative(l, n(a, 1), n(a, 2), n(a, 3));
+        });
+        doc("looking_block(distancia[, entidad])", "El bloque que mira el jugador (o la entidad) a esa distancia o menos, o nulo. Solo en el hilo principal.", 1, 2, (c, a) -> {
+            requireMain("looking_block");
+            Object e = Values.raw(a.length > 1 ? a[1] : c.player());
+            return e instanceof org.bukkit.entity.LivingEntity l ? l.getTargetBlockExact((int) Math.max(1, Math.min(120, n(a, 0)))) : null;
+        });
+        doc("looking_entity(distancia[, entidad])", "La entidad que mira el jugador (o la entidad) a esa distancia o menos, o nulo. Solo en el hilo principal.", 1, 2, (c, a) -> {
+            requireMain("looking_entity");
+            Object e = Values.raw(a.length > 1 ? a[1] : c.player());
+            return e instanceof org.bukkit.entity.LivingEntity l ? l.getTargetEntity((int) Math.max(1, Math.min(120, n(a, 0)))) : null;
+        });
+        doc("is_outside([entidad])", "true si no hay ningún bloque (que no sea aire) encima del jugador hasta el techo del mundo (%player_is_outside% de ConditionalEvents). Solo en el hilo principal.", 0, 1, (c, a) -> {
+            requireMain("is_outside");
+            Location l = loc(a.length > 0 ? a[0] : c.player());
+            if (l == null || l.getWorld() == null) return false;
+            int max = l.getWorld().getMaxHeight();
+            for (int y = l.getBlockY() + 1; y < max; y++) {
+                if (!l.getWorld().getBlockAt(l.getBlockX(), y, l.getBlockZ()).getType().isAir()) return false;
+            }
+            return true;
+        });
+        doc("random_last()", "El último número de random(a, b) o %random_a_b% en este hilo, o nulo (%random_last% de ConditionalEvents).", 0, 0, (c, a) -> LAST_RANDOM.get());
         doc("in_area(mundo,x1, y1, z1, x2, y2, z2)", "true si el jugador está dentro del cubo.", 7, 7, (c, a) -> {
             Location l = loc(c.player());
             if (l == null || l.getWorld() == null || !l.getWorld().getName().equalsIgnoreCase(s(a, 0))) return false;
@@ -209,6 +265,18 @@ public final class Functions {
             if (o instanceof Map<?, ?> m) return Boolean.TRUE.equals(m.get("npc"));
             return dev.leo.omnievents.hook.Npcs.isNpc(o);
         });
+    }
+
+    private static void requireMain(String fn) {
+        if (!Bukkit.isPrimaryThread()) throw new ExprException(fn + " solo se puede usar en el hilo principal (no en player_chat, player_pre_login ni player_receive_chat)", -1);
+    }
+
+    /** La ubicación corrida según el giro horizontal (yaw): adelante, derecha y arriba (spec 016). */
+    public static Location relative(Location l, double front, double side, double up) {
+        double yaw = Math.toRadians(l.getYaw());
+        double fx = -Math.sin(yaw), fz = Math.cos(yaw);
+        // La derecha de quien mira hacia (fx, fz) es (-fz, fx).
+        return l.clone().add(fx * front - fz * side, up, fz * front + fx * side);
     }
 
     private static boolean between(double v, double a, double b) {

@@ -72,6 +72,8 @@ public final class OmniEvents extends JavaPlugin implements Listener {
     /** Spec 013: menús abiertos y formularios de Bedrock (Floodgate). */
     private dev.leo.omnievents.menu.MenuService menuService;
     private dev.leo.omnievents.hook.Forms forms = dev.leo.omnievents.hook.Forms.NONE;
+    /** Spec 016: el chat que recibe el jugador, con ProtocolLib (null si no está). */
+    private dev.leo.omnievents.hook.ChatPackets chatPackets;
     /** Spec 012: Vault, WorldGuard y Citizens, si están instalados. */
     private java.util.Set<String> integrations = java.util.Set.of();
     private BukkitTask autosave;
@@ -141,6 +143,9 @@ public final class OmniEvents extends JavaPlugin implements Listener {
             step("oyentes", () -> {
                 if (listeners != null) listeners.unregister();
             });
+            step("paquetes de chat", () -> {
+                if (chatPackets != null) chatPackets.listen(false);
+            });
             step("temporizadores", () -> {
                 if (timers != null) timers.stop();
             });
@@ -201,6 +206,9 @@ public final class OmniEvents extends JavaPlugin implements Listener {
         // Los comandos no se quitan antes: register() concilia y solo registra si cambiaron (spec 005).
         rules.set(loaded, loader.packs());
         guarded(p, "oyentes", () -> listeners.register(rules.all(), p));
+        guarded(p, "paquetes de chat", () -> {
+            if (chatPackets != null) chatPackets.listen(listeners.listens(dev.leo.omnievents.trigger.ReceivedChatEvent.class));
+        });
         guarded(p, "temporizadores", timers::start);
         guarded(p, "estados", () -> states.register(rules.all()));
         guarded(p, "regiones", () -> regionService.register(rules.all()));
@@ -364,6 +372,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
         var id = e.getPlayer().getUniqueId();
         Bukkit.getScheduler().runTaskLater(this, () -> {
             if (Bukkit.getPlayer(id) == null) data.unload(id, r -> Bukkit.getScheduler().runTaskAsynchronously(this, r));
+            if (chatPackets != null) chatPackets.forget(id);
         }, 1);
     }
 
@@ -389,6 +398,15 @@ public final class OmniEvents extends JavaPlugin implements Listener {
             }
         }
         if (pm.getPlugin("Citizens") != null) found.add("Citizens");
+        // Spec 016 (ADR 0004): la clase que usa ProtocolLib solo se carga si está.
+        if (pm.getPlugin("ProtocolLib") != null) {
+            try {
+                chatPackets = new dev.leo.omnievents.hook.ChatPackets(this, () -> settings().chatPacketsPerSecond());
+                found.add("ProtocolLib");
+            } catch (RuntimeException | LinkageError e) {
+                getLogger().warning("ProtocolLib está pero no se pudo usar su API: " + e);
+            }
+        }
         // Spec 013: formularios de Bedrock con Floodgate (por reflexión: sin dependencia de compilación).
         org.bukkit.plugin.Plugin floodgate = pm.getPlugin("floodgate");
         if (floodgate != null) {
@@ -425,7 +443,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
 
     /** /omni stats: lo detectado y, con Vault, el plugin de economía de ahora. */
     public String integrationsLine() {
-        if (integrations.isEmpty()) return "ninguna (Vault, WorldGuard, Citizens y Floodgate son opcionales)";
+        if (integrations.isEmpty()) return "ninguna (Vault, WorldGuard, Citizens, Floodgate y ProtocolLib son opcionales)";
         List<String> out = new java.util.ArrayList<>();
         for (String i : integrations) {
             if (i.equals("Vault")) out.add("Vault (" + (economy.available() ? economy.provider() : "sin economía") + ")");

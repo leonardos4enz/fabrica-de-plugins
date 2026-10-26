@@ -1,0 +1,33 @@
+# Spec 016 (paridad con ConditionalEvents, tercera parte). Se llaman desde /e2e <grupo> (e2e.yml) o reaccionan a lo
+# que la suite manda por consola.
+
+# H1 CA1: actionbar con duración (texto;ticks de CE): se reenvía cada 2 s hasta cubrir los 100 ticks.
+e2e_barra016:
+  trigger: call
+  actions:
+    - actionbar: "e2e barra larga de {player.name};100"
+
+# H4 CA1: player_receive_chat (ProtocolLib). Un mensaje del sistema que el jugador recibe dispara la regla; la
+# respuesta va por la barra de acción, que el disparador no lee (no se dispara a sí misma).
+e2e_recibe016:
+  trigger: player_receive_chat
+  conditions:
+    - "message startsWith 'e2e sistema 016' && type == 'SYSTEM'"
+  actions:
+    - actionbar: "e2e recibido: {message} ({type})"
+
+# H4 CA1: cancel hace que el jugador no vea el mensaje.
+e2e_oculta016:
+  trigger: player_receive_chat
+  conditions:
+    - "message contains 'e2e oculto 016'"
+  actions:
+    - cancel
+
+# H4 CA1 y regresión 016 F-03: el chat de otro jugador (paquete firmado) también se lee, sin errores.
+e2e_recibe_chat016:
+  trigger: player_receive_chat
+  conditions:
+    - "message contains 'e2e chat 016' && type == 'PLAYER'"
+  actions:
+    - actionbar: "e2e chat recibido ({type})"

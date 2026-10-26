@@ -1,4 +1,4 @@
-version = "1.10.0"
+version = "1.11.0"
 
 repositories {
     // Integraciones opcionales (spec 012): solo para compilar, no se empaquetan.
@@ -10,6 +10,8 @@ dependencies {
     compileOnly("me.clip:placeholderapi:2.11.6")
     compileOnly("com.github.MilkBowl:VaultAPI:1.7.1") { isTransitive = false }
     compileOnly("com.sk89q.worldguard:worldguard-bukkit:7.0.13") { exclude(group = "org.bukkit"); exclude(group = "io.papermc.paper") }
+    // Spec 016 (ADR 0004): lectura de los paquetes de chat; Maven Central.
+    compileOnly("net.dmulloy2:ProtocolLib:5.4.0") { isTransitive = false }
     // Valida los ejemplos contra el esquema generado (spec 007); solo en pruebas.
     testImplementation("com.networknt:json-schema-validator:1.5.6")
 }

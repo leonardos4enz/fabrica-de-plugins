@@ -7,7 +7,7 @@ tarea y no se da por terminada sin una fase de verificación en un servidor real
 ## Plugins
 | Plugin | Qué hace | Versión | Paper verificado | Java |
 |---|---|---|---|---|
-| [OmniEvents](plugins/omnievents/README.md) | Eventos condicionales: «cuando pase X, si se cumple Y, haz Z». Versión propia y ampliada de ConditionalEvents ([galería](docs/omnievents/galeria.md), [referencia](docs/omnievents/referencia.md), autocompletado en VS Code, pruebas de reglas con `/omni test`, paquetes y plantillas, costos todo o nada con Vault, regiones de WorldGuard, NPC de Citizens, menús de inventario con formularios de Bedrock y paridad comprobada con ConditionalEvents, que `/omni import` traduce casi entera) | 1.10.0 | 1.21.4 y 26.1.2 ([detalle](plugins/omnievents/README.md#compatibilidad)) | 21+ |
+| [OmniEvents](plugins/omnievents/README.md) | Eventos condicionales: «cuando pase X, si se cumple Y, haz Z». Versión propia y ampliada de ConditionalEvents ([galería](docs/omnievents/galeria.md), [referencia](docs/omnievents/referencia.md), autocompletado en VS Code, pruebas de reglas con `/omni test`, paquetes y plantillas, costos todo o nada con Vault, regiones de WorldGuard, NPC de Citizens, menús de inventario con formularios de Bedrock, el chat que recibe el jugador con ProtocolLib y paridad comprobada con ConditionalEvents, que `/omni import` traduce casi entera) | 1.11.0 | 1.21.4 y 26.1.2 ([detalle](plugins/omnievents/README.md#compatibilidad)) | 21+ |
 
 «Verificado» quiere decir que el plugin pasó la suite en el juego en esa versión; las demás están «sin verificar» en
 el README de cada plugin.
@@ -49,6 +49,9 @@ Floodgate, configura Geyser para escuchar solo en `127.0.0.1:19199` y aceptar un
 métricas de bStats del servidor de prueba; un jugador de Bedrock (`tests-e2e/lib/bedrock.mjs`, con `bedrock-protocol`)
 recibe y contesta los formularios. Geyser baja el jar del cliente de Minecraft de Mojang la primera vez (para sus
 traducciones). La primera corrida con Geyser genera su configuración: si una corrida avisa de eso, la siguiente ya la usa.
+Para `player_receive_chat` (spec 016, [ADR 0004](docs/adr/0004-protocollib-opcional.md)) baja ProtocolLib: el release
+5.4.0 de GitHub para Paper 1.21.4 y, como no hay release para 26.1, la build de desarrollo #765 del Jenkins oficial de
+dmulloy2 para 26.1.2 (también con su sha256 fijado).
 Detalle de las compuertas: [verificacion.md](docs/sdd/verificacion.md).
 
 ## Galería con imágenes

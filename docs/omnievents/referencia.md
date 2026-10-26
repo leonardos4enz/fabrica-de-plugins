@@ -317,6 +317,7 @@ Raíces que todos ofrecen además de las suyas: `server` `rule` `online` `source
 | `region_leave` | `player` `world` `location` `region` `event` | El jugador sale de una región de WorldGuard (region.id); cancel lo deja dentro. Necesita WorldGuard. |
 | `npc_click` | `event` `world` `location` `player` `npc` `target` `item` | Un jugador hace clic derecho en un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens. *(se puede cancelar)* |
 | `npc_left_click` | `event` `world` `location` `player` `npc` `target` `item` | Un jugador golpea (clic izquierdo) un NPC de Citizens (npc.id, npc.name, npc.entity). Necesita Citizens. *(se puede cancelar)* |
+| `player_receive_chat` | `event` `world` `location` `player` `message` `message_legacy` `json` `type` | Un jugador va a recibir un mensaje del chat o del sistema (asíncrono, en el hilo de red): message sin formato, message_legacy con códigos &, json, type (SYSTEM, DISGUISED o PLAYER). cancel hace que no lo vea; la barra de acción no cuenta. Es texto no confiable. Necesita ProtocolLib. *(se puede cancelar, asíncrono)* |
 
 ### Menús
 | Disparador | Raíces | Qué es |
@@ -504,12 +505,16 @@ Claves:
 ### Mensajes
 
 #### `actionbar`
-Muestra un texto en la barra de acción.
+Muestra un texto en la barra de acción; con duración (texto;ticks, como ConditionalEvents, o la clave duration) se reenvía cada 2 s hasta cubrirla (spec 016).
 
-Valor: texto.
+Valor: texto[;ticks].
+
+Claves:
+- `duration`: Cuánto se mantiene: ticks (120) o con unidad (6s).
 
 ```yaml
-- actionbar: "<aqua>Diamantes: {pvar.diamantes}"
+- actionbar: "<gold>Evento en 1 minuto"
+  duration: 6s
 ```
 
 #### `bossbar`
@@ -714,12 +719,12 @@ Claves:
 ```
 
 #### `effect`
-Da un efecto de poción (segundos negativos: infinito).
+Da un efecto de poción (segundos negativos: infinito); ícono false lo oculta de la pantalla (spec 016).
 
-Valor: EFECTO;segundos;nivel;partículas.
+Valor: EFECTO;segundos;nivel;partículas;ícono.
 
 ```yaml
-- effect: "SPEED;30;2;false"
+- effect: "SPEED;30;2;false;false"
 ```
 
 #### `feed`
@@ -967,7 +972,7 @@ Valor: potencia;fuego;romper bloques.
 #### `firework`
 Lanza un fuego artificial desde el jugador (o cada destinatario de to) o desde location; sin daño salvo damage:true (spec 014). Forma de ConditionalEvents: pares clave:valor separados por espacios.
 
-Valor: colors:C1,C2 [type:BALL|BALL_LARGE|STAR|BURST|CREEPER] [power:0-3] [fade:C1,C2] [flicker:true] [trail:true] [location:mundo;x;y;z] [damage:true]; colores por nombre (RED, AQUA…) o #RRGGBB.
+Valor: colors:C1,C2 [type:BALL|BALL_LARGE|STAR|BURST|CREEPER] [power:0-3] [fade:C1,C2] [flicker:true] [trail:true] [location:mundo;x;y;z] [damage:true] [shot_direction:xmin,xmax;ymin,ymax;zmin,zmax;vmin-vmax]; colores por nombre (RED, AQUA…) o #RRGGBB; shot_direction lo dispara en ángulo (spec 016).
 
 ```yaml
 - firework: "colors:RED,#FFAA00 type:STAR power:1 fade:WHITE trail:true"
@@ -1158,14 +1163,19 @@ Operadores: `&&` `||` `!` (`and` `or` `not`), `==` `!=` `<` `<=` `>` `>=`, `~=` 
 | `is_bedrock()` | true si el jugador entró desde Bedrock (Geyser + Floodgate); sin Floodgate, false. En tests:, given.bedrock. |
 | `is_npc(entidad)` | true si la entidad es un NPC de Citizens. En tests:, un objeto de given con npc: true. |
 | `is_number(x)` | true si x es un número o un texto con un número (spec 015; %is_number_x% de ConditionalEvents). |
+| `is_outside([entidad])` | true si no hay ningún bloque (que no sea aire) encima del jugador hasta el techo del mundo (%player_is_outside% de ConditionalEvents). Solo en el hilo principal. |
 | `join(lista[, separador])` | Une una lista en un texto (", " por defecto). |
 | `len(x)` | Largo de un texto, o tamaño de una lista o un mapa. |
+| `location(mundo, x, y, z)` | Una ubicación (mundo por nombre o un mundo); nulo si el mundo no existe. |
+| `looking_block(distancia[, entidad])` | El bloque que mira el jugador (o la entidad) a esa distancia o menos, o nulo. Solo en el hilo principal. |
+| `looking_entity(distancia[, entidad])` | La entidad que mira el jugador (o la entidad) a esa distancia o menos, o nulo. Solo en el hilo principal. |
 | `lower(t)` | Texto en minúsculas. |
 | `max(a, b, …)` | El mayor de los números (o de una lista). |
 | `min(a, b, …)` | El menor de los números (o de una lista). |
 | `minute()` | Minuto de la hora (0 a 59). |
 | `money()` | Saldo del jugador en la economía de Vault; nulo sin Vault o sin jugador. En tests:, el de given.money. |
 | `money_format(n)` | La cantidad con la moneda de la economía (p. ej. $1,500.00); sin economía, el número. |
+| `near(a, b, radio)` | true si a y b (ubicaciones, entidades o bloques) están en el mismo mundo a radio bloques o menos (%is_nearby_…% de ConditionalEvents). |
 | `now()` | Milisegundos desde 1970 (hora del servidor). |
 | `num(x)` | Convierte a número (0 si no se puede). |
 | `online(nombre)` | true si ese jugador está conectado. |
@@ -1177,11 +1187,14 @@ Operadores: `&&` `||` `!` (`and` `or` `not`), `==` `!=` `<` `<=` `>` `>=`, `~=` 
 | `pow(x, y)` | x elevado a y. |
 | `pvar_of(jugador, nombre)` | Variable pvar de otro jugador (por nombre). |
 | `random(a, b)` | Entero al azar entre a y b, ambos incluidos. |
+| `random_last()` | El último número de random(a, b) o %random_a_b% en este hilo, o nulo (%random_last% de ConditionalEvents). |
 | `randomf(a, b)` | Decimal al azar entre a y b. |
 | `regions()` | Ids de las regiones de WorldGuard donde está el jugador, de mayor a menor prioridad (sin WorldGuard, vacía). |
+| `relative(entidad, adelante, lado, arriba)` | La ubicación de la entidad corrida según hacia dónde mira (solo el giro horizontal): adelante y derecha positivos, arriba positivo (%player_location_…% de ConditionalEvents). |
 | `replace(t, buscar, poner)` | Reemplaza cada aparición de buscar. |
 | `round(x[, decimales])` | Redondea (a 0 decimales por defecto). |
 | `size(x)` | Igual que len. |
+| `slice(x, desde[, hasta])` | Parte de una lista (o de un texto): posiciones desde 0, hasta sin incluir y recortado al largo. join(slice(args, 1, 4), ' ') une los argumentos 2 a 4. |
 | `split(t, separador)` | Lista con las partes del texto. |
 | `sqrt(x)` | Raíz cuadrada. |
 | `str(x)` | Convierte a texto. |
@@ -1192,3 +1205,4 @@ Operadores: `&&` `||` `!` (`and` `or` `not`), `==` `!=` `<` `<=` `>` `>=`, `~=` 
 | `upper(t)` | Texto en mayúsculas. |
 | `uses(regla)` | Usos que lleva el jugador en esa regla. |
 | `weekday()` | Día de la semana: 1 es lunes, 7 es domingo. |
+| `world(nombre)` | El mundo con ese nombre, o nulo (world('nether').time). |

@@ -8,12 +8,12 @@ import { PLUGINS_EXTRA, configurarEssentials, configurarGeyser, ponerClave } fro
 
 const carpeta = () => fs.mkdtempSync(path.join(os.tmpdir(), 'e2e-extra-'))
 
-test('cada versión de Paper trae Vault, EssentialsX, WorldEdit, WorldGuard, Citizens, Geyser y Floodgate con su sha256', () => {
+test('cada versión de Paper trae Vault, EssentialsX, WorldEdit, WorldGuard, Citizens, Geyser, Floodgate y ProtocolLib con su sha256', () => {
   for (const [version, lista] of Object.entries(PLUGINS_EXTRA)) {
-    assert.equal(lista.length, 7, version)
+    assert.equal(lista.length, 8, version)
     for (const p of lista) {
       assert.match(p.sha256, /^[0-9a-f]{64}$/, p.archivo)
-      assert.match(p.url, /^https:\/\/(github\.com\/MilkBowl|cdn\.modrinth\.com|ci\.citizensnpcs\.co|download\.geysermc\.org\/v2\/projects)\//, p.archivo)
+      assert.match(p.url, /^https:\/\/(github\.com\/MilkBowl|cdn\.modrinth\.com|ci\.citizensnpcs\.co|download\.geysermc\.org\/v2\/projects|github\.com\/dmulloy2\/ProtocolLib\/releases|ci\.dmulloy2\.net\/job\/ProtocolLib)\//, p.archivo)
     }
   }
 })

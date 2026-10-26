@@ -19,7 +19,7 @@ import java.util.Map;
  * lo que tiene {expresiones}, al correr.
  */
 public final class Firework {
-    public static final List<String> KEYS = List.of("colors", "type", "power", "fade", "flicker", "trail", "location", "damage");
+    public static final List<String> KEYS = List.of("colors", "type", "power", "fade", "flicker", "trail", "location", "damage", "shot_direction");
 
     static final Map<String, Color> COLORS = new LinkedHashMap<>();
 
@@ -59,20 +59,20 @@ public final class Firework {
             int c = token.indexOf(':');
             if (c <= 0) throw new IllegalArgumentException("'" + token + "' no es clave:valor (p. ej. colors:RED,BLUE type:STAR power:1)");
             String key = token.substring(0, c).toLowerCase(Locale.ROOT);
-            if (key.equals("shot_direction")) throw new IllegalArgumentException("shot_direction (de ConditionalEvents) no se soporta: el cohete sube recto");
             if (!KEYS.contains(key)) throw new IllegalArgumentException("clave desconocida '" + key + "' en firework" + Suggest.hint(key, KEYS) + "; claves: " + String.join(", ", KEYS));
             v.put(key, Template.compile(token.substring(c + 1)));
         }
         if (!v.containsKey("colors")) throw new IllegalArgumentException("firework necesita colors (p. ej. colors:RED,#FFAA00)");
         Firework f = new Firework(v);
         // Lo constante se comprueba ya: un color o un tipo mal escrito es un error de carga, no de ejecución.
-        for (String k : List.of("colors", "fade", "type", "power")) {
+        for (String k : List.of("colors", "fade", "type", "power", "shot_direction")) {
             Template t = v.get(k);
             if (t == null || !t.isConstant()) continue;
             try {
                 switch (k) {
                     case "colors", "fade" -> colors(t.source());
                     case "type" -> type(t.source());
+                    case "shot_direction" -> ShotDirection.parse(t.source());
                     default -> power(t.source());
                 }
             } catch (ActionException e) {
@@ -91,6 +91,12 @@ public final class Firework {
         b.flicker(Values.truthy(raw("flicker", ctx)));
         b.trail(Values.truthy(raw("trail", ctx)));
         return b.build();
+    }
+
+    /** La velocidad del cohete con shot_direction (al azar en sus rangos), o null si sube recto. */
+    public org.bukkit.util.Vector shot(EvalContext ctx) {
+        String s = raw("shot_direction", ctx);
+        return s == null || s.isEmpty() ? null : ShotDirection.parse(s).roll();
     }
 
     public int power(EvalContext ctx) {
@@ -141,5 +147,37 @@ public final class Firework {
         int p = (int) Values.num(s.trim());
         if (p < 0 || p > 3) throw new ActionException("power va de 0 a 3 (dado: " + p + ")");
         return p;
+    }
+
+    /**
+     * shot_direction de ConditionalEvents (spec 016): xmin,xmax;ymin,ymax;zmin,zmax[;vmin-vmax]. Cada eje es un número o
+     * un rango min,max; la velocidad, un número o min-max (1 por defecto). El vector sale al azar en esos rangos.
+     */
+    public record ShotDirection(double[] x, double[] y, double[] z, double[] speed) {
+        public static ShotDirection parse(String text) {
+            String[] p = text.trim().split(";");
+            if (p.length < 3 || p.length > 4) {
+                throw new ActionException("shot_direction es xmin,xmax;ymin,ymax;zmin,zmax[;vmin-vmax] (p. ej. -1,1;1,1;-1,1;0.5-1), no '" + text + "'");
+            }
+            return new ShotDirection(range(p[0], ","), range(p[1], ","), range(p[2], ","), p.length > 3 ? range(p[3], "-") : new double[]{1, 1});
+        }
+
+        private static double[] range(String s, String sep) {
+            String t = s.trim();
+            // Un número negativo solo (-0.5) no es un rango con «-».
+            int at = sep.equals("-") ? t.indexOf(sep, 1) : t.indexOf(sep);
+            String a = at < 0 ? t : t.substring(0, at).trim(), b = at < 0 ? t : t.substring(at + 1).trim();
+            if (!Values.isNumeric(a) || !Values.isNumeric(b)) throw new ActionException("shot_direction: '" + s + "' no es un número ni un rango min" + sep + "max");
+            double x = Values.num(a), y = Values.num(b);
+            return new double[]{Math.min(x, y), Math.max(x, y)};
+        }
+
+        private static double roll(double[] r) {
+            return r[0] == r[1] ? r[0] : java.util.concurrent.ThreadLocalRandom.current().nextDouble(r[0], r[1]);
+        }
+
+        public org.bukkit.util.Vector roll() {
+            return new org.bukkit.util.Vector(roll(x), roll(y), roll(z)).multiply(roll(speed));
+        }
     }
 }
