@@ -1,0 +1,46 @@
+# Spec 014 (paridad con ConditionalEvents): centered_message, firework, item_repair, cooldown_bypass y reset con *.
+# Se llaman desde /e2e <grupo> (e2e.yml).
+
+e2e_centrado:
+  trigger: call
+  actions:
+    - centered_message: "<gold><b>e2e centrado</b>\n<gray>segunda línea e2e"
+
+# H2: cohete sin daño (por defecto) y con damage:true, los dos desde el jugador.
+e2e_cohete:
+  trigger: call
+  actions:
+    - firework: "colors:RED,#00FF00 type:BALL_LARGE power:0"
+e2e_cohete_danino:
+  trigger: call
+  actions:
+    - firework: "colors:BLUE type:BALL_LARGE power:0 damage:true"
+
+# H3: reparar o renombrar; «bloqueada» en el nombre lo impide.
+e2e_reparar:
+  trigger: item_repair
+  actions:
+    - if: "rename_text contains 'bloqueada'"
+      then:
+        - cancel
+        - message: "e2e reparar cancelado"
+        - stop
+    - message: "e2e reparar {repair_type} '{rename_text}' costo {level_cost}"
+
+# H4: el permiso automático, la opción cooldown_bypass y una regla de control sin permiso (un OP no la salta).
+e2e_bypass:
+  trigger: call
+  cooldown: 1h
+  on_cooldown: ["message: e2e bypass en enfriamiento"]
+  actions: ["message: e2e bypass corrió"]
+e2e_bypass_propio:
+  trigger: call
+  cooldown: 1h
+  cooldown_bypass: e2e.saltar.enfriamiento
+  on_cooldown: ["message: e2e propio en enfriamiento"]
+  actions: ["message: e2e propio corrió"]
+e2e_sin_bypass:
+  trigger: call
+  cooldown: 1h
+  on_cooldown: ["message: e2e control en enfriamiento"]
+  actions: ["message: e2e control corrió"]

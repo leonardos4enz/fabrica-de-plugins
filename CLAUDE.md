@@ -87,6 +87,10 @@ con `--release 21`.
   26.1) y acepta el cliente sin Xbox de `bedrock-protocol` solo con `enable-proxy-connections: true` (2.6) o
   `advanced.bedrock.validate-bedrock-login: false` (2.10): lo pone `configurarGeyser`. El cliente necesita el RakNet
   nativo (con `jsp-raknet` no conecta) y Floodgate le pone «.» delante del nombre (`.Beb_e2e`: escapar el punto en regex).
+- **Spec 014:** EssentialsX también reemplaza `/enchant` (consola: «Solo jugadores…»): usar `minecraft:enchant`. Paper no
+  trae comando de permisos: la suite da uno escribiendo `permissions.yml` (`default: true`) + `reload permissions` y lo
+  restaura al terminar. Un permiso no declarado vale para los OP en Bukkit: para «solo si está dado», `isPermissionSet`.
+  Dentro de una acción con `to`, `player` es el destinatario y `source` el jugador del evento (014 F-01).
 - En 26.x las reglas de juego van en snake_case (`natural_health_regeneration`, `advance_time`…): los nombres de
   1.21.4 fallan con «Incorrect argument» y el servidor sigue como si nada. La suite manda las dos formas (008 F-02).
 

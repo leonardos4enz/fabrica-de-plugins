@@ -1149,6 +1149,163 @@ export default {
       }
     },
     {
+      id: '014 H1 CA1',
+      nombre: 'centered_message: cada línea llega centrada con los espacios de la fuente (negrita incluida)',
+      async fn (ctx) {
+        await prepararJugador(ctx, ANA)
+        const ana = ctx.bots[ANA]
+        const m = ana.marca()
+        ana.comando('e2e centrado')
+        // «e2e centrado» en negrita mide 80 px → (154 − 40) / 4 = 28 espacios; «segunda línea e2e» mide 94 → 26.
+        await ana.esperar('chat', /^ {28}e2e centrado$/, { desde: m })
+        await ana.esperar('chat', /^ {26}segunda línea e2e$/, { desde: m })
+      }
+    },
+    {
+      id: '014 H2 CA1 · H2 CA2',
+      nombre: 'firework: el cohete sale del jugador y no hace daño salvo damage:true',
+      timeoutMs: 25000,
+      async fn (ctx) {
+        const { srv } = ctx
+        await limpiarArea(srv)
+        await prepararJugador(ctx, ANA)
+        const ana = ctx.bots[ANA]
+        // Techo de vidrio justo encima: el cohete choca y explota al lado del jugador.
+        await srv.consola('fill 11 -57 11 14 -57 14 glass')
+        await srv.sincronizar()
+        let m = ana.marca()
+        ana.comando('e2e cohete')
+        await ana.esperar('entity', /firework/, { desde: m })
+        await dormir(2500)
+        if (ana.bot.health !== 20) throw new Error(`el cohete sin daño lastimó: vida ${ana.bot.health}`)
+        m = ana.marca()
+        ana.comando('e2e cohete_danino')
+        await ana.esperar('entity', /firework/, { desde: m })
+        await ana.hasta('perder vida con damage:true', b => b.health < 20, { timeoutMs: 5000 })
+        await srv.consola('fill 11 -57 11 14 -57 14 air')
+        await prepararJugador(ctx, ANA)
+      }
+    },
+    {
+      id: '014 H3 CA1 · H3 CA2',
+      nombre: 'item_repair: renombrar en el yunque y limpiar en la afiladora; cancel impide la reparación',
+      timeoutMs: 40000,
+      async fn (ctx) {
+        const { srv } = ctx
+        await limpiarArea(srv)
+        await prepararJugador(ctx, ANA)
+        const ana = ctx.bots[ANA]
+        const w = () => ana.bot.currentWindow
+        const abrir = async (x, tipo) => {
+          await ana.bot.activateBlock(ana.bot.blockAt(new ana.bot.entity.position.constructor(x, -60, 14)))
+          await ana.hasta(`abrir ${tipo}`, () => w() && new RegExp(tipo).test(w().type ?? ''))
+        }
+        // Casillas de la ventana: 0 y 1 entrada, 2 resultado; la barra rápida del jugador empieza en 30.
+        const ponerYTomar = async (nombre) => {
+          await ana.bot.clickWindow(30, 0, 0)
+          await ana.bot.clickWindow(0, 0, 0)
+          if (nombre != null) {
+            await dormir(200)
+            ana.bot._client.write('name_item', { name: nombre })
+          }
+          try {
+            await ana.hasta('ver el resultado', () => w().slots[2] != null)
+          } catch (e) {
+            throw new Error(e.message + ' · casillas: ' + [0, 1, 2, 30].map(i => w()?.slots[i]?.name ?? '-').join(', ') + ' · ventana ' + w()?.type)
+          }
+          await ana.bot.clickWindow(2, 0, 0)
+          await dormir(400)
+        }
+        await srv.consola('setblock 12 -60 14 anvil')
+        await srv.consola('setblock 14 -60 14 grindstone[face=floor]')
+        await srv.consola(`xp set ${ANA} 10 levels`)
+        await srv.consola(`give ${ANA} iron_sword 1`)
+        await srv.sincronizar()
+        await ana.hasta('tener la espada y 10 niveles', b => ana.cantidad('iron_sword') === 1 && b.experience.level === 10)
+
+        // Yunque: renombrar corre la regla con el nombre y el costo.
+        await abrir(12, 'anvil')
+        let m = ana.marca()
+        await ponerYTomar('Hoja e2e')
+        await ana.esperar('chat', /^e2e reparar ANVIL 'Hoja e2e' costo 1$/, { desde: m })
+        ana.bot.closeWindow(w())
+        await ana.hasta('tener la espada renombrada y 9 niveles', b => ana.nombreDe(ana.items('iron_sword')[0]) === 'Hoja e2e' && b.experience.level === 9)
+
+        // Un nombre bloqueado: cancel deja la espada como estaba y no cobra niveles.
+        await abrir(12, 'anvil')
+        m = ana.marca()
+        await ponerYTomar('bloqueada')
+        await ana.esperar('chat', /^e2e reparar cancelado$/, { desde: m })
+        ana.bot.closeWindow(w())
+        await dormir(500)
+        if (ana.bot.experience.level !== 9) throw new Error(`cobró niveles al cancelar: ${ana.bot.experience.level}`)
+        if (ana.nombreDe(ana.items('iron_sword')[0]) !== 'Hoja e2e') throw new Error(`la espada cambió: ${ana.nombreDe(ana.items('iron_sword')[0])}`)
+
+        // Afiladora: quita el encantamiento; repair_type GRINDSTONE, sin nombre ni costo.
+        await srv.consola(`clear ${ANA}`)
+        await srv.consola(`give ${ANA} iron_sword 1`)
+        await srv.sincronizar()
+        await ana.hasta('tener otra espada', () => ana.cantidad('iron_sword') === 1)
+        await srv.consola(`minecraft:enchant ${ANA} sharpness 1`) // EssentialsX reemplaza enchant (012 F-03)
+        await srv.sincronizar()
+        await abrir(14, 'grindstone')
+        m = ana.marca()
+        await ponerYTomar(null)
+        await ana.esperar('chat', /^e2e reparar GRINDSTONE '' costo 0$/, { desde: m })
+        ana.bot.closeWindow(w())
+        await srv.consola('setblock 12 -60 14 air')
+        await srv.consola('setblock 14 -60 14 air')
+        await prepararJugador(ctx, ANA)
+      }
+    },
+    {
+      id: '014 H4 CA1 · H4 CA2 · H4 CA3',
+      nombre: 'cooldown_bypass: el permiso dado salta el enfriamiento (un OP sin él no); reset con * para todos',
+      timeoutMs: 40000,
+      async fn (ctx) {
+        const { srv } = ctx
+        // Permisos dados por permissions.yml (Paper no trae un comando de permisos): por defecto, a todos.
+        const archivo = path.join(srv.run, 'permissions.yml')
+        const antes = fs.existsSync(archivo) ? fs.readFileSync(archivo, 'utf8') : null
+        fs.writeFileSync(archivo, ['omnievents.bypasscooldown.e2e_bypass:', '  default: true',
+          'e2e.saltar.enfriamiento:', '  default: true', ''].join('\n'))
+        try {
+          await srv.consola('bukkit:reload permissions', { espera: /Permissions successfully reloaded/i })
+          await ctx.entrar(ANA) // vuelve a calcular sus permisos al entrar
+          await ctx.bots[ANA].esperar('title', /Bienvenido/, { timeoutMs: 10000 }) // la bienvenida (con delay) termina antes de seguir
+          await srv.consola(`op ${ANA}`, { espera: new RegExp(`Made ${ANA} a server operator|Nothing changed`) })
+          await prepararJugador(ctx, ANA)
+          const ana = ctx.bots[ANA]
+          await srv.consola('omni cooldown reset * *', { espera: /enfriamiento de \* \(\d+ reglas\) reiniciado para todos \(\d+ jugadores\)/ })
+          const dos = async (grupo, patron) => {
+            for (let i = 0; i < 2; i++) {
+              const m = ana.marca()
+              ana.comando(`e2e ${grupo}`)
+              await ana.esperar('chat', patron, { desde: m })
+            }
+          }
+          await dos('bypass', /^e2e bypass corrió$/)
+          await dos('bypass_propio', /^e2e propio corrió$/)
+          let m = ana.marca()
+          ana.comando('e2e sin_bypass')
+          await ana.esperar('chat', /^e2e control corrió$/, { desde: m })
+          m = ana.marca()
+          ana.comando('e2e sin_bypass')
+          await ana.esperar('chat', /^e2e control en enfriamiento$/, { desde: m }) // Ana es OP y no lo salta
+          await srv.consola(`omni check e2e_bypass ${ANA}`, { espera: /libre \(permiso omnievents\.bypasscooldown\.e2e_bypass\)/ })
+          await srv.consola('omni cooldown reset e2e_sin_bypass *', { espera: /enfriamiento de e2e_sin_bypass reiniciado para todos \(\d+ jugadores\)/ })
+          m = ana.marca()
+          ana.comando('e2e sin_bypass')
+          await ana.esperar('chat', /^e2e control corrió$/, { desde: m })
+        } finally {
+          if (antes == null) fs.rmSync(archivo, { force: true })
+          else fs.writeFileSync(archivo, antes)
+          await srv.consola('bukkit:reload permissions')
+          await srv.sincronizar()
+        }
+      }
+    },
+    {
       id: 'H5 CA3',
       nombre: 'jugador: kick con su motivo',
       async fn (ctx) {

@@ -60,14 +60,14 @@ class ImporterTest {
                       error2:
                       - "cancel_event: true"
                       - "message: &cThat player is not online."
-                      - "firework: colors:RED;type:BALL"
+                      - "remove_item_slot: HAND;1"
                     ignore_with_permission: conditionalevents.ignore.example
                     cooldown: 10
                 """, StandardCharsets.UTF_8);
         File out = new File(dir, "rules");
         ConditionalEventsImporter.Report rep = new ConditionalEventsImporter().importFolder(ce, out);
         assertEquals(1, rep.events());
-        assertEquals(1, rep.review(), "firework no se traduce y queda para revisar");
+        assertEquals(1, rep.review(), "remove_item_slot no se traduce y queda para revisar (firework sí desde la 014)");
         String yml = Files.readString(new File(out, "config.yml").toPath(), StandardCharsets.UTF_8);
         assertTrue(yml.contains("REVISAR"), yml);
 
@@ -79,5 +79,139 @@ class ImporterTest {
         assertEquals("player_command", r.trigger().name());
         assertEquals(10_000, r.cooldownMs());
         assertEquals(1, r.conditions().size(), "la condición sin execute queda como condición de la regla");
+    }
+
+    // Regresión (spec 014, F-01): dentro de una acción to_… el %player% de ConditionalEvents es el jugador del evento,
+    // pero se traducía como player.name, que en OmniEvents es el destinatario: «Ana te saluda» llegaba como
+    // «Beto te saluda» a Beto.
+    @Test
+    void F01_player_dentro_de_to_es_el_jugador_del_evento(@TempDir File dir) throws Exception {
+        String yml = importa(dir, """
+                Events:
+                  saludo:
+                    type: player_command
+                    conditions:
+                    - "%main_command% == /hola"
+                    actions:
+                      default:
+                      - "to_range: 10;false: message: &e%player% &7te saluda, %to:player%"
+                """);
+        assertTrue(yml.contains("{source.name}"), yml);
+        assertTrue(yml.contains("{player.name}"), "%to:player% es el destinatario: " + yml);
+        assertTrue(yml.contains("player != source"), "false = sin el jugador del evento: " + yml);
+    }
+
+    private static String importa(File dir, String config) throws Exception {
+        File ce = new File(dir, "ConditionalEvents");
+        ce.mkdirs();
+        Files.writeString(new File(ce, "config.yml").toPath(), config, StandardCharsets.UTF_8);
+        File out = new File(dir, "rules");
+        new ConditionalEventsImporter().importFolder(ce, out);
+        String yml = Files.readString(new File(out, "config.yml").toPath(), StandardCharsets.UTF_8);
+        Problems p = new Problems();
+        new RuleLoader(new Actions(null), new Triggers()).loadFolder(out, p);
+        assertEquals(0, p.errors(), p.all().stream().map(Object::toString).collect(Collectors.joining("\n")) + "\n" + yml);
+        return yml;
+    }
+
+    /** Spec 014, H5: una configuración de CE que usa cada fila con equivalente carga sin errores y sin REVISAR. */
+    @Test
+    void S014_H5_CA1_CA3_traduce_cada_fila_con_equivalente(@TempDir File dir) throws Exception {
+        File ce = new File(dir, "ConditionalEvents");
+        ce.mkdirs();
+        Files.writeString(new File(ce, "config.yml").toPath(), """
+                Config:
+                  to_condition_groups:
+                    vips:
+                    - "%player_has_permission_rango.vip% == yes"
+                Events:
+                  npc:
+                    type: citizens_right_click_npc
+                    conditions: ["%npc_id% == 3", "%npc_name% contains Guía"]
+                    actions:
+                      default: ["centered_message: &6&lBIENVENIDO %player%"]
+                  zona:
+                    type: wgevents_region_enter
+                    conditions: ["%region% == spawn"]
+                    actions:
+                      default: ["firework: colors:RED,#FFAA00 type:STAR power:1 shot_direction:-1,1;1,1;-1,1;0.5-0.5 trail:true"]
+                  reparar:
+                    type: item_repair
+                    cooldown: 30
+                    conditions: ["%repair_type% == ANVIL", "%rename_text% contains Excalibur", "%item_lore_line_1% contains Rara"]
+                    actions:
+                      default:
+                      - "cancel_event: true"
+                      - "title: 10;40;10;&cReservado;%rename_text%"
+                      - "json_message: {\\"text\\":\\"Clic aquí\\",\\"color\\":\\"red\\"}"
+                      cooldown: ["message: &cEspera %time%s"]
+                    prevent_cooldown_activation: [aviso]
+                  mover:
+                    type: item_move
+                    conditions: ["%action_type% == PICKUP_ALL", "%cursor:item_name% contains Llave"]
+                    actions:
+                      default: ["to_condition: vips: message: &aun vip movió algo"]
+                  telep:
+                    type: player_teleport
+                    conditions: ["%from_world% != %to_world%", "%to_y% > 100"]
+                    actions:
+                      default: ["playsound_resource_pack: mi_sonido;1;1", "throw_coordinate: 0;1.5;0", "keep_items: all"]
+                  romper:
+                    type: block_break
+                    conditions: ["%playerarmor_helmet% == DIAMOND_HELMET", "%world_is_raining% == false"]
+                    actions:
+                      default:
+                      - "set_event_xp: 0"
+                      - "give_item: id:DIAMOND_SWORD;amount:1;name:&bEspada;lore:&7Línea 1|&7Línea 2;enchants:SHARPNESS-2|UNBREAKING-1;custom_model_data:7"
+                      - "drop_item: location:%block_x%,%block_y%,%block_z%,%block_world%;id:GOLD_INGOT;amount:2"
+                      - "set_block: location:%block_x%,%block_y%,%block_z%,%block_world%;id:STONE"
+                      - "summon: location:0,64,0,world;entity:ZOMBIE"
+                      - "particle: effect:DUST;255;0;0 amount:5 offset:0.1;0.1;0.1 speed:0"
+                      - "execute_action_group: suerte:70;nada:30"
+                      suerte: ["message: suerte"]
+                      nada: ["message: nada"]
+                  dano:
+                    type: player_damage
+                    conditions: ["%damager_type% == ZOMBIE"]
+                    actions:
+                      default: ["message: %damager_name%"]
+                  armadura:
+                    type: player_armor
+                    conditions: ["%armor_type% == HELMET", "%equip_type% == EQUIP"]
+                    actions:
+                      default: ["message: ok"]
+                  ataque:
+                    type: player_attack
+                    conditions: ["%attack_type% == ARROW", "%victim_health% < 5"]
+                    actions:
+                      default: ["to_target: give_potion_effect: POISON;120;1;true"]
+                  clic:
+                    type: player_command
+                    conditions:
+                    - "%main_command% == /premio execute dar{%cantidad%=5;%tipo%=oro}"
+                    actions:
+                      default: ["message: no"]
+                      dar: ["message: recibes %cantidad% de %tipo%"]
+                """, StandardCharsets.UTF_8);
+        File out = new File(dir, "rules");
+        ConditionalEventsImporter.Report rep = new ConditionalEventsImporter().importFolder(ce, out);
+        String yml = Files.readString(new File(out, "config.yml").toPath(), StandardCharsets.UTF_8);
+        assertEquals(0, rep.review(), yml + "\n" + rep.notes());
+        Problems p = new Problems();
+        Map<String, Rule> rules = new RuleLoader(new Actions(null), new Triggers()).loadFolder(out, p);
+        assertEquals(0, p.errors(), p.all().stream().map(Object::toString).collect(Collectors.joining("\n")) + "\n" + yml);
+        assertEquals("npc_click", rules.get("npc").trigger().name());
+        assertEquals("region_enter", rules.get("zona").trigger().name());
+        assertEquals("item_repair", rules.get("reparar").trigger().name());
+        assertEquals("inventory_click", rules.get("mover").trigger().name());
+        assertEquals("conditionalevents.bypasscooldown.reparar", rules.get("reparar").cooldownBypass());
+        for (String s : new String[]{"npc.id == 3", "region.id == 'spawn'", "centered_message", "firework:", "item.lore[0]",
+                "var.cooldown_left", "event.action", "cursor.name", "from.world.name", "to.y", "minecraft:mi_sonido", "velocity:",
+                "player.helmet.type", "player.world.has_storm", "exp_to_drop = 0", "material: DIAMOND_SWORD", "SHARPNESS:2",
+                "model:", "GOLD_INGOT", "summon: ZOMBIE;world;0;64;0", "particle: DUST;5;0.1;0.1;0.1;0;255;0;0", "weight: 70",
+                "damager.type", "target.health", "var.cantidad = 5", "{var.cantidad}", "<red>Clic aquí", "where:"}) {
+            assertTrue(yml.contains(s), "falta «" + s + "» en\n" + yml);
+        }
+        assertTrue(rep.notes().stream().anyMatch(n -> n.contains("shot_direction")), rep.notes().toString());
     }
 }

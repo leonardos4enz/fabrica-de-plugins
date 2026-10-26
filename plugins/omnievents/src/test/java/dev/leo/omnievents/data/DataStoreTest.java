@@ -76,6 +76,33 @@ class DataStoreTest {
     }
 
     @Test
+    void S014_H4_CA3_reset_de_todos_toca_solo_esas_claves_de_los_desconectados(@TempDir File dir) {
+        DataStore s = store(dir);
+        UUID offline = UUID.randomUUID(), online = UUID.randomUUID();
+        DataStore.Holder off = s.player(offline);
+        off.cooldowns().put("kit", now.get() + 60_000);
+        off.cooldowns().put("otra", now.get() + 60_000);
+        off.uses().put("kit", new long[]{1, 0});
+        off.put("monedas", 7.0, 0);
+        s.saveAllSync();
+
+        DataStore fresh = store(dir);
+        DataStore.Holder on = fresh.player(online); // conectado: lo limpia el hilo principal, no el barrido
+        on.cooldowns().put("kit", now.get() + 60_000);
+        assertEquals(List.of(offline), fresh.storedPlayers());
+        assertEquals(1, fresh.removeUsageOffline(List.of("kit"), true));
+        assertEquals(now.get() + 60_000, on.cooldowns().get("kit"), "los cargados no se tocan aquí");
+        assertTrue(DataStore.removeUsage(on, List.of("kit"), true));
+
+        DataStore.Holder again = store(dir).player(offline);
+        assertNull(again.cooldowns().get("kit"));
+        assertEquals(now.get() + 60_000, again.cooldowns().get("otra"), "las demás reglas quedan");
+        assertEquals(1, again.uses().size(), "los usos no se tocan al reiniciar el enfriamiento");
+        assertEquals(7.0, again.get("monedas"));
+        assertEquals(0, store(dir).removeUsageOffline(List.of("kit"), true), "ya no queda nada que cambiar");
+    }
+
+    @Test
     void H1_CA3_la_caducidad_persiste_y_lo_vencido_no_vuelve(@TempDir File dir) throws IOException {
         DataStore s = store(dir);
         UUID id = UUID.randomUUID();

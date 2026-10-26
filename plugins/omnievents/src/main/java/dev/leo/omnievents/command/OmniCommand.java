@@ -65,8 +65,8 @@ public final class OmniCommand implements TabExecutor {
         SUBS.put("call", "Ejecuta una regla call: <regla> [jugador] [k=v…]");
         SUBS.put("var", "Variables: get|set|del|list <jugador|global> [nombre] [valor] [--expire 10m]");
         SUBS.put("data", "Variables de un objeto: [bloque|entidad|mano]");
-        SUBS.put("cooldown", "reset <regla> [jugador|global]");
-        SUBS.put("limit", "reset <regla> [jugador|global]");
+        SUBS.put("cooldown", "reset <regla|*> [jugador|*|global]");
+        SUBS.put("limit", "reset <regla|*> [jugador|*|global]");
         SUBS.put("stats", "Rendimiento por regla, oyentes y tareas");
         SUBS.put("cpu", "Perfilador por regla, condición y acción: [on|off|reset]");
         SUBS.put("triggers", "Disparadores disponibles");
@@ -548,14 +548,30 @@ public final class OmniCommand implements TabExecutor {
     }
 
     private void resetUsage(CommandSender s, String[] a, boolean cooldown) {
-        if (a.length < 2 || !a[0].equalsIgnoreCase("reset")) throw new IllegalArgumentException("uso: /omni " + (cooldown ? "cooldown" : "limit") + " reset <regla> [jugador|global]");
-        Rule r = rule(s, a, 1);
+        if (a.length < 2 || !a[0].equalsIgnoreCase("reset")) throw new IllegalArgumentException("uso: /omni " + (cooldown ? "cooldown" : "limit") + " reset <regla|*> [jugador|*|global]");
+        String what = cooldown ? "enfriamiento" : "límite";
+        boolean allRules = a[1].equals("*");
+        boolean everyone = a.length > 2 && a[2].equals("*");
+        // Spec 014, H4 CA3: '*' como regla (todas las que tienen enfriamiento o límite) o como jugador (todos).
+        List<Rule> rules = new ArrayList<>();
+        if (allRules) {
+            for (Rule r : plugin.rules().all()) if (cooldown ? r.cooldownMs() > 0 : r.limit() > 0) rules.add(r);
+        } else {
+            rules.add(rule(s, a, 1));
+        }
+        String ruleLabel = allRules ? "* (" + rules.size() + " reglas)" : rules.get(0).name();
+        if (everyone) {
+            plugin.rules().resetEveryone(rules, cooldown, n -> send(s, "usage-reset", "rule", ruleLabel, "what", what, "target", "todos (" + n + " jugadores)"));
+            return;
+        }
         UUID id = null;
         if (a.length > 2 && !a[2].equalsIgnoreCase("global")) id = offline(a[2]).getUniqueId();
         else if (a.length <= 2 && s instanceof Player p) id = p.getUniqueId();
-        if (cooldown) plugin.rules().resetCooldown(r.name(), id);
-        else plugin.rules().resetUses(r.name(), id);
-        send(s, "usage-reset", "rule", r.name(), "what", cooldown ? "enfriamiento" : "límite", "target", a.length > 2 ? a[2] : s.getName());
+        for (Rule r : rules) {
+            if (cooldown) plugin.rules().resetCooldown(r.name(), id);
+            else plugin.rules().resetUses(r.name(), id);
+        }
+        send(s, "usage-reset", "rule", ruleLabel, "what", what, "target", a.length > 2 ? a[2] : s.getName());
     }
 
     private void stats(CommandSender s) {
@@ -943,9 +959,13 @@ public final class OmniCommand implements TabExecutor {
                 }
                 case "cooldown", "limit" -> {
                     if (i == 1) opts.add("reset");
-                    if (i == 2) opts.addAll(plugin.rules().names());
+                    if (i == 2) {
+                        opts.add("*");
+                        opts.addAll(plugin.rules().names());
+                    }
                     if (i == 3) {
                         opts.add("global");
+                        opts.add("*");
                         Bukkit.getOnlinePlayers().forEach(p -> opts.add(p.getName()));
                     }
                 }

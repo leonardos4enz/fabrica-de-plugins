@@ -1,0 +1,41 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
+# Lo que llegó en la spec 014 para quien viene de ConditionalEvents: mensaje centrado, fuegos artificiales, reparar
+# ítems y el permiso por regla para saltar el enfriamiento.
+
+# /celebrar: un anuncio centrado y un fuego artificial sobre cada jugador. Una vez por hora; quien tenga el permiso
+# omnievents.bypasscooldown.celebracion (dado con tu plugin de permisos) no espera.
+celebracion:
+  trigger: command
+  command:
+    name: celebrar
+    description: Celebra con todo el servidor
+  cooldown: 1h
+  on_cooldown:
+    - message: "<red>Podrás celebrar de nuevo en {var.cooldown_left} s."
+  actions:
+    - to: all
+      centered_message: "<gold><b>¡FIESTA!</b>\n<gray>{source.name} invita a celebrar"
+    - to: all
+      firework: "colors:RED,#FFAA00,YELLOW type:STAR power:1 fade:WHITE trail:true"
+  tests:
+    - name: anuncia y lanza
+      given: {player.name: Leo}
+      expect:
+        messages: ["¡FIESTA!"]
+        actions: [centered_message, firework]
+
+# Nadie puede llamar «Excalibur» a un ítem en el yunque.
+nombre_reservado:
+  trigger: item_repair
+  conditions:
+    - "repair_type == 'ANVIL' && lower(rename_text) contains 'excalibur'"
+  actions:
+    - cancel
+    - message: "<red>Ese nombre está reservado."
+  tests:
+    - name: en el yunque se cancela
+      given: {repair_type: ANVIL, rename_text: "La EXCALIBUR"}
+      expect: {cancelled: true}
+    - name: la afiladora no cuenta
+      given: {repair_type: GRINDSTONE, rename_text: ""}
+      expect: {fired: false}

@@ -229,6 +229,43 @@ public final class DataStore {
         }
     }
 
+    /** Spec 014, H4 CA3: quita esas claves de los enfriamientos (o de los usos) de un holder; true si cambió. */
+    public static boolean removeUsage(Holder h, Collection<String> keys, boolean cooldowns) {
+        boolean changed = false;
+        for (String k : keys) changed |= (cooldowns ? h.cooldowns().remove(k) : h.uses().remove(k)) != null;
+        if (changed) h.markDirty();
+        return changed;
+    }
+
+    /** Spec 014, H4 CA3: lo mismo en los jugadores con archivo que no están cargados (fuera del hilo principal). */
+    public int removeUsageOffline(Collection<String> keys, boolean cooldowns) {
+        int n = 0;
+        for (UUID id : storedPlayers()) {
+            if (players.containsKey(id)) continue; // los cargados se limpian en el hilo principal
+            Holder h = load(playerFile(id), id);
+            if (removeUsage(h, keys, cooldowns) && !h.readOnly) {
+                write(snapshot(h));
+                n++;
+            }
+        }
+        return n;
+    }
+
+    /** Spec 014, H4 CA3: los jugadores con archivo en data/players (conectados o no). */
+    public List<UUID> storedPlayers() {
+        List<UUID> out = new ArrayList<>();
+        File[] files = new File(folder, "players").listFiles((d, n) -> n.endsWith(".yml"));
+        if (files == null) return out;
+        for (File f : files) {
+            try {
+                out.add(UUID.fromString(f.getName().substring(0, f.getName().length() - 4)));
+            } catch (IllegalArgumentException ignored) {
+                // otro archivo (un .roto-, un respaldo): no es de un jugador
+            }
+        }
+        return out;
+    }
+
     private File playerFile(UUID id) {
         return new File(new File(folder, "players"), id + ".yml");
     }

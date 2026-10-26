@@ -85,6 +85,7 @@ public final class RuleOptions {
         add("cooldown", Kind.DURATION, "Enfriamiento entre usos: 30s, 5m, 1h30m, 2d, 20t (ticks) o un número de segundos.");
         values("cooldown_scope", Kind.ENUM, "player (por jugador, por defecto) o global (uno para todo el servidor).", "player", "jugador", "global", "server", "servidor");
         add("on_cooldown", Kind.ACTIONS, "Acciones si la regla está en enfriamiento (var.cooldown_left tiene los segundos que faltan).");
+        add("cooldown_bypass", Kind.TEXT, "Permiso que salta el enfriamiento de esta regla (spec 014); sin la opción, omnievents.bypasscooldown.<regla>. Solo cuenta si está dado al jugador (a un OP sin él no lo salta; eso es cooldown-bypass-op).");
         add("limit", Kind.INTEGER, "Usos máximos (0 = sin límite).");
         add("one_time", Kind.BOOLEAN, "true equivale a limit: 1 (el one_time de ConditionalEvents).");
         values("limit_scope", Kind.ENUM, "player (por jugador, por defecto) o global.", "player", "jugador", "global", "server", "servidor");

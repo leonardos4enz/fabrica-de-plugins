@@ -34,6 +34,7 @@ Contenido: [opciones de una regla](#opciones-de-una-regla) · [menús](#menús) 
 | `cooldown` | duración | todos | Enfriamiento entre usos: 30s, 5m, 1h30m, 2d, 20t (ticks) o un número de segundos. |
 | `cooldown_scope` | `player`, `jugador`, `global`, `server`, `servidor` | todos | player (por jugador, por defecto) o global (uno para todo el servidor). |
 | `on_cooldown` | acciones | todos | Acciones si la regla está en enfriamiento (var.cooldown_left tiene los segundos que faltan). |
+| `cooldown_bypass` | texto | todos | Permiso que salta el enfriamiento de esta regla (spec 014); sin la opción, omnievents.bypasscooldown.&lt;regla>. Solo cuenta si está dado al jugador (a un OP sin él no lo salta; eso es cooldown-bypass-op). |
 | `limit` | entero | todos | Usos máximos (0 = sin límite). |
 | `one_time` | `true` / `false` | todos | true equivale a limit: 1 (el one_time de ConditionalEvents). |
 | `limit_scope` | `player`, `jugador`, `global`, `server`, `servidor` | todos | player (por jugador, por defecto) o global. |
@@ -274,6 +275,7 @@ Raíces que todos ofrecen además de las suyas: `server` `rule` `online` `source
 | `item_pickup` | `event` `world` `location` `player` `item` `entity` | Un jugador recoge un ítem del suelo. *(se puede cancelar)* |
 | `item_held` | `event` `world` `location` `player` `item` `previous_item` `slot` | Un jugador cambia de ranura en la barra (item: el nuevo, previous_item: el anterior). *(se puede cancelar)* |
 | `item_enchant` | `event` `world` `location` `player` `item` `enchants` `cost` | Un jugador encanta un ítem en la mesa (enchants, cost). *(se puede cancelar)* |
+| `item_repair` | `event` `world` `location` `player` `item` `repair_type` `base_item` `addition` `rename_text` `level_cost` | Un jugador saca el resultado de un yunque o una afiladora (repair_type: ANVIL o GRINDSTONE; rename_text, level_cost, base_item, addition). *(se puede cancelar)* |
 | `item_break` | `event` `world` `location` `player` `item` | Se rompe la herramienta o la armadura de un jugador. |
 
 ### Inventario
@@ -522,6 +524,15 @@ Valor: texto.
 
 ```yaml
 - broadcast: "<gold>{player.name} encontró un tesoro"
+```
+
+#### `centered_message`
+Como message, con cada línea centrada en el chat (spec 014; la fuente por defecto de Minecraft, negritas incluidas). \n o &lt;newline> separan líneas.
+
+Valor: texto.
+
+```yaml
+- centered_message: "<gold><b>EVENTO</b>\n<gray>Empieza en 5 minutos"
 ```
 
 #### `console_message`
@@ -888,6 +899,15 @@ Valor: potencia;fuego;romper bloques.
 - explosion: "2;false;false"
 ```
 
+#### `firework`
+Lanza un fuego artificial desde el jugador (o cada destinatario de to) o desde location; sin daño salvo damage:true (spec 014). Forma de ConditionalEvents: pares clave:valor separados por espacios.
+
+Valor: colors:C1,C2 [type:BALL|BALL_LARGE|STAR|BURST|CREEPER] [power:0-3] [fade:C1,C2] [flicker:true] [trail:true] [location:mundo;x;y;z] [damage:true]; colores por nombre (RED, AQUA…) o #RRGGBB.
+
+```yaml
+- firework: "colors:RED,#FFAA00 type:STAR power:1 fade:WHITE trail:true"
+```
+
 #### `lightning`
 Cae un rayo (solo el efecto, sin daño) donde está el jugador o en mundo;x;y;z.
 
@@ -1016,7 +1036,7 @@ Valor: texto o none.
 - set_quit_message: none
 ```
 
-Alias (de ConditionalEvents y sinónimos): `bc` → `broadcast`, `call_event` → `call`, `cancel_event` → `cancel`, `centered_message` → `message`, `console_command` → `console`, `execute` → `call`, `give_potion_effect` → `effect`, `json_message` → `message`, `lightning_strike` → `lightning`, `mini_message` → `message`, `msg` → `message`, `player_command` → `command`, `player_send_chat` → `chat`, `playsound` → `sound`, `potion` → `effect`, `prevent_join` → `deny_join`, `remove_potion_effect` → `remove_effect`, `set_on_fire` → `fire`, `stopsound` → `stop_sound`, `tp` → `teleport`, `wait` → `delay`.
+Alias (de ConditionalEvents y sinónimos): `bc` → `broadcast`, `call_event` → `call`, `cancel_event` → `cancel`, `console_command` → `console`, `execute` → `call`, `give_potion_effect` → `effect`, `json_message` → `message`, `lightning_strike` → `lightning`, `mini_message` → `message`, `msg` → `message`, `player_command` → `command`, `player_send_chat` → `chat`, `playsound` → `sound`, `potion` → `effect`, `prevent_join` → `deny_join`, `remove_potion_effect` → `remove_effect`, `set_on_fire` → `fire`, `stopsound` → `stop_sound`, `tp` → `teleport`, `wait` → `delay`.
 
 ## Funciones
 Operadores: `&&` `||` `!` (`and` `or` `not`), `==` `!=` `<` `<=` `>` `>=`, `~=` (igual sin mayúsculas), `contains` `startsWith` `endsWith` `matches` `in`, `+ - * / %`, `c ? a : b`. Variables: `var.x` (de la ejecución), `pvar.x` (del jugador), `gvar.x` (global).

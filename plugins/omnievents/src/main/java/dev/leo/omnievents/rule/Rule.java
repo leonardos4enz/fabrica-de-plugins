@@ -49,6 +49,8 @@ public final class Rule {
     List<RuleTest> tests = List.of();
     /** Spec 011: el paquete de la regla (null si es global). */
     String pack;
+    /** Spec 014, H4: permiso que salta el enfriamiento (cooldown_bypass u omnievents.bypasscooldown.<regla>). */
+    String cooldownBypass;
     /** Spec 012: el costo (null si no tiene) y lo que corre si no alcanza. */
     Cost cost;
     List<ActionNode> onCostFail = List.of();
@@ -122,6 +124,11 @@ public final class Rule {
 
     public List<Condition> conditions() {
         return conditions;
+    }
+
+    /** Spec 014, H4: el permiso que salta el enfriamiento. */
+    public String cooldownBypass() {
+        return cooldownBypass;
     }
 
     public long cooldownMs() {

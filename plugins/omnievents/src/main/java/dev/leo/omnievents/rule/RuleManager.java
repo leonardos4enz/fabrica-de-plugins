@@ -174,7 +174,9 @@ public final class RuleManager {
             }
             DataStore.Holder cdHolder = holder(rule.cooldownGlobal, p);
             long now = System.currentTimeMillis();
-            boolean bypassCd = p != null && plugin.settings().cooldownBypassOp() && p.isOp();
+            String bypassWhy = rule.cooldownMs > 0 ? cooldownBypass(rule, p) : null;
+            boolean bypassCd = bypassWhy != null;
+            if (bypassCd && trace != null) trace.add(ind + "✔ enfriamiento: libre (" + bypassWhy + ")");
             if (rule.cooldownMs > 0 && !bypassCd && cdHolder != null) {
                 Long until = cdHolder.cooldowns().get(rule.name());
                 if (until != null && until > now) {
@@ -318,10 +320,11 @@ public final class RuleManager {
         }
         DataStore.Holder cdHolder = holder(rule.cooldownGlobal, p);
         if (rule.cooldownMs > 0 && cdHolder != null) {
-            boolean bypassCd = p != null && plugin.settings().cooldownBypassOp() && p.isOp();
+            String bypassWhy = cooldownBypass(rule, p);
+            boolean bypassCd = bypassWhy != null;
             Long until = cdHolder.cooldowns().get(rule.name());
             long left = until == null || bypassCd ? 0 : Math.max(0, until - System.currentTimeMillis());
-            out.add((left == 0 ? "✔ " : "✘ ") + "enfriamiento: " + (left == 0 ? "libre" + (bypassCd ? " (OP)" : "") : "faltan " + Values.formatNumber(Math.ceil(left / 1000.0)) + "s"));
+            out.add((left == 0 ? "✔ " : "✘ ") + "enfriamiento: " + (left == 0 ? "libre" + (bypassCd ? " (" + bypassWhy + ")" : "") : "faltan " + Values.formatNumber(Math.ceil(left / 1000.0)) + "s"));
             if (left > 0 && branch == null) branch = rule.onCooldown.isEmpty() ? "nada (en enfriamiento)" : "on_cooldown (" + rule.onCooldown.size() + " acciones)";
         }
         // Spec 012, H2 CA5: cada parte del costo con lo que tiene y lo que pide.
@@ -421,6 +424,20 @@ public final class RuleManager {
         return start.atStartOfDay(zone).toInstant().toEpochMilli();
     }
 
+    /**
+     * Por qué el jugador salta el enfriamiento de la regla («OP» o «permiso …»), o null. Spec 014, H4 CA1: el permiso
+     * cuenta solo si está dado (isPermissionSet); un permiso no declarado vale para los OP por defecto en Bukkit.
+     */
+    String cooldownBypass(Rule rule, Player p) {
+        return bypassReason(rule.cooldownBypass, plugin.settings().cooldownBypassOp(), p);
+    }
+
+    static String bypassReason(String perm, boolean opBypass, Player p) {
+        if (p == null) return null;
+        if (opBypass && p.isOp()) return "OP";
+        return perm != null && p.isPermissionSet(perm) && p.hasPermission(perm) ? "permiso " + perm : null;
+    }
+
     private Runnable registerUsage(Rule rule, DataStore.Holder cd, DataStore.Holder lim, long now, boolean bypassCd) {
         Long prevCd = cd == null ? null : cd.cooldowns().get(rule.name());
         long[] prevUses = lim == null ? null : lim.uses().get(rule.name());
@@ -491,6 +508,29 @@ public final class RuleManager {
         String key = r == null ? ruleName : r.name();
         DataStore.Holder h = player == null || r != null && r.cooldownGlobal ? plugin.data().global() : plugin.data().player(player);
         if (h.cooldowns().remove(key) != null) h.markDirty();
+    }
+
+    /**
+     * Spec 014, H4 CA3: reinicia el enfriamiento (o los usos) de esas reglas para todos: el global en las de alcance
+     * global y, en las demás, cada jugador cargado (aquí, en el hilo principal) y cada desconectado con archivo (en
+     * otro hilo; {@code done} recibe cuántos jugadores cambiaron en total, en el hilo principal).
+     */
+    public void resetEveryone(Collection<Rule> rules, boolean cooldown, java.util.function.IntConsumer done) {
+        List<String> perPlayer = new ArrayList<>();
+        List<String> global = new ArrayList<>();
+        for (Rule r : rules) ((cooldown ? r.cooldownGlobal : r.limitGlobal) ? global : perPlayer).add(r.name());
+        DataStore.removeUsage(plugin.data().global(), global, cooldown);
+        int loaded = 0;
+        for (UUID id : plugin.data().loadedPlayers()) if (DataStore.removeUsage(plugin.data().player(id), perPlayer, cooldown)) loaded++;
+        int already = loaded;
+        if (perPlayer.isEmpty()) {
+            done.accept(already);
+            return;
+        }
+        org.bukkit.Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            int offline = plugin.data().removeUsageOffline(perPlayer, cooldown);
+            org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> done.accept(already + offline));
+        });
     }
 
     public void resetUses(String ruleName, UUID player) {

@@ -59,6 +59,7 @@ import org.bukkit.event.player.PlayerToggleSneakEvent;
 import org.bukkit.event.player.PlayerToggleSprintEvent;
 import org.bukkit.event.server.ServerCommandEvent;
 import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.view.AnvilView;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -131,6 +132,21 @@ public final class Triggers {
             case RIGHT_CLICK_AIR, RIGHT_CLICK_BLOCK -> prefix + "RIGHT_CLICK";
             default -> "PHYSICAL";
         };
+    }
+
+    /**
+     * Spec 014, H3 CA2: el clic se lleva el resultado de un yunque o una afiladora. En el yunque, fuera de creativo,
+     * hacen falta los niveles (si no, Minecraft no deja sacarlo).
+     */
+    static boolean takesRepairResult(InventoryClickEvent e) {
+        if (!(e.getWhoClicked() instanceof Player p) || e.getRawSlot() != 2) return false;
+        org.bukkit.event.inventory.InventoryType type = e.getView().getTopInventory().getType();
+        if (type != org.bukkit.event.inventory.InventoryType.ANVIL && type != org.bukkit.event.inventory.InventoryType.GRINDSTONE) return false;
+        if (e.getCurrentItem() == null || e.getCurrentItem().getType().isAir()) return false;
+        if (e.getView() instanceof AnvilView a && p.getGameMode() != org.bukkit.GameMode.CREATIVE) {
+            return a.getRepairCost() > 0 && p.getLevel() >= a.getRepairCost();
+        }
+        return true;
     }
 
     /** El jugador que causó un daño (directo o con un proyectil). */
@@ -316,6 +332,19 @@ public final class Triggers {
             m.put("enchants", ench);
             m.put("cost", e.getExpLevelCost());
         }, null, false, "item", "enchants", "cost").doc("Un jugador encanta un ítem en la mesa (enchants, cost)."));
+        // Spec 014, H3: el evento item_repair de ConditionalEvents (yunque y afiladora, al sacar el resultado).
+        register(TriggerType.event("item_repair", g, InventoryClickEvent.class, e -> (Player) e.getWhoClicked(), (e, m) -> {
+            boolean anvil = e.getView() instanceof AnvilView;
+            org.bukkit.inventory.Inventory top = e.getView().getTopInventory();
+            m.put("item", e.getCurrentItem());
+            m.put("repair_type", anvil ? "ANVIL" : "GRINDSTONE");
+            m.put("base_item", top.getItem(0));
+            m.put("addition", top.getItem(1));
+            String rename = anvil ? ((AnvilView) e.getView()).getRenameText() : null;
+            m.put("rename_text", rename == null ? "" : rename);
+            m.put("level_cost", anvil ? ((AnvilView) e.getView()).getRepairCost() : 0);
+        }, Triggers::takesRepairResult, false, "item", "repair_type", "base_item", "addition", "rename_text", "level_cost")
+                .doc("Un jugador saca el resultado de un yunque o una afiladora (repair_type: ANVIL o GRINDSTONE; rename_text, level_cost, base_item, addition)."));
         register(TriggerType.event("item_break", g, PlayerItemBreakEvent.class, PlayerItemBreakEvent::getPlayer, (e, m) -> m.put("item", e.getBrokenItem()), null, false, "item").doc("Se rompe la herramienta o la armadura de un jugador."));
     }
 

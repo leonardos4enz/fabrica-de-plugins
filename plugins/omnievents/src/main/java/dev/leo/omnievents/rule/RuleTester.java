@@ -50,7 +50,7 @@ public final class RuleTester {
     }
 
     /** Tipos de acción que cuentan como mensajes (H2 CA4). */
-    public static final Set<String> MESSAGE_TYPES = Set.of("message", "broadcast", "actionbar", "title", "bossbar", "console_message",
+    public static final Set<String> MESSAGE_TYPES = Set.of("message", "centered_message", "broadcast", "actionbar", "title", "bossbar", "console_message",
             "log", "kick", "chat", "deny_join", "set_message", "set_join_message", "set_quit_message", "set_death_message");
 
     private static final Pattern SCOPED = Pattern.compile("^(pvar|gvar|var)\\.([A-Za-z0-9_\\-]+)$");

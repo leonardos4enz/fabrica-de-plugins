@@ -136,6 +136,14 @@ public final class Actions {
         registerEvent();
     }
 
+    private FireworkGuard fireworkGuard;
+
+    /** El que quita el daño a los cohetes de firework (spec 014); se crea con el primero. */
+    public FireworkGuard fireworkGuard() {
+        if (fireworkGuard == null) fireworkGuard = new FireworkGuard(plugin);
+        return fireworkGuard;
+    }
+
     /** El plugin (null en las unitarias). */
     public OmniEvents plugin() {
         return plugin;
@@ -424,6 +432,18 @@ public final class Actions {
                 if (s instanceof Player p) p.sendMessage(t.component(ctx));
                 else if (ctx.sender() != null) ctx.sender().sendMessage(t.component(ctx));
                 else Bukkit.getConsoleSender().sendMessage(t.component(ctx));
+            }));
+        });
+        register("centered_message", doc("Como message, con cada línea centrada en el chat (spec 014; la fuente por defecto de Minecraft, negritas incluidas). \\n o <newline> separan líneas.", "texto", "centered_message: \"<gold><b>EVENTO</b>\\n<gray>Empieza en 5 minutos\""), a -> {
+            Template t = a.template();
+            return Action.safe(Action.of(ctx -> {
+                Object s = ctx.subject();
+                Component msg = t.component(ctx);
+                if (s instanceof Player p) {
+                    for (Component line : dev.leo.omnievents.text.Centered.lines(msg)) p.sendMessage(line);
+                } else {
+                    (ctx.sender() != null ? ctx.sender() : Bukkit.getConsoleSender()).sendMessage(msg);
+                }
             }));
         });
         register("broadcast", doc("Envía un mensaje a todo el servidor.", "texto", "broadcast: \"<gold>{player.name} encontró un tesoro\""), a -> {
@@ -883,6 +903,38 @@ public final class Actions {
                     throw new ActionException("la partícula " + type + " necesita datos que OmniEvents aún no soporta");
                 }
                 l.getWorld().spawnParticle(type, at, Math.min(count, 2000), dx, dy, dz, speed, data);
+            });
+        });
+        register("firework", doc("Lanza un fuego artificial desde el jugador (o cada destinatario de to) o desde location; sin daño salvo damage:true (spec 014). Forma de ConditionalEvents: pares clave:valor separados por espacios.",
+                "colors:C1,C2 [type:BALL|BALL_LARGE|STAR|BURST|CREEPER] [power:0-3] [fade:C1,C2] [flicker:true] [trail:true] [location:mundo;x;y;z] [damage:true]; colores por nombre (RED, AQUA…) o #RRGGBB",
+                "firework: \"colors:RED,#FFAA00 type:STAR power:1 fade:WHITE trail:true\""), a -> {
+            Firework fw = Firework.parse(a.text());
+            return Action.of(ctx -> {
+                Location at;
+                if (fw.location() != null) {
+                    List<String> parts = Args.split(fw.location().render(ctx, Template.Mode.RAW), ';');
+                    // ConditionalEvents escribe x;y;z;mundo: el mundo va primero en OmniEvents.
+                    if (parts.size() == 4 && Values.isNumeric(parts.get(0).trim()) && !Values.isNumeric(parts.get(3).trim()) && !parts.get(3).trim().startsWith("~")) {
+                        parts = List.of(parts.get(3), parts.get(0), parts.get(1), parts.get(2));
+                    }
+                    List<Template> lp = new ArrayList<>();
+                    for (String s : parts) lp.add(Template.compile(s.trim()));
+                    at = location(lp, 0, ctx, ctx.location(), true);
+                } else {
+                    Location l = ctx.location();
+                    if (l == null) throw new ActionException("firework no tiene ubicación (usa location:mundo;x;y;z)");
+                    at = l.clone().add(0, 1, 0);
+                }
+                org.bukkit.FireworkEffect effect = fw.effect(ctx);
+                int power = fw.power(ctx);
+                boolean damage = fw.damage(ctx);
+                at.getWorld().spawn(at, org.bukkit.entity.Firework.class, f -> {
+                    org.bukkit.inventory.meta.FireworkMeta meta = f.getFireworkMeta();
+                    meta.addEffect(effect);
+                    meta.setPower(power);
+                    f.setFireworkMeta(meta);
+                    if (!damage) fireworkGuard().mark(f);
+                });
             });
         });
         register("summon", doc("Invoca una entidad donde está el jugador o en mundo;x;y;z.", "TIPO[;mundo;x;y;z]", "summon: ZOMBIE"), a -> {

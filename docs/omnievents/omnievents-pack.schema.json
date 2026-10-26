@@ -119,6 +119,7 @@
             "item_pickup",
             "item_held",
             "item_enchant",
+            "item_repair",
             "item_break",
             "inventory_open",
             "inventory_close",
@@ -194,6 +195,7 @@
             "Un jugador recoge un ítem del suelo.",
             "Un jugador cambia de ranura en la barra (item: el nuevo, previous_item: el anterior).",
             "Un jugador encanta un ítem en la mesa (enchants, cost).",
+            "Un jugador saca el resultado de un yunque o una afiladora (repair_type: ANVIL o GRINDSTONE; rename_text, level_cost, base_item, addition).",
             "Se rompe la herramienta o la armadura de un jugador.",
             "Un jugador abre un inventario (title, inventory_type).",
             "Un jugador cierra un inventario.",
@@ -269,6 +271,7 @@
             "Un jugador recoge un ítem del suelo.",
             "Un jugador cambia de ranura en la barra (item: el nuevo, previous_item: el anterior).",
             "Un jugador encanta un ítem en la mesa (enchants, cost).",
+            "Un jugador saca el resultado de un yunque o una afiladora (repair_type: ANVIL o GRINDSTONE; rename_text, level_cost, base_item, addition).",
             "Se rompe la herramienta o la armadura de un jugador.",
             "Un jugador abre un inventario (title, inventory_type).",
             "Un jugador cierra un inventario.",
@@ -348,6 +351,7 @@
             "item_pickup",
             "item_held",
             "item_enchant",
+            "item_repair",
             "item_break",
             "inventory_open",
             "inventory_close",
@@ -423,6 +427,7 @@
             "Un jugador recoge un ítem del suelo.",
             "Un jugador cambia de ranura en la barra (item: el nuevo, previous_item: el anterior).",
             "Un jugador encanta un ítem en la mesa (enchants, cost).",
+            "Un jugador saca el resultado de un yunque o una afiladora (repair_type: ANVIL o GRINDSTONE; rename_text, level_cost, base_item, addition).",
             "Se rompe la herramienta o la armadura de un jugador.",
             "Un jugador abre un inventario (title, inventory_type).",
             "Un jugador cierra un inventario.",
@@ -498,6 +503,7 @@
             "Un jugador recoge un ítem del suelo.",
             "Un jugador cambia de ranura en la barra (item: el nuevo, previous_item: el anterior).",
             "Un jugador encanta un ítem en la mesa (enchants, cost).",
+            "Un jugador saca el resultado de un yunque o una afiladora (repair_type: ANVIL o GRINDSTONE; rename_text, level_cost, base_item, addition).",
             "Se rompe la herramienta o la armadura de un jugador.",
             "Un jugador abre un inventario (title, inventory_type).",
             "Un jugador cierra un inventario.",
@@ -668,6 +674,10 @@
             }
           ],
           "description": "Acciones si la regla está en enfriamiento (var.cooldown_left tiene los segundos que faltan)."
+        },
+        "cooldown_bypass": {
+          "type": "string",
+          "description": "Permiso que salta el enfriamiento de esta regla (spec 014); sin la opción, omnievents.bypasscooldown.<regla>. Solo cuenta si está dado al jugador (a un OP sin él no lo salta; eso es cooldown-bypass-op)."
         },
         "limit": {
           "anyOf": [
@@ -1795,6 +1805,10 @@
           ],
           "description": "Acciones si la regla está en enfriamiento (var.cooldown_left tiene los segundos que faltan)."
         },
+        "cooldown_bypass": {
+          "type": "string",
+          "description": "Permiso que salta el enfriamiento de esta regla (spec 014); sin la opción, omnievents.bypasscooldown.<regla>. Solo cuenta si está dado al jugador (a un OP sin él no lo salta; eso es cooldown-bypass-op)."
+        },
         "limit": {
           "anyOf": [
             {
@@ -2395,7 +2409,7 @@
       "anyOf": [
         {
           "type": "string",
-          "pattern": "^\\s*(?:(?:to_all|to_target)\\s*:\\s*|(?:to_player|to_range|to_world)\\s*:[^:]*:\\s*)?(?:actionbar|bossbar|broadcast|call|cancel|cancel_drops|chat|clear_inventory|close_inventory|close_menu|command|console|console_message|damage|delay|deny_join|drop_item|effect|explosion|feed|fire|fly|for_each|freeze|gamemode|give_exp|give_item|give_level|give_money|heal|if|keep_inventory|kick|launch|lightning|log|message|no_cooldown|open_menu|particle|random|remove_effect|remove_item|repeat|reset_cooldown|send_to_server|set|set_block|set_damage|set_death_message|set_event|set_food|set_join_message|set_message|set_quit_message|sound|stop|stop_sound|summon|take_money|teleport|title|unset|velocity|wait_ticks|while|bc|call_event|cancel_event|centered_message|console_command|execute|give_potion_effect|json_message|lightning_strike|mini_message|msg|player_command|player_send_chat|playsound|potion|prevent_join|remove_potion_effect|set_on_fire|stopsound|tp|wait)\\s*(?::[\\s\\S]*)?$",
+          "pattern": "^\\s*(?:(?:to_all|to_target)\\s*:\\s*|(?:to_player|to_range|to_world)\\s*:[^:]*:\\s*)?(?:actionbar|bossbar|broadcast|call|cancel|cancel_drops|centered_message|chat|clear_inventory|close_inventory|close_menu|command|console|console_message|damage|delay|deny_join|drop_item|effect|explosion|feed|fire|firework|fly|for_each|freeze|gamemode|give_exp|give_item|give_level|give_money|heal|if|keep_inventory|kick|launch|lightning|log|message|no_cooldown|open_menu|particle|random|remove_effect|remove_item|repeat|reset_cooldown|send_to_server|set|set_block|set_damage|set_death_message|set_event|set_food|set_join_message|set_message|set_quit_message|sound|stop|stop_sound|summon|take_money|teleport|title|unset|velocity|wait_ticks|while|bc|call_event|cancel_event|console_command|execute|give_potion_effect|json_message|lightning_strike|mini_message|msg|player_command|player_send_chat|playsound|potion|prevent_join|remove_potion_effect|set_on_fire|stopsound|tp|wait)\\s*(?::[\\s\\S]*)?$",
           "description": "Forma corta: \"tipo: valor\" (p. ej. \"message: hola\" o \"cancel\")."
         },
         {
@@ -2595,6 +2609,36 @@
           },
           "required": [
             "cancel_drops"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "centered_message": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Como message, con cada línea centrada en el chat (spec 014; la fuente por defecto de Minecraft, negritas incluidas). \\n o <newline> separan líneas. Valor: texto."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "centered_message"
           ],
           "additionalProperties": false
         },
@@ -3092,6 +3136,36 @@
           },
           "required": [
             "fire"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "firework": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Lanza un fuego artificial desde el jugador (o cada destinatario de to) o desde location; sin daño salvo damage:true (spec 014). Forma de ConditionalEvents: pares clave:valor separados por espacios. Valor: colors:C1,C2 [type:BALL|BALL_LARGE|STAR|BURST|CREEPER] [power:0-3] [fade:C1,C2] [flicker:true] [trail:true] [location:mundo;x;y;z] [damage:true]; colores por nombre (RED, AQUA…) o #RRGGBB."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "firework"
           ],
           "additionalProperties": false
         },
@@ -4667,36 +4741,6 @@
           },
           "required": [
             "cancel_event"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "centered_message": {
-              "type": [
-                "string",
-                "number",
-                "boolean",
-                "null"
-              ],
-              "description": "Alias de message (ConditionalEvents). Envía un mensaje al jugador (sin jugador, a quien ejecutó o a la consola). Acepta MiniMessage, & y {expresiones}. Valor: texto."
-            },
-            "to": {
-              "$ref": "#/definitions/modifier_to"
-            },
-            "where": {
-              "$ref": "#/definitions/modifier_where"
-            },
-            "chance": {
-              "$ref": "#/definitions/modifier_chance"
-            },
-            "when": {
-              "$ref": "#/definitions/modifier_when"
-            }
-          },
-          "required": [
-            "centered_message"
           ],
           "additionalProperties": false
         },

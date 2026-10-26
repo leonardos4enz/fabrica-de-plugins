@@ -33,7 +33,7 @@ public final class ActionParser {
     public static final Map<String, String> ALIASES = Map.ofEntries(
             Map.entry("cancel_event", "cancel"), Map.entry("console_command", "console"), Map.entry("player_command", "command"),
             Map.entry("playsound", "sound"), Map.entry("give_potion_effect", "effect"), Map.entry("remove_potion_effect", "remove_effect"),
-            Map.entry("wait", "delay"), Map.entry("player_send_chat", "chat"), Map.entry("centered_message", "message"),
+            Map.entry("wait", "delay"), Map.entry("player_send_chat", "chat"),
             Map.entry("mini_message", "message"), Map.entry("json_message", "message"), Map.entry("set_on_fire", "fire"),
             Map.entry("call_event", "call"), Map.entry("lightning_strike", "lightning"), Map.entry("stopsound", "stop_sound"),
             Map.entry("execute", "call"), Map.entry("tp", "teleport"), Map.entry("msg", "message"), Map.entry("bc", "broadcast"),

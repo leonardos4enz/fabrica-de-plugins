@@ -680,6 +680,7 @@ public final class RuleLoader {
         rule.pack = pack == null ? null : pack.name;
         rule.cost = cost;
         rule.onCostFail = onCostFail;
+        rule.cooldownBypass = s.getString("cooldown_bypass", "omnievents.bypasscooldown." + name);
         // Spec 010: después de compilar la regla (assert no cuenta para las dependencias de un estado). Un caso mal
         // escrito se descarta con su error, pero la regla carga (H1 CA3).
         if (s.contains("tests")) rule.tests = tests(name, s.get("tests"), trigger, problems);
