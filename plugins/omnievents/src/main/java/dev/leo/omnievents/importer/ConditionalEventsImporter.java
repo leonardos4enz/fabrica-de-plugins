@@ -38,13 +38,10 @@ public final class ConditionalEventsImporter {
             Map.entry("player_run", "player_sprint"), Map.entry("player_change_food", "player_food_change"),
             Map.entry("item_select", "item_held"), Map.entry("repetitive", "timer"), Map.entry("repetitive_server", "timer"),
             Map.entry("citizens_right_click_npc", "npc_click"), Map.entry("wgevents_region_enter", "region_enter"),
-            Map.entry("wgevents_region_leave", "region_leave"));
+            Map.entry("wgevents_region_leave", "region_leave"), Map.entry("player_change_air", "player_air_change"));
 
     /** Eventos de ConditionalEvents sin disparador en OmniEvents (spec 014, fuera de alcance o «no»). */
     private static final Map<String, String> NO_TYPE = Map.of(
-            "player_statistic", "aún no hay disparador player_statistic en OmniEvents",
-            "player_change_air", "aún no hay disparador de cambio de aire en OmniEvents",
-            "player_tab_complete", "aún no hay disparador player_tab_complete en OmniEvents",
             "protocollib_receive_message", "OmniEvents no lee paquetes (ProtocolLib)",
             "player_receive_chat", "OmniEvents no lee paquetes (PacketEvents)");
 
@@ -83,20 +80,24 @@ public final class ConditionalEventsImporter {
             Map.entry("npc_name", "npc.name"), Map.entry("region", "region.id"), Map.entry("time", "var.cooldown_left"),
             Map.entry("world_is_raining", "player.world.has_storm"), Map.entry("player_is_present", "(player != null)"),
             Map.entry("attack_type", "(projectile != null ? str(projectile.type) : 'PLAYER')"),
-            Map.entry("world_time_{player_world}", "player.world.time"));
+            Map.entry("world_time_{player_world}", "player.world.time"), Map.entry("statistic_name", "statistic"),
+            Map.entry("previous_value", "previous_value"), Map.entry("new_value", "new_value"),
+            Map.entry("random_player", "pick(players()).name"));
 
     /** Variables que cambian de significado según el evento. */
     private static final Map<String, Map<String, String>> BY_TYPE = Map.of(
             "player_click_inventory", Map.of("action_type", "event.action"),
             "item_move", Map.of("action_type", "event.action"),
+            // Spec 015: en player_statistic, %entity% y %block% son el tipo de la estadística.
+            "player_statistic", Map.of("entity", "entity_type", "block", "material"),
             "entity_spawn", entityRoot("entity"),
             "item_pickup", entityRoot("entity"));
 
     /** Variables de ConditionalEvents sin equivalente directo (se avisa una vez por evento). */
-    private static final List<String> CE_ONLY = List.of("random_player", "randomword_", "block_at_", "block_data_at_", "is_nearby_",
-            "playerblock_", "player_is_outside", "is_number_", "args_substring_", "block_above_", "block_below_",
+    private static final List<String> CE_ONLY = List.of("block_data_at_", "is_nearby_",
+            "playerblock_", "player_is_outside", "args_substring_", "block_above_", "block_below_",
             "player_attack_cooldown", "random_last", "player_location_", "player_looking_", "format_remove_", "world_time_",
-            "original_damage", "movement_type", "select_type", "statistic_name", "previous_value", "new_value", "item_meta",
+            "original_damage", "movement_type", "select_type", "item_meta",
             "item_itemsadder_id", "block_head_texture", "item_model", "normal_message", "json_message", "message_type");
 
     private static final String[] OPS = {"!equalsIgnoreCase", "equalsIgnoreCase", "!startsWith", "startsWith", "!endsWith", "endsWith",
@@ -382,11 +383,47 @@ public final class ConditionalEventsImporter {
         if (k.startsWith("target:")) return "papi('%" + v.substring(7) + "%', target)";
         Matcher ft = FROM_TO.matcher(k);
         if (ft.matches()) return ft.group(1) + "." + (ft.group(2).equals("world") ? "world.name" : ft.group(2));
-        if (k.startsWith("playerarmor_name_")) return "player." + k.substring(17) + ".name";
+        // Spec 015: las variables de CE que ahora son funciones.
+        if (k.startsWith("randomword_")) {
+            List<String> words = new ArrayList<>();
+            for (String w : v.substring(11).split("-")) words.add(quote(w));
+            return "pick([" + String.join(", ", words) + "])";
+        }
+        if (k.startsWith("is_number_")) return "is_number(" + piece(v.substring(10)) + ")";
+        if (k.startsWith("block_at_")) {
+            String[] p = underscores(v.substring(9));
+            if (p.length == 4)return "block_at(" + piece(p[3]) + ", " + piece(p[0]) + ", " + piece(p[1]) + ", " + piece(p[2]) + ").type";
+        }
+        if (k.startsWith("playerarmor_name_"))return "player." + k.substring(17) + ".name";
         if (k.startsWith("playerarmor_")) return "player." + k.substring(12) + ".type";
         if (k.startsWith("offhand:")) return item(k.substring(8), "offhand");
         if (k.startsWith("cursor:")) return item(k.substring(7), "cursor");
         return item(k, "item");
+    }
+
+    /** x_y_z_mundo de CE: tres trozos por _ fuera de las {variables} anidadas y el resto (el mundo puede tener _). */
+    private static String[] underscores(String s) {
+        List<String> out = new ArrayList<>();
+        int depth = 0, start = 0;
+        for (int i = 0; i < s.length() && out.size() < 3; i++) {
+            char c = s.charAt(i);
+            if (c == '{') depth++;
+            else if (c == '}') depth--;
+            else if (c == '_' && depth == 0) {
+                out.add(s.substring(start, i));
+                start = i + 1;
+            }
+        }
+        out.add(s.substring(start));
+        return out.toArray(String[]::new);
+    }
+
+    /** Un trozo de una variable compuesta de CE:{variable} anidada, un número o un texto literal. */
+    private String piece(String s) {
+        String t = s.replace("\\{", "{").replace("\\}", "}");
+        if (t.startsWith("{") && t.endsWith("}")) return var(t.substring(1, t.length() - 1));
+        if (t.matches("-?\\d+(\\.\\d+)?")) return t;
+        return quote(t);
     }
 
     /** Variables de ítem de CE sobre una raíz (item, offhand, cursor). */
@@ -514,12 +551,23 @@ public final class ConditionalEventsImporter {
             case "actionbar" -> "actionbar: " + text(p[0]);
             case "title" -> p.length >= 5 ? "title: " + text(p[3]) + ";" + text(p[4]) + ";" + p[0] + ";" + p[1] + ";" + p[2] : "title: " + text(v);
             case "playsound", "playsound_resource_pack" -> {
-                if (p.length > 3) note(event, "playsound con ubicación: OmniEvents lo reproduce donde está el jugador");
                 String sound = text(p[0].trim());
                 if (type.equals("playsound_resource_pack") && !sound.contains(":") && !sound.contains(".")) sound = "minecraft:" + sound;
-                yield "sound: " + sound + (p.length > 2 ? ";" + p[1] + ";" + p[2] : "");
+                String s = sound + (p.length > 2 ? ";" + p[1] + ";" + p[2] : "");
+                if (p.length <= 3) yield "sound: " + s;
+                // Spec 015: SONIDO;vol;tono;x,y,z,mundo → sound con location.
+                Map<String, Object> node = new LinkedHashMap<>();
+                node.put("sound", s);
+                node.put("location", location(p[3].trim()));
+                yield node;
             }
-            case "stopsound" -> "stop_sound: " + v;
+            case "stopsound", "stopsound_resource_pack" -> "stop_sound: " + v;
+            case "remove_item_slot" -> "remove_item_slot: " + text(v);
+            case "tab_complete" -> "tab_complete: " + text(v);
+            case "set_item" -> {
+                Object it = item(event, "set_caught_item", v);
+                yield it;
+            }
             case "cancel_event" -> "cancel: " + v;
             case "give_potion_effect" -> "effect: " + p[0] + ";" + (p.length > 1 ? seconds(p[1]) : "10") + ";" + (p.length > 2 ? p[2] : "1")
                     + (p.length > 3 ? ";" + p[3] : "");
@@ -530,8 +578,8 @@ public final class ConditionalEventsImporter {
             case "wait" -> "delay: " + v + "s";
             case "wait_ticks" -> "delay: " + v + "t";
             case "keep_items" -> {
-                if (!v.equalsIgnoreCase("all") && !v.isEmpty()) note(event, "keep_items: " + v + " — keep_inventory conserva ítems y nivel a la vez");
-                yield "keep_inventory";
+                String mode = v.trim().toLowerCase(Locale.ROOT);
+                yield mode.equals("items") || mode.equals("xp") ? "keep_inventory: " + mode : "keep_inventory";
             }
             case "cancel_drop" -> "cancel_drops: " + v;
             case "set_event_xp" -> "set_event: exp_to_drop = " + v;
@@ -543,11 +591,19 @@ public final class ConditionalEventsImporter {
                 yield "lightning: " + text(v);
             }
             case "remove_item" -> {
-                if (p.length > 2) {
-                    note(event, "remove_item con name/lorecontains/datavalue: OmniEvents quita por material (los filtros quedan para otra spec)");
-                    yield null;
+                StringBuilder sb = new StringBuilder("remove_item: " + p[0] + ";" + (p.length > 1 ? p[1] : "1"));
+                for (int i = 2; i < p.length; i++) {
+                    String f = p[i].trim(), low = f.toLowerCase(Locale.ROOT);
+                    if (low.startsWith("name:") || low.startsWith("lorecontains:")) sb.append(';').append(text(f));
+                    else if (low.startsWith("datavalue:")) {
+                        note(event, "remove_item con datavalue: es de las versiones viejas (1.12); OmniEvents filtra por name: y lorecontains:");
+                        yield null;
+                    } else if (!f.isEmpty()) {
+                        note(event, "remove_item: filtro desconocido '" + f + "'");
+                        yield null;
+                    }
                 }
-                yield "remove_item: " + p[0] + ";" + (p.length > 1 ? p[1] : "1");
+                yield sb.toString();
             }
             case "throw_directional" -> "launch: " + v;
             case "throw_coordinate" -> "velocity: " + v;
@@ -573,8 +629,7 @@ public final class ConditionalEventsImporter {
                 switch (type) {
                     case "player_command_as_op" -> note(event, "player_command_as_op no existe en OmniEvents por seguridad (ver plan 001 STRIDE)");
                     case "discordsrv_embed" -> note(event, "discordsrv_embed: OmniEvents aún no se integra con DiscordSRV");
-                    case "remove_item_slot", "set_item", "tab_complete", "stopsound_resource_pack", "vector" ->
-                            note(event, type + ": aún no tiene equivalente en OmniEvents");
+                    case "vector" -> note(event, "vector (sin documentar en ConditionalEvents): usa velocity: x;y;z o launch");
                     default -> note(event, "acción desconocida '" + type + "'");
                 }
                 yield null;
@@ -582,15 +637,27 @@ public final class ConditionalEventsImporter {
         };
     }
 
-    /** json_message: el JSON de texto se convierte a MiniMessage (clic y hover incluidos). */
+    /**
+     * json_message: la acción propia de OmniEvents (spec 015), con las %variables% como {expresiones} dentro de los
+     * textos. Las llaves del JSON no se escapan: json_message lo lee antes de buscar expresiones.
+     */
     private Object json(String event, String v) {
         try {
-            Component c = GsonComponentSerializer.gson().deserialize(v);
-            return "message: " + text(MiniMessage.miniMessage().serialize(c));
+            GsonComponentSerializer.gson().deserialize(v);
         } catch (RuntimeException e) {
             note(event, "json_message con JSON inválido: " + e.getMessage());
             return null;
         }
+        Matcher m = VAR.matcher(v);
+        StringBuilder sb = new StringBuilder();
+        while (m.find()) {
+            String expr = var(m.group(1));
+            m.appendReplacement(sb, Matcher.quoteReplacement(expr.startsWith("%") ? expr : "{" + expr + "}"));
+        }
+        m.appendTail(sb);
+        Map<String, Object> node = new LinkedHashMap<>();
+        node.put("json_message", sb.toString());
+        return node;
     }
 
     /** firework: la misma forma (clave:valor con espacios); shot_direction no se soporta. */
@@ -650,27 +717,47 @@ public final class ConditionalEventsImporter {
             sb.append(';').append(kv.getOrDefault("speed", "0"));
             if (eff.length == 4) sb.append(';').append(eff[1]).append(';').append(eff[2]).append(';').append(eff[3]);
         }
-        for (String k : List.of("location", "force", "for_player")) {
-            if (kv.containsKey(k)) note(event, "particle: " + k + " aún no se soporta (las partículas salen donde está el jugador)");
-        }
-        return text(sb.toString());
+        if (!kv.containsKey("location") && !kv.containsKey("force") && !kv.containsKey("for_player")) return text(sb.toString());
+        // Spec 015: location, force y for_player como claves hermanas.
+        Map<String, Object> node = new LinkedHashMap<>();
+        node.put("particle", text(sb.substring("particle: ".length())));
+        if (kv.containsKey("location")) node.put("location", location(kv.get("location")));
+        if (kv.containsKey("force")) node.put("force", Boolean.parseBoolean(kv.get("force")));
+        if (kv.containsKey("for_player")) node.put("for_player", Boolean.parseBoolean(kv.get("for_player")));
+        return node;
     }
 
-    /** summon: location:x,y,z,mundo;entity:TIPO (las demás claves de CE quedan en la nota). */
+    /** summon: location:x,y,z,mundo;entity:TIPO;custom_name;health;amount;equipment;hand_equipment → forma de mapa. */
     private Object summon(String event, String v) {
         Map<String, String> kv = keyValues(v);
         if (!kv.containsKey("entity")) return null;
-        for (String k : kv.keySet()) {
-            if (!k.equals("entity") && !k.equals("location")) note(event, "summon: " + k + " aún no se soporta");
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("entity", kv.get("entity"));
+        for (Map.Entry<String, String> e : kv.entrySet()) {
+            switch (e.getKey()) {
+                case "entity" -> { }
+                case "location" -> m.put("location", location(e.getValue()));
+                case "custom_name" -> m.put("name", text(e.getValue()));
+                case "health", "amount", "scale" -> m.put(e.getKey(), text(e.getValue()));
+                case "equipment", "hand_equipment" -> m.put(e.getKey(), e.getValue());
+                default -> note(event, "summon: " + e.getKey() + " no se conoce en ConditionalEvents 4.65.1");
+            }
         }
-        String loc = kv.get("location");
-        return "summon: " + kv.get("entity") + (loc == null ? "" : ";" + location(loc));
+        if (m.size() == 1 || m.size() == 2 && m.containsKey("location")) {
+            return "summon: " + kv.get("entity") + (m.containsKey("location") ? ";" + m.get("location") : "");
+        }
+        Map<String, Object> node = new LinkedHashMap<>();
+        node.put("summon", m);
+        return node;
     }
 
-    /** x,y,z,mundo (CE) → mundo;x;y;z (OmniEvents). */
+    /** x,y,z,mundo (CE; también con ;) → mundo;x;y;z (OmniEvents). */
     private String location(String ce) {
-        String[] p = ce.split(",");
+        String[] p = ce.split("[,;]");
         if (p.length != 4) return text(ce.replace(",", ";"));
+        if (!p[0].trim().matches("-?\\d+(\\.\\d+)?") && !p[0].trim().startsWith("~") && !p[0].trim().startsWith("%")) {
+            return text(String.join(";", p).replace(" ", ""));
+        }
         return text(p[3].trim() + ";" + p[0].trim() + ";" + p[1].trim() + ";" + p[2].trim());
     }
 
@@ -698,8 +785,21 @@ public final class ConditionalEventsImporter {
             item.put("enchants", ench);
         }
         if (kv.containsKey("custom_model_data")) item.put("model", text(kv.get("custom_model_data")));
-        Set<String> known = Set.of("id", "saved_item", "amount", "name", "lore", "enchants", "custom_model_data", "location");
-        for (String k : kv.keySet()) if (!known.contains(k)) note(event, type + ": " + k + " aún no se soporta (el ítem se da sin esa propiedad)");
+        // Spec 015: las demás claves de give_item de CE.
+        if (kv.containsKey("flags")) {
+            List<String> flags = new ArrayList<>();
+            for (String f : kv.get("flags").split("[,|]")) if (!f.isBlank()) flags.add(f.trim().toUpperCase(Locale.ROOT));
+            item.put("flags", flags);
+        }
+        for (String k : List.of("durability", "item_model", "skull_owner", "skull_texture")) if (kv.containsKey(k)) item.put(k, text(kv.get(k)));
+        if (type.equals("give_item") && kv.containsKey("slot")) item.put("slot", kv.get("slot").toUpperCase(Locale.ROOT));
+        if (type.equals("give_item") && kv.containsKey("slot_replace")) item.put("slot_replace", Boolean.parseBoolean(kv.get("slot_replace")));
+        Set<String> known = Set.of("id", "saved_item", "amount", "name", "lore", "enchants", "custom_model_data", "location", "flags", "durability",
+                "item_model", "skull_owner", "skull_texture", "slot", "slot_replace");
+        for (String k : kv.keySet()) {
+            if (known.contains(k) && !(k.startsWith("slot") && !type.equals("give_item"))) continue;
+            note(event, type + ": " + k + (k.startsWith("custom_model_component_data") ? " (componentes de 1.21.4) aún no se soporta; queda model" : " no se soporta aquí") + " (el ítem se da sin esa propiedad)");
+        }
         Map<String, Object> node = new LinkedHashMap<>();
         node.put(type, item);
         if (type.equals("drop_item") && kv.containsKey("location")) node.put("location", location(kv.get("location")));
@@ -711,9 +811,16 @@ public final class ConditionalEventsImporter {
         Map<String, String> kv = keyValues(v);
         if (!kv.containsKey("id") || !kv.containsKey("location")) return null;
         for (String k : kv.keySet()) {
-            if (!k.equals("id") && !k.equals("location")) note(event, "set_block: " + k + " aún no se soporta");
+            if (!k.equals("id") && !k.equals("location") && !k.equals("block_data")) note(event, "set_block: " + k + " aún no se soporta");
         }
-        return "set_block: " + location(kv.get("location")) + ";" + text(kv.get("id"));
+        // Spec 015: block_data → MATERIAL[datos].
+        String id = kv.get("id"), data = kv.get("block_data");
+        if (data != null && !data.isBlank()) {
+            data = data.trim();
+            if (data.contains("[")) id = data.startsWith("[") ? id + data : data;
+            else id = id + "[" + data + "]";
+        }
+        return "set_block: " + location(kv.get("location")) + ";" + text(id);
     }
 
     /** Ticks de ConditionalEvents → segundos de OmniEvents (-1 = infinito se conserva). */

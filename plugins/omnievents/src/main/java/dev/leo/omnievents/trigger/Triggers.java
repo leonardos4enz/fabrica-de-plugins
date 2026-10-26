@@ -234,6 +234,33 @@ public final class Triggers {
         }, null, false, "from", "to", "cause").doc("Un jugador usa un portal."));
         register(TriggerType.event("player_kick", g, PlayerKickEvent.class, PlayerKickEvent::getPlayer, (e, m) -> m.put("reason", plain(e.reason())), null, false, "reason").doc("Un jugador es expulsado del servidor."));
         register(TriggerType.event("player_resource_pack", g, PlayerResourcePackStatusEvent.class, PlayerResourcePackStatusEvent::getPlayer, (e, m) -> m.put("status", e.getStatus()), null, false, "status").doc("Un jugador responde al paquete de recursos (status)."));
+        // Spec 015, H5: los eventos de ConditionalEvents que faltaban.
+        register(TriggerType.event("player_statistic", g, org.bukkit.event.player.PlayerStatisticIncrementEvent.class, org.bukkit.event.player.PlayerStatisticIncrementEvent::getPlayer, (e, m) -> {
+            m.put("statistic", e.getStatistic().name());
+            m.put("previous_value", e.getPreviousValue());
+            m.put("new_value", e.getNewValue());
+            m.put("material", e.getMaterial() == null ? null : e.getMaterial().name());
+            m.put("entity_type", e.getEntityType() == null ? null : e.getEntityType().name());
+        }, null, false, "statistic", "previous_value", "new_value", "material", "entity_type")
+                .doc("Sube una estadística del jugador (statistic: JUMP, MOB_KILLS…; previous_value, new_value; material o entity_type si la estadística los tiene). Algunas, como caminar, suben muy seguido."));
+        register(TriggerType.event("player_air_change", g, org.bukkit.event.entity.EntityAirChangeEvent.class, e -> (Player) e.getEntity(), (e, m) -> {
+            Player p = (Player) e.getEntity();
+            m.put("old_air", p.getRemainingAir());
+            m.put("new_air", e.getAmount());
+            m.put("max_air", p.getMaximumAir());
+        }, e -> e.getEntity() instanceof Player, false, "old_air", "new_air", "max_air")
+                .doc("Cambia el aire de un jugador (old_air, new_air, max_air, en ticks: 300 es lleno). Bajo el agua corre en cada tick."));
+        register(TriggerType.event("player_tab_complete", g, org.bukkit.event.server.TabCompleteEvent.class, e -> (Player) e.getSender(), (e, m) -> {
+            String buffer = e.getBuffer();
+            m.put("buffer", buffer);
+            m.put("cmd", command(buffer));
+            String rest = buffer.startsWith("/") ? buffer.substring(1) : buffer;
+            int sp = rest.indexOf(' ');
+            m.put("args", sp < 0 ? new ArrayList<Object>() : new ArrayList<Object>(Arrays.asList(rest.substring(sp + 1).split(" ", -1))));
+            m.put("last", dev.leo.omnievents.action.TabCompletions.last(buffer));
+            m.put("completions", new ArrayList<Object>(e.getCompletions()));
+        }, e -> e.getSender() instanceof Player && e.getBuffer().startsWith("/"), false, "buffer", "cmd", "args", "last", "completions")
+                .doc("Un jugador pide autocompletar un comando de un plugin (buffer: lo escrito; cmd, args; last: la palabra a medio escribir; completions: las sugerencias). La acción tab_complete las cambia. Los comandos de Minecraft los completa el cliente: no pasan por aquí."));
     }
 
     private void combat() {
@@ -345,7 +372,13 @@ public final class Triggers {
             m.put("level_cost", anvil ? ((AnvilView) e.getView()).getRepairCost() : 0);
         }, Triggers::takesRepairResult, false, "item", "repair_type", "base_item", "addition", "rename_text", "level_cost")
                 .doc("Un jugador saca el resultado de un yunque o una afiladora (repair_type: ANVIL o GRINDSTONE; rename_text, level_cost, base_item, addition)."));
-        register(TriggerType.event("item_break", g, PlayerItemBreakEvent.class, PlayerItemBreakEvent::getPlayer, (e, m) -> m.put("item", e.getBrokenItem()), null, false, "item").doc("Se rompe la herramienta o la armadura de un jugador."));
+        register(TriggerType.event("item_mend", g, org.bukkit.event.player.PlayerItemMendEvent.class, org.bukkit.event.player.PlayerItemMendEvent::getPlayer, (e, m) -> {
+            m.put("item", e.getItem());
+            m.put("amount", e.getRepairAmount());
+            m.put("orb", e.getExperienceOrb());
+        }, null, false, "item", "amount", "orb")
+                .doc("Mending repara un ítem del jugador con un orbe de experiencia (spec 015; amount: durabilidad que repara, orb). cancel hace que el orbe dé experiencia en vez de reparar."));
+        register(TriggerType.event("item_break", g,PlayerItemBreakEvent.class, PlayerItemBreakEvent::getPlayer, (e, m) -> m.put("item", e.getBrokenItem()), null, false, "item").doc("Se rompe la herramienta o la armadura de un jugador."));
     }
 
     private void inventory() {

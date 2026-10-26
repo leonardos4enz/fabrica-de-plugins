@@ -26,6 +26,7 @@ schema-done: "{prefix} <green>Esquema y referencia escritos en <white>{schema}</
 schema-busy: "{prefix} <gray>Ya se está escribiendo el esquema; espera un momento."
 debug-status: "{prefix} <gray>Depuración: <white>{rule}</white>"
 call-done: "{prefix} <green>Regla <white>{rule}</white> ejecutada."
+interrupt-done: "{prefix} <green>Cortadas <white>{count}</white> ejecuciones en espera de <white>{rule}</white>."
 var-set: "{prefix} <green>{target}.{name}</green> <gray>=</gray> <white>{value}</white>"
 var-deleted: "{prefix} <yellow>{target}.{name}</yellow> <gray>borrada."
 var-missing: "{prefix} <gray>{target}.{name} no existía."

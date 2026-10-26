@@ -86,7 +86,12 @@ public final class Functions {
         // Matemáticas
         doc("random(a, b)", "Entero al azar entre a y b, ambos incluidos.", 2, 2, (c, a) -> (double) ThreadLocalRandom.current().nextLong((long) Math.min(n(a, 0), n(a, 1)), (long) Math.max(n(a, 0), n(a, 1)) + 1));
         doc("randomf(a, b)", "Decimal al azar entre a y b.", 2, 2, (c, a) -> ThreadLocalRandom.current().nextDouble(Math.min(n(a, 0), n(a, 1)), Math.nextUp(Math.max(n(a, 0), n(a, 1)))));
-        doc("chance(p)", "true con una probabilidad de p por ciento.", 1, 1, (c, a) -> ThreadLocalRandom.current().nextDouble(100) < n(a, 0));
+        // Spec 015: %random_player% y %randomword_…% de ConditionalEvents.
+        doc("pick(lista)", "Un elemento al azar de la lista, o de los argumentos con pick(a, b, …); nulo si no hay ninguno. pick(players()).name es un jugador al azar.", 1, Integer.MAX_VALUE, (c, a) -> {
+            List<Object> items = a.length == 1 && Values.raw(a[0]) instanceof Collection<?> ? Values.list(a[0]) : java.util.Arrays.asList(a);
+            return items.isEmpty() ? null : items.get(ThreadLocalRandom.current().nextInt(items.size()));
+        });
+        doc("chance(p)","true con una probabilidad de p por ciento.", 1, 1, (c, a) -> ThreadLocalRandom.current().nextDouble(100) < n(a, 0));
         doc("min(a, b, …)", "El menor de los números (o de una lista).", 1, Integer.MAX_VALUE, (c, a) -> fold(a, Math::min));
         doc("max(a, b, …)", "El mayor de los números (o de una lista).", 1, Integer.MAX_VALUE, (c, a) -> fold(a, Math::max));
         doc("abs(x)", "Valor absoluto.", 1, 1, (c, a) -> Math.abs(n(a, 0)));
@@ -128,7 +133,8 @@ public final class Functions {
             Double d = Values.toNumberOrNull(a[0]);
             return d == null ? 0.0 : (double) d.longValue();
         });
-        doc("bool(x)", "Convierte a booleano.", 1, 1, (c, a) -> Values.truthy(a[0]));
+        doc("is_number(x)", "true si x es un número o un texto con un número (spec 015; %is_number_x% de ConditionalEvents).", 1, 1, (c, a) -> Values.toNumberOrNull(a[0]) != null);
+        doc("bool(x)","Convierte a booleano.", 1, 1, (c, a) -> Values.truthy(a[0]));
         doc("strip(t)", "Quita los colores & y § y las etiquetas MiniMessage.", 1, 1, (c, a) -> s(a, 0).replaceAll("(?i)[&§][0-9a-fk-orx]", "").replaceAll("<[^<>]*>", ""));
         doc("format(x[, decimales])", "Número con separador de miles (1,234.5).", 1, 2, (c, a) -> String.format(Locale.ROOT, "%,." + (a.length > 1 ? (int) n(a, 1) : 0) + "f", n(a, 0)));
         doc("default(x, otro)", "x, o otro si x es nulo o vacío.", 2, 2, (c, a) -> a[0] == null || Values.str(a[0]).isEmpty() ? a[1] : a[0]);
@@ -160,7 +166,16 @@ public final class Functions {
             if (x == null || y == null || x.getWorld() != y.getWorld()) return -1.0;
             return x.distance(y);
         });
-        doc("in_area(mundo, x1, y1, z1, x2, y2, z2)", "true si el jugador está dentro del cubo.", 7, 7, (c, a) -> {
+        doc("block_at(mundo, x, y, z)", "El bloque en esas coordenadas (.type, .data…; spec 015); nulo si el mundo no existe o el chunk no está cargado (no lo carga). Solo en el hilo principal.", 4, 4, (c, a) -> {
+            Object w = Values.raw(a[0]);
+            org.bukkit.World world = w instanceof org.bukkit.World ww ? ww : Bukkit.getWorld(s(a, 0));
+            if (world == null) return null;
+            if (!Bukkit.isPrimaryThread()) throw new ExprException("block_at solo se puede usar en el hilo principal (no en player_chat ni player_pre_login)", -1);
+            int x = (int) Math.floor(n(a, 1)), y = (int) Math.floor(n(a, 2)), z = (int) Math.floor(n(a, 3));
+            if (!world.isChunkLoaded(x >> 4, z >> 4)) return null;
+            return world.getBlockAt(x, y, z);
+        });
+        doc("in_area(mundo,x1, y1, z1, x2, y2, z2)", "true si el jugador está dentro del cubo.", 7, 7, (c, a) -> {
             Location l = loc(c.player());
             if (l == null || l.getWorld() == null || !l.getWorld().getName().equalsIgnoreCase(s(a, 0))) return false;
             return between(l.getX(), n(a, 1), n(a, 4)) && between(l.getY(), n(a, 2), n(a, 5)) && between(l.getZ(), n(a, 3), n(a, 6));

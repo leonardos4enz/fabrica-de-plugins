@@ -29,8 +29,17 @@ public final class ItemSpec {
     private boolean glow;
     private boolean unbreakable;
     private boolean hideFlags;
+    // Spec 015, H1 CA1: las claves de give_item de ConditionalEvents.
+    private final List<Template> flags = new ArrayList<>();
+    private Template durability;
+    private Template itemModel;
+    private Template skullOwner;
+    private Template skullTexture;
     private String saved;
     private OmniEvents plugin;
+
+    /** Nombres de ItemFlag (para validar y sugerir sin servidor). */
+    static final List<String> FLAG_NAMES = java.util.Arrays.stream(ItemFlag.values()).map(Enum::name).toList();
 
     /** Un ítem fuera de una acción (spec 013: los ítems de un menú), con el mismo formato que give_item. */
     public static ItemSpec parse(Object value, String path, OmniEvents plugin) {
@@ -50,8 +59,9 @@ public final class ItemSpec {
     /** Las plantillas del ítem (material, cantidad, nombre, lore, modelo, encantamientos), para validar sus raíces. */
     public List<Template> templates() {
         List<Template> out = new ArrayList<>();
-        for (Template t : new Template[]{material, amount, name, model}) if (t != null) out.add(t);
+        for (Template t : new Template[]{material, amount, name, model, durability, itemModel, skullOwner, skullTexture}) if (t != null) out.add(t);
         out.addAll(lore);
+        out.addAll(flags);
         out.addAll(enchants.values());
         return out;
     }
@@ -78,6 +88,17 @@ public final class ItemSpec {
             s.glow = Values.truthy(m.get("glow"));
             s.unbreakable = Values.truthy(m.get("unbreakable"));
             s.hideFlags = Values.truthy(m.get("hide_flags"));
+            Object fl = m.get("flags");
+            List<?> flagList = fl instanceof List<?> l ? l : fl == null ? List.of() : List.of(Values.str(fl).split(","));
+            for (Object o : flagList) {
+                Template t = Template.compile(Values.str(o).trim());
+                if (t.isConstant()) flag(t.source());
+                s.flags.add(t);
+            }
+            s.durability = opt(m, "durability");
+            s.itemModel = opt(m, "item_model");
+            s.skullOwner = opt(m, "skull_owner");
+            s.skullTexture = opt(m, "skull_texture");
             return s;
         }
         String text = a.text();
@@ -92,6 +113,17 @@ public final class ItemSpec {
         if (p.size() > 2 && !p.get(2).source().isEmpty()) s.name = p.get(2);
         if (p.size() > 3) for (String line : p.get(3).source().split("\\|")) s.lore.add(Template.compile(line));
         return s;
+    }
+
+    private static Template opt(Map<String, Object> m, String key) {
+        return m.get(key) == null ? null : Template.compile(Values.str(m.get(key)));
+    }
+
+    /** Una bandera de ítem por nombre (HIDE_ENCHANTS…); IllegalArgumentException con sugerencia si no existe. */
+    static ItemFlag flag(String name) {
+        String n = name.trim().toUpperCase(Locale.ROOT);
+        if (!FLAG_NAMES.contains(n)) throw new IllegalArgumentException("bandera de ítem desconocida '" + name.trim() + "'" + dev.leo.omnievents.util.Suggest.hint(n, FLAG_NAMES));
+        return ItemFlag.valueOf(n);
     }
 
     private static void addEnchant(ItemSpec s, String entry) {
@@ -110,7 +142,10 @@ public final class ItemSpec {
         ItemStack it = new ItemStack(Actions.material(material.render(ctx, Template.Mode.RAW)));
         if (amount != null) it.setAmount((int) Math.max(1, Math.min(it.getMaxStackSize() * 36, Values.num(amount.render(ctx, Template.Mode.RAW)))));
         ItemMeta meta = it.getItemMeta();
-        if (meta == null) return it;
+        if (meta == null) {
+            if (!flags.isEmpty() || durability != null || itemModel != null) throw new ActionException("el material " + it.getType() + " no admite flags, durability ni item_model");
+            return it;
+        }
         if (name != null) meta.displayName(noItalic(name, ctx));
         if (!lore.isEmpty()) {
             List<Component> lines = new ArrayList<>();
@@ -126,8 +161,44 @@ public final class ItemSpec {
         if (glow) meta.setEnchantmentGlintOverride(true);
         if (unbreakable) meta.setUnbreakable(true);
         if (hideFlags) meta.addItemFlags(ItemFlag.values());
+        for (Template t : flags) {
+            try {
+                meta.addItemFlags(flag(t.render(ctx, Template.Mode.RAW)));
+            } catch (IllegalArgumentException e) {
+                throw new ActionException(e.getMessage());
+            }
+        }
+        if (durability != null && meta instanceof org.bukkit.inventory.meta.Damageable d) {
+            d.setDamage((int) Math.max(0, Values.num(durability.render(ctx, Template.Mode.RAW))));
+        }
+        if (itemModel != null) {
+            String key = itemModel.render(ctx, Template.Mode.RAW).trim().toLowerCase(Locale.ROOT);
+            NamespacedKey k = NamespacedKey.fromString(key);
+            if (k == null) throw new ActionException("item_model inválido '" + key + "' (usa espacio:modelo)");
+            meta.setItemModel(k);
+        }
+        if ((skullOwner != null || skullTexture != null) && meta instanceof org.bukkit.inventory.meta.SkullMeta skull) {
+            skull.setPlayerProfile(profile(skullOwner == null ? null : skullOwner.render(ctx, Template.Mode.RAW).trim(),
+                    skullTexture == null ? null : skullTexture.render(ctx, Template.Mode.RAW).trim()));
+        }
         it.setItemMeta(meta);
         return it;
+    }
+
+    /**
+     * Perfil de una cabeza: por nombre (el servidor lo completa por su cuenta: OmniEvents no hace red) o con una
+     * textura en base64 (skull_texture de ConditionalEvents).
+     */
+    private static com.destroystokyo.paper.profile.PlayerProfile profile(String owner, String texture) {
+        com.destroystokyo.paper.profile.PlayerProfile p;
+        if (owner != null && !owner.isEmpty()) {
+            if (!owner.matches("[A-Za-z0-9_]{1,16}")) throw new ActionException("skull_owner no es un nombre de jugador: '" + owner + "'");
+            p = org.bukkit.Bukkit.createProfile(owner);
+        } else {
+            p = org.bukkit.Bukkit.createProfile(java.util.UUID.nameUUIDFromBytes(("omnievents:" + texture).getBytes(java.nio.charset.StandardCharsets.UTF_8)), null);
+        }
+        if (texture != null && !texture.isEmpty()) p.setProperty(new com.destroystokyo.paper.profile.ProfileProperty("textures", texture));
+        return p;
     }
 
     @SuppressWarnings("deprecation")

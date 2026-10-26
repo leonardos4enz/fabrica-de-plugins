@@ -1306,6 +1306,119 @@ export default {
       }
     },
     {
+      id: '015 H1 CA1 · H1 CA2 · H1 CA3',
+      nombre: 'give_item en una casilla con banderas y durabilidad; remove_item por nombre y remove_item_slot',
+      async fn (ctx) {
+        await prepararJugador(ctx, ANA)
+        const ana = ctx.bots[ANA]
+        const inv = () => ana.bot.inventory.slots
+        let m = ana.marca()
+        ana.comando('e2e items015')
+        await ana.esperar('chat', /^e2e items015 listos$/, { desde: m })
+        // Ventana del jugador: 5 es el casco, 36 + n la casilla n de la barra.
+        await ana.hasta('el libro en la casilla 3 y el casco puesto', () => inv()[39]?.name === 'book' && inv()[5]?.name === 'iron_helmet')
+        if (ana.nombreDe(inv()[39]) !== 'e2e libro') throw new Error(`el libro se llama ${ana.nombreDe(inv()[39])}`)
+        if (inv()[5].durabilityUsed !== 50) throw new Error(`el casco tiene ${inv()[5].durabilityUsed} de daño, no 50`)
+        await ana.hasta('5 papeles (2 con nombre)', () => ana.cantidad('paper') === 5)
+        m = ana.marca()
+        ana.comando('e2e quitar015')
+        await ana.esperar('chat', /^e2e quitar015 listo$/, { desde: m })
+        // Solo se van los dos con nombre; los tres sin nombre quedan. El libro de la casilla 3 se quita.
+        await ana.hasta('3 papeles sin nombre y sin el libro', () => ana.cantidad('paper') === 3 && inv()[39] == null)
+        if (ana.items('paper').some(i => ana.nombreDe(i))) throw new Error('quedó un papel con nombre')
+        if (ana.cantidad('emerald') !== 5) throw new Error('remove_item tocó otro material')
+        await prepararJugador(ctx, ANA)
+      }
+    },
+    {
+      id: '015 H2 CA1',
+      nombre: 'summon en forma de mapa: dos soportes con nombre, vida 40 y equipo',
+      async fn (ctx) {
+        const { srv } = ctx
+        await limpiarArea(srv)
+        await prepararJugador(ctx, ANA)
+        const ana = ctx.bots[ANA]
+        const m = ana.marca()
+        ana.comando('e2e guardian015')
+        await ana.esperar('chat', /^e2e guardian015 listo$/, { desde: m })
+        await srv.consola('minecraft:execute if entity @e[type=minecraft:armor_stand,name=e2e_guardian]', { espera: /Test passed[,.] [cC]ount: 2/ }) // 26.x: «Test passed. Count: 2»
+        await srv.consola('minecraft:data get entity @e[type=minecraft:armor_stand,name=e2e_guardian,limit=1] Health', { espera: /entity data: 40(\.0)?f/ })
+        // El bot ve el equipo de los soportes (casco y espada).
+        await ana.hasta('ver un soporte con casco de diamante y espada', b => Object.values(b.entities).some(e =>
+          e.name === 'armor_stand' && e.equipment?.some(i => i?.name === 'diamond_helmet') && e.equipment?.some(i => i?.name === 'iron_sword')))
+        await limpiarArea(srv)
+      }
+    },
+    {
+      id: '015 H3 CA1',
+      nombre: 'json_message: el JSON llega como texto con la expresión resuelta',
+      async fn (ctx) {
+        const ana = ctx.bots[ANA]
+        const m = ana.marca()
+        ana.comando('e2e json015')
+        await ana.esperar('chat', /^e2e json de Ana_e2e$/, { desde: m })
+      }
+    },
+    {
+      id: '015 H4 CA1 · H4 CA2',
+      nombre: '/omni interrupt corta lo que falta tras un delay; -s no responde',
+      timeoutMs: 25000,
+      async fn (ctx) {
+        const { srv } = ctx
+        const ana = ctx.bots[ANA]
+        let m = ana.marca()
+        ana.comando('e2e espera015')
+        await ana.esperar('chat', /^e2e espera 1$/, { desde: m })
+        await srv.consola(`omni interrupt e2e_espera015 ${ANA}`, { espera: /Cortadas 1 ejecuciones en espera de e2e_espera015/ })
+        await ana.nunca('chat', /^e2e espera 2$/, { desde: m, ms: 5000 })
+        // Sin cortar, la segunda llega (la prueba distingue los dos casos).
+        m = ana.marca()
+        ana.comando('e2e espera015')
+        await ana.esperar('chat', /^e2e espera 2$/, { desde: m, timeoutMs: 8000 })
+        // -s: la regla corre pero el comando no contesta.
+        const desde = srv.marca()
+        m = ana.marca()
+        await srv.consola(`omni call e2e_silencio015 ${ANA} -s`)
+        await ana.esperar('chat', /^e2e silencio corrió$/, { desde: m })
+        await srv.consola('omni interrupt * -s')
+        await srv.sincronizar()
+        const respuestas = srv.lineas.slice(desde).filter(l => /ejecutada|Cortadas/.test(l))
+        if (respuestas.length) throw new Error(`-s respondió: ${respuestas.join(' | ')}`)
+        await srv.consola(`omni call e2e_silencio015 ${ANA}`, { espera: /Regla e2e_silencio015 ejecutada/ })
+      }
+    },
+    {
+      id: '015 H5 CA1',
+      nombre: 'player_statistic: saltar sube la estadística JUMP y la regla corre',
+      async fn (ctx) {
+        const { srv } = ctx
+        await prepararJugador(ctx, ANA)
+        const ana = ctx.bots[ANA]
+        await srv.consola(`omni var set ${ANA} e2e_saltos true`)
+        await srv.sincronizar()
+        try {
+          const m = ana.marca()
+          ana.bot.setControlState('jump', true)
+          await ana.esperar('chat', /^e2e salto 1$/, { desde: m })
+        } finally {
+          ana.bot.setControlState('jump', false)
+          await srv.consola(`omni var del ${ANA} e2e_saltos`)
+        }
+      }
+    },
+    {
+      id: '015 H5 CA3',
+      nombre: 'player_tab_complete + tab_complete: el bot pide autocompletar /e2e y recibe las sugerencias de la regla',
+      async fn (ctx) {
+        const ana = ctx.bots[ANA]
+        const res = await ana.bot.tabComplete('/e2e e2e_tab', false, false)
+        const nombres = res.map(r => typeof r === 'string' ? r : r.match).sort()
+        if (JSON.stringify(nombres) !== JSON.stringify(['e2e_tab_alfa', 'e2e_tab_beta'])) {
+          throw new Error(`sugerencias: ${JSON.stringify(nombres)} (se esperaban e2e_tab_alfa y e2e_tab_beta)`)
+        }
+      }
+    },
+    {
       id: 'H5 CA3',
       nombre: 'jugador: kick con su motivo',
       async fn (ctx) {

@@ -244,6 +244,9 @@ Raíces que todos ofrecen además de las suyas: `server` `rule` `online` `source
 | `player_portal` | `event` `world` `location` `player` `from` `to` `cause` | Un jugador usa un portal. *(se puede cancelar)* |
 | `player_kick` | `event` `world` `location` `player` `reason` | Un jugador es expulsado del servidor. *(se puede cancelar)* |
 | `player_resource_pack` | `event` `world` `location` `player` `status` | Un jugador responde al paquete de recursos (status). |
+| `player_statistic` | `event` `world` `location` `player` `statistic` `previous_value` `new_value` `material` `entity_type` | Sube una estadística del jugador (statistic: JUMP, MOB_KILLS…; previous_value, new_value; material o entity_type si la estadística los tiene). Algunas, como caminar, suben muy seguido. *(se puede cancelar)* |
+| `player_air_change` | `event` `world` `location` `player` `old_air` `new_air` `max_air` | Cambia el aire de un jugador (old_air, new_air, max_air, en ticks: 300 es lleno). Bajo el agua corre en cada tick. *(se puede cancelar)* |
+| `player_tab_complete` | `event` `world` `location` `player` `buffer` `cmd` `args` `last` `completions` | Un jugador pide autocompletar un comando de un plugin (buffer: lo escrito; cmd, args; last: la palabra a medio escribir; completions: las sugerencias). La acción tab_complete las cambia. Los comandos de Minecraft los completa el cliente: no pasan por aquí. *(se puede cancelar)* |
 
 ### Combate
 | Disparador | Raíces | Qué es |
@@ -276,6 +279,7 @@ Raíces que todos ofrecen además de las suyas: `server` `rule` `online` `source
 | `item_held` | `event` `world` `location` `player` `item` `previous_item` `slot` | Un jugador cambia de ranura en la barra (item: el nuevo, previous_item: el anterior). *(se puede cancelar)* |
 | `item_enchant` | `event` `world` `location` `player` `item` `enchants` `cost` | Un jugador encanta un ítem en la mesa (enchants, cost). *(se puede cancelar)* |
 | `item_repair` | `event` `world` `location` `player` `item` `repair_type` `base_item` `addition` `rename_text` `level_cost` | Un jugador saca el resultado de un yunque o una afiladora (repair_type: ANVIL o GRINDSTONE; rename_text, level_cost, base_item, addition). *(se puede cancelar)* |
+| `item_mend` | `event` `world` `location` `player` `item` `amount` `orb` | Mending repara un ítem del jugador con un orbe de experiencia (spec 015; amount: durabilidad que repara, orb). cancel hace que el orbe dé experiencia en vez de reparar. *(se puede cancelar)* |
 | `item_break` | `event` `world` `location` `player` `item` | Se rompe la herramienta o la armadura de un jugador. |
 
 ### Inventario
@@ -544,6 +548,15 @@ Valor: texto.
 - console_message: "La regla corrió para {player.name}"
 ```
 
+#### `json_message`
+Envía un mensaje escrito en JSON de texto de Minecraft (clic, hover…), como json_message de ConditionalEvents (spec 015). Se convierte al cargar; los {expresiones} dentro de los textos se resuelven y escapan como en message.
+
+Valor: JSON de texto.
+
+```yaml
+- json_message: '{"text":"Clic aquí","color":"gold","clickEvent":{"action":"run_command","value":"/spawn"}}'
+```
+
 #### `log`
 Escribe en el log del servidor, con el nombre de la regla.
 
@@ -567,12 +580,16 @@ Reproduce un sonido al jugador (o en la ubicación); también acepta claves como
 
 Valor: SONIDO;volumen;tono.
 
+Claves:
+- `location`: Dónde suena: mundo;x;y;z (~ relativo; spec 015). Lo oyen los cercanos, no solo el jugador.
+
 ```yaml
 - sound: "ENTITY_PLAYER_LEVELUP;1;1.2"
+  location: "~;~;~"
 ```
 
 #### `stop_sound`
-Detiene un sonido del jugador, o todos (all o sin valor).
+Detiene un sonido del jugador, o todos (all o sin valor); también claves de paquete de recursos (mi_pack:musica, spec 015).
 
 Valor: SONIDO o all.
 
@@ -682,6 +699,11 @@ En forma de mapa:
 - `unbreakable`: Irrompible.
 - `hide_flags`: Oculta los atributos.
 - `saved`: Ítem guardado con /omni item save.
+- `flags`: Banderas (spec 015): lista o texto con comas de HIDE_ENCHANTS, HIDE_ATTRIBUTES…
+- `durability`: Daño del ítem (durabilidad gastada, como en ConditionalEvents).
+- `item_model`: Modelo del ítem: clave espacio:modelo (1.21.4+).
+- `skull_owner`: Para PLAYER_HEAD: nombre del jugador de la cabeza.
+- `skull_texture`: Para PLAYER_HEAD: textura en base64.
 
 Claves:
 - `location`: Dónde soltarlo: mundo;x;y;z (~ relativo).
@@ -755,7 +777,7 @@ Valor: expresión.
 ```
 
 #### `give_item`
-Da un ítem; lo que no cabe cae al suelo.
+Da un ítem; lo que no cabe cae al suelo. En forma de mapa, slot lo pone en una casilla (spec 015).
 
 Valor: MATERIAL;cantidad;nombre;lore1|lore2, saved:&lt;nombre> o un mapa.
 
@@ -771,6 +793,13 @@ En forma de mapa:
 - `unbreakable`: Irrompible.
 - `hide_flags`: Oculta los atributos.
 - `saved`: Ítem guardado con /omni item save.
+- `flags`: Banderas (spec 015): lista o texto con comas de HIDE_ENCHANTS, HIDE_ATTRIBUTES…
+- `durability`: Daño del ítem (durabilidad gastada, como en ConditionalEvents).
+- `item_model`: Modelo del ítem: clave espacio:modelo (1.21.4+).
+- `skull_owner`: Para PLAYER_HEAD: nombre del jugador de la cabeza.
+- `skull_texture`: Para PLAYER_HEAD: textura en base64.
+- `slot`: Casilla donde ponerlo: 0 a 40 o HAND, OFF_HAND, HELMET, CHESTPLATE, LEGGINGS, BOOTS. Si está ocupada, va al inventario (salvo slot_replace).
+- `slot_replace`: true: reemplaza lo que haya en la casilla.
 
 ```yaml
 - give_item: "DIAMOND;2;<aqua>Diamante;<gray>Premio"
@@ -844,12 +873,48 @@ Valor: EFECTO o all.
 ```
 
 #### `remove_item`
-Quita ítems por material, tengan o no nombre.
+Quita ítems por material, tengan o no nombre; con name: o lorecontains: (spec 015), solo los de ese nombre o con esa línea de lore (sin colores).
 
-Valor: MATERIAL;cantidad.
+Valor: MATERIAL;cantidad[;name:&lt;nombre>][;lorecontains:&lt;texto>].
 
 ```yaml
-- remove_item: "EMERALD;5"
+- remove_item: "PAPER;1;name:Ticket VIP"
+```
+
+#### `remove_item_slot`
+Quita ítems de una casilla (spec 015): HAND, OFF_HAND, HELMET, CHESTPLATE, LEGGINGS, BOOTS o 0 a 40; sin cantidad, toda la pila.
+
+Valor: CASILLA;cantidad.
+
+```yaml
+- remove_item_slot: "HAND;1"
+```
+
+#### `set_caught_item`
+Cambia lo que se pescó (player_fish) por otro ítem, con el formato de give_item (spec 015; set_item de ConditionalEvents).
+
+Valor: como give_item.
+
+En forma de mapa:
+- `material`: Material (DIAMOND, IRON_SWORD…).
+- `id`: Sinónimo de material.
+- `amount`: Cantidad.
+- `name`: Nombre (MiniMessage, & y {expresiones}).
+- `lore`: Líneas de descripción: una lista, o un texto con |.
+- `model`: custom_model_data.
+- `enchants`: Encantamientos: mapa encantamiento: nivel, o lista "SHARPNESS:2".
+- `glow`: Brillo de encantado sin encantamientos.
+- `unbreakable`: Irrompible.
+- `hide_flags`: Oculta los atributos.
+- `saved`: Ítem guardado con /omni item save.
+- `flags`: Banderas (spec 015): lista o texto con comas de HIDE_ENCHANTS, HIDE_ATTRIBUTES…
+- `durability`: Daño del ítem (durabilidad gastada, como en ConditionalEvents).
+- `item_model`: Modelo del ítem: clave espacio:modelo (1.21.4+).
+- `skull_owner`: Para PLAYER_HEAD: nombre del jugador de la cabeza.
+- `skull_texture`: Para PLAYER_HEAD: textura en base64.
+
+```yaml
+- set_caught_item: "DIAMOND;1;<aqua>Diamante del lago"
 ```
 
 #### `set_food`
@@ -918,27 +983,46 @@ Valor: (sin valor) o mundo;x;y;z.
 ```
 
 #### `particle`
-Partículas donde está el jugador (DUST lleva el color r;g;b).
+Partículas donde está el jugador o en location (DUST lleva el color r;g;b).
 
 Valor: PARTÍCULA;cantidad;dx;dy;dz;velocidad[;r;g;b].
 
+Claves:
+- `location`: Dónde: mundo;x;y;z (~ relativo; spec 015). Sin ella, un bloque encima del jugador.
+- `force`: true: se ve desde lejos (spec 015).
+- `for_player`: true: solo la ve el jugador (spec 015).
+
 ```yaml
 - particle: "HEART;10"
+  location: "~;~2;~"
+  force: false
+  for_player: true
 ```
 
 #### `set_block`
-Cambia un bloque: con solo el material, el bloque del evento; con coordenadas, ese (~ relativo).
+Cambia un bloque: con solo el material, el bloque del evento; con coordenadas, ese (~ relativo). El material acepta datos de bloque: OAK_STAIRS[facing=north] (spec 015).
 
-Valor: [mundo;]x;y;z;MATERIAL o MATERIAL.
+Valor: [mundo;]x;y;z;MATERIAL[datos] o MATERIAL[datos].
 
 ```yaml
 - set_block: "~;~-1;~;GOLD_BLOCK"
 ```
 
 #### `summon`
-Invoca una entidad donde está el jugador o en mundo;x;y;z.
+Invoca una entidad donde está el jugador o en mundo;x;y;z. En forma de mapa (spec 015): name, health, amount, scale y equipo.
 
-Valor: TIPO[;mundo;x;y;z].
+Valor: TIPO[;mundo;x;y;z] o un mapa.
+
+En forma de mapa:
+- `entity`: Tipo de entidad (ZOMBIE…).
+- `type`: Sinónimo de entity.
+- `location`: Dónde: mundo;x;y;z (~ relativo); sin ella, donde está el jugador.
+- `name`: Nombre visible (MiniMessage, & y {expresiones}).
+- `health`: Vida máxima y actual.
+- `amount`: Cuántas (1 por defecto, máximo 50).
+- `scale`: Escala de tamaño (atributo scale; 1 es normal).
+- `equipment`: Armadura: casco,peto,pantalones,botas (materiales o none).
+- `hand_equipment`: Manos: principal,secundaria (materiales o none).
 
 ```yaml
 - summon: ZOMBIE
@@ -974,12 +1058,12 @@ Valor: texto.
 ```
 
 #### `keep_inventory`
-El jugador conserva el inventario y el nivel al morir (player_death).
+El jugador conserva al morir (player_death) los ítems, el nivel o los dos: items, xp o all (spec 015); sin valor o con una expresión verdadera, all.
 
-Valor: (sin valor) o expresión.
+Valor: items, xp, all, (sin valor) o expresión.
 
 ```yaml
-- keep_inventory
+- keep_inventory: items
 ```
 
 #### `set_damage`
@@ -1036,7 +1120,16 @@ Valor: texto o none.
 - set_quit_message: none
 ```
 
-Alias (de ConditionalEvents y sinónimos): `bc` → `broadcast`, `call_event` → `call`, `cancel_event` → `cancel`, `console_command` → `console`, `execute` → `call`, `give_potion_effect` → `effect`, `json_message` → `message`, `lightning_strike` → `lightning`, `mini_message` → `message`, `msg` → `message`, `player_command` → `command`, `player_send_chat` → `chat`, `playsound` → `sound`, `potion` → `effect`, `prevent_join` → `deny_join`, `remove_potion_effect` → `remove_effect`, `set_on_fire` → `fire`, `stopsound` → `stop_sound`, `tp` → `teleport`, `wait` → `delay`.
+#### `tab_complete`
+Cambia las sugerencias de autocompletado (player_tab_complete, spec 015): set deja solo las de la lista, add las suma (las dos solo las que empiezan por lo que lleva escrito, y set las ordena), remove las quita y clear las borra todas.
+
+Valor: set|add|remove|clear;a,b,c.
+
+```yaml
+- tab_complete: "set;spawn,tienda,arena"
+```
+
+Alias (de ConditionalEvents y sinónimos): `bc` → `broadcast`, `call_event` → `call`, `cancel_event` → `cancel`, `console_command` → `console`, `execute` → `call`, `give_potion_effect` → `effect`, `lightning_strike` → `lightning`, `mini_message` → `message`, `msg` → `message`, `player_command` → `command`, `player_send_chat` → `chat`, `playsound` → `sound`, `potion` → `effect`, `prevent_join` → `deny_join`, `remove_potion_effect` → `remove_effect`, `set_item` → `set_caught_item`, `set_on_fire` → `fire`, `stopsound` → `stop_sound`, `tp` → `teleport`, `wait` → `delay`.
 
 ## Funciones
 Operadores: `&&` `||` `!` (`and` `or` `not`), `==` `!=` `<` `<=` `>` `>=`, `~=` (igual sin mayúsculas), `contains` `startsWith` `endsWith` `matches` `in`, `+ - * / %`, `c ? a : b`. Variables: `var.x` (de la ejecución), `pvar.x` (del jugador), `gvar.x` (global).
@@ -1044,6 +1137,7 @@ Operadores: `&&` `||` `!` (`and` `or` `not`), `==` `!=` `<` `<=` `>` `>=`, `~=` 
 | Función | Qué hace |
 |---|---|
 | `abs(x)` | Valor absoluto. |
+| `block_at(mundo, x, y, z)` | El bloque en esas coordenadas (.type, .data…; spec 015); nulo si el mundo no existe o el chunk no está cargado (no lo carga). Solo en el hilo principal. |
 | `bool(x)` | Convierte a booleano. |
 | `ceil(x)` | Redondea hacia arriba. |
 | `chance(p)` | true con una probabilidad de p por ciento. |
@@ -1057,12 +1151,13 @@ Operadores: `&&` `||` `!` (`and` `or` `not`), `==` `!=` `<` `<=` `>` `>=`, `~=` 
 | `has_item(material[, n])` | true si el jugador lleva al menos n (1 por defecto) del material, tengan o no nombre (sin contar la armadura). |
 | `hour()` | Hora del día del servidor (0 a 23). |
 | `if(condición, a, b)` | a si la condición se cumple, si no b (solo evalúa la rama elegida). |
-| `in_area(mundo, x1, y1, z1, x2, y2, z2)` | true si el jugador está dentro del cubo. |
+| `in_area(mundo,x1, y1, z1, x2, y2, z2)` | true si el jugador está dentro del cubo. |
 | `in_region(id)` | true si el jugador está en esa región de WorldGuard (sin WorldGuard, false). En tests:, given.regions. |
 | `in_state(regla)` | true si el jugador está en el estado de esa regla state (o si el estado del servidor está activo). |
 | `int(x)` | Convierte a entero, sin decimales (0 si no se puede). |
 | `is_bedrock()` | true si el jugador entró desde Bedrock (Geyser + Floodgate); sin Floodgate, false. En tests:, given.bedrock. |
 | `is_npc(entidad)` | true si la entidad es un NPC de Citizens. En tests:, un objeto de given con npc: true. |
+| `is_number(x)` | true si x es un número o un texto con un número (spec 015; %is_number_x% de ConditionalEvents). |
 | `join(lista[, separador])` | Une una lista en un texto (", " por defecto). |
 | `len(x)` | Largo de un texto, o tamaño de una lista o un mapa. |
 | `lower(t)` | Texto en minúsculas. |
@@ -1076,6 +1171,7 @@ Operadores: `&&` `||` `!` (`and` `or` `not`), `==` `!=` `<` `<=` `>` `>=`, `~=` 
 | `online(nombre)` | true si ese jugador está conectado. |
 | `papi(texto[, jugador])` | Resuelve placeholders de PlaceholderAPI; si el resultado es un número, devuelve número. |
 | `perm(permiso[, jugador])` | true si el jugador (el del evento por defecto) tiene el permiso. |
+| `pick(lista)` | Un elemento al azar de la lista, o de los argumentos con pick(a, b, …); nulo si no hay ninguno. pick(players()).name es un jugador al azar. |
 | `player(nombre)` | El jugador conectado con ese nombre, o nulo. |
 | `players()` | Lista de jugadores conectados. |
 | `pow(x, y)` | x elevado a y. |

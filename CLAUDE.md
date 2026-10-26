@@ -93,6 +93,10 @@ con `--release 21`.
   Dentro de una acción con `to`, `player` es el destinatario y `source` el jugador del evento (014 F-01).
 - En 26.x las reglas de juego van en snake_case (`natural_health_regeneration`, `advance_time`…): los nombres de
   1.21.4 fallan con «Incorrect argument» y el servidor sigue como si nada. La suite manda las dos formas (008 F-02).
+- **Spec 015:** `EntityEquipment.setDropChance` revienta si la entidad no es un `Mob` (soporte de armadura). En 26.x
+  `execute if entity` dice «Test passed. Count: N» (1.21.4: «, count:»). `SchemaTest` necesita 1 GB (el `anyOf` de acciones)
+  y un ejemplo de acción inválido daba OOM armando el mensaje: un `OutOfMemoryError` en las pruebas suele ser eso. Tras
+  cambiar el código, `./gradlew :omnievents:dist` antes de la compuerta 2 (si no, prueba el jar anterior).
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

@@ -30,7 +30,8 @@ final class MenuLoader {
     /** Claves del menú que son de su regla de apertura. */
     private static final List<String> OPEN_KEYS = List.of("permission", "conditions", "else", "cost", "on_cost_fail", "cooldown", "on_cooldown", "on_open", "tests");
     /** Claves de ítem de give_item que también se aceptan sueltas en el ítem del menú (como en DeluxeMenus). */
-    private static final Set<String> INLINE_ITEM_KEYS = Set.of("material", "id", "amount", "name", "lore", "model", "enchants", "glow", "unbreakable", "hide_flags", "saved");
+    private static final Set<String> INLINE_ITEM_KEYS = Set.of("material", "id", "amount", "name", "lore", "model", "enchants", "glow", "unbreakable", "hide_flags", "saved",
+            "flags", "durability", "item_model", "skull_owner", "skull_texture");
 
     private final RuleLoader loader;
 

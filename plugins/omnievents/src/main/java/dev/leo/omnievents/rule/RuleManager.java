@@ -44,6 +44,30 @@ public final class RuleManager {
         this.packs = List.copyOf(packs);
     }
 
+    /** Ejecuciones que esperan un delay (spec 015, /omni interrupt). Concurrente: un delay puede programarse desde player_chat. */
+    private final java.util.Set<dev.leo.omnievents.action.Execution> waiting = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /** La ejecución empieza (true) o deja (false) de esperar un delay. */
+    public void waiting(dev.leo.omnievents.action.Execution exec, boolean on) {
+        if (on) waiting.add(exec);
+        else waiting.remove(exec);
+    }
+
+    /**
+     * Corta las ejecuciones que esperan un delay de una regla (o de todas con *), del jugador o de todos (player null).
+     * Devuelve cuántas cortó. Hilo principal.
+     */
+    public int interrupt(String rule, java.util.UUID player) {
+        int n = 0;
+        for (dev.leo.omnievents.action.Execution e : java.util.List.copyOf(waiting)) {
+            if (e.rule() == null || !rule.equals("*") && !e.rule().name().equalsIgnoreCase(rule)) continue;
+            if (player != null && !player.equals(e.playerId())) continue;
+            waiting.remove(e);
+            if (e.interrupt()) n++;
+        }
+        return n;
+    }
+
     public Rule get(String name) {
         return name == null ? null : rules.get(name.toLowerCase(Locale.ROOT));
     }

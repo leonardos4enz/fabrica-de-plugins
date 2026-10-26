@@ -39,3 +39,42 @@ nombre_reservado:
     - name: la afiladora no cuenta
       given: {repair_type: GRINDSTONE, rename_text: ""}
       expect: {fired: false}
+
+# Spec 015: más de ConditionalEvents. Cada 100 saltos, un aviso en la barra de acción (player_statistic).
+saltarin:
+  trigger: player_statistic
+  conditions:
+    - "statistic == 'JUMP' && new_value % 100 == 0"
+  actions:
+    - actionbar: "<aqua>¡{new_value} saltos!"
+  tests:
+    - name: cada cien
+      given: {statistic: JUMP, previous_value: 199, new_value: 200}
+      expect: {messages: ["¡200 saltos!"]}
+    - name: los demás no
+      given: {statistic: JUMP, previous_value: 200, new_value: 201}
+      expect: {fired: false}
+
+# Sugerencias propias para /warp (si tu servidor tiene ese comando): tab_complete cambia lo que ve el jugador al
+# apretar Tab.
+warp_sugerencias:
+  trigger: player_tab_complete
+  conditions:
+    - "cmd.name == 'warp' && args.size <= 1"
+  actions:
+    - tab_complete: "set;spawn,tienda,arena"
+  tests:
+    - given: {cmd: {name: warp}, args: [""], last: ""}
+      expect: {actions: [tab_complete]}
+
+# /reglas: un mensaje con clic escrito en JSON, como el json_message de ConditionalEvents.
+enlace_reglas:
+  trigger: command
+  command:
+    name: reglas
+    description: Muestra las reglas del servidor
+  actions:
+    - json_message: '{"text":"» Lee las reglas, {player.name}","color":"gold","hoverEvent":{"action":"show_text","contents":"Clic para abrirlas"},"clickEvent":{"action":"run_command","value":"/help"}}'
+  tests:
+    - given: {player.name: Leo}
+      expect: {messages: ["» Lee las reglas, Leo"]}

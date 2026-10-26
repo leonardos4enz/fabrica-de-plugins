@@ -16,6 +16,7 @@
 | 012 OmniEvents: integraciones con costos (P9, Vault, WorldGuard, Citizens) | Verificado: 1.7.0; `cost` todo o nada con `on_cost_fail` y devolución, dinero de Vault, `region_enter`/`region_leave` e `in_region()`, `npc_click`/`npc_left_click` e `is_npc()`; 155 unitarias; 42/42 dos veces en Paper 1.21.4 y en 26.1.2 con EssentialsX, WorldGuard y Citizens ([verify](specs/012-omnievents-integraciones-con-costos/verify.md)) |
 | 013 OmniEvents: menús de inventario y formularios de Bedrock (P10) | Verificado: 1.8.1 (F-03 y F-04 corregidos tras el cierre); entradas `menu:` con `open_menu`/`close_menu`, `view`, clics como reglas (`conditions`, `cost`, `cooldown`, `tests`), ítems que no se pueden sacar, formulario de botones para Bedrock con Floodgate e `is_bedrock()`, `/omni menu`; 170 unitarias; 45/45 dos veces en Paper 1.21.4 y en 26.1.2 con Geyser, Floodgate y un jugador de Bedrock ([verify](specs/013-omnievents-menus-y-formularios-bedrock/verify.md)) |
 | 014 OmniEvents: paridad con ConditionalEvents | Verificado: 1.9.0; tabla completa contra el jar de CE 4.65.1, `centered_message`, `firework`, `item_repair`, permiso `omnievents.bypasscooldown.<regla>` y `cooldown_bypass`, `/omni cooldown|limit reset` con `*`, importador que traduce todo lo que tiene equivalente; 182 unitarias; 49/49 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/014-omnievents-paridad-conditionalevents/verify.md)) |
+| 015 OmniEvents: paridad con ConditionalEvents, segunda parte | Verificado: 1.10.0; `give_item` con `slot`, `flags`, `durability`, `item_model`, `skull_owner`; `remove_item` con `name:`/`lorecontains:` y `remove_item_slot`; `summon` en mapa; `json_message` propia; `tab_complete`; disparadores `player_statistic`, `player_air_change`, `player_tab_complete` e `item_mend`; `pick`, `block_at`, `is_number`; `/omni interrupt` y `-s`; `%omni_enabled_r%`; importador sin «REVISAR» salvo lo que no tiene equivalente; 191 unitarias; 55/55 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/015-omnievents-paridad-conditionalevents-2/verify.md)) |
 
 ## Por qué empezamos con OmniEvents
 OmniEvents es la versión propia de *ConditionalEvents* (Ajneb97): «cuando pase X, si se cumple Y, haz Z». Es el
@@ -66,11 +67,7 @@ Otras pendientes:
 - **Fábrica: más escenarios en el juego** — las acciones y disparadores sin escenario (riesgos de la 002) y
   PlaceholderAPI con su jar en el servidor de prueba.
 - **OmniEvents: más integraciones** — lo que la 012 dejó fuera: acciones sobre NPC (`npc_say`, `npc_teleport`) y regiones (banderas), bancos de Vault.
-- **OmniEvents: paridad con ConditionalEvents, segunda parte** — lo que la 014 dejó fuera (tabla de su spec):
-  disparadores `player_statistic`, `player_air_change`, `player_tab_complete` y la acción `tab_complete`; `json_message`,
-  `remove_item_slot` y los filtros de `remove_item`; claves de `give_item` (`slot`, `flags`, `skull_owner`…), `summon`
-  (`equipment`, `health`…), `particle` (`location`) y `sound` con ubicación; `set_caught_item`; `keep_inventory` con modo;
-  funciones `pick`, `block_at` e `is_number`; `/omni interrupt`; `%omni_enabled_r%`; reparar por Mending.
+- ~~**OmniEvents: paridad con ConditionalEvents, segunda parte**~~: hecha en la [015](specs/015-omnievents-paridad-conditionalevents-2/spec.md) (Mending como `item_mend`: CE no lo tiene).
 - **OmniEvents: menús dinámicos** — lo que la 013 dejó fuera: paginación, ítems generados de una lista, refresco
   periódico y formularios de Bedrock con campos o de sí/no.
 - **OmniEvents: editor en el juego** — inventario para ver, activar y probar reglas sin editar YAML.

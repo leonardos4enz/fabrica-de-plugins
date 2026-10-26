@@ -24,6 +24,18 @@ class ExpressionTest {
     }
 
     @Test
+    void S015_H3_CA2_CA4_pick_e_is_number() {
+        assertEquals("a", eval("pick(['a'])"));
+        assertNull(eval("pick([])"));
+        Object v = eval("pick('x', 'y', 'z')");
+        assertTrue(java.util.Set.of("x", "y", "z").contains(v), String.valueOf(v));
+        assertTrue(test("is_number('12.5')"));
+        assertTrue(test("is_number(3)"));
+        assertFalse(test("is_number('doce')"));
+        assertFalse(test("is_number('')"));
+    }
+
+    @Test
     void H2_CA1_operadores_logicos_y_de_texto() {
         assertTrue(test("true && !false"));
         assertTrue(test("true and not false"));

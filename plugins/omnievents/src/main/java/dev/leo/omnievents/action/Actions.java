@@ -111,7 +111,23 @@ public final class Actions {
             "name", "Nombre (MiniMessage, & y {expresiones}).", "lore", "Líneas de descripción: una lista, o un texto con |.",
             "model", "custom_model_data.", "enchants", "Encantamientos: mapa encantamiento: nivel, o lista \"SHARPNESS:2\".",
             "glow", "Brillo de encantado sin encantamientos.", "unbreakable", "Irrompible.", "hide_flags", "Oculta los atributos.",
-            "saved", "Ítem guardado con /omni item save."};
+            "saved", "Ítem guardado con /omni item save.",
+            "flags", "Banderas (spec 015): lista o texto con comas de HIDE_ENCHANTS, HIDE_ATTRIBUTES…",
+            "durability", "Daño del ítem (durabilidad gastada, como en ConditionalEvents).",
+            "item_model", "Modelo del ítem: clave espacio:modelo (1.21.4+).",
+            "skull_owner", "Para PLAYER_HEAD: nombre del jugador de la cabeza.",
+            "skull_texture", "Para PLAYER_HEAD: textura en base64."};
+
+    /** Claves de give_item: las del ítem más la casilla (spec 015). */
+    public static final String[] GIVE_KEYS = concat(ITEM_KEYS,
+            "slot", "Casilla donde ponerlo: 0 a 40 o HAND, OFF_HAND, HELMET, CHESTPLATE, LEGGINGS, BOOTS. Si está ocupada, va al inventario (salvo slot_replace).",
+            "slot_replace", "true: reemplaza lo que haya en la casilla.");
+
+    private static String[] concat(String[] a, String... b) {
+        String[] out = java.util.Arrays.copyOf(a, a.length + b.length);
+        System.arraycopy(b, 0, out, a.length, b.length);
+        return out;
+    }
 
     private record Entry(Factory factory, boolean flow, Doc doc) {
     }
@@ -446,6 +462,15 @@ public final class Actions {
                 }
             }));
         });
+        register("json_message", doc("Envía un mensaje escrito en JSON de texto de Minecraft (clic, hover…), como json_message de ConditionalEvents (spec 015). Se convierte al cargar; los {expresiones} dentro de los textos se resuelven y escapan como en message.",
+                "JSON de texto", "json_message: '{\"text\":\"Clic aquí\",\"color\":\"gold\",\"clickEvent\":{\"action\":\"run_command\",\"value\":\"/spawn\"}}'"), a -> {
+            Template t = jsonTemplate(a.text());
+            return Action.safe(Action.of(ctx -> {
+                Object s = ctx.subject();
+                if (s instanceof Player p) p.sendMessage(t.component(ctx));
+                else (ctx.sender() != null ? ctx.sender() : Bukkit.getConsoleSender()).sendMessage(t.component(ctx));
+            }));
+        });
         register("broadcast", doc("Envía un mensaje a todo el servidor.", "texto", "broadcast: \"<gold>{player.name} encontró un tesoro\""), a -> {
             Template t = a.template();
             return Action.safe(Action.of(ctx -> Bukkit.getServer().broadcast(t.component(ctx))));
@@ -484,14 +509,16 @@ public final class Actions {
                 Bukkit.getScheduler().runTaskLater(plugin, () -> pl.hideBossBar(bar), Math.max(1, Math.round(seconds * 20)));
             });
         });
-        register("sound", doc("Reproduce un sonido al jugador (o en la ubicación); también acepta claves como minecraft:block.note_block.pling.", "SONIDO;volumen;tono", "sound: \"ENTITY_PLAYER_LEVELUP;1;1.2\""), a -> {
+        register("sound", doc("Reproduce un sonido al jugador (o en la ubicación); también acepta claves como minecraft:block.note_block.pling.", "SONIDO;volumen;tono", "sound: \"ENTITY_PLAYER_LEVELUP;1;1.2\"\nlocation: \"~;~;~\"")
+                .keys("location", "Dónde suena: mundo;x;y;z (~ relativo; spec 015). Lo oyen los cercanos, no solo el jugador."), a -> {
             List<Template> p = a.parts();
+            List<Template> locP = a.extra("location") == null ? null : new Args("location", a.extra("location"), Map.of(), a.path(), a.parser()).parts();
             return Action.of(ctx -> {
                 String name = p.get(0).render(ctx, Template.Mode.RAW);
                 float vol = part(p, 1) == null ? 1f : (float) Values.num(p.get(1).render(ctx, Template.Mode.RAW));
                 float pitch = part(p, 2) == null ? 1f : (float) Values.num(p.get(2).render(ctx, Template.Mode.RAW));
-                Player pl = ctx.playerOrNull();
-                Location l = ctx.location();
+                Player pl = locP != null ? null : ctx.playerOrNull();
+                Location l = locP != null ? location(locP, 0, ctx, ctx.location(), true) : ctx.location();
                 if (name.contains(".") || name.contains(":")) {
                     if (pl != null) pl.playSound(pl.getLocation(), name.toLowerCase(Locale.ROOT), vol, pitch);
                     else if (l != null) l.getWorld().playSound(l, name.toLowerCase(Locale.ROOT), vol, pitch);
@@ -502,15 +529,33 @@ public final class Actions {
                 else if (l != null) l.getWorld().playSound(l, s, vol, pitch);
             });
         });
-        register("stop_sound", doc("Detiene un sonido del jugador, o todos (all o sin valor).", "SONIDO o all", "stop_sound: all"), a -> {
+        register("stop_sound", doc("Detiene un sonido del jugador, o todos (all o sin valor); también claves de paquete de recursos (mi_pack:musica, spec 015).", "SONIDO o all", "stop_sound: all"), a -> {
             Template t = a.template();
             return Action.of(ctx -> {
                 Player pl = ctx.requirePlayer();
-                String name = t.render(ctx, Template.Mode.RAW);
+                String name = t.render(ctx, Template.Mode.RAW).trim();
                 if (name.isEmpty() || name.equalsIgnoreCase("all")) pl.stopAllSounds();
+                else if (name.contains(".") || name.contains(":")) pl.stopSound(name.toLowerCase(Locale.ROOT));
                 else pl.stopSound(sound(name));
             });
         });
+    }
+
+    /**
+     * JSON de texto → plantilla de MiniMessage (spec 015, H3 CA1). Se hace una vez al cargar; un JSON inválido es un
+     * error de carga con la ruta.
+     */
+    public static Template jsonTemplate(String json) {
+        Component c;
+        try {
+            c = net.kyori.adventure.text.serializer.gson.GsonComponentSerializer.gson().deserialize(json.trim());
+        } catch (RuntimeException e) {
+            String why = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            throw new IllegalArgumentException("json_message no es JSON de texto válido: " + why.lines().findFirst().orElse(why));
+        }
+        if (c == null) throw new IllegalArgumentException("json_message está vacío");
+        // MiniMessage escapa los < del texto; las llaves quedan para las {expresiones}.
+        return Template.compile(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().serialize(c));
     }
 
     @SuppressWarnings("deprecation")
@@ -670,12 +715,24 @@ public final class Actions {
                 e.setVelocity(dir);
             });
         });
-        register("give_item", doc("Da un ítem; lo que no cabe cae al suelo.", "MATERIAL;cantidad;nombre;lore1|lore2, saved:<nombre> o un mapa", "give_item: \"DIAMOND;2;<aqua>Diamante;<gray>Premio\"").shape(Shape.ITEM, ITEM_KEYS), a -> {
+        register("give_item", doc("Da un ítem; lo que no cabe cae al suelo. En forma de mapa, slot lo pone en una casilla (spec 015).", "MATERIAL;cantidad;nombre;lore1|lore2, saved:<nombre> o un mapa", "give_item: \"DIAMOND;2;<aqua>Diamante;<gray>Premio\"").shape(Shape.ITEM, GIVE_KEYS), a -> {
             ItemSpec spec = ItemSpec.parse(a, plugin);
+            Template slotT = a.isMap() && a.map().get("slot") != null ? Template.compile(Values.str(a.map().get("slot"))) : null;
+            if (slotT != null && slotT.isConstant()) Slots.parse(slotT.source());
+            boolean replace = a.isMap() && Values.truthy(a.map().get("slot_replace"));
             return Action.of(ctx -> {
                 Player p = ctx.requirePlayer();
                 ItemStack it = spec.build(ctx);
-                for (ItemStack left : p.getInventory().addItem(it).values()) p.getWorld().dropItemNaturally(p.getLocation(), left);
+                PlayerInventory inv = p.getInventory();
+                if (slotT != null) {
+                    int slot = slot(slotT.render(ctx, Template.Mode.RAW), inv);
+                    ItemStack cur = inv.getItem(slot);
+                    if (replace || cur == null || cur.getType().isAir()) {
+                        inv.setItem(slot, it);
+                        return;
+                    }
+                }
+                for (ItemStack left : inv.addItem(it).values()) p.getWorld().dropItemNaturally(p.getLocation(), left);
             });
         });
         register("drop_item", doc("Suelta un ítem en el suelo, donde está el jugador o en location.", "como give_item", "drop_item: \"GOLD_INGOT;3\"\nlocation: \"world;0;64;0\"").shape(Shape.ITEM, ITEM_KEYS).keys("location", "Dónde soltarlo: mundo;x;y;z (~ relativo)."), a -> {
@@ -688,14 +745,49 @@ public final class Actions {
                 l.getWorld().dropItemNaturally(l, spec.build(ctx));
             });
         });
-        register("remove_item", doc("Quita ítems por material, tengan o no nombre.", "MATERIAL;cantidad", "remove_item: \"EMERALD;5\""), a -> {
+        register("remove_item", doc("Quita ítems por material, tengan o no nombre; con name: o lorecontains: (spec 015), solo los de ese nombre o con esa línea de lore (sin colores).", "MATERIAL;cantidad[;name:<nombre>][;lorecontains:<texto>]", "remove_item: \"PAPER;1;name:Ticket VIP\""), a -> {
             List<Template> p = a.parts();
+            Template nameF = null, loreF = null;
+            for (int i = 2; i < p.size(); i++) {
+                String src = p.get(i).source().trim();
+                String low = src.toLowerCase(Locale.ROOT);
+                if (low.startsWith("name:")) nameF = Template.compile(src.substring(5));
+                else if (low.startsWith("lorecontains:")) loreF = Template.compile(src.substring(13));
+                else if (!src.isEmpty()) throw new IllegalArgumentException("filtro de remove_item desconocido '" + src + "' (usa name:<nombre> o lorecontains:<texto>)");
+            }
+            Template fName = nameF, fLore = loreF;
             return Action.of(ctx -> {
                 Player pl = ctx.requirePlayer();
                 Material m = material(p.get(0).render(ctx, Template.Mode.RAW));
                 int amount = part(p, 1) == null ? 1 : (int) num(p, 1, ctx);
-                removeByMaterial(pl.getInventory(), m, amount);
+                String n = fName == null ? null : plainFilter(fName.render(ctx, Template.Mode.RAW));
+                String l = fLore == null ? null : plainFilter(fLore.render(ctx, Template.Mode.RAW));
+                removeByMaterial(pl.getInventory(), m, amount, it -> matches(it, n, l));
             });
+        });
+        register("remove_item_slot", doc("Quita ítems de una casilla (spec 015): HAND, OFF_HAND, HELMET, CHESTPLATE, LEGGINGS, BOOTS o 0 a 40; sin cantidad, toda la pila.", "CASILLA;cantidad", "remove_item_slot: \"HAND;1\""), a -> {
+            List<Template> p = a.parts();
+            if (p.get(0).isConstant()) Slots.parse(p.get(0).source());
+            return Action.of(ctx -> {
+                PlayerInventory inv = ctx.requirePlayer().getInventory();
+                int slot = slot(p.get(0).render(ctx, Template.Mode.RAW), inv);
+                ItemStack it = inv.getItem(slot);
+                if (it == null || it.getType().isAir()) return;
+                int take = part(p, 1) == null ? it.getAmount() : (int) Math.max(0, num(p, 1, ctx));
+                if (take >= it.getAmount()) inv.setItem(slot, null);
+                else {
+                    it.setAmount(it.getAmount() - take);
+                    inv.setItem(slot, it);
+                }
+            });
+        });
+        register("set_caught_item", doc("Cambia lo que se pescó (player_fish) por otro ítem, con el formato de give_item (spec 015; set_item de ConditionalEvents).", "como give_item", "set_caught_item: \"DIAMOND;1;<aqua>Diamante del lago\"").shape(Shape.ITEM, ITEM_KEYS), a -> {
+            ItemSpec spec = ItemSpec.parse(a, plugin);
+            return Action.safe(Action.of(ctx -> {
+                if (!(ctx.event() instanceof org.bukkit.event.player.PlayerFishEvent f)) throw new ActionException("set_caught_item solo funciona en player_fish");
+                if (!(f.getCaught() instanceof org.bukkit.entity.Item caught)) throw new ActionException("set_caught_item: lo pescado no es un ítem (usa la condición state == 'CAUGHT_FISH')");
+                caught.setItemStack(spec.build(ctx));
+            }));
         });
         register("clear_inventory", doc("Vacía el inventario.", "(sin valor)", "clear_inventory"), a -> Action.of(ctx -> ctx.requirePlayer().getInventory().clear()));
         register("close_inventory", doc("Cierra el inventario abierto.", "(sin valor)", "close_inventory"), a -> Action.of(ctx -> ctx.requirePlayer().closeInventory()));
@@ -764,12 +856,12 @@ public final class Actions {
      * secundaria; la armadura no). Regresión (spec 002, F-02): {@code removeItem} de Bukkit solo quita ítems idénticos
      * y no tocaba los que da el propio plugin con nombre.
      */
-    private static void removeByMaterial(PlayerInventory inv, Material m, int amount) {
+    private static void removeByMaterial(PlayerInventory inv, Material m, int amount, java.util.function.Predicate<ItemStack> filter) {
         int left = amount;
         for (int i = 0; i < inv.getSize() && left > 0; i++) {
             if (i >= 36 && i < 40) continue;
             ItemStack it = inv.getItem(i);
-            if (it == null || it.getType() != m) continue;
+            if (it == null || it.getType() != m || !filter.test(it)) continue;
             int take = Math.min(left, it.getAmount());
             left -= take;
             if (take == it.getAmount()) inv.setItem(i, null);
@@ -778,6 +870,44 @@ public final class Actions {
                 inv.setItem(i, it);
             }
         }
+    }
+
+    /** Texto de un filtro sin colores (&, § y etiquetas MiniMessage). */
+    static String plainFilter(String s) {
+        return dev.leo.omnievents.text.TextFormat.plain(s).trim();
+    }
+
+    /** Spec 015, H1 CA2: el ítem tiene ese nombre (sin colores) y una línea de lore que contiene el texto. */
+    static boolean matches(ItemStack it, String name, String loreContains) {
+        if (name == null && loreContains == null) return true;
+        org.bukkit.inventory.meta.ItemMeta meta = it.getItemMeta();
+        if (name != null) {
+            if (meta == null || !meta.hasDisplayName()) return false;
+            if (!plain(meta.displayName()).trim().equals(name)) return false;
+        }
+        if (loreContains != null) {
+            List<Component> lore = meta == null ? null : meta.lore();
+            if (lore == null) return false;
+            boolean found = false;
+            for (Component c : lore) if (plain(c).contains(loreContains)) found = true;
+            if (!found) return false;
+        }
+        return true;
+    }
+
+    private static String plain(Component c) {
+        return c == null ? "" : net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(c);
+    }
+
+    /** La casilla de Slots en el inventario (HAND: la que tiene seleccionada el jugador). */
+    private static int slot(String text, PlayerInventory inv) {
+        int s;
+        try {
+            s = Slots.parse(text);
+        } catch (IllegalArgumentException e) {
+            throw new ActionException(e.getMessage());
+        }
+        return s == Slots.HAND ? inv.getHeldItemSlot() : s;
     }
 
     private static Entity requireEntity(ExecContext ctx) {
@@ -853,17 +983,18 @@ public final class Actions {
     // ------------------------------------------------------------------ mundo
 
     private void registerWorld() {
-        register("set_block", doc("Cambia un bloque: con solo el material, el bloque del evento; con coordenadas, ese (~ relativo).", "[mundo;]x;y;z;MATERIAL o MATERIAL", "set_block: \"~;~-1;~;GOLD_BLOCK\""), a -> {
+        register("set_block", doc("Cambia un bloque: con solo el material, el bloque del evento; con coordenadas, ese (~ relativo). El material acepta datos de bloque: OAK_STAIRS[facing=north] (spec 015).", "[mundo;]x;y;z;MATERIAL[datos] o MATERIAL[datos]", "set_block: \"~;~-1;~;GOLD_BLOCK\""), a -> {
             List<Template> p = a.parts();
             return Action.of(ctx -> {
+                Block target;
                 if (p.size() == 1) {
                     Object b = Values.raw(ctx.resolve("block"));
                     if (!(b instanceof Block block)) throw new ActionException("set_block sin coordenadas necesita un disparador con bloque");
-                    block.setType(material(p.get(0).render(ctx, Template.Mode.RAW)));
-                    return;
+                    target = block;
+                } else {
+                    target = location(p.subList(0, p.size() - 1), 0, ctx, ctx.location(), true).getBlock();
                 }
-                Location l = location(p.subList(0, p.size() - 1), 0, ctx, ctx.location(), true);
-                l.getBlock().setType(material(p.get(p.size() - 1).render(ctx, Template.Mode.RAW)));
+                setBlock(target, p.get(p.size() - 1).render(ctx, Template.Mode.RAW).trim());
             });
         });
         register("lightning", doc("Cae un rayo (solo el efecto, sin daño) donde está el jugador o en mundo;x;y;z.", "(sin valor) o mundo;x;y;z", "lightning"), a -> {
@@ -885,16 +1016,21 @@ public final class Actions {
                 l.getWorld().createExplosion(l, Math.min(power, 10f), fire, breakBlocks);
             });
         });
-        register("particle", doc("Partículas donde está el jugador (DUST lleva el color r;g;b).", "PARTÍCULA;cantidad;dx;dy;dz;velocidad[;r;g;b]", "particle: \"HEART;10\""), a -> {
+        register("particle", doc("Partículas donde está el jugador o en location (DUST lleva el color r;g;b).", "PARTÍCULA;cantidad;dx;dy;dz;velocidad[;r;g;b]", "particle: \"HEART;10\"\nlocation: \"~;~2;~\"\nforce: false\nfor_player: true")
+                .keys("location", "Dónde: mundo;x;y;z (~ relativo; spec 015). Sin ella, un bloque encima del jugador.",
+                        "force", "true: se ve desde lejos (spec 015).", "for_player", "true: solo la ve el jugador (spec 015)."), a -> {
             List<Template> p = a.parts();
+            List<Template> locP = a.extra("location") == null ? null : new Args("location", a.extra("location"), Map.of(), a.path(), a.parser()).parts();
+            Expression force = a.extra("force") == null ? null : Expression.compile(Values.str(a.extra("force")));
+            Expression forPlayer = a.extra("for_player") == null ? null : Expression.compile(Values.str(a.extra("for_player")));
             return Action.of(ctx -> {
                 Location l = ctx.location();
-                if (l == null) throw new ActionException("particle no tiene ubicación");
+                if (l == null && locP == null) throw new ActionException("particle no tiene ubicación (usa location: mundo;x;y;z)");
                 org.bukkit.Particle type = enumOf(org.bukkit.Particle.class, p.get(0).render(ctx, Template.Mode.RAW), "partícula");
                 int count = part(p, 1) == null ? 10 : (int) num(p, 1, ctx);
                 double dx = part(p, 2) == null ? 0.3 : num(p, 2, ctx), dy = part(p, 3) == null ? 0.3 : num(p, 3, ctx), dz = part(p, 4) == null ? 0.3 : num(p, 4, ctx);
                 double speed = part(p, 5) == null ? 0 : num(p, 5, ctx);
-                Location at = l.clone().add(0, 1, 0);
+                Location at = locP != null ? location(locP, 0, ctx, l, true) : l.clone().add(0, 1, 0);
                 Object data = null;
                 if (type.getDataType() == org.bukkit.Particle.DustOptions.class) {
                     int r = part(p, 6) == null ? 255 : (int) num(p, 6, ctx), g = part(p, 7) == null ? 0 : (int) num(p, 7, ctx), b = part(p, 8) == null ? 0 : (int) num(p, 8, ctx);
@@ -902,7 +1038,12 @@ public final class Actions {
                 } else if (type.getDataType() != Void.class) {
                     throw new ActionException("la partícula " + type + " necesita datos que OmniEvents aún no soporta");
                 }
-                l.getWorld().spawnParticle(type, at, Math.min(count, 2000), dx, dy, dz, speed, data);
+                int n = Math.min(count, 2000);
+                if (forPlayer != null && forPlayer.test(ctx)) {
+                    ctx.requirePlayer().spawnParticle(type, at, n, dx, dy, dz, speed, data);
+                } else {
+                    at.getWorld().spawnParticle(type, at, n, dx, dy, dz, speed, data, force != null && force.test(ctx));
+                }
             });
         });
         register("firework", doc("Lanza un fuego artificial desde el jugador (o cada destinatario de to) o desde location; sin daño salvo damage:true (spec 014). Forma de ConditionalEvents: pares clave:valor separados por espacios.",
@@ -937,7 +1078,12 @@ public final class Actions {
                 });
             });
         });
-        register("summon", doc("Invoca una entidad donde está el jugador o en mundo;x;y;z.", "TIPO[;mundo;x;y;z]", "summon: ZOMBIE"), a -> {
+        register("summon", doc("Invoca una entidad donde está el jugador o en mundo;x;y;z. En forma de mapa (spec 015): name, health, amount, scale y equipo.", "TIPO[;mundo;x;y;z] o un mapa", "summon: ZOMBIE").shape(Shape.ITEM,
+                "entity", "Tipo de entidad (ZOMBIE…).", "type", "Sinónimo de entity.", "location", "Dónde: mundo;x;y;z (~ relativo); sin ella, donde está el jugador.",
+                "name", "Nombre visible (MiniMessage, & y {expresiones}).", "health", "Vida máxima y actual.", "amount", "Cuántas (1 por defecto, máximo 50).",
+                "scale", "Escala de tamaño (atributo scale; 1 es normal).", "equipment", "Armadura: casco,peto,pantalones,botas (materiales o none).",
+                "hand_equipment", "Manos: principal,secundaria (materiales o none)."), a -> {
+            if (a.isMap()) return summonMap(a);
             List<Template> p = a.parts();
             return Action.of(ctx -> {
                 EntityType type = enumOf(EntityType.class, p.get(0).render(ctx, Template.Mode.RAW), "tipo de entidad");
@@ -946,6 +1092,87 @@ public final class Actions {
                 l.getWorld().spawnEntity(l, type);
             });
         });
+    }
+
+    /** Spec 015, H2 CA1: summon con las claves de ConditionalEvents. */
+    private static Action summonMap(Args a) {
+        Map<String, Object> m = a.map();
+        Object typeRaw = m.get("entity") != null ? m.get("entity") : m.get("type");
+        if (typeRaw == null) throw new IllegalArgumentException("summon en forma de mapa necesita entity (ZOMBIE…)");
+        Template type = Template.compile(Values.str(typeRaw));
+        List<Template> loc = m.get("location") == null ? null : new Args("location", m.get("location"), Map.of(), a.path(), a.parser()).parts();
+        Template name = opt(m, "name"), health = opt(m, "health"), amount = opt(m, "amount"), scale = opt(m, "scale");
+        List<Template> armor = equipment(m.get("equipment"), 4, "equipment"), hands = equipment(m.get("hand_equipment"), 2, "hand_equipment");
+        return Action.of(ctx -> {
+            EntityType t = enumOf(EntityType.class, type.render(ctx, Template.Mode.RAW), "tipo de entidad");
+            Location l = loc == null ? ctx.location() : location(loc, 0, ctx, ctx.location(), true);
+            if (l == null) throw new ActionException("summon no tiene ubicación (usa location: mundo;x;y;z)");
+            int n = amount == null ? 1 : (int) Math.max(1, Math.min(50, Values.num(amount.render(ctx, Template.Mode.RAW))));
+            for (int i = 0; i < n; i++) {
+                Entity e = l.getWorld().spawnEntity(l, t);
+                if (name != null) {
+                    e.customName(name.component(ctx));
+                    e.setCustomNameVisible(true);
+                }
+                if (!(e instanceof LivingEntity le)) continue;
+                if (health != null) {
+                    double h = Math.max(1, Values.num(health.render(ctx, Template.Mode.RAW)));
+                    AttributeInstance max = le.getAttribute(Attribute.MAX_HEALTH);
+                    if (max != null) max.setBaseValue(h);
+                    le.setHealth(Math.min(h, max == null ? h : max.getValue()));
+                }
+                if (scale != null) {
+                    AttributeInstance sc = le.getAttribute(Attribute.SCALE);
+                    if (sc != null) sc.setBaseValue(Math.max(0.0625, Math.min(16, Values.num(scale.render(ctx, Template.Mode.RAW)))));
+                }
+                org.bukkit.inventory.EntityEquipment eq = le.getEquipment();
+                if (eq == null) continue;
+                org.bukkit.inventory.EquipmentSlot[] armorSlots = {org.bukkit.inventory.EquipmentSlot.HEAD, org.bukkit.inventory.EquipmentSlot.CHEST,
+                        org.bukkit.inventory.EquipmentSlot.LEGS, org.bukkit.inventory.EquipmentSlot.FEET};
+                org.bukkit.inventory.EquipmentSlot[] handSlots = {org.bukkit.inventory.EquipmentSlot.HAND, org.bukkit.inventory.EquipmentSlot.OFF_HAND};
+                equip(eq, armor, armorSlots, ctx);
+                equip(eq, hands, handSlots, ctx);
+            }
+        });
+    }
+
+    /** MATERIAL o MATERIAL[clave=valor,…] (datos de bloque, spec 015 H2 CA2). */
+    private static void setBlock(Block b, String spec) {
+        if (spec.indexOf('[') < 0) {
+            b.setType(material(spec));
+            return;
+        }
+        String id = spec.contains(":") ? spec : "minecraft:" + spec.toLowerCase(Locale.ROOT).replaceFirst("\\[.*", "") + spec.substring(spec.indexOf('['));
+        try {
+            b.setBlockData(Bukkit.createBlockData(id));
+        } catch (IllegalArgumentException e) {
+            throw new ActionException("datos de bloque inválidos '" + spec + "'");
+        }
+    }
+
+    private static Template opt(Map<String, Object> m, String key) {
+        return m.get(key) == null ? null : Template.compile(Values.str(m.get(key)));
+    }
+
+    /** casco,peto,pantalones,botas (o principal,secundaria): texto con comas o lista; none deja la casilla vacía. */
+    private static List<Template> equipment(Object raw, int max, String key) {
+        if (raw == null) return List.of();
+        List<?> items = raw instanceof List<?> l ? l : List.of(Values.str(raw).split(","));
+        if (items.size() > max) throw new IllegalArgumentException(key + " lleva hasta " + max + " ítems separados por comas");
+        List<Template> out = new ArrayList<>();
+        for (Object o : items) out.add(Template.compile(Values.str(o).trim()));
+        return out;
+    }
+
+    private static void equip(org.bukkit.inventory.EntityEquipment eq, List<Template> items, org.bukkit.inventory.EquipmentSlot[] slots, ExecContext ctx) {
+        for (int i = 0; i < items.size(); i++) {
+            String v = items.get(i).render(ctx, Template.Mode.RAW).trim();
+            if (v.isEmpty() || v.equalsIgnoreCase("none")) continue;
+            eq.setItem(slots[i], new ItemStack(material(v)));
+            // Regresión (spec 015, F-02): Bukkit no deja fijar la probabilidad de soltar en lo que no es un Mob
+            // (un soporte de armadura) y el summon entero fallaba.
+            if (eq.getHolder() instanceof org.bukkit.entity.Mob) eq.setDropChance(slots[i], 0f);
+        }
     }
 
     private static int clamp255(int v) {
@@ -1017,13 +1244,19 @@ public final class Actions {
                 e.deathMessage(isNone(t, ctx) ? null : t.component(ctx));
             }));
         });
-        register("keep_inventory", doc("El jugador conserva el inventario y el nivel al morir (player_death).", "(sin valor) o expresión", "keep_inventory"), a -> {
-            Expression e = a.text().isEmpty() ? Expression.compile("true") : a.expr();
+        register("keep_inventory", doc("El jugador conserva al morir (player_death) los ítems, el nivel o los dos: items, xp o all (spec 015); sin valor o con una expresión verdadera, all.", "items, xp, all, (sin valor) o expresión", "keep_inventory: items"), a -> {
+            String mode = a.text().trim().toLowerCase(Locale.ROOT);
+            boolean fixed = mode.equals("items") || mode.equals("xp") || mode.equals("all");
+            Expression e = a.text().isEmpty() || fixed ? Expression.compile("true") : a.expr();
+            boolean items = !fixed || !mode.equals("xp"), xp = !fixed || !mode.equals("items");
             return Action.safe(Action.of(ctx -> {
                 if (!(ctx.event() instanceof PlayerDeathEvent d)) throw new ActionException("keep_inventory solo funciona en player_death");
-                if (Values.truthy(e.eval(ctx))) {
+                if (!Values.truthy(e.eval(ctx))) return;
+                if (items) {
                     d.setKeepInventory(true);
                     d.getDrops().clear();
+                }
+                if (xp) {
                     d.setKeepLevel(true);
                     d.setDroppedExp(0);
                 }
@@ -1037,6 +1270,22 @@ public final class Actions {
                 if (ev instanceof BlockBreakEvent b) b.setDropItems(false);
                 else if (ev instanceof EntityDeathEvent d) d.getDrops().clear();
                 else throw new ActionException("cancel_drops solo funciona en block_break, entity_death y player_kill");
+            }));
+        });
+        register("tab_complete", doc("Cambia las sugerencias de autocompletado (player_tab_complete, spec 015): set deja solo las de la lista, add las suma (las dos solo las que empiezan por lo que lleva escrito, y set las ordena), remove las quita y clear las borra todas.",
+                "set|add|remove|clear;a,b,c", "tab_complete: \"set;spawn,tienda,arena\""), a -> {
+            List<Template> p = a.parts();
+            String mode = p.get(0).source().trim().toLowerCase(Locale.ROOT);
+            if (!List.of("set", "add", "remove", "clear").contains(mode)) {
+                throw new IllegalArgumentException("modo de tab_complete desconocido '" + mode + "' (usa set, add, remove o clear)" + dev.leo.omnievents.util.Suggest.hint(mode, List.of("set", "add", "remove", "clear")));
+            }
+            Template list = part(p, 1);
+            if (list == null && !mode.equals("clear")) throw new IllegalArgumentException("tab_complete " + mode + " necesita la lista: \"" + mode + ";a,b,c\"");
+            return Action.safe(Action.of(ctx -> {
+                if (!(ctx.event() instanceof org.bukkit.event.server.TabCompleteEvent e)) throw new ActionException("tab_complete solo funciona en player_tab_complete");
+                List<String> items = new ArrayList<>();
+                if (list != null) for (String s : list.render(ctx, Template.Mode.RAW).split(",")) if (!s.isBlank()) items.add(s.trim());
+                e.setCompletions(TabCompletions.apply(mode, e.getCompletions(), items, TabCompletions.last(e.getBuffer())));
             }));
         });
         register("deny_join", doc("Rechaza la entrada con un mensaje (player_pre_login).", "texto", "deny_join: \"<red>El servidor está en mantenimiento\""), a -> {

@@ -34,7 +34,7 @@ public final class ActionParser {
             Map.entry("cancel_event", "cancel"), Map.entry("console_command", "console"), Map.entry("player_command", "command"),
             Map.entry("playsound", "sound"), Map.entry("give_potion_effect", "effect"), Map.entry("remove_potion_effect", "remove_effect"),
             Map.entry("wait", "delay"), Map.entry("player_send_chat", "chat"),
-            Map.entry("mini_message", "message"), Map.entry("json_message", "message"), Map.entry("set_on_fire", "fire"),
+            Map.entry("mini_message", "message"), Map.entry("set_on_fire", "fire"), Map.entry("set_item", "set_caught_item"),
             Map.entry("call_event", "call"), Map.entry("lightning_strike", "lightning"), Map.entry("stopsound", "stop_sound"),
             Map.entry("execute", "call"), Map.entry("tp", "teleport"), Map.entry("msg", "message"), Map.entry("bc", "broadcast"),
             Map.entry("prevent_join", "deny_join"), Map.entry("potion", "effect"));
@@ -186,7 +186,8 @@ public final class ActionParser {
                 where == null ? null : Expression.compile(Values.str(where)), ch,
                 when == null ? null : Expression.compile(Values.str(when)),
                 catalog.isFlow(canonical) || canonical.equals("call"), source(canonical, value, extra),
-                catalog.isFlow(canonical) || canonical.equals("call") || ActionNode.SANDBOXED.contains(canonical) ? null : preview(value));
+                catalog.isFlow(canonical) || canonical.equals("call") || ActionNode.SANDBOXED.contains(canonical) ? null
+                        : canonical.equals("json_message") ? Actions.jsonTemplate(Values.str(value)) : preview(value));
     }
 
     /** El valor de texto como plantilla, para registrarlo armado en una prueba (spec 010); null si no es texto. */

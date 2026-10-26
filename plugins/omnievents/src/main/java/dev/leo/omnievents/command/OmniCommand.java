@@ -45,6 +45,8 @@ import java.util.UUID;
 /** /omni (H11). Cada subcomando exige omnievents.command.&lt;sub&gt;. */
 public final class OmniCommand implements TabExecutor {
     private static final Map<String, String> SUBS = new LinkedHashMap<>();
+    /** Subcomandos que aceptan -s (spec 015). */
+    private static final java.util.Set<String> SILENT = java.util.Set.of("call", "enable", "disable", "interrupt");
 
     static {
         SUBS.put("help", "Esta ayuda");
@@ -52,8 +54,8 @@ public final class OmniCommand implements TabExecutor {
         SUBS.put("validate", "Revisa las reglas sin aplicarlas");
         SUBS.put("list", "Lista las reglas [filtro]");
         SUBS.put("info", "Detalle de una regla");
-        SUBS.put("enable", "Activa una regla");
-        SUBS.put("disable", "Desactiva una regla");
+        SUBS.put("enable", "Activa una regla [-s]");
+        SUBS.put("disable", "Desactiva una regla [-s]");
         SUBS.put("debug", "Traza en vivo: <regla|all|off|export>");
         SUBS.put("check", "Revisa una regla ahora, sin efectos: <regla> [jugador]");
         SUBS.put("test", "Corre las pruebas (tests:) de las reglas, sin efectos: [regla]");
@@ -62,7 +64,8 @@ public final class OmniCommand implements TabExecutor {
         SUBS.put("run", "Dispara una regla: <regla> <jugador> [--simular]");
         SUBS.put("state", "Quién está en el estado de una regla state: <regla>");
         SUBS.put("eval", "Evalúa una expresión con tu contexto");
-        SUBS.put("call", "Ejecuta una regla call: <regla> [jugador] [k=v…]");
+        SUBS.put("call", "Ejecuta una regla call: <regla> [jugador] [k=v…] [-s]");
+        SUBS.put("interrupt", "Corta las esperas (delay) de una regla: <regla|*> [jugador] [-s]");
         SUBS.put("var", "Variables: get|set|del|list <jugador|global> [nombre] [valor] [--expire 10m]");
         SUBS.put("data", "Variables de un objeto: [bloque|entidad|mano]");
         SUBS.put("cooldown", "reset <regla|*> [jugador|*|global]");
@@ -111,6 +114,9 @@ public final class OmniCommand implements TabExecutor {
             return true;
         }
         String[] a = Arrays.copyOfRange(args, Math.min(1, args.length), args.length);
+        // Spec 015, H4 CA2: -s (silent:true de ConditionalEvents) no manda la respuesta; los errores sí.
+        boolean silent = SILENT.contains(sub) && Arrays.asList(a).contains("-s");
+        if (silent) a = Arrays.stream(a).filter(x -> !x.equals("-s")).toArray(String[]::new);
         try {
             switch (sub) {
                 case "help" -> help(s, label);
@@ -118,7 +124,7 @@ public final class OmniCommand implements TabExecutor {
                 case "validate" -> validate(s);
                 case "list" -> list(s, a);
                 case "info" -> info(s, a);
-                case "enable", "disable" -> toggle(s, a, sub.equals("enable"));
+                case "enable", "disable" -> toggle(s, a, sub.equals("enable"), silent);
                 case "debug" -> debug(s, a);
                 case "check" -> check(s, a);
                 case "test" -> test(s, a);
@@ -128,7 +134,8 @@ public final class OmniCommand implements TabExecutor {
                 case "state" -> state(s, a);
                 case "cpu" -> cpu(s, a);
                 case "eval" -> eval(s, a);
-                case "call" -> call(s, a);
+                case "call" -> call(s, a, silent);
+                case "interrupt" -> interrupt(s, a, silent);
                 case "var" -> var(s, a);
                 case "data" -> data(s, a);
                 case "cooldown" -> resetUsage(s, a, true);
@@ -225,10 +232,11 @@ public final class OmniCommand implements TabExecutor {
                 + Values.formatNumber(Values.round(st.avgMillis(), 3)) + " ms");
     }
 
-    private void toggle(CommandSender s, String[] a, boolean on) {
+    private void toggle(CommandSender s, String[] a, boolean on, boolean silent) {
         Rule r = rule(s, a, 0);
         r.setEnabled(on);
         reRegister();
+        if (silent) return;
         send(s, on ? "rule-enabled" : "rule-disabled", "rule", r.name());
         send(s, "toggle-note");
     }
@@ -409,7 +417,7 @@ public final class OmniCommand implements TabExecutor {
         raw(s, "<gray>" + esc(src) + " <dark_gray>=</dark_gray> <green>" + esc(Node.show(v)) + "</green> <dark_gray>(" + esc(Values.typeName(v)) + ")");
     }
 
-    private void call(CommandSender s, String[] a) {
+    private void call(CommandSender s, String[] a, boolean silent) {
         Rule r = rule(s, a, 0);
         if (r.trigger().kind() != TriggerType.Kind.CALL) throw new IllegalArgumentException("'" + r.name() + "' no es una regla con trigger: call");
         ExecContext base = senderContext(s);
@@ -435,7 +443,21 @@ public final class OmniCommand implements TabExecutor {
             b.put("location", p.getLocation());
         }
         plugin.rules().call(r.name(), new ExecContext(plugin, null, b), args, 0, null);
-        send(s, "call-done", "rule", r.name());
+        if (!silent) send(s, "call-done", "rule", r.name());
+    }
+
+    /** /omni interrupt <regla|*> [jugador] (spec 015, H4 CA1; /ce interrupt). */
+    private void interrupt(CommandSender s, String[] a, boolean silent) {
+        if (a.length == 0) throw new IllegalArgumentException("uso: /omni interrupt <regla|*> [jugador] [-s]");
+        String name = a[0].equals("*") ? "*" : rule(s, a, 0).name();
+        java.util.UUID who = null;
+        if (a.length > 1) {
+            Player p = Bukkit.getPlayerExact(a[1]);
+            if (p == null) throw new IllegalArgumentException("el jugador '" + a[1] + "' no está conectado");
+            who = p.getUniqueId();
+        }
+        int n = plugin.rules().interrupt(name, who);
+        if (!silent) send(s, "interrupt-done", "rule", name.equals("*") ? "todas las reglas" : name, "count", n);
     }
 
     @SuppressWarnings("deprecation")
@@ -942,6 +964,13 @@ public final class OmniCommand implements TabExecutor {
                         opts.add("export");
                         opts.addAll(plugin.rules().names());
                     }
+                }
+                case "interrupt" -> {
+                    if (i == 1) {
+                        opts.add("*");
+                        opts.addAll(plugin.rules().names());
+                    }
+                    if (i == 2) Bukkit.getOnlinePlayers().forEach(p -> opts.add(p.getName()));
                 }
                 case "call" -> {
                     if (i == 1) for (Rule r : plugin.rules().byKind(TriggerType.Kind.CALL)) opts.add(r.name());

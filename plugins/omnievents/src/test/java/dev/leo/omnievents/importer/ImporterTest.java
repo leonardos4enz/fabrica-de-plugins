@@ -60,14 +60,14 @@ class ImporterTest {
                       error2:
                       - "cancel_event: true"
                       - "message: &cThat player is not online."
-                      - "remove_item_slot: HAND;1"
+                      - "player_command_as_op: op %player%"
                     ignore_with_permission: conditionalevents.ignore.example
                     cooldown: 10
                 """, StandardCharsets.UTF_8);
         File out = new File(dir, "rules");
         ConditionalEventsImporter.Report rep = new ConditionalEventsImporter().importFolder(ce, out);
         assertEquals(1, rep.events());
-        assertEquals(1, rep.review(), "remove_item_slot no se traduce y queda para revisar (firework sí desde la 014)");
+        assertEquals(1, rep.review(), "player_command_as_op no se traduce y queda para revisar (remove_item_slot sí desde la 015)");
         String yml = Files.readString(new File(out, "config.yml").toPath(), StandardCharsets.UTF_8);
         assertTrue(yml.contains("REVISAR"), yml);
 
@@ -209,9 +209,84 @@ class ImporterTest {
                 "var.cooldown_left", "event.action", "cursor.name", "from.world.name", "to.y", "minecraft:mi_sonido", "velocity:",
                 "player.helmet.type", "player.world.has_storm", "exp_to_drop = 0", "material: DIAMOND_SWORD", "SHARPNESS:2",
                 "model:", "GOLD_INGOT", "summon: ZOMBIE;world;0;64;0", "particle: DUST;5;0.1;0.1;0.1;0;255;0;0", "weight: 70",
-                "damager.type", "target.health", "var.cantidad = 5", "{var.cantidad}", "<red>Clic aquí", "where:"}) {
+                "damager.type", "target.health", "var.cantidad = 5", "{var.cantidad}", "json_message:", "Clic aquí", "where:"}) {
             assertTrue(yml.contains(s), "falta «" + s + "» en\n" + yml);
         }
         assertTrue(rep.notes().stream().anyMatch(n -> n.contains("shot_direction")), rep.notes().toString());
+    }
+
+    @Test
+    void S015_H6_CA1_CA2_traduce_lo_que_faltaba(@TempDir File dir) throws Exception {
+        File ce = new File(dir, "ConditionalEvents");
+        ce.mkdirs();
+        Files.writeString(new File(ce, "config.yml").toPath(), """
+                Events:
+                  estadistica:
+                    type: player_statistic
+                    conditions: ["%statistic_name% == JUMP", "%new_value% > %previous_value%", "%entity% == none"]
+                    actions:
+                      default: ["message: saltaste %new_value% veces"]
+                  aire:
+                    type: player_change_air
+                    actions:
+                      default: ["message: aire"]
+                  tab:
+                    type: player_tab_complete
+                    conditions: ["%main_command% == /warp", "%args_length% == 1"]
+                    actions:
+                      default: ["tab_complete: set;spawn,tienda", "tab_complete: remove;admin"]
+                  pesca:
+                    type: player_fish
+                    conditions: ["%random_player% != %player%", "%is_number_{arg_1}% == true"]
+                    actions:
+                      default:
+                      - "set_item: id:DIAMOND;amount:1;name:&bDiamante"
+                      - "message: %randomword_hola-chau-buenas%"
+                  muerte:
+                    type: player_death
+                    conditions: ["%block_at_10_64_{player_z}_world% == STONE"]
+                    actions:
+                      default: ["keep_items: items"]
+                  kit:
+                    type: player_command
+                    conditions: ["%main_command% == /kit"]
+                    actions:
+                      default:
+                      - "json_message: {\\"text\\":\\"Hola %player%\\",\\"color\\":\\"gold\\",\\"clickEvent\\":{\\"action\\":\\"run_command\\",\\"value\\":\\"/spawn\\"}}"
+                      - "give_item: id:PLAYER_HEAD;amount:1;skull_owner:%player%;slot:HELMET;slot_replace:true"
+                      - "give_item: id:DIAMOND_SWORD;flags:HIDE_ENCHANTS,HIDE_ATTRIBUTES;durability:10;item_model:minecraft:stick;slot:0"
+                      - "remove_item: PAPER;1;name:&aTicket;lorecontains:VIP"
+                      - "remove_item_slot: OFF_HAND;1"
+                      - "summon: location:0,64,0,world;entity:ZOMBIE;custom_name:&cGuardián;health:40;amount:2;equipment:DIAMOND_HELMET,none,none,IRON_BOOTS;hand_equipment:IRON_SWORD,none"
+                      - "particle: effect:FLAME amount:10 location:5;70;5;world force:true"
+                      - "playsound: ENTITY_PLAYER_LEVELUP;1;1;10,64,10,world"
+                      - "stopsound_resource_pack: mi_pack:musica"
+                      - "set_block: location:1,64,1,world;id:OAK_STAIRS;block_data:facing=north"
+                  viejo:
+                    type: player_command
+                    actions:
+                      default: ["remove_item: WOOL;1;datavalue:14"]
+                """, StandardCharsets.UTF_8);
+        File out = new File(dir, "rules");
+        ConditionalEventsImporter.Report rep = new ConditionalEventsImporter().importFolder(ce, out);
+        String yml = Files.readString(new File(out, "config.yml").toPath(), StandardCharsets.UTF_8);
+        // Solo datavalue (legado de 1.12) queda como REVISAR.
+        assertEquals(1, rep.review(), yml + "\n" + rep.notes());
+        assertTrue(yml.contains("REVISAR (ConditionalEvents) remove_item: WOOL;1;datavalue:14"), yml);
+        Problems p = new Problems();
+        Map<String, Rule> rules = new RuleLoader(new Actions(null), new Triggers()).loadFolder(out, p);
+        assertEquals(0, p.errors(), p.all().stream().map(Object::toString).collect(Collectors.joining("\n")) + "\n" + yml);
+        assertEquals("player_statistic", rules.get("estadistica").trigger().name());
+        assertEquals("player_air_change", rules.get("aire").trigger().name());
+        assertEquals("player_tab_complete", rules.get("tab").trigger().name());
+        for (String s : new String[]{"statistic == 'JUMP'", "new_value > previous_value", "entity_type == 'none'", "tab_complete: set;spawn,tienda",
+                "pick(players()).name != player.name", "is_number(args[0])", "pick([''hola'', ''chau'', ''buenas''])", "set_caught_item:",
+                "block_at('world', 10, 64, %player_z%).type", "keep_inventory: items", "json_message:", "Hola {player.name}", "skull_owner: '{player.name}'",
+                "slot: HELMET", "slot_replace: true", "HIDE_ATTRIBUTES", "durability: '10'", "item_model: minecraft:stick", "name:&aTicket;lorecontains:VIP",
+                "remove_item_slot: OFF_HAND;1", "name: '&cGuardián'", "health: '40'", "equipment: DIAMOND_HELMET,none,none,IRON_BOOTS",
+                "hand_equipment: IRON_SWORD,none", "location: world;5;70;5", "force: true", "location: world;10;64;10",
+                "stop_sound: mi_pack:musica", "OAK_STAIRS[facing=north]"}) {
+            assertTrue(yml.contains(s), "falta «" + s + "» en\n" + yml);
+        }
     }
 }

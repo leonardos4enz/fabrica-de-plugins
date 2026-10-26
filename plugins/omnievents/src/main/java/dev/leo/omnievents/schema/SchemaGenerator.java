@@ -360,7 +360,7 @@ public final class SchemaGenerator {
         Map<String, Object> value = value(d);
         value.put("description", description + (d.value().isEmpty() ? "" : " Valor: " + d.value() + "."));
         props.put(key, value);
-        d.keys().forEach((k, desc) -> props.put(k, with(ACTION_LIST_KEYS.contains(k) ? ref("actions") : map("type", List.of("string", "number")), desc)));
+        d.keys().forEach((k, desc) -> props.put(k, with(ACTION_LIST_KEYS.contains(k) ? ref("actions") : map("type", List.of("string", "number", "boolean")), desc)));
         for (String m : ActionParser.MODIFIER_DOCS.keySet()) {
             if (!(m.equals("to") && actions.isFlow(canonical))) props.put(m, ref("modifier_" + m));
         }

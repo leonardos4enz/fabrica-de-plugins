@@ -1,4 +1,4 @@
-version = "1.9.0"
+version = "1.10.0"
 
 repositories {
     // Integraciones opcionales (spec 012): solo para compilar, no se empaquetan.

@@ -37,6 +37,9 @@ public final class Execution {
     private int iterations;
     private Runnable revertUsage;
     private Runnable onFinish;
+    /** Spec 015: el jugador de la ejecución y la tarea de su delay, para /omni interrupt. */
+    private java.util.UUID playerId;
+    private org.bukkit.scheduler.BukkitTask waitTask;
     /** Spec 010: en una prueba no hay plugin; los topes y los errores van al Sandbox. */
     private final Sandbox sandbox;
 
@@ -177,6 +180,8 @@ public final class Execution {
     // ----- motor -----
 
     public void start(List<ActionNode> nodes, ExecContext ctx) {
+        org.bukkit.entity.Player p = sandbox == null ? ctx.playerOrNull() : null;
+        playerId = p == null ? null : p.getUniqueId();
         pushBlock(nodes, ctx);
         resume();
     }
@@ -252,11 +257,35 @@ public final class Execution {
                     trace("  delay ignorado: el servidor se está apagando");
                     continue;
                 }
-                Bukkit.getScheduler().runTaskLater(plugin, this::resume, wait);
+                waitTask = Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    waitTask = null;
+                    plugin.rules().waiting(this, false);
+                    resume();
+                }, wait);
+                plugin.rules().waiting(this, true);
                 return;
             }
         }
         finish();
+    }
+
+    /** El jugador con el que empezó (null sin jugador). */
+    public java.util.UUID playerId() {
+        return playerId;
+    }
+
+    /**
+     * /omni interrupt (spec 015, H4 CA1): corta una ejecución que espera un delay; lo que faltaba no corre. true si
+     * estaba esperando.
+     */
+    public boolean interrupt() {
+        if (waitTask == null || finished) return false;
+        waitTask.cancel();
+        waitTask = null;
+        stopped = true;
+        trace("  ✘ interrumpida (/omni interrupt)");
+        finish();
+        return true;
     }
 
     private void fail(ActionNode node, RuntimeException e) {

@@ -1,4 +1,4 @@
-# OmniEvents
+`item_repair` (yunque o afiladora: `repair_type`, `rename_text`, `level_cost`, `base_item`, `addition`) `item_mend` (Mending: `amount`, `orb`) |`player_portal` `player_kick` `player_resource_pack` `player_statistic` (`statistic`, `previous_value`, `new_value`) `player_air_change` (`old_air`, `new_air`, `max_air`) `player_tab_complete` (`buffer`, `cmd`, `args`, `last`, `completions`; la acción `tab_complete` las cambia) |`keep_inventory` (`items`, `xp` o `all`) `cancel_drops` `deny_join` `tab_complete` (`set|add|remove|clear;a,b,c`, en `player_tab_complete`) |`sound` (`SONIDO;vol;tono`, `location:` opcional) `stop_sound` (también claves de paquete de recursos) `console_message` `log` || [Mensajes](../../docs/omnievents/galeria.md#acciones--mensajes) | `message` `centered_message` (cada línea centrada en el chat) `json_message` (JSON de texto con clic y hover)# OmniEvents
 
 Eventos condicionales para **Paper 1.21.4 y 26.1** (ver [Compatibilidad](#compatibilidad)): «cuando pase X, si se cumple Y, haz Z», declarado en YAML.
 Es la versión propia de la fábrica de *ConditionalEvents*, con un lenguaje de expresiones real, control de flujo,
@@ -10,8 +10,9 @@ variables persistentes y herramientas de diagnóstico. Specs: [001](../../docs/s
 [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/spec.md) (pruebas de reglas en el YAML: `tests:` y `/omni test`),
 [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/spec.md) (paquetes, plantillas y versión),
 [012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/spec.md) (costos todo o nada, Vault, WorldGuard y Citizens),
-[013](../../docs/sdd/specs/013-omnievents-menus-y-formularios-bedrock/spec.md) (menús de inventario y formularios de Bedrock) y
-[014](../../docs/sdd/specs/014-omnievents-paridad-conditionalevents/spec.md) (paridad con ConditionalEvents).
+[013](../../docs/sdd/specs/013-omnievents-menus-y-formularios-bedrock/spec.md) (menús de inventario y formularios de Bedrock),
+[014](../../docs/sdd/specs/014-omnievents-paridad-conditionalevents/spec.md) (paridad con ConditionalEvents) y
+[015](../../docs/sdd/specs/015-omnievents-paridad-conditionalevents-2/spec.md) (paridad con ConditionalEvents, segunda parte).
 
 **[Referencia completa](../../docs/omnievents/referencia.md)**: cada opción, disparador, acción y función, generada del
 código (nunca queda desactualizada). **[Autocompletado en VS Code](#editor-autocompletado-y-errores-en-vs-code)** con
@@ -26,8 +27,8 @@ Minecraft 1.21.4 ([spec 004](../../docs/sdd/specs/004-fabrica-capturas-en-juego/
 ## Compatibilidad
 | Servidor | Estado | Evidencia |
 |---|---|---|
-| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.9.0) | Compuertas 1, 2 y 3a: 182 unitarias, servidor real y 49/49 escenarios en el juego dos veces (2026-10-25, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md), [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md), [012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/verify.md), [013](../../docs/sdd/specs/013-omnievents-menus-y-formularios-bedrock/verify.md) y [014](../../docs/sdd/specs/014-omnievents-paridad-conditionalevents/verify.md)) |
-| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.9.0) | 49/49 escenarios en el juego dos veces con el mismo jar (2026-10-25, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md), [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md), [012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/verify.md), [013](../../docs/sdd/specs/013-omnievents-menus-y-formularios-bedrock/verify.md) y [014](../../docs/sdd/specs/014-omnievents-paridad-conditionalevents/verify.md)) |
+| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.10.0) | Compuertas 1, 2 y 3a: 191 unitarias, servidor real y 55/55 escenarios en el juego dos veces (2026-10-25, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md), [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md), [012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/verify.md), [013](../../docs/sdd/specs/013-omnievents-menus-y-formularios-bedrock/verify.md), [014](../../docs/sdd/specs/014-omnievents-paridad-conditionalevents/verify.md) y [015](../../docs/sdd/specs/015-omnievents-paridad-conditionalevents-2/verify.md)) |
+| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.10.0) | 55/55 escenarios en el juego dos veces con el mismo jar (2026-10-25, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md), [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md), [012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/verify.md), [013](../../docs/sdd/specs/013-omnievents-menus-y-formularios-bedrock/verify.md), [014](../../docs/sdd/specs/014-omnievents-paridad-conditionalevents/verify.md) y [015](../../docs/sdd/specs/015-omnievents-paridad-conditionalevents-2/verify.md)) |
 | Paper 1.21.5 – 1.21.11 | Sin verificar | Debería funcionar (misma API, sin NMS), pero no se probó |
 | Paper 26.2 y 26.3 | Sin verificar | El bot de pruebas (mineflayer 4.39) llega hasta 26.1 |
 | Paper 1.21.3 o anterior | No soportada | Se compila contra la API de 1.21.4 |
@@ -325,7 +326,9 @@ tests:
   `lower` `upper` `trim` `replace` `substr` `split` `join` `str` `num` `int` `bool` `strip` `format` `default(a,b)`
   `if(c,a,b)` `papi(t[,jugador])` `online(n)` `player(n)` `players()` `perm(p)` `now()` `hour()` `minute()`
   `weekday()` `date(patrón)` `cooldown(regla)` `uses(regla)` `distance(a,b)` `in_area(mundo,x1,y1,z1,x2,y2,z2)`
-  `has_item(material[,n])` `pvar_of(jugador,nombre)` `in_state(regla)` `ttl(variable)` `size(x)`.
+  `has_item(material[,n])` `pvar_of(jugador,nombre)` `in_state(regla)` `ttl(variable)` `size(x)`, y desde la 1.10.0
+  `pick(lista)` (uno al azar: `pick(players()).name`), `block_at(mundo,x,y,z)` (el bloque, o nulo si el chunk no está
+  cargado) e `is_number(x)`.
 
 Firma y descripción de cada función: [referencia](../../docs/omnievents/referencia.md#funciones). Prueba cualquier expresión en el juego: `/omni eval player.location.biome`.
 
@@ -352,8 +355,8 @@ Control de flujo: `if/then/else`, `repeat/do` (`var.i`), `while/do`, `for_each/a
 |---|---|
 | [Mensajes](../../docs/omnievents/galeria.md#acciones--mensajes) | `message` `centered_message` (cada línea centrada en el chat) `broadcast` `actionbar` `title` (`título;subtítulo;in;stay;out`) `bossbar` (`texto;segundos;color;progreso`) `sound` (`SONIDO;vol;tono`) `stop_sound` `console_message` `log` |
 | [Comandos](../../docs/omnievents/galeria.md#acciones--comandos) | `console` `command` `chat` `send_to_server` |
-| [Jugador](../../docs/omnievents/galeria.md#acciones--jugador) | `teleport` (`mundo;x;y;z;yaw;pitch`, `~` relativo) `heal` `damage` `feed` `set_food` `gamemode` `fly` `effect` (`EFECTO;segundos;nivel;partículas`) `remove_effect` `fire` `freeze` `velocity` `launch` `give_item` `drop_item` `remove_item` (`MATERIAL;cantidad`: por material, aunque el ítem tenga nombre) `clear_inventory` `close_inventory` `give_exp` `give_level` `give_money` `take_money` (Vault) `kick` |
-| [Mundo](../../docs/omnievents/galeria.md#acciones--mundo) | `set_block` `lightning` `explosion` (`potencia;fuego;romper`) `particle` (`PARTÍCULA;n;dx;dy;dz;vel[;r;g;b]`) `summon` `firework` (abajo) |
+| [Jugador](../../docs/omnievents/galeria.md#acciones--jugador) | `teleport` (`mundo;x;y;z;yaw;pitch`, `~` relativo) `heal` `damage` `feed` `set_food` `gamemode` `fly` `effect` (`EFECTO;segundos;nivel;partículas`) `remove_effect` `fire` `freeze` `velocity` `launch` `give_item` `drop_item` `remove_item` (`MATERIAL;cantidad[;name:…][;lorecontains:…]`: por material, aunque el ítem tenga nombre, o solo los de ese nombre o lore) `remove_item_slot` (`CASILLA;cantidad`) `set_caught_item` (`player_fish`) `clear_inventory` `close_inventory` `give_exp` `give_level` `give_money` `take_money` (Vault) `kick` |
+| [Mundo](../../docs/omnievents/galeria.md#acciones--mundo) | `set_block` (`MATERIAL[datos]`: `OAK_STAIRS[facing=north]`) `lightning` `explosion` (`potencia;fuego;romper`) `particle` (`PARTÍCULA;n;dx;dy;dz;vel[;r;g;b]`, con `location`, `force`, `for_player`) `summon` (texto o mapa, abajo) `firework` (abajo) |
 | [Evento](../../docs/omnievents/galeria.md#acciones--evento) | `cancel` `set_event` (`propiedad = expresión`) `set_damage` (`10` o `150%`) `set_message` `set_join_message` `set_quit_message` `set_death_message` (`none` la oculta) `keep_inventory` `cancel_drops` `deny_join` |
 
 | `title` | `bossbar` |
@@ -369,6 +372,34 @@ Fuegos artificiales (forma de ConditionalEvents; sin daño salvo `damage:true`):
 ```
 
 Ítems: `give_item: "DIAMOND;2;<aqua>Nombre;<gray>Lore 1|<gray>Lore 2"`, en mapa (`material`, `amount`, `name`,
+`lore`, `model`, `enchants`, `glow`, `unbreakable`, `hide_flags`, y desde la 1.10.0 `flags`, `durability`, `item_model`,
+`skull_owner`, `skull_texture`) o `saved:<nombre>` (guardado con `/omni item save`). `give_item` en mapa acepta además
+`slot` (0 a 40 o `HAND`, `OFF_HAND`, `HELMET`, `CHESTPLATE`, `LEGGINGS`, `BOOTS`) y `slot_replace`:
+```yaml
+- give_item:
+    material: DIAMOND_SWORD
+    name: "<aqua>Espada VIP"
+    flags: HIDE_ENCHANTS, HIDE_ATTRIBUTES
+    durability: 100            # daño ya gastado
+    enchants: ["SHARPNESS:3"]
+    slot: 0                    # si está ocupada va al inventario, salvo slot_replace: true
+- give_item: {material: PLAYER_HEAD, skull_owner: "{player.name}", slot: HELMET}
+- remove_item: "PAPER;1;name:Ticket VIP"     # solo los papeles con ese nombre (sin colores)
+- remove_item_slot: "OFF_HAND;1"
+```
+
+Invocar con nombre, vida y equipo (`summon` en mapa; el equipo no se suelta al morir):
+```yaml
+- summon:
+    entity: ZOMBIE
+    location: "~3;~;~"
+    name: "<red>Guardián"
+    health: 40
+    amount: 2                  # máximo 50
+    scale: 1.5
+    equipment: "DIAMOND_HELMET,none,none,IRON_BOOTS"   # casco,peto,pantalones,botas
+    hand_equipment: "IRON_SWORD,SHIELD"
+```|<gray>Lore 2"`, en mapa (`material`, `amount`, `name`,
 `lore`, `model`, `enchants`, `glow`, `unbreakable`, `hide_flags`) o `saved:<nombre>` (guardado con `/omni item save`).
 
 ## Disparadores
@@ -578,26 +609,29 @@ avisar:
 
 ## Desde ConditionalEvents
 La [spec 014](../../docs/sdd/specs/014-omnievents-paridad-conditionalevents/spec.md) comparó OmniEvents fila por fila
-con el jar de ConditionalEvents 4.65.1 (51 eventos, 53 acciones, destinos, variables, opciones y comandos). Resumen:
+con el jar de ConditionalEvents 4.65.1 (51 eventos, 53 acciones, destinos, variables, opciones y comandos) y la
+[015](../../docs/sdd/specs/015-omnievents-paridad-conditionalevents-2/spec.md) cerró lo que quedaba. Resumen:
 
 | De ConditionalEvents | En OmniEvents | `/omni import` |
 |---|---|---|
-| Los 47 eventos con equivalente (de 51), incluidos `item_repair`, `citizens_right_click_npc` y `wgevents_region_*` | El mismo disparador o su par (`player_leave` → `player_quit`, `repetitive` → `timer`…) | Se traduce, con las variables de cada evento |
-| `centered_message`, `firework`, `title`, `actionbar`, `playsound`, `give_item`, `drop_item`, `summon`, `particle`, `set_block`, `keep_items`, `set_event_xp`, `execute_action_group`, `throw_*`, `json_message` y las demás acciones comunes | Su acción (`json_message` se convierte a MiniMessage; `execute_action_group` a `random` con `weight`) | Se traduce; las claves que aún no existen (`summon` con `equipment`, `particle` con `location`…) se avisan |
+| Los 49 eventos con equivalente (de 51), incluidos `item_repair`, `citizens_right_click_npc`, `wgevents_region_*`, `player_statistic`, `player_change_air` y `player_tab_complete` | El mismo disparador o su par (`player_leave` → `player_quit`, `repetitive` → `timer`…) | Se traduce, con las variables de cada evento |
+| `centered_message`, `firework`, `json_message`, `title`, `actionbar`, `playsound` (también con ubicación), `give_item` y `drop_item` (con `slot`, `flags`, `durability`, `item_model`, `skull_owner`…), `remove_item` (con `name:` y `lorecontains:`), `remove_item_slot`, `summon` (con `custom_name`, `health`, `amount`, `equipment`…), `particle` (con `location` y `force`), `set_block` (con `block_data`), `set_item`, `tab_complete`, `keep_items`, `set_event_xp`, `execute_action_group`, `throw_*` y las demás acciones comunes | Su acción (`set_item` → `set_caught_item`; `execute_action_group` → `random` con `weight`) | Se traduce |
+| `%random_player%`, `%randomword_a-b%`, `%is_number_x%`, `%block_at_x_y_z_mundo%` | `pick(players()).name`, `pick([...])`, `is_number(x)`, `block_at(mundo, x, y, z).type` | Se traduce |
 | `to_all`, `to_target`, `to_world`, `to_player`, `to_range` (con su booleano), `to_condition` | `to` y `where` | Se traduce; dentro de `to`, `%player%` es el jugador del evento (`source`) y `%to:x%` el destinatario |
 | `execute grupo{%v%=x}`, grupos `cooldown`/`one_time`, `prevent_cooldown_activation` | `if`/`else`, `on_cooldown`/`on_limit`, `no_cooldown` | Se traduce |
 | `cooldown` y `conditionalevents.bypasscooldown.<evento>` | `cooldown` y `cooldown_bypass` | El permiso de CE sigue sirviendo |
-| `/ce reset <jugador>\|* <evento>\|all` | `/omni cooldown reset <regla\|*> [jugador\|*\|global]` (y `limit reset`) | — |
-| `player_statistic`, `player_change_air`, `player_tab_complete`, `remove_item_slot`, `set_item`, `tab_complete`, `/ce interrupt` | Todavía no (pendientes en el [roadmap](../../docs/sdd/roadmap.md)) | Queda «REVISAR» con una nota |
+| `/ce reset <jugador>|* <evento>|all`, `/ce interrupt`, `silent:true` | `/omni cooldown reset <regla|*> [jugador|*|global]` (y `limit reset`), `/omni interrupt <regla|*> [jugador]`, `-s` | — ||* <evento>\|all` | `/omni cooldown reset <regla\|*> [jugador\|*\|global]` (y `limit reset`) | — |
+| `remove_item` con `datavalue:` (1.12), `custom_model_component_data_*`, `vector` | No: legado de versiones viejas; componentes sin API estable; sin documentar en CE | Queda «REVISAR» con una nota |
 | `player_command_as_op`, ProtocolLib/PacketEvents, DiscordSRV | No: escalada de permisos; leer paquetes; otra integración | Queda «REVISAR» con el motivo |
 
 ## Comandos (`/omni`, alias `/oe`)
 `reload` · `validate` · `list [filtro]` · `info <regla>` · `enable|disable <regla>` · `debug <regla|all|off|export>` ·
 `check <regla> [jugador]` · `test [regla]` · `pack list|info|enable|disable [paquete]` · `menu list|open <jugador> <menú>|close <jugador>` · `run <regla> <jugador> [--simular]` · `state <regla>` · `cpu [on|off|reset]` ·
-`eval <expr>` · `call <regla> [jugador] [k=v…]` · `var get|set|del|list <jugador|global> [nombre] [valor] [--expire 10m]` ·
+`eval <expr>` · `call <regla> [jugador] [k=v…]` · `interrupt <regla|*> [jugador]` (corta lo que falta de las ejecuciones que esperan un `delay`) · `var get|set|del|list <jugador|global> [nombre] [valor] [--expire 10m]` ·
 `data [bloque|entidad|mano]` ·
 `cooldown reset <regla|*> [jugador|*|global]` · `limit reset <regla|*> [jugador|*|global]` · `stats` · `triggers` · `actions` ·
 `item save|delete|list` · `import conditionalevents` · `selftest` · `schema` (esquema JSON y referencia, [arriba](#editor-autocompletado-y-errores-en-vs-code)).
+`-s` en `call`, `enable`, `disable` e `interrupt` no manda la respuesta (para usarlos desde `console:` en otras reglas).
 Permisos: `omnievents.command.<sub>` (por defecto solo OP) o `omnievents.command.*`. Cómo se ve cada uno: [galería](../../docs/omnievents/galeria.md#comandos-de-omni).
 
 `enable|disable` duran hasta el próximo `reload` y se pueden encadenar sin costo: si la regla no es un comando, no se
@@ -647,7 +681,7 @@ debug:
 ```
 
 ## PlaceholderAPI
-`%omni_var_<n>%` · `%omni_gvar_<n>%` · `%omni_cooldown_<regla>%` · `%omni_uses_<regla>%` · `%omni_state_<regla>%` (`true`/`false`).
+`%omni_var_<n>%` · `%omni_gvar_<n>%` · `%omni_cooldown_<regla>%` · `%omni_uses_<regla>%` · `%omni_state_<regla>%` (`true`/`false`) · `%omni_enabled_<regla>%` (`true`/`false`).
 
 ## API
 ```java

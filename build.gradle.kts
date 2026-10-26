@@ -26,6 +26,9 @@ subprojects {
 
     tasks.withType<Test>().configureEach {
         useJUnitPlatform()
+        // Spec 015, F-01: el validador del esquema JSON (SchemaTest) junta los mensajes de cada rama del anyOf de
+        // acciones; con las de la 015 ya no entra en los 512 MB por defecto.
+        maxHeapSize = "1g"
         testLogging { events("failed"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
     }
 

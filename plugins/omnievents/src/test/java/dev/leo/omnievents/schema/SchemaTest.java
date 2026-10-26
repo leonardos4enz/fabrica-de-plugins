@@ -57,8 +57,11 @@ class SchemaTest {
         return s.validate(node);
     }
 
+    // Regresión (spec 015, F-01): con el anyOf de todas las acciones, un ejemplo inválido da miles de mensajes y
+    // armarlos todos dejaba sin memoria al JVM de las pruebas (OutOfMemoryError en vez de decir qué ejemplo falla).
     private static String dump(Set<ValidationMessage> errors) {
-        return errors.stream().map(ValidationMessage::getMessage).collect(Collectors.joining("\n"));
+        String shown = errors.stream().limit(30).map(ValidationMessage::getMessage).collect(Collectors.joining("\n"));
+        return errors.size() > 30 ? shown + "\n… y " + (errors.size() - 30) + " mensajes más" : shown;
     }
 
     private static String rule(String body) {

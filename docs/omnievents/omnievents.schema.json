@@ -41,6 +41,9 @@
             "player_portal",
             "player_kick",
             "player_resource_pack",
+            "player_statistic",
+            "player_air_change",
+            "player_tab_complete",
             "player_damage",
             "player_attack",
             "player_kill",
@@ -61,6 +64,7 @@
             "item_held",
             "item_enchant",
             "item_repair",
+            "item_mend",
             "item_break",
             "inventory_open",
             "inventory_close",
@@ -117,6 +121,9 @@
             "Un jugador usa un portal.",
             "Un jugador es expulsado del servidor.",
             "Un jugador responde al paquete de recursos (status).",
+            "Sube una estadística del jugador (statistic: JUMP, MOB_KILLS…; previous_value, new_value; material o entity_type si la estadística los tiene). Algunas, como caminar, suben muy seguido.",
+            "Cambia el aire de un jugador (old_air, new_air, max_air, en ticks: 300 es lleno). Bajo el agua corre en cada tick.",
+            "Un jugador pide autocompletar un comando de un plugin (buffer: lo escrito; cmd, args; last: la palabra a medio escribir; completions: las sugerencias). La acción tab_complete las cambia. Los comandos de Minecraft los completa el cliente: no pasan por aquí.",
             "Un jugador recibe daño (cause; damager si fue una entidad o un jugador, también con proyectil).",
             "Un jugador golpea a una entidad, directo o con un proyectil (target, damage).",
             "Un jugador mata a una entidad (target).",
@@ -137,6 +144,7 @@
             "Un jugador cambia de ranura en la barra (item: el nuevo, previous_item: el anterior).",
             "Un jugador encanta un ítem en la mesa (enchants, cost).",
             "Un jugador saca el resultado de un yunque o una afiladora (repair_type: ANVIL o GRINDSTONE; rename_text, level_cost, base_item, addition).",
+            "Mending repara un ítem del jugador con un orbe de experiencia (spec 015; amount: durabilidad que repara, orb). cancel hace que el orbe dé experiencia en vez de reparar.",
             "Se rompe la herramienta o la armadura de un jugador.",
             "Un jugador abre un inventario (title, inventory_type).",
             "Un jugador cierra un inventario.",
@@ -193,6 +201,9 @@
             "Un jugador usa un portal.",
             "Un jugador es expulsado del servidor.",
             "Un jugador responde al paquete de recursos (status).",
+            "Sube una estadística del jugador (statistic: JUMP, MOB_KILLS…; previous_value, new_value; material o entity_type si la estadística los tiene). Algunas, como caminar, suben muy seguido.",
+            "Cambia el aire de un jugador (old_air, new_air, max_air, en ticks: 300 es lleno). Bajo el agua corre en cada tick.",
+            "Un jugador pide autocompletar un comando de un plugin (buffer: lo escrito; cmd, args; last: la palabra a medio escribir; completions: las sugerencias). La acción tab_complete las cambia. Los comandos de Minecraft los completa el cliente: no pasan por aquí.",
             "Un jugador recibe daño (cause; damager si fue una entidad o un jugador, también con proyectil).",
             "Un jugador golpea a una entidad, directo o con un proyectil (target, damage).",
             "Un jugador mata a una entidad (target).",
@@ -213,6 +224,7 @@
             "Un jugador cambia de ranura en la barra (item: el nuevo, previous_item: el anterior).",
             "Un jugador encanta un ítem en la mesa (enchants, cost).",
             "Un jugador saca el resultado de un yunque o una afiladora (repair_type: ANVIL o GRINDSTONE; rename_text, level_cost, base_item, addition).",
+            "Mending repara un ítem del jugador con un orbe de experiencia (spec 015; amount: durabilidad que repara, orb). cancel hace que el orbe dé experiencia en vez de reparar.",
             "Se rompe la herramienta o la armadura de un jugador.",
             "Un jugador abre un inventario (title, inventory_type).",
             "Un jugador cierra un inventario.",
@@ -273,6 +285,9 @@
             "player_portal",
             "player_kick",
             "player_resource_pack",
+            "player_statistic",
+            "player_air_change",
+            "player_tab_complete",
             "player_damage",
             "player_attack",
             "player_kill",
@@ -293,6 +308,7 @@
             "item_held",
             "item_enchant",
             "item_repair",
+            "item_mend",
             "item_break",
             "inventory_open",
             "inventory_close",
@@ -349,6 +365,9 @@
             "Un jugador usa un portal.",
             "Un jugador es expulsado del servidor.",
             "Un jugador responde al paquete de recursos (status).",
+            "Sube una estadística del jugador (statistic: JUMP, MOB_KILLS…; previous_value, new_value; material o entity_type si la estadística los tiene). Algunas, como caminar, suben muy seguido.",
+            "Cambia el aire de un jugador (old_air, new_air, max_air, en ticks: 300 es lleno). Bajo el agua corre en cada tick.",
+            "Un jugador pide autocompletar un comando de un plugin (buffer: lo escrito; cmd, args; last: la palabra a medio escribir; completions: las sugerencias). La acción tab_complete las cambia. Los comandos de Minecraft los completa el cliente: no pasan por aquí.",
             "Un jugador recibe daño (cause; damager si fue una entidad o un jugador, también con proyectil).",
             "Un jugador golpea a una entidad, directo o con un proyectil (target, damage).",
             "Un jugador mata a una entidad (target).",
@@ -369,6 +388,7 @@
             "Un jugador cambia de ranura en la barra (item: el nuevo, previous_item: el anterior).",
             "Un jugador encanta un ítem en la mesa (enchants, cost).",
             "Un jugador saca el resultado de un yunque o una afiladora (repair_type: ANVIL o GRINDSTONE; rename_text, level_cost, base_item, addition).",
+            "Mending repara un ítem del jugador con un orbe de experiencia (spec 015; amount: durabilidad que repara, orb). cancel hace que el orbe dé experiencia en vez de reparar.",
             "Se rompe la herramienta o la armadura de un jugador.",
             "Un jugador abre un inventario (title, inventory_type).",
             "Un jugador cierra un inventario.",
@@ -425,6 +445,9 @@
             "Un jugador usa un portal.",
             "Un jugador es expulsado del servidor.",
             "Un jugador responde al paquete de recursos (status).",
+            "Sube una estadística del jugador (statistic: JUMP, MOB_KILLS…; previous_value, new_value; material o entity_type si la estadística los tiene). Algunas, como caminar, suben muy seguido.",
+            "Cambia el aire de un jugador (old_air, new_air, max_air, en ticks: 300 es lleno). Bajo el agua corre en cada tick.",
+            "Un jugador pide autocompletar un comando de un plugin (buffer: lo escrito; cmd, args; last: la palabra a medio escribir; completions: las sugerencias). La acción tab_complete las cambia. Los comandos de Minecraft los completa el cliente: no pasan por aquí.",
             "Un jugador recibe daño (cause; damager si fue una entidad o un jugador, también con proyectil).",
             "Un jugador golpea a una entidad, directo o con un proyectil (target, damage).",
             "Un jugador mata a una entidad (target).",
@@ -445,6 +468,7 @@
             "Un jugador cambia de ranura en la barra (item: el nuevo, previous_item: el anterior).",
             "Un jugador encanta un ítem en la mesa (enchants, cost).",
             "Un jugador saca el resultado de un yunque o una afiladora (repair_type: ANVIL o GRINDSTONE; rename_text, level_cost, base_item, addition).",
+            "Mending repara un ítem del jugador con un orbe de experiencia (spec 015; amount: durabilidad que repara, orb). cancel hace que el orbe dé experiencia en vez de reparar.",
             "Se rompe la herramienta o la armadura de un jugador.",
             "Un jugador abre un inventario (title, inventory_type).",
             "Un jugador cierra un inventario.",
@@ -1221,7 +1245,7 @@
         "number",
         "boolean"
       ],
-      "description": "Expresión de OmniEvents (el editor no la revisa: usa /omni validate). Operadores: && || ! == != < <= > >= ~= contains startsWith endsWith matches in, + - * / %, c ? a : b. Variables: var.x, pvar.x, gvar.x. Funciones: abs(x), bool(x), ceil(x), chance(p), clamp(x, min, max), cooldown(regla), date([patrón]), default(x, otro), distance(a, b), floor(x), format(x[, decimales]), has_item(material[, n]), hour(), if(condición, a, b), in_area(mundo, x1, y1, z1, x2, y2, z2), in_region(id), in_state(regla), int(x), is_bedrock(), is_npc(entidad), join(lista[, separador]), len(x), lower(t), max(a, b, …), min(a, b, …), minute(), money(), money_format(n), now(), num(x), online(nombre), papi(texto[, jugador]), perm(permiso[, jugador]), player(nombre), players(), pow(x, y), pvar_of(jugador, nombre), random(a, b), randomf(a, b), regions(), replace(t, buscar, poner), round(x[, decimales]), size(x), split(t, separador), sqrt(x), str(x), strip(t), substr(t, desde[, hasta]), trim(t), ttl(variable), upper(t), uses(regla), weekday()."
+      "description": "Expresión de OmniEvents (el editor no la revisa: usa /omni validate). Operadores: && || ! == != < <= > >= ~= contains startsWith endsWith matches in, + - * / %, c ? a : b. Variables: var.x, pvar.x, gvar.x. Funciones: abs(x), block_at(mundo, x, y, z), bool(x), ceil(x), chance(p), clamp(x, min, max), cooldown(regla), date([patrón]), default(x, otro), distance(a, b), floor(x), format(x[, decimales]), has_item(material[, n]), hour(), if(condición, a, b), in_area(mundo,x1, y1, z1, x2, y2, z2), in_region(id), in_state(regla), int(x), is_bedrock(), is_npc(entidad), is_number(x), join(lista[, separador]), len(x), lower(t), max(a, b, …), min(a, b, …), minute(), money(), money_format(n), now(), num(x), online(nombre), papi(texto[, jugador]), perm(permiso[, jugador]), pick(lista), player(nombre), players(), pow(x, y), pvar_of(jugador, nombre), random(a, b), randomf(a, b), regions(), replace(t, buscar, poner), round(x[, decimales]), size(x), split(t, separador), sqrt(x), str(x), strip(t), substr(t, desde[, hasta]), trim(t), ttl(variable), upper(t), uses(regla), weekday()."
     },
     "menu": {
       "type": "object",
@@ -1512,6 +1536,21 @@
                 },
                 "saved": {
                   "description": "Ítem guardado con /omni item save."
+                },
+                "flags": {
+                  "description": "Banderas (spec 015): lista o texto con comas de HIDE_ENCHANTS, HIDE_ATTRIBUTES…"
+                },
+                "durability": {
+                  "description": "Daño del ítem (durabilidad gastada, como en ConditionalEvents)."
+                },
+                "item_model": {
+                  "description": "Modelo del ítem: clave espacio:modelo (1.21.4+)."
+                },
+                "skull_owner": {
+                  "description": "Para PLAYER_HEAD: nombre del jugador de la cabeza."
+                },
+                "skull_texture": {
+                  "description": "Para PLAYER_HEAD: textura en base64."
                 }
               },
               "additionalProperties": false
@@ -1586,6 +1625,21 @@
         },
         "saved": {
           "description": "Ítem guardado con /omni item save."
+        },
+        "flags": {
+          "description": "Banderas (spec 015): lista o texto con comas de HIDE_ENCHANTS, HIDE_ATTRIBUTES…"
+        },
+        "durability": {
+          "description": "Daño del ítem (durabilidad gastada, como en ConditionalEvents)."
+        },
+        "item_model": {
+          "description": "Modelo del ítem: clave espacio:modelo (1.21.4+)."
+        },
+        "skull_owner": {
+          "description": "Para PLAYER_HEAD: nombre del jugador de la cabeza."
+        },
+        "skull_texture": {
+          "description": "Para PLAYER_HEAD: textura en base64."
         }
       },
       "additionalProperties": false,
@@ -2350,7 +2404,7 @@
       "anyOf": [
         {
           "type": "string",
-          "pattern": "^\\s*(?:(?:to_all|to_target)\\s*:\\s*|(?:to_player|to_range|to_world)\\s*:[^:]*:\\s*)?(?:actionbar|bossbar|broadcast|call|cancel|cancel_drops|centered_message|chat|clear_inventory|close_inventory|close_menu|command|console|console_message|damage|delay|deny_join|drop_item|effect|explosion|feed|fire|firework|fly|for_each|freeze|gamemode|give_exp|give_item|give_level|give_money|heal|if|keep_inventory|kick|launch|lightning|log|message|no_cooldown|open_menu|particle|random|remove_effect|remove_item|repeat|reset_cooldown|send_to_server|set|set_block|set_damage|set_death_message|set_event|set_food|set_join_message|set_message|set_quit_message|sound|stop|stop_sound|summon|take_money|teleport|title|unset|velocity|wait_ticks|while|bc|call_event|cancel_event|console_command|execute|give_potion_effect|json_message|lightning_strike|mini_message|msg|player_command|player_send_chat|playsound|potion|prevent_join|remove_potion_effect|set_on_fire|stopsound|tp|wait)\\s*(?::[\\s\\S]*)?$",
+          "pattern": "^\\s*(?:(?:to_all|to_target)\\s*:\\s*|(?:to_player|to_range|to_world)\\s*:[^:]*:\\s*)?(?:actionbar|bossbar|broadcast|call|cancel|cancel_drops|centered_message|chat|clear_inventory|close_inventory|close_menu|command|console|console_message|damage|delay|deny_join|drop_item|effect|explosion|feed|fire|firework|fly|for_each|freeze|gamemode|give_exp|give_item|give_level|give_money|heal|if|json_message|keep_inventory|kick|launch|lightning|log|message|no_cooldown|open_menu|particle|random|remove_effect|remove_item|remove_item_slot|repeat|reset_cooldown|send_to_server|set|set_block|set_caught_item|set_damage|set_death_message|set_event|set_food|set_join_message|set_message|set_quit_message|sound|stop|stop_sound|summon|tab_complete|take_money|teleport|title|unset|velocity|wait_ticks|while|bc|call_event|cancel_event|console_command|execute|give_potion_effect|lightning_strike|mini_message|msg|player_command|player_send_chat|playsound|potion|prevent_join|remove_potion_effect|set_item|set_on_fire|stopsound|tp|wait)\\s*(?::[\\s\\S]*)?$",
           "description": "Forma corta: \"tipo: valor\" (p. ej. \"message: hola\" o \"cancel\")."
         },
         {
@@ -2928,6 +2982,21 @@
                     },
                     "saved": {
                       "description": "Ítem guardado con /omni item save."
+                    },
+                    "flags": {
+                      "description": "Banderas (spec 015): lista o texto con comas de HIDE_ENCHANTS, HIDE_ATTRIBUTES…"
+                    },
+                    "durability": {
+                      "description": "Daño del ítem (durabilidad gastada, como en ConditionalEvents)."
+                    },
+                    "item_model": {
+                      "description": "Modelo del ítem: clave espacio:modelo (1.21.4+)."
+                    },
+                    "skull_owner": {
+                      "description": "Para PLAYER_HEAD: nombre del jugador de la cabeza."
+                    },
+                    "skull_texture": {
+                      "description": "Para PLAYER_HEAD: textura en base64."
                     }
                   },
                   "additionalProperties": false
@@ -2938,7 +3007,8 @@
             "location": {
               "type": [
                 "string",
-                "number"
+                "number",
+                "boolean"
               ],
               "description": "Dónde soltarlo: mundo;x;y;z (~ relativo)."
             },
@@ -3163,7 +3233,8 @@
             "as": {
               "type": [
                 "string",
-                "number"
+                "number",
+                "boolean"
               ],
               "description": "Nombre de la raíz con el destinatario (sin as: player y source)."
             },
@@ -3320,12 +3391,33 @@
                     },
                     "saved": {
                       "description": "Ítem guardado con /omni item save."
+                    },
+                    "flags": {
+                      "description": "Banderas (spec 015): lista o texto con comas de HIDE_ENCHANTS, HIDE_ATTRIBUTES…"
+                    },
+                    "durability": {
+                      "description": "Daño del ítem (durabilidad gastada, como en ConditionalEvents)."
+                    },
+                    "item_model": {
+                      "description": "Modelo del ítem: clave espacio:modelo (1.21.4+)."
+                    },
+                    "skull_owner": {
+                      "description": "Para PLAYER_HEAD: nombre del jugador de la cabeza."
+                    },
+                    "skull_texture": {
+                      "description": "Para PLAYER_HEAD: textura en base64."
+                    },
+                    "slot": {
+                      "description": "Casilla donde ponerlo: 0 a 40 o HAND, OFF_HAND, HELMET, CHESTPLATE, LEGGINGS, BOOTS. Si está ocupada, va al inventario (salvo slot_replace)."
+                    },
+                    "slot_replace": {
+                      "description": "true: reemplaza lo que haya en la casilla."
                     }
                   },
                   "additionalProperties": false
                 }
               ],
-              "description": "Da un ítem; lo que no cabe cae al suelo. Valor: MATERIAL;cantidad;nombre;lore1|lore2, saved:<nombre> o un mapa."
+              "description": "Da un ítem; lo que no cabe cae al suelo. En forma de mapa, slot lo pone en una casilla (spec 015). Valor: MATERIAL;cantidad;nombre;lore1|lore2, saved:<nombre> o un mapa."
             },
             "to": {
               "$ref": "#/definitions/modifier_to"
@@ -3481,6 +3573,36 @@
         {
           "type": "object",
           "properties": {
+            "json_message": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Envía un mensaje escrito en JSON de texto de Minecraft (clic, hover…), como json_message de ConditionalEvents (spec 015). Se convierte al cargar; los {expresiones} dentro de los textos se resuelven y escapan como en message. Valor: JSON de texto."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "json_message"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
             "keep_inventory": {
               "type": [
                 "string",
@@ -3488,7 +3610,7 @@
                 "boolean",
                 "null"
               ],
-              "description": "El jugador conserva el inventario y el nivel al morir (player_death). Valor: (sin valor) o expresión."
+              "description": "El jugador conserva al morir (player_death) los ítems, el nivel o los dos: items, xp o all (spec 015); sin valor o con una expresión verdadera, all. Valor: items, xp, all, (sin valor) o expresión."
             },
             "to": {
               "$ref": "#/definitions/modifier_to"
@@ -3745,7 +3867,31 @@
                 "boolean",
                 "null"
               ],
-              "description": "Partículas donde está el jugador (DUST lleva el color r;g;b). Valor: PARTÍCULA;cantidad;dx;dy;dz;velocidad[;r;g;b]."
+              "description": "Partículas donde está el jugador o en location (DUST lleva el color r;g;b). Valor: PARTÍCULA;cantidad;dx;dy;dz;velocidad[;r;g;b]."
+            },
+            "location": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ],
+              "description": "Dónde: mundo;x;y;z (~ relativo; spec 015). Sin ella, un bloque encima del jugador."
+            },
+            "force": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ],
+              "description": "true: se ve desde lejos (spec 015)."
+            },
+            "for_player": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ],
+              "description": "true: solo la ve el jugador (spec 015)."
             },
             "to": {
               "$ref": "#/definitions/modifier_to"
@@ -3847,7 +3993,7 @@
                 "boolean",
                 "null"
               ],
-              "description": "Quita ítems por material, tengan o no nombre. Valor: MATERIAL;cantidad."
+              "description": "Quita ítems por material, tengan o no nombre; con name: o lorecontains: (spec 015), solo los de ese nombre o con esa línea de lore (sin colores). Valor: MATERIAL;cantidad[;name:<nombre>][;lorecontains:<texto>]."
             },
             "to": {
               "$ref": "#/definitions/modifier_to"
@@ -3864,6 +4010,36 @@
           },
           "required": [
             "remove_item"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "remove_item_slot": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Quita ítems de una casilla (spec 015): HAND, OFF_HAND, HELMET, CHESTPLATE, LEGGINGS, BOOTS o 0 a 40; sin cantidad, toda la pila. Valor: CASILLA;cantidad."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "remove_item_slot"
           ],
           "additionalProperties": false
         },
@@ -3890,7 +4066,8 @@
             "as": {
               "type": [
                 "string",
-                "number"
+                "number",
+                "boolean"
               ],
               "description": "Nombre de la variable con el número de vuelta (i por defecto)."
             },
@@ -3984,7 +4161,8 @@
             "expire": {
               "type": [
                 "string",
-                "number"
+                "number",
+                "boolean"
               ],
               "description": "Duración tras la que la variable se borra sola (10m, 1h; spec 009). Cada set la vuelve a contar; un set sin expire la quita."
             },
@@ -4016,7 +4194,7 @@
                 "boolean",
                 "null"
               ],
-              "description": "Cambia un bloque: con solo el material, el bloque del evento; con coordenadas, ese (~ relativo). Valor: [mundo;]x;y;z;MATERIAL o MATERIAL."
+              "description": "Cambia un bloque: con solo el material, el bloque del evento; con coordenadas, ese (~ relativo). El material acepta datos de bloque: OAK_STAIRS[facing=north] (spec 015). Valor: [mundo;]x;y;z;MATERIAL[datos] o MATERIAL[datos]."
             },
             "to": {
               "$ref": "#/definitions/modifier_to"
@@ -4033,6 +4211,94 @@
           },
           "required": [
             "set_block"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "set_caught_item": {
+              "anyOf": [
+                {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "material": {
+                      "description": "Material (DIAMOND, IRON_SWORD…)."
+                    },
+                    "id": {
+                      "description": "Sinónimo de material."
+                    },
+                    "amount": {
+                      "description": "Cantidad."
+                    },
+                    "name": {
+                      "description": "Nombre (MiniMessage, & y {expresiones})."
+                    },
+                    "lore": {
+                      "description": "Líneas de descripción: una lista, o un texto con |."
+                    },
+                    "model": {
+                      "description": "custom_model_data."
+                    },
+                    "enchants": {
+                      "description": "Encantamientos: mapa encantamiento: nivel, o lista \"SHARPNESS:2\"."
+                    },
+                    "glow": {
+                      "description": "Brillo de encantado sin encantamientos."
+                    },
+                    "unbreakable": {
+                      "description": "Irrompible."
+                    },
+                    "hide_flags": {
+                      "description": "Oculta los atributos."
+                    },
+                    "saved": {
+                      "description": "Ítem guardado con /omni item save."
+                    },
+                    "flags": {
+                      "description": "Banderas (spec 015): lista o texto con comas de HIDE_ENCHANTS, HIDE_ATTRIBUTES…"
+                    },
+                    "durability": {
+                      "description": "Daño del ítem (durabilidad gastada, como en ConditionalEvents)."
+                    },
+                    "item_model": {
+                      "description": "Modelo del ítem: clave espacio:modelo (1.21.4+)."
+                    },
+                    "skull_owner": {
+                      "description": "Para PLAYER_HEAD: nombre del jugador de la cabeza."
+                    },
+                    "skull_texture": {
+                      "description": "Para PLAYER_HEAD: textura en base64."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "description": "Cambia lo que se pescó (player_fish) por otro ítem, con el formato de give_item (spec 015; set_item de ConditionalEvents). Valor: como give_item."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "set_caught_item"
           ],
           "additionalProperties": false
         },
@@ -4258,6 +4524,14 @@
               ],
               "description": "Reproduce un sonido al jugador (o en la ubicación); también acepta claves como minecraft:block.note_block.pling. Valor: SONIDO;volumen;tono."
             },
+            "location": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ],
+              "description": "Dónde suena: mundo;x;y;z (~ relativo; spec 015). Lo oyen los cercanos, no solo el jugador."
+            },
             "to": {
               "$ref": "#/definitions/modifier_to"
             },
@@ -4313,7 +4587,7 @@
                 "boolean",
                 "null"
               ],
-              "description": "Detiene un sonido del jugador, o todos (all o sin valor). Valor: SONIDO o all."
+              "description": "Detiene un sonido del jugador, o todos (all o sin valor); también claves de paquete de recursos (mi_pack:musica, spec 015). Valor: SONIDO o all."
             },
             "to": {
               "$ref": "#/definitions/modifier_to"
@@ -4337,13 +4611,50 @@
           "type": "object",
           "properties": {
             "summon": {
-              "type": [
-                "string",
-                "number",
-                "boolean",
-                "null"
+              "anyOf": [
+                {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "entity": {
+                      "description": "Tipo de entidad (ZOMBIE…)."
+                    },
+                    "type": {
+                      "description": "Sinónimo de entity."
+                    },
+                    "location": {
+                      "description": "Dónde: mundo;x;y;z (~ relativo); sin ella, donde está el jugador."
+                    },
+                    "name": {
+                      "description": "Nombre visible (MiniMessage, & y {expresiones})."
+                    },
+                    "health": {
+                      "description": "Vida máxima y actual."
+                    },
+                    "amount": {
+                      "description": "Cuántas (1 por defecto, máximo 50)."
+                    },
+                    "scale": {
+                      "description": "Escala de tamaño (atributo scale; 1 es normal)."
+                    },
+                    "equipment": {
+                      "description": "Armadura: casco,peto,pantalones,botas (materiales o none)."
+                    },
+                    "hand_equipment": {
+                      "description": "Manos: principal,secundaria (materiales o none)."
+                    }
+                  },
+                  "additionalProperties": false
+                }
               ],
-              "description": "Invoca una entidad donde está el jugador o en mundo;x;y;z. Valor: TIPO[;mundo;x;y;z]."
+              "description": "Invoca una entidad donde está el jugador o en mundo;x;y;z. En forma de mapa (spec 015): name, health, amount, scale y equipo. Valor: TIPO[;mundo;x;y;z] o un mapa."
             },
             "to": {
               "$ref": "#/definitions/modifier_to"
@@ -4360,6 +4671,36 @@
           },
           "required": [
             "summon"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "tab_complete": {
+              "type": [
+                "string",
+                "number",
+                "boolean",
+                "null"
+              ],
+              "description": "Cambia las sugerencias de autocompletado (player_tab_complete, spec 015): set deja solo las de la lista, add las suma (las dos solo las que empiezan por lo que lleva escrito, y set las ordena), remove las quita y clear las borra todas. Valor: set|add|remove|clear;a,b,c."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "tab_complete"
           ],
           "additionalProperties": false
         },
@@ -4798,36 +5139,6 @@
         {
           "type": "object",
           "properties": {
-            "json_message": {
-              "type": [
-                "string",
-                "number",
-                "boolean",
-                "null"
-              ],
-              "description": "Alias de message (ConditionalEvents). Envía un mensaje al jugador (sin jugador, a quien ejecutó o a la consola). Acepta MiniMessage, & y {expresiones}. Valor: texto."
-            },
-            "to": {
-              "$ref": "#/definitions/modifier_to"
-            },
-            "where": {
-              "$ref": "#/definitions/modifier_where"
-            },
-            "chance": {
-              "$ref": "#/definitions/modifier_chance"
-            },
-            "when": {
-              "$ref": "#/definitions/modifier_when"
-            }
-          },
-          "required": [
-            "json_message"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
             "lightning_strike": {
               "type": [
                 "string",
@@ -4987,6 +5298,14 @@
               ],
               "description": "Alias de sound (ConditionalEvents). Reproduce un sonido al jugador (o en la ubicación); también acepta claves como minecraft:block.note_block.pling. Valor: SONIDO;volumen;tono."
             },
+            "location": {
+              "type": [
+                "string",
+                "number",
+                "boolean"
+              ],
+              "description": "Dónde suena: mundo;x;y;z (~ relativo; spec 015). Lo oyen los cercanos, no solo el jugador."
+            },
             "to": {
               "$ref": "#/definitions/modifier_to"
             },
@@ -5098,6 +5417,94 @@
         {
           "type": "object",
           "properties": {
+            "set_item": {
+              "anyOf": [
+                {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "material": {
+                      "description": "Material (DIAMOND, IRON_SWORD…)."
+                    },
+                    "id": {
+                      "description": "Sinónimo de material."
+                    },
+                    "amount": {
+                      "description": "Cantidad."
+                    },
+                    "name": {
+                      "description": "Nombre (MiniMessage, & y {expresiones})."
+                    },
+                    "lore": {
+                      "description": "Líneas de descripción: una lista, o un texto con |."
+                    },
+                    "model": {
+                      "description": "custom_model_data."
+                    },
+                    "enchants": {
+                      "description": "Encantamientos: mapa encantamiento: nivel, o lista \"SHARPNESS:2\"."
+                    },
+                    "glow": {
+                      "description": "Brillo de encantado sin encantamientos."
+                    },
+                    "unbreakable": {
+                      "description": "Irrompible."
+                    },
+                    "hide_flags": {
+                      "description": "Oculta los atributos."
+                    },
+                    "saved": {
+                      "description": "Ítem guardado con /omni item save."
+                    },
+                    "flags": {
+                      "description": "Banderas (spec 015): lista o texto con comas de HIDE_ENCHANTS, HIDE_ATTRIBUTES…"
+                    },
+                    "durability": {
+                      "description": "Daño del ítem (durabilidad gastada, como en ConditionalEvents)."
+                    },
+                    "item_model": {
+                      "description": "Modelo del ítem: clave espacio:modelo (1.21.4+)."
+                    },
+                    "skull_owner": {
+                      "description": "Para PLAYER_HEAD: nombre del jugador de la cabeza."
+                    },
+                    "skull_texture": {
+                      "description": "Para PLAYER_HEAD: textura en base64."
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ],
+              "description": "Alias de set_caught_item (ConditionalEvents). Cambia lo que se pescó (player_fish) por otro ítem, con el formato de give_item (spec 015; set_item de ConditionalEvents). Valor: como give_item."
+            },
+            "to": {
+              "$ref": "#/definitions/modifier_to"
+            },
+            "where": {
+              "$ref": "#/definitions/modifier_where"
+            },
+            "chance": {
+              "$ref": "#/definitions/modifier_chance"
+            },
+            "when": {
+              "$ref": "#/definitions/modifier_when"
+            }
+          },
+          "required": [
+            "set_item"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
             "set_on_fire": {
               "type": [
                 "string",
@@ -5135,7 +5542,7 @@
                 "boolean",
                 "null"
               ],
-              "description": "Alias de stop_sound (ConditionalEvents). Detiene un sonido del jugador, o todos (all o sin valor). Valor: SONIDO o all."
+              "description": "Alias de stop_sound (ConditionalEvents). Detiene un sonido del jugador, o todos (all o sin valor); también claves de paquete de recursos (mi_pack:musica, spec 015). Valor: SONIDO o all."
             },
             "to": {
               "$ref": "#/definitions/modifier_to"

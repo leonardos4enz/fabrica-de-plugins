@@ -17,7 +17,7 @@ public final class PapiHook {
         if (plugin.settings().placeholderApi()) new Expansion(plugin).register();
     }
 
-    /** %omni_var_x%, %omni_gvar_x%, %omni_cooldown_regla%, %omni_uses_regla% (H7 CA3), %omni_state_regla% (spec 008). */
+    /** %omni_var_x%, %omni_gvar_x%, %omni_cooldown_regla%, %omni_uses_regla% (H7 CA3), %omni_state_regla% (spec 008), %omni_enabled_regla% (spec 015). */
     static final class Expansion extends PlaceholderExpansion {
         private final OmniEvents plugin;
 
@@ -57,6 +57,11 @@ public final class PapiHook {
                 case "cooldown" -> Values.formatNumber(plugin.rules().cooldownLeftSeconds(arg, player == null ? null : player.getUniqueId()));
                 case "uses" -> String.valueOf(plugin.rules().uses(arg, player == null ? null : player.getUniqueId()));
                 case "state" -> String.valueOf(plugin.states().isIn(arg, player == null ? null : player.getUniqueId()));
+                // Spec 015: %omni_enabled_regla% (%conditionalevents_is_enabled_e%).
+                case "enabled" -> {
+                    dev.leo.omnievents.rule.Rule r = plugin.rules().get(arg);
+                    yield r == null ? "" : String.valueOf(r.enabled());
+                }
                 default -> null;
             };
         }

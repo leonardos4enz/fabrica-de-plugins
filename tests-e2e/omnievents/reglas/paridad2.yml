@@ -1,0 +1,71 @@
+# Spec 015 (paridad con ConditionalEvents, segunda parte). Se llaman desde /e2e <grupo> (e2e.yml).
+
+# H1: ítems en una casilla, con banderas y durabilidad; quitar por nombre y de una casilla.
+e2e_items015:
+  trigger: call
+  actions:
+    - give_item:
+        material: BOOK
+        name: "e2e libro"
+        enchants: ["UNBREAKING:1"]
+        flags: HIDE_ENCHANTS
+        slot: 3
+    - give_item: {material: IRON_HELMET, durability: 50, slot: HELMET}
+    - give_item: "PAPER;2;e2e ticket"
+    - give_item: "PAPER;3"
+    - give_item: "EMERALD;5"
+    - message: "e2e items015 listos"
+e2e_quitar015:
+  trigger: call
+  actions:
+    - remove_item: "PAPER;10;name:e2e ticket"
+    - remove_item_slot: "3;1"
+    - message: "e2e quitar015 listo"
+
+# H2: summon con nombre, vida, cantidad y equipo (un soporte de armadura: no ataca ni lo borra spawn-monsters).
+e2e_guardian015:
+  trigger: call
+  actions:
+    - summon:
+        entity: ARMOR_STAND
+        location: "~3;~;~"
+        name: "e2e_guardian"
+        health: 40
+        amount: 2
+        equipment: "DIAMOND_HELMET,none,none,none"
+        hand_equipment: "IRON_SWORD"
+    - message: "e2e guardian015 listo"
+
+# H3 CA1: json_message propia.
+e2e_json015:
+  trigger: call
+  actions:
+    - json_message: '{"text":"e2e json de {player.name}","color":"gold","clickEvent":{"action":"run_command","value":"/e2e json015"}}'
+
+# H4: /omni interrupt corta lo que falta tras el delay; -s no responde.
+e2e_espera015:
+  trigger: call
+  actions:
+    - message: "e2e espera 1"
+    - delay: 4s
+    - message: "e2e espera 2"
+e2e_silencio015:
+  trigger: call
+  actions:
+    - message: "e2e silencio corrió"
+
+# H5 CA1: player_statistic, solo mientras la suite lo activa (pvar.e2e_saltos).
+e2e_saltos015:
+  trigger: player_statistic
+  conditions:
+    - "statistic == 'JUMP' && default(pvar.e2e_saltos, false) == true"
+  actions:
+    - message: "e2e salto {new_value - previous_value}"
+
+# H5 CA3: autocompletado propio para /e2e.
+e2e_tab015:
+  trigger: player_tab_complete
+  conditions:
+    - "cmd.name == 'e2e' && args.size == 1"
+  actions:
+    - tab_complete: "set;e2e_tab_alfa,e2e_tab_beta,otro_e2e"
