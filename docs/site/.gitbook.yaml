@@ -1,0 +1,6 @@
+# GitBook Git Sync (spec 017): in GitBook, set the project directory to docs/site.
+root: ./pages/
+
+structure:
+  readme: README.md
+  summary: SUMMARY.md

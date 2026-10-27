@@ -15,6 +15,11 @@ variables persistentes y herramientas de diagnóstico. Specs: [001](../../docs/s
 [015](../../docs/sdd/specs/015-omnievents-paridad-conditionalevents-2/spec.md) (paridad con ConditionalEvents, segunda parte) y
 [016](../../docs/sdd/specs/016-omnievents-paridad-conditionalevents-3/spec.md) (detalles de ConditionalEvents y el chat recibido con ProtocolLib).
 
+**[Documentación en inglés](../../docs/site/pages/omnievents/README.md)** (English docs): una wiki para GitBook o
+Zensical con instalación, primera regla, disparadores, condiciones, acciones, variables, comandos y cómo migrar desde
+ConditionalEvents ([spec 017](../../docs/sdd/specs/017-omnievents-documentacion-publica-en-ingles/spec.md); cómo
+previsualizarla y publicarla: [README raíz](../../README.md#documentación-pública-en-inglés-docssite)).
+
 **[Referencia completa](../../docs/omnievents/referencia.md)**: cada opción, disparador, acción y función, generada del
 código (nunca queda desactualizada). **[Autocompletado en VS Code](#editor-autocompletado-y-errores-en-vs-code)** con
 el esquema JSON.

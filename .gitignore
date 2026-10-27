@@ -12,3 +12,6 @@ out/
 
 # Assets del cliente de Minecraft extraídos para las capturas (spec 004): nunca al repositorio
 tests-e2e/.cache/
+
+# Sitio generado de la documentación pública (spec 017)
+docs/site/site/

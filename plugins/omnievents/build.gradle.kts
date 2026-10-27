@@ -16,6 +16,11 @@ dependencies {
     testImplementation("com.networknt:json-schema-validator:1.5.6")
 }
 
+// DocsSiteTest (spec 017) lee la documentación pública: si cambia, las pruebas vuelven a correr.
+tasks.named<Test>("test") {
+    inputs.dir(rootProject.layout.projectDirectory.dir("docs/site")).withPropertyName("docsSite")
+}
+
 tasks.named<Jar>("jar") {
     archiveBaseName.set("OmniEvents")
 }
