@@ -1,0 +1,24 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;width:1600px;height:500px;overflow:hidden}
+body{font-family:"Segoe UI",system-ui,sans-serif;background:radial-gradient(ellipse at 15% 20%,#3a1d0e 0%,transparent 55%),radial-gradient(ellipse at 90% 90%,#2b1407 0%,transparent 50%),#141210;color:#f4efe9;display:flex;align-items:center;justify-content:space-between;padding:0 110px;box-sizing:border-box;position:relative}
+body:before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:40px 40px}
+.l{position:relative;max-width:700px}
+.tag{display:inline-block;font-size:20px;letter-spacing:.18em;text-transform:uppercase;color:#fc8a3a;border:1px solid #fc8a3a55;border-radius:999px;padding:6px 18px;margin-bottom:26px}
+h1{margin:0;font-size:112px;line-height:1;font-weight:800;letter-spacing:-.03em;background:linear-gradient(90deg,#f7b733,#fc4a1a);-webkit-background-clip:text;color:transparent}
+p{font-size:34px;margin:26px 0 0;color:#d9d0c6}
+p b{color:#fff}
+.card{position:relative;background:#1d1a17;border:1px solid #3a332c;border-radius:18px;padding:30px 38px;font-family:Consolas,"Cascadia Code",monospace;font-size:25px;line-height:1.55;box-shadow:0 30px 80px rgba(0,0,0,.55);transform:rotate(-1.5deg)}
+.k{color:#fc8a3a}.s{color:#9fd47a}.c{color:#7d746a}.v{color:#f7b733}
+.dots{display:flex;gap:9px;margin-bottom:18px}.dots i{width:14px;height:14px;border-radius:50%;background:#3a332c;display:block}
+</style></head><body>
+<div class="l"><div class="tag">Paper plugin · YAML rules</div><h1>OmniEvents</h1>
+<p>When <b>X</b> happens, if <b>Y</b> is true, do <b>Z</b>.</p></div>
+<div class="card"><div class="dots"><i></i><i></i><i></i></div>
+<div><span class="v">diamond_hunter</span>:</div>
+<div>&nbsp;&nbsp;<span class="k">trigger</span>: block_break</div>
+<div>&nbsp;&nbsp;<span class="k">conditions</span>:</div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;- <span class="s">"block.type == 'DIAMOND_ORE'"</span></div>
+<div>&nbsp;&nbsp;<span class="k">actions</span>:</div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;- <span class="k">set</span>: <span class="s">"pvar.diamonds += 1"</span></div>
+<div>&nbsp;&nbsp;&nbsp;&nbsp;- <span class="k">title</span>: <span class="s">"&lt;aqua&gt;Shiny!"</span></div>
+</div></body></html>

@@ -1,3 +1,7 @@
+---
+description: "Every event a rule can react to, and the values each one gives you."
+---
+
 # Triggers
 
 The `trigger` of a rule is the event that runs it. Each trigger gives the rule some **values** (also called roots)
@@ -104,7 +108,7 @@ Older ConditionalEvents names also work: `player_kill_entity` is `player_kill`, 
 | `clock` | `time` | At a time of day (`at: "20:00"`, `timezone`). |
 | `call` | `sender`, `caller` | Only when another rule calls it (`call` action) or with `/omni call`. Its `args` arrive as `var.<name>`. |
 | `command` | `sender`, `cmd`, `args` | Registers a real command (`command:` option) and runs when it is used. |
-| `state` | — | When the `when` expression becomes true (`on_enter`) or false again (`on_exit`). See [state rules](more-features.md#state-rules). |
+| `state` | — | When the `when` expression becomes true (`on_enter`) or false again (`on_exit`). See [state rules](features/state-rules.md). |
 | `var_expire` | `variable`, `value`, `scope` | A variable with `expire` runs out. See [variables](variables.md#expiring-variables). |
 | `custom` | — | Any Bukkit or plugin event by its class name (`event:` option). |
 
@@ -120,7 +124,7 @@ These need the optional plugin; without it, the rule loads with a warning and do
 | `player_receive_chat` | `message`, `message_legacy`, `json`, `type` | A player is about to receive a chat or system message (needs ProtocolLib; off the main thread). Cancelling hides it. |
 
 ## Menus
-You never write these by hand: a [menu](more-features.md#menus) creates them for its open, click and close actions.
+You never write these by hand: a [menu](features/menus.md) creates them for its open, click and close actions.
 They show up in `/omni list` and `/omni debug`.
 
 | Trigger | Extra values | When it runs |

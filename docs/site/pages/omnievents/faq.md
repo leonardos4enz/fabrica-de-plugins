@@ -1,3 +1,7 @@
+---
+description: "Answers to the most common questions."
+---
+
 # FAQ
 
 ### My rule does not run. What do I check?

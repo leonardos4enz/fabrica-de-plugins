@@ -45,3 +45,15 @@ intercambiadas → «SUMMARY.md y el nav de mkdocs.yml deben listar las mismas p
   Markdown simple, así que cambiar de herramienta solo toca `mkdocs.yml`.
 - No se probó el render en GitBook (falta la cuenta del dueño). Riesgo bajo: GitBook muestra Markdown estándar y las
   páginas no usan bloques propios de ninguna herramienta.
+
+## Segunda iteración (2026-10-27, pedido del dueño: «que se vea como la de ConditionalEvents»)
+- La portada es OmniEvents con un banner propio (`pages/assets/banner.png`, generado de `docs/site/assets-src/banner.html`
+  con Chrome sin ventana) y un logo (`assets/logo.png`).
+- La barra lateral está en tres grupos (Getting started, Writing rules, Reference), y «More features» tiene siete
+  subpáginas.
+- Hay una página nueva de **Examples** con 15 reglas listas para copiar; las pruebas `tests:` de 3 de ellas corren en
+  gradle.
+- Cada página tiene un subtítulo (`description:` en el encabezado YAML, que GitBook y Zensical muestran).
+- Se descartaron los íconos de página de GitBook (`icon:`): Zensical no encuentra esos nombres y el build falla.
+- `DocsSiteTest` ahora reconoce reglas que solo tienen `extends` y no exige que una plantilla cargue como regla.
+- Resultado: 21 páginas, `DocsSiteTest` 3/3 y `zensical build` sin avisos.

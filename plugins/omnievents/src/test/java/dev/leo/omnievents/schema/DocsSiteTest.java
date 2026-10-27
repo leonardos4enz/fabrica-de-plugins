@@ -38,7 +38,7 @@ class DocsSiteTest {
     static final Path PAGES = SITE.resolve("pages");
     static final Pattern YAML_BLOCK = Pattern.compile("```yaml\\n(.*?)```", Pattern.DOTALL);
     static final Pattern LINK = Pattern.compile("\\]\\(([^)\\s]+)\\)");
-    static final Set<String> RULE_KEYS = Set.of("trigger", "type", "menu", "template");
+    static final Set<String> RULE_KEYS = Set.of("trigger", "type", "menu", "template", "extends");
 
     static String read(Path p) {
         try {
@@ -54,7 +54,7 @@ class DocsSiteTest {
         }
     }
 
-    /** Un bloque es un conjunto de reglas si cada clave de primer nivel es un mapa con trigger, type, menu o template. */
+    /** Un bloque es un conjunto de reglas si cada clave de primer nivel es un mapa con trigger, type, menu, template o extends. */
     static boolean isRuleSet(YamlConfiguration y) {
         Set<String> keys = y.getKeys(false);
         if (keys.isEmpty()) return false;
@@ -85,8 +85,9 @@ class DocsSiteTest {
                 Problems p = new Problems();
                 Map<String, Rule> rules = new RuleLoader(new Actions(null), new Triggers()).loadFolder(dir.toFile(), p);
                 p.all().forEach(x -> errors.append(where).append(": ").append(x).append('\n'));
-                // Un menú se compila en varias reglas con su ruta (shop.menu, shop.menu.items.x.click).
+                // Un menú se compila en varias reglas con su ruta (shop.menu, shop.menu.items.x.click); una plantilla no es una regla.
                 for (String k : y.getKeys(false)) {
+                    if (y.getBoolean(k + ".template")) continue;
                     String key = k.toLowerCase(Locale.ROOT);
                     if (rules.keySet().stream().noneMatch(r -> r.equals(key) || r.startsWith(key + ".")))
                         errors.append(where).append(": no cargó ").append(k).append(" (cargaron ").append(rules.keySet()).append(")\n");

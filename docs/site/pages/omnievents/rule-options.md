@@ -1,3 +1,7 @@
+---
+description: "Everything you can put in a rule besides its trigger: filters, cooldowns, limits and costs."
+---
+
 # Rule options
 
 Every key directly under a rule name is an option. Only `trigger` is required; everything else is optional.
@@ -98,12 +102,12 @@ given back.
 | `move_mode` | `player_move` | `block` (default: only when the player moves to another block), `chunk` or `any`. |
 | `event`, `player_from` | `custom` | The full class name of any Bukkit event, and where to find the player in it. |
 | `variables` | `var_expire` | Only these variable names run the rule. |
-| `when`, `on_enter`, `on_exit`, `check_every`, `watch`, `initial` | `state` | See [state rules](more-features.md#state-rules). |
+| `when`, `on_enter`, `on_exit`, `check_every`, `watch`, `initial` | `state` | See [state rules](features/state-rules.md). |
 
 ## Advanced
 | Option | What it does |
 |---|---|
-| `tests` | Test cases for the rule (`given` and `expect`). See [rule tests](more-features.md#rule-tests). |
-| `template`, `extends`, `with`, `params` | Reuse a rule as a template with `${parameters}`. See [packs and templates](more-features.md#packs-and-templates). |
-| `menu` | This entry is an inventory menu instead of a rule. See [menus](more-features.md#menus). |
+| `tests` | Test cases for the rule (`given` and `expect`). See [rule tests](features/rule-tests.md). |
+| `template`, `extends`, `with`, `params` | Reuse a rule as a template with `${parameters}`. See [packs and templates](features/packs-and-templates.md). |
+| `menu` | This entry is an inventory menu instead of a rule. See [menus](features/menus.md). |
 | `budget` | Time budget per run (`0.5ms`, `200us`). The console warns you if the rule gets slower than that. |

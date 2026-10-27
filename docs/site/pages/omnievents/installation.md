@@ -1,3 +1,7 @@
+---
+description: "Install OmniEvents, the optional plugins, and autocomplete for VS Code."
+---
+
 # Installation
 
 ## Requirements

@@ -1,4 +1,8 @@
-# OmniEvents
+---
+description: "What OmniEvents does better, and the Paper versions it runs on."
+---
+
+# Why OmniEvents
 
 OmniEvents lets you script your Paper server in YAML: **when** something happens (a player joins, breaks a block,
 types a command…), **if** some conditions are true, **do** a list of actions. No Java, no restarts: edit a file and run

@@ -1,3 +1,7 @@
+---
+description: "Import your ConditionalEvents configuration and learn the equivalents."
+---
+
 # Migrating from ConditionalEvents
 
 OmniEvents can do everything ConditionalEvents (CE) 4.65 does, and it ships an importer that converts your
@@ -71,5 +75,5 @@ end, and the player's name is the expression `{player.name}`.
 ## After importing
 - `/omni validate` lists anything the importer left in a shape the plugin does not accept.
 - `/omni debug <rule>` shows why an imported rule does or does not run.
-- Write a few [tests](more-features.md#rule-tests) for your most important rules, so a future update cannot break them
+- Write a few [tests](features/rule-tests.md) for your most important rules, so a future update cannot break them
   without you knowing.

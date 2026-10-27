@@ -1,3 +1,7 @@
+---
+description: "Every action a rule can run, from chat messages to explosions."
+---
+
 # Actions
 
 `actions` is a list. Each action can be written in two equivalent ways:
@@ -116,7 +120,7 @@ mystery_box:
 | `clear_inventory`, `close_inventory` | Empty the inventory, or close the open one. |
 | `give_exp`, `give_level` | Give experience points or levels. |
 | `give_money`, `take_money` | Vault money. `take_money` takes nothing if the balance is not enough. |
-| `open_menu`, `close_menu` | Open or close a [menu](more-features.md#menus). |
+| `open_menu`, `close_menu` | Open or close a [menu](features/menus.md). |
 | `kick` | Kick the player with a reason. |
 
 `give_item` as a map accepts `material`, `amount`, `name`, `lore`, `enchants`, `glow`, `unbreakable`, `flags`,

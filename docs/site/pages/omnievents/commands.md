@@ -1,3 +1,7 @@
+---
+description: "The /omni command, its subcommands and permissions."
+---
+
 # Commands and permissions
 
 The main command is `/omni` (aliases `/oe` and `/omnievents`). Every subcommand has the permission
@@ -23,7 +27,7 @@ The main command is `/omni` (aliases `/oe` and `/omnievents`). Every subcommand 
 | `/omni check <rule> [player]` | Evaluates the rule **now** for that player without running anything: all conditions, uses, cooldown and the branch it would take. |
 | `/omni run <rule> <player> [--simular]` | Runs the rule as if that player triggered it. With `--simular` (Spanish for "simulate") it only lists the actions it would run. |
 | `/omni eval <expression>` | Evaluates an expression and shows its value and type. |
-| `/omni test [rule]` | Runs the rules' [tests](more-features.md#rule-tests). |
+| `/omni test [rule]` | Runs the rules' [tests](features/rule-tests.md). |
 | `/omni stats` | Runs, passes, errors and time per rule; active listeners; detected integrations. |
 | `/omni cpu [on\|off\|reset]` | Profiler: the most expensive rules, conditions and actions. |
 | `/omni triggers`, `/omni actions` | Lists every trigger or action. |
@@ -37,9 +41,9 @@ The main command is `/omni` (aliases `/oe` and `/omnievents`). Every subcommand 
 | `/omni limit reset <rule\|*> [player\|*\|global]` | Resets uses. |
 | `/omni call <rule> [player] [key=value…]` | Runs a `trigger: call` rule with arguments. |
 | `/omni interrupt <rule\|*> [player]` | Cancels what is left of runs that are waiting on a `delay`. |
-| `/omni state <rule>` | Who is inside a [state rule](more-features.md#state-rules), and since when. |
-| `/omni menu list\|open <player> <menu>\|close <player>` | Lists, opens or closes [menus](more-features.md#menus). |
-| `/omni pack list\|info\|enable\|disable [pack]` | Manages [packs](more-features.md#packs-and-templates). |
+| `/omni state <rule>` | Who is inside a [state rule](features/state-rules.md), and since when. |
+| `/omni menu list\|open <player> <menu>\|close <player>` | Lists, opens or closes [menus](features/menus.md). |
+| `/omni pack list\|info\|enable\|disable [pack]` | Manages [packs](features/packs-and-templates.md). |
 | `/omni item save\|delete\|list [name]` | Saves the item in your hand, to use it later as `give_item: "saved:<name>"`. |
 
 ## Tools

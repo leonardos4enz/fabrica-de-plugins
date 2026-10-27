@@ -1,3 +1,7 @@
+---
+description: "Write conditions with a real expression language, and every built-in function."
+---
+
 # Conditions and expressions
 
 ## Conditions
@@ -120,7 +124,7 @@ players cannot inject clickable or colored text.
 | `if(condition, a, b)` | `a` if the condition is true, otherwise `b`. |
 | `in_area(world, x1, y1, z1, x2, y2, z2)` | `true` if the player is inside that box. |
 | `in_region(id)` | `true` if the player is in that WorldGuard region (false without WorldGuard). |
-| `in_state(rule)` | `true` if the player is in that [state rule](more-features.md#state-rules). |
+| `in_state(rule)` | `true` if the player is in that [state rule](features/state-rules.md). |
 | `int(x)` | `x` as a whole number (0 if it is not a number). |
 | `is_bedrock()` | `true` if the player joined from Bedrock (needs Floodgate). |
 | `is_npc(entity)` | `true` if the entity is a Citizens NPC. |

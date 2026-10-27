@@ -1,3 +1,7 @@
+---
+description: "Remember things per run, per player, server-wide, or on blocks, entities and items."
+---
+
 # Variables
 
 OmniEvents has its own variables, so you do not need another plugin to remember things.

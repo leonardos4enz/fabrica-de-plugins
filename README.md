@@ -19,7 +19,7 @@ docs/sdd/                 constitución, metodología, verificación, roadmap, p
 docs/adr/                 decisiones de arquitectura
 docs/investigacion/       investigaciones para decidir specs (p. ej. plugins exitosos y propuestas)
 docs/<plugin>/galeria.md  una imagen por capacidad, generada en el juego (spec 004); imágenes en docs/img/<plugin>/
-docs/site/                documentación pública en inglés para GitBook y Zensical (spec 017): pages/, SUMMARY.md, mkdocs.yml
+docs/site/                documentación pública en inglés para GitBook y Zensical (spec 017): pages/, SUMMARY.md, mkdocs.yml, assets-src/ (fuente del banner)
 docs/omnievents/          también referencia.md, omnievents.schema.json y omnievents-pack.schema.json, generados del código (specs 007 y 011)
 plugins/<nombre>/         un proyecto Gradle por plugin
 tools/nuevo-plugin.ps1    crea un plugin nuevo con su spec

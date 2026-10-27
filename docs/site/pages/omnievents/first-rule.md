@@ -1,3 +1,7 @@
+---
+description: "Write, reload, test and debug your first rule."
+---
+
 # Your first rule
 
 A rule has three parts: a **trigger** (when), **conditions** (if) and **actions** (do). Create
