@@ -6,7 +6,7 @@
 |---|---|
 | Unitarias | `./gradlew build`: 203 pruebas, 0 fallas (200 de antes + 3 de `DocsSiteTest`) |
 | Sitio estático | `zensical build -f docs/site/mkdocs.yml` (Zensical 0.0.73): «No issues found»; `zensical serve` revisado en el navegador local (barra lateral, tablas, bloques de código, búsqueda) a 800 y 1280 px |
-| GitBook | Sin conectar (lo hace el dueño). `SUMMARY.md` y `.gitbook.yaml` siguen el formato de Git Sync; la prueba exige que coincidan con el `nav:` |
+| GitBook | Publicada el 2026-10-27 en https://leonardos4enz.gitbook.io/leonardos4enz-docs/ (Git Sync del espacio «Documentation» con la rama `docs`, carpeta `docs/site`, dirección GitHub → GitBook; GitBook no hizo commits). `SUMMARY.md` y `.gitbook.yaml` siguen el formato de Git Sync; la prueba exige que coincidan con el `nav:` |
 | Servidor real (compuerta 2) y en el juego (3a) | No aplican: la spec no cambia el código del plugin (solo pruebas y la entrada `docs/site` de la tarea `test`). Los ejemplos de las páginas se cargan con el mismo `RuleLoader` que usa el servidor |
 | Revisión exploratoria (3b) | Lectura de las 12 páginas contra la referencia generada y el código (ver hallazgos) |
 | README | Raíz: fila de OmniEvents con el enlace a la documentación en inglés, `docs/site/` en la estructura y la sección «Documentación pública en inglés» (previsualizar y publicar con GitBook o GitHub Pages). Plugin: enlace a la documentación en inglés. Compatibilidad sin cambios (el jar no cambió). Sin capturas nuevas |

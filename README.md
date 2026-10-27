@@ -7,7 +7,7 @@ tarea y no se da por terminada sin una fase de verificación en un servidor real
 ## Plugins
 | Plugin | Qué hace | Versión | Paper verificado | Java |
 |---|---|---|---|---|
-| [OmniEvents](plugins/omnievents/README.md) | Eventos condicionales: «cuando pase X, si se cumple Y, haz Z». Versión propia y ampliada de ConditionalEvents ([documentación en inglés](docs/site/pages/omnievents/README.md), [galería](docs/omnievents/galeria.md), [referencia](docs/omnievents/referencia.md), autocompletado en VS Code, pruebas de reglas con `/omni test`, paquetes y plantillas, costos todo o nada con Vault, regiones de WorldGuard, NPC de Citizens, menús de inventario con formularios de Bedrock, el chat que recibe el jugador con ProtocolLib y paridad comprobada con ConditionalEvents, que `/omni import` traduce casi entera) | 1.11.0 | 1.21.4 y 26.1.2 ([detalle](plugins/omnievents/README.md#compatibilidad)) | 21+ |
+| [OmniEvents](plugins/omnievents/README.md) | Eventos condicionales: «cuando pase X, si se cumple Y, haz Z». Versión propia y ampliada de ConditionalEvents ([documentación en inglés](https://leonardos4enz.gitbook.io/leonardos4enz-docs/) ([fuente](docs/site/pages/omnievents/README.md)), [galería](docs/omnievents/galeria.md), [referencia](docs/omnievents/referencia.md), autocompletado en VS Code, pruebas de reglas con `/omni test`, paquetes y plantillas, costos todo o nada con Vault, regiones de WorldGuard, NPC de Citizens, menús de inventario con formularios de Bedrock, el chat que recibe el jugador con ProtocolLib y paridad comprobada con ConditionalEvents, que `/omni import` traduce casi entera) | 1.11.0 | 1.21.4 y 26.1.2 ([detalle](plugins/omnievents/README.md#compatibilidad)) | 21+ |
 
 «Verificado» quiere decir que el plugin pasó la suite en el juego en esa versión; las demás están «sin verificar» en
 el README de cada plugin.
@@ -57,7 +57,7 @@ Detalle de las compuertas: [verificacion.md](docs/sdd/verificacion.md).
 
 
 ## Documentación pública en inglés (`docs/site/`)
-Wiki en inglés para dueños de servidores, en Markdown simple (spec 017). Sirve igual para **GitBook** y para un sitio
+Wiki en inglés para dueños de servidores, en Markdown simple (spec 017), **publicada en https://leonardos4enz.gitbook.io/leonardos4enz-docs/** (GitBook, sincronizada con la rama `docs`). Sirve igual para **GitBook** y para un sitio
 estático con **Zensical** (o MkDocs Material): `pages/SUMMARY.md` es el índice de GitBook y el `nav:` de `mkdocs.yml`
 el del sitio estático. `DocsSiteTest` (en `./gradlew :omnievents:test`) exige que los dos índices sean iguales, que cada
 enlace exista, que cada regla de ejemplo cargue y pase sus `tests:`, y que estén todos los disparadores, acciones y
@@ -69,7 +69,7 @@ pip install zensical
 zensical serve -f docs/site/mkdocs.yml
 ```
 Publicar (lo hace el dueño; nada se publica solo):
-- **GitBook, gratis** en `<nombre>.gitbook.io`: crear un espacio, *Integrations → GitHub Sync*, repositorio
+- **GitBook, gratis** en `<nombre>.gitbook.io` (así está publicada hoy: espacio «Documentation», rama `docs`, carpeta `docs/site`; para actualizar el sitio, pasar `main` a `docs`): crear un espacio, *Integrations → GitHub Sync*, repositorio
   `leonardos4enz/fabrica-de-plugins`, rama `main`, *project directory* `docs/site`. GitBook lee `docs/site/.gitbook.yaml`.
   La sincronización va en las dos direcciones: lo que se edite en GitBook vuelve como commit a esa rama, así que conviene
   sincronizar con una rama propia (p. ej. `docs`) y pasarla a `main` revisada. El plan gratuito no incluye dominio propio.
