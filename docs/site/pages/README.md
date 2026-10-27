@@ -4,7 +4,7 @@ description: "Script your Paper server in YAML. When something happens, if your 
 
 # OmniEvents
 
-![OmniEvents: when X happens, if Y is true, do Z](assets/banner.png)
+![OmniEvents: when X happens, if Y is true, do Z](https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/site/pages/assets/banner.png)
 
 **OmniEvents** is a rule engine for Paper servers. You write rules in YAML: **when** something happens (a player
 joins, breaks a block, types a command, enters a region…), **if** your conditions are true, **do** a list of actions.
