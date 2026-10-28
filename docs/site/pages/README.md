@@ -26,6 +26,7 @@ first_join_kit:
 | **[Installation](omnievents/installation.md)** | Drop the jar in `plugins/`, start the server, and you are ready. |
 | **[Your first rule](omnievents/first-rule.md)** | Write, reload and debug a rule in five minutes. |
 | **[Examples](omnievents/examples.md)** | Ready-to-copy rules: rewards, custom commands, chat filters, zones, events. |
+| **[Build a minigame](omnievents/minigames.md)** | A complete parkour ships with the plugin; the same pattern builds your own game. |
 | **[Migrating from ConditionalEvents](omnievents/migrating-from-conditionalevents.md)** | `/omni import conditionalevents` converts your events for you. |
 
 ## What makes it different

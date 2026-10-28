@@ -8,6 +8,7 @@
 * [Installation](omnievents/installation.md)
 * [Your first rule](omnievents/first-rule.md)
 * [Examples](omnievents/examples.md)
+* [Build a minigame](omnievents/minigames.md)
 * [Migrating from ConditionalEvents](omnievents/migrating-from-conditionalevents.md)
 
 ## Writing rules

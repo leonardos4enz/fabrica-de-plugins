@@ -1,0 +1,399 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
+# Reglas del paquete parkour (spec 018). El patrón sirve para cualquier minijuego de un jugador:
+#   - el estado de la partida vive en variables del jugador (pvar.pk_*): pk_activo dice si está jugando;
+#   - una regla por cosa que pasa (pisar una placa, caerse, morir, salir del servidor) que primero pregunta pk_activo;
+#   - lo común (empezar, perder, terminar) en reglas trigger: call, que las demás llaman;
+#   - un timer por jugador para el reloj y el tiempo límite;
+#   - al terminar, por ganar, perder, salir o desconectarse, siempre la misma limpieza (terminar).
+# En player_move, player.location todavía es el bloque de donde viene: la placa que pisa y la altura nueva son to.
+# Variables que quedan: pvar.pk_record (mejor tiempo, ms), pk_partidas, pk_ganadas; gvar.pk_record y pk_record_nombre.
+
+# ------------------------------------------------------------------ las placas
+
+inicio:
+  description: Pisar la placa de inicio empieza la partida (o la reinicia)
+  trigger: player_move
+  conditions:
+    - "to.block.type == '${inicio}'"
+    - expr: "str(player.gamemode) ~= 'survival' || str(player.gamemode) ~= 'adventure'"
+      deny:
+        - actionbar: "<red>El parkour se juega en supervivencia o aventura."
+    - expr: "!player.flying"
+      deny:
+        - actionbar: "<red>Deja de volar para empezar el parkour."
+  actions:
+    - call: "guardar_punto; mundo=to.world.name; x=to.block.x + 0.5; y=to.block.y; z=to.block.z + 0.5; giro=round(to.yaw)"
+    - set: "pvar.pk_s_mundo = pvar.pk_mundo"
+    - set: "pvar.pk_s_x = pvar.pk_x"
+    - set: "pvar.pk_s_y = pvar.pk_y"
+    - set: "pvar.pk_s_z = pvar.pk_z"
+    - set: "pvar.pk_s_giro = pvar.pk_giro"
+    - call: empezar
+  tests:
+    - name: en supervivencia empieza
+      given: {player.name: Ana, player.gamemode: SURVIVAL, player.flying: false, to.world.name: world,
+              to.block.type: LIGHT_WEIGHTED_PRESSURE_PLATE, to.block.x: 10,
+              to.block.y: -56, to.block.z: 12, to.yaw: -90}
+      expect:
+        fired: true
+        pvar.pk_activo: true
+        pvar.pk_s_x: 10.5
+        pvar.pk_y: -56
+        pvar.pk_partidas: 1
+        messages: ["¡Ya!", "Llega a la meta en 300 s"]
+        assert: "now() - pvar.pk_inicio < 5000"
+    - name: en creativo no empieza y dice por qué
+      given: {player.gamemode: CREATIVE, to.block.type: LIGHT_WEIGHTED_PRESSURE_PLATE}
+      expect: {branch: deny, messages: ["supervivencia o aventura"], pvar.pk_activo: null}
+    - name: otro bloque no hace nada
+      given: {player.gamemode: SURVIVAL, to.block.type: STONE}
+      expect: {fired: false, messages: []}
+
+checkpoint:
+  description: Una placa de checkpoint guarda el punto (una vez por placa en cada partida)
+  trigger: player_move
+  conditions:
+    - "to.block.type == '${checkpoint}'"
+    - expr: "pvar.pk_activo == true"
+      deny:
+        - actionbar: "<gray>Pisa la placa de inicio para empezar el parkour."
+    - "!(default(pvar.pk_vistos, '') contains ('|' + to.block.x + ',' + to.block.y + ',' + to.block.z))"
+  actions:
+    - set: "pvar.pk_vistos = default(pvar.pk_vistos, '') + '|' + to.block.x + ',' + to.block.y + ',' + to.block.z"
+    - set: "pvar.pk_cps += 1"
+    - call: "guardar_punto; mundo=to.world.name; x=to.block.x + 0.5; y=to.block.y; z=to.block.z + 0.5; giro=round(to.yaw)"
+    - message: "<aqua>» Checkpoint {pvar.pk_cps}</aqua> <gray>· {round((now() - pvar.pk_inicio) / 1000, 2)} s"
+    - sound: BLOCK_NOTE_BLOCK_PLING;1;1.6
+  tests:
+    - name: guarda el punto la primera vez
+      given: {player.name: Ana, to.world.name: world, to.block.type: HEAVY_WEIGHTED_PRESSURE_PLATE,
+              to.block.x: 13, to.block.y: -56, to.block.z: 12,
+              pvar.pk_activo: true, pvar.pk_cps: 0, pvar.pk_vistos: "", pvar.pk_inicio: 0}
+      expect: {fired: true, pvar.pk_cps: 1, pvar.pk_x: 13.5, pvar.pk_vistos: "|13,-56,12", messages: ["Checkpoint 1"]}
+    - name: la misma placa no cuenta dos veces
+      given: {to.block.type: HEAVY_WEIGHTED_PRESSURE_PLATE, to.block.x: 13,
+              to.block.y: -56, to.block.z: 12, pvar.pk_activo: true, pvar.pk_cps: 1,
+              pvar.pk_vistos: "|13,-56,12"}
+      expect: {fired: false, pvar.pk_cps: 1, messages: []}
+    - name: fuera de una partida solo avisa
+      given: {to.block.type: HEAVY_WEIGHTED_PRESSURE_PLATE}
+      expect: {branch: deny, messages: ["Pisa la placa de inicio"]}
+
+meta:
+  description: La placa de meta termina la partida y guarda los récords
+  trigger: player_move
+  conditions:
+    - "to.block.type == '${meta}'"
+    - expr: "pvar.pk_activo == true"
+      deny:
+        - actionbar: "<gray>Pisa la placa de inicio para empezar el parkour."
+  actions:
+    - set: "var.t = default(var.ahora, now()) - pvar.pk_inicio"   # var.ahora fija la hora en tests:
+    - if: "var.t > ${limite} * 1000"
+      then:
+        - call: "perder; motivo='se acabó el tiempo (${limite} s)'"
+        - stop
+    - set: "pvar.pk_ganadas = default(pvar.pk_ganadas, 0) + 1"
+    - message: "<green>✔ ¡Meta!</green> <white>{round(var.t / 1000, 2)} s</white> <gray>· checkpoints: {pvar.pk_cps} · caídas: {pvar.pk_caidas}"
+    - title: "<green>¡Meta!;<white>{round(var.t / 1000, 2)} s;5;50;15"
+    - sound: UI_TOAST_CHALLENGE_COMPLETE;1;1
+    - firework: "colors:LIME,YELLOW type:STAR power:1 trail:true"
+    - if: "pvar.pk_record == null || var.t < pvar.pk_record"
+      then:
+        - set: "pvar.pk_record = var.t"
+        - message: "<gold>» Nuevo récord personal: {round(var.t / 1000, 2)} s"
+    - if: "gvar.pk_record == null || var.t < gvar.pk_record"
+      then:
+        - set: "gvar.pk_record = var.t"
+        - set: "gvar.pk_record_nombre = player.name"
+        - broadcast: "<gold>» {player.name} batió el récord del parkour: {round(var.t / 1000, 2)} s"
+    - call: terminar
+  tests:
+    - name: gana y bate los dos récords
+      given: {player.name: Ana, to.block.type: POLISHED_BLACKSTONE_PRESSURE_PLATE, pvar.pk_activo: true,
+              var.ahora: 100042000, pvar.pk_inicio: 100000000, pvar.pk_cps: 1, pvar.pk_caidas: 2}
+      expect:
+        fired: true
+        messages: ["¡Meta! 42 s · checkpoints: 1 · caídas: 2", "Nuevo récord personal: 42 s", "Ana batió el récord del parkour: 42 s"]
+        pvar.pk_activo: null
+        pvar.pk_ganadas: 1
+        gvar.pk_record_nombre: Ana
+        pvar.pk_record: 42000
+        gvar.pk_record: 42000
+    - name: más lento que su récord no lo cambia
+      given: {player.name: Beto, to.block.type: POLISHED_BLACKSTONE_PRESSURE_PLATE, pvar.pk_activo: true,
+              var.ahora: 100060000, pvar.pk_inicio: 100000000, pvar.pk_record: 30000, gvar.pk_record: 20000, gvar.pk_record_nombre: Ana}
+      expect: {fired: true, pvar.pk_record: 30000, gvar.pk_record: 20000, gvar.pk_record_nombre: Ana}
+    - name: llegar después del límite es perder
+      given: {to.block.type: POLISHED_BLACKSTONE_PRESSURE_PLATE, pvar.pk_activo: true,
+              var.ahora: 400000, pvar.pk_inicio: 0}
+      expect: {messages: ["Perdiste: se acabó el tiempo (300 s)"], pvar.pk_activo: null, pvar.pk_record: null}
+
+# ------------------------------------------------------------------ durante la partida
+
+caida:
+  description: Caer más de ${caida} bloques por debajo del último punto devuelve a él
+  trigger: player_move
+  conditions:
+    - "pvar.pk_activo == true"
+    - "to.y < pvar.pk_y - ${caida}"
+  actions:
+    - set: "pvar.pk_caidas += 1"
+    - call: volver_al_punto
+    - actionbar: "<yellow>¡Caída! Vuelves al último punto ({pvar.pk_caidas} caídas)."
+    - sound: ENTITY_ENDERMAN_TELEPORT;1;1.2
+  tests:
+    - name: debajo del margen vuelve al punto
+      given: {pvar.pk_activo: true, pvar.pk_y: -56, pvar.pk_caidas: 0, to.y: -59.5}
+      expect: {fired: true, pvar.pk_caidas: 1, actions: [teleport, actionbar]}
+    - name: dentro del margen no pasa nada
+      given: {pvar.pk_activo: true, pvar.pk_y: -56, to.y: -58.5}
+      expect: {fired: false}
+
+reloj:
+  description: Cada segundo, el tiempo en la barra de acción y el tiempo límite
+  trigger: timer
+  every: 1s
+  conditions: "pvar.pk_activo == true"
+  actions:
+    - set: "var.t = default(var.ahora, now()) - pvar.pk_inicio"   # var.ahora fija la hora en tests:
+    - if: "var.t > ${limite} * 1000"
+      then:
+        - call: "perder; motivo='se acabó el tiempo (${limite} s)'"
+        - stop
+    - actionbar: "<gold>Parkour</gold> <white>{floor(var.t / 1000)} / ${limite} s</white> <gray>· checkpoint {pvar.pk_cps} · caídas {pvar.pk_caidas}"
+  tests:
+    - name: muestra el tiempo
+      given: {pvar.pk_activo: true, var.ahora: 12300, pvar.pk_inicio: 0, pvar.pk_cps: 1, pvar.pk_caidas: 0}
+      expect: {messages: ["Parkour 12 / 300 s · checkpoint 1 · caídas 0"]}
+    - name: pasado el límite, pierde
+      given: {pvar.pk_activo: true, var.ahora: 301000, pvar.pk_inicio: 0}
+      expect: {messages: ["Perdiste: se acabó el tiempo"], pvar.pk_activo: null}
+    - name: sin partida no corre
+      given: {}
+      expect: {fired: false}
+
+# ------------------------------------------------------------------ perder sin llegar
+
+muerte:
+  trigger: player_death
+  conditions: "pvar.pk_activo == true"
+  actions:
+    - call: "perder; motivo='moriste'"
+  tests:
+    - given: {pvar.pk_activo: true}
+      expect: {messages: ["Perdiste: moriste"], pvar.pk_activo: null}
+
+cambio_de_modo:
+  trigger: player_gamemode_change
+  conditions: "pvar.pk_activo == true"
+  actions:
+    - call: "perder; motivo='cambiaste de modo de juego'"
+  tests:
+    - given: {pvar.pk_activo: true}
+      expect: {messages: ["cambiaste de modo de juego"]}
+
+vuelo:
+  trigger: player_toggle_flight
+  conditions: ["pvar.pk_activo == true", "flying"]
+  actions:
+    - call: "perder; motivo='te pusiste a volar'"
+  tests:
+    - given: {pvar.pk_activo: true, flying: true}
+      expect: {messages: ["te pusiste a volar"]}
+    - given: {pvar.pk_activo: true, flying: false}
+      expect: {fired: false}
+
+atajo:
+  description: Teletransportarse por otro medio (un comando, una perla) no vale; los del propio parkour sí
+  trigger: player_teleport
+  conditions:
+    - "pvar.pk_activo == true"
+    - "upper(str(cause)) in ['COMMAND', 'ENDER_PEARL', 'CHORUS_FRUIT', 'CONSUMABLE_EFFECT', 'SPECTATE', 'NETHER_PORTAL', 'END_PORTAL', 'END_GATEWAY']"
+  actions:
+    - call: "perder; motivo='te teletransportaste'"
+  tests:
+    - name: un /tp hace perder
+      given: {pvar.pk_activo: true, cause: COMMAND}
+      expect: {messages: ["te teletransportaste"], pvar.pk_activo: null}
+    - name: volver al checkpoint (PLUGIN) no
+      given: {pvar.pk_activo: true, cause: PLUGIN}
+      expect: {fired: false}
+
+# ------------------------------------------------------------------ salir del servidor
+
+desconexion:
+  description: Salir del servidor en plena partida la cancela, sin récord
+  trigger: player_quit
+  conditions: "pvar.pk_activo == true"
+  actions:
+    - log: "parkour: {player.name} salió en plena partida; se cancela"
+    - call: terminar
+  tests:
+    - given: {player.name: Ana, pvar.pk_activo: true, pvar.pk_inicio: 1}
+      expect: {pvar.pk_activo: null, pvar.pk_inicio: null, pvar.pk_record: null}
+
+partida_vieja:
+  description: Si el servidor se apagó en plena partida, al volver se limpia
+  trigger: player_join
+  conditions: "pvar.pk_activo == true"
+  actions:
+    - call: terminar
+    - message: "<gray>Tu partida de parkour quedó a medias y se canceló."
+  tests:
+    - given: {pvar.pk_activo: true}
+      expect: {pvar.pk_activo: null, messages: ["quedó a medias"]}
+
+# ------------------------------------------------------------------ el comando
+
+comando:
+  trigger: command
+  command:
+    name: parkour
+    aliases: [pk]
+    description: Parkour de OmniEvents
+    usage: /parkour [salir | reiniciar | checkpoint | record | construir]
+    tab: [["salir", "reiniciar", "checkpoint", "record", "construir"]]
+  actions:
+    - if: "player == null"
+      then:
+        - message: "Solo los jugadores juegan al parkour."
+        - stop
+    - set: "var.sub = args.size == 0 ? '' : lower(args[0])"
+    - if: "var.sub == 'salir'"
+      then:
+        - if: "pvar.pk_activo != true"
+          then: [{message: "<gray>No estás en una partida de parkour."}, stop]
+        - call: terminar
+        - message: "<yellow>Saliste del parkour."
+        - stop
+    - if: "var.sub == 'reiniciar'"
+      then:
+        - if: "pvar.pk_s_mundo == null"
+          then: [{message: "<gray>Todavía no empezaste ningún parkour: pisa la placa de inicio."}, stop]
+        - set: "pvar.pk_mundo = pvar.pk_s_mundo"
+        - set: "pvar.pk_x = pvar.pk_s_x"
+        - set: "pvar.pk_y = pvar.pk_s_y"
+        - set: "pvar.pk_z = pvar.pk_s_z"
+        - set: "pvar.pk_giro = pvar.pk_s_giro"
+        - call: volver_al_punto
+        - call: empezar
+        - stop
+    - if: "var.sub == 'checkpoint'"
+      then:
+        - if: "pvar.pk_activo != true"
+          then: [{message: "<gray>No estás en una partida de parkour."}, stop]
+        - set: "pvar.pk_caidas += 1"
+        - call: volver_al_punto
+        - stop
+    - if: "var.sub == 'record'"
+      then:
+        - message: "<gold>Tu récord:</gold> <white>{pvar.pk_record == null ? 'sin tiempo todavía' : round(pvar.pk_record / 1000, 2) + ' s'}</white> <gray>· {default(pvar.pk_ganadas, 0)} de {default(pvar.pk_partidas, 0)} partidas ganadas"
+        - message: "<gold>Récord del servidor:</gold> <white>{gvar.pk_record == null ? 'nadie todavía' : round(gvar.pk_record / 1000, 2) + ' s, de ' + gvar.pk_record_nombre}"
+        - stop
+    - if: "var.sub == 'construir'"
+      then:
+        - if: "!perm('${admin}')"
+          then: [{message: "<red>Necesitas el permiso ${admin}."}, stop]
+        - call: construir
+        - stop
+    - message: "<gold>Parkour</gold> <gray>· pisa la placa de inicio para empezar, los checkpoints guardan tu punto y la meta tu tiempo."
+    - message: "<gray>/parkour salir · reiniciar · checkpoint · record{perm('${admin}') ? ' · construir' : ''}"
+  tests:
+    - name: salir de una partida
+      given: {player.name: Ana, args: [salir], pvar.pk_activo: true, pvar.pk_inicio: 1}
+      expect: {messages: ["Saliste del parkour"], pvar.pk_activo: null}
+    - name: salir sin partida
+      given: {player.name: Ana, args: [salir]}
+      expect: {messages: ["No estás en una partida"]}
+    - name: reiniciar vuelve al inicio y empieza de cero
+      given: {player.name: Ana, args: [reiniciar], pvar.pk_activo: true, pvar.pk_cps: 2, pvar.pk_caidas: 3, pvar.pk_vistos: "|1,2,3",
+              pvar.pk_s_mundo: world, pvar.pk_s_x: 10.5, pvar.pk_s_y: -56, pvar.pk_s_z: 12.5, pvar.pk_s_giro: -90,
+              pvar.pk_x: 13.5}
+      expect: {pvar.pk_activo: true, pvar.pk_cps: 0, pvar.pk_caidas: 0, pvar.pk_vistos: "", pvar.pk_x: 10.5,
+               commands: [], messages: ["¡Ya!"], actions: [teleport]}
+    - name: reiniciar sin haber empezado nunca
+      given: {player.name: Ana, args: [reiniciar]}
+      expect: {messages: ["Todavía no empezaste"]}
+    - name: volver al checkpoint cuenta como caída
+      given: {player.name: Ana, args: [checkpoint], pvar.pk_activo: true, pvar.pk_caidas: 1}
+      expect: {pvar.pk_caidas: 2, actions: [teleport]}
+    - name: récords
+      given: {player.name: Ana, args: [record], pvar.pk_record: 41250, pvar.pk_ganadas: 1, pvar.pk_partidas: 3, gvar.pk_record: 38000,
+              gvar.pk_record_nombre: Beto}
+      expect: {messages: ["Tu récord: 41.25 s · 1 de 3 partidas ganadas", "Récord del servidor: 38 s, de Beto"]}
+    - name: récords sin tiempos
+      given: {player.name: Ana, args: [record]}
+      expect: {messages: ["sin tiempo todavía · 0 de 0", "nadie todavía"]}
+    - name: construir sin permiso
+      given: {player.name: Ana, args: [construir]}
+      expect: {messages: ["Necesitas el permiso omnievents.parkour.admin"]}
+    - name: sin argumentos, la ayuda
+      given: {player.name: Ana, args: []}
+      expect: {messages: ["pisa la placa de inicio", "/parkour salir"]}
+
+# ------------------------------------------------------------------ lo común (trigger: call)
+
+empezar:
+  trigger: call
+  actions:
+    - set: "pvar.pk_activo = true"
+    - set: "pvar.pk_inicio = now()"
+    - set: "pvar.pk_cps = 0"
+    - set: "pvar.pk_caidas = 0"
+    - set: "pvar.pk_vistos = ''"
+    - set: "pvar.pk_partidas = default(pvar.pk_partidas, 0) + 1"
+    - title: "<gold>¡Ya!;<gray>Llega a la meta en ${limite} s;5;30;10"
+    - sound: BLOCK_NOTE_BLOCK_BELL;1;1.4
+    - message: "<gold>Parkour</gold> <gray>· llega a la meta en ${limite} s. Si caes, vuelves al último checkpoint. /parkour salir para dejarlo."
+
+perder:
+  trigger: call
+  args: [motivo]
+  actions:
+    - message: "<red>✘ Perdiste: {var.motivo}."
+    - title: "<red>Perdiste;<gray>{var.motivo};5;40;15"
+    - sound: ENTITY_VILLAGER_NO;1;1
+    - call: terminar
+
+terminar:
+  description: La limpieza de siempre, al ganar, perder, salir o desconectarse (quedan los récords y la salida)
+  trigger: call
+  actions:
+    - unset: pvar.pk_activo
+    - unset: pvar.pk_inicio
+    - unset: pvar.pk_cps
+    - unset: pvar.pk_caidas
+    - unset: pvar.pk_vistos
+
+guardar_punto:
+  description: Guarda la placa pisada como el punto al que se vuelve (llega de inicio y checkpoint con la raíz to)
+  trigger: call
+  args: [mundo, x, y, z, giro]
+  actions:
+    - set: "pvar.pk_mundo = var.mundo"
+    - set: "pvar.pk_x = var.x"
+    - set: "pvar.pk_y = var.y"
+    - set: "pvar.pk_z = var.z"
+    - set: "pvar.pk_giro = var.giro"
+
+volver_al_punto:
+  trigger: call
+  actions:
+    - teleport: "{pvar.pk_mundo};{pvar.pk_x};{pvar.pk_y};{pvar.pk_z};{pvar.pk_giro};0"
+
+construir:
+  description: Un recorrido de prueba hacia el este (x+) del jugador; el suelo de su posición es la altura 0
+  trigger: call
+  actions:
+    - set_block: "~2;~;~;${inicio}"
+    - set_block: "~4;~;~;STONE_BRICKS"
+    - set_block: "~6;~1;~;STONE_BRICKS"
+    - set_block: "~8;~2;~;STONE_BRICKS"
+    - set_block: "~10;~3;~;STONE_BRICKS"
+    - set_block: "~10;~4;~;${checkpoint}"
+    - set_block: "~12;~3;~;STONE_BRICKS"
+    - set_block: "~14;~3;~1;STONE_BRICKS"
+    - set_block: "~16;~3;~;STONE_BRICKS"
+    - set_block: "~16;~4;~;${meta}"
+    - message: "<green>Recorrido de prueba listo hacia el este: inicio a 2 bloques, checkpoint y meta arriba."

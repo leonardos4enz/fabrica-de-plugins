@@ -1464,6 +1464,129 @@ export default {
       }
     },
     {
+      // Spec 018: el minijuego de ejemplo (rules/ejemplos/parkour), solo configuración, jugado de punta a punta.
+      id: '018 H1 CA3 · H2 CA1–CA7 · H3 CA1–CA2 · H4 CA1',
+      nombre: 'parkour de ejemplo: construir, empezar, checkpoint, caída, meta con récords, perder, salir y desconectarse',
+      timeoutMs: 90000,
+      async fn (ctx) {
+        const { srv } = ctx
+        let ana = ctx.bots[ANA]
+        const beto = ctx.bots[BETO]
+        const V = ana.bot.entity.position.constructor
+        await srv.consola('omni pack enable parkour', { espera: /parkour/ })
+        for (const v of ['pk_record', 'pk_record_nombre']) await srv.consola(`omni var del global ${v}`)
+        for (const v of ['pk_record', 'pk_partidas', 'pk_ganadas', 'pk_activo', 'pk_s_mundo']) await srv.consola(`omni var del ${ANA} ${v}`)
+        await prepararJugador(ctx, ANA)
+
+        // H1 CA3: /parkour construir arma el recorrido de prueba hacia el este de quien lo usa.
+        await srv.consola('fill 49 -60 48 68 -54 52 air')
+        await srv.consola(`tp ${ANA} 50.5 -60 50.5 -90 0`)
+        await srv.sincronizar()
+        await ana.hasta('estar donde se construye', b => cerca(b.entity.position, 50.5, -60, 50.5))
+        let m = ana.marca()
+        ana.comando('parkour construir')
+        await ana.esperar('chat', /Recorrido de prueba listo/, { desde: m })
+        await ana.hasta('ver el recorrido construido', b => bloque(b, 52, -60, 50) === 'light_weighted_pressure_plate' &&
+          bloque(b, 60, -56, 50) === 'heavy_weighted_pressure_plate' && bloque(b, 66, -56, 50) === 'polished_blackstone_pressure_plate')
+        await srv.consola('fill 49 -60 48 68 -54 52 air')
+
+        // Un recorrido plano y elevado en la zona de trabajo: inicio en x 9, checkpoint en x 12, meta en x 16.
+        await srv.consola('fill 7 -57 12 17 -57 12 stone')
+        await srv.consola('setblock 9 -56 12 light_weighted_pressure_plate')
+        await srv.consola('setblock 12 -56 12 heavy_weighted_pressure_plate')
+        await srv.consola('setblock 16 -56 12 polished_blackstone_pressure_plate')
+        await srv.consola(`tp ${ANA} 7.5 -56 12.5 -90 0`)
+        await srv.sincronizar()
+        await ana.hasta('estar al principio del recorrido', b => cerca(b.entity.position, 7.5, -56, 12.5))
+        const caminarHasta = async (x) => {
+          await ana.bot.lookAt(new V(40, ana.bot.entity.position.y + 1.62, 12.5), true)
+          ana.bot.setControlState('forward', true)
+          try {
+            await ana.hasta(`caminar hasta x ${x}`, b => b.entity.position.x >= x, { timeoutMs: 10000 })
+          } finally {
+            ana.bot.clearControlStates()
+          }
+        }
+
+        // H2 CA1–CA3: empezar al pisar la placa de inicio y guardar el checkpoint.
+        m = ana.marca()
+        await caminarHasta(13.3)
+        await ana.esperar('title', /¡Ya!/, { desde: m })
+        await ana.esperar('chat', /llega a la meta en 300 s/, { desde: m })
+        await ana.esperar('chat', /» Checkpoint 1 · [\d.]+ s/, { desde: m })
+        await ana.esperar('actionbar', /^Parkour \d+ \/ 300 s · checkpoint 1 · caídas 0$/, { desde: m, timeoutMs: 4000 })
+
+        // H2 CA4: caerse del recorrido devuelve al checkpoint.
+        m = ana.marca()
+        ana.bot.setControlState('right', true) // mirando al este, la derecha es el sur (z+)
+        try {
+          await ana.hasta('caerse del recorrido', b => b.entity.position.z > 13.3)
+        } finally {
+          ana.bot.clearControlStates()
+        }
+        await ana.esperar('actionbar', /¡Caída! Vuelves al último punto \(1 caídas\)/, { desde: m })
+        await ana.hasta('volver al checkpoint', b => cerca(b.entity.position, 12.5, -56, 12.5))
+
+        // H2 CA5 · H3 CA1–CA2: llegar a la meta guarda el récord personal y el del servidor.
+        m = ana.marca()
+        const mb = beto.marca()
+        await caminarHasta(16.3)
+        await ana.esperar('chat', /^✔ ¡Meta! [\d.]+ s · checkpoints: 1 · caídas: 1$/, { desde: m })
+        await ana.esperar('chat', /» Nuevo récord personal: [\d.]+ s/, { desde: m })
+        await beto.esperar('chat', /» Ana_e2e batió el récord del parkour: [\d.]+ s/, { desde: mb })
+        await ana.esperar('title', /¡Meta!/, { desde: m })
+        await srv.consola(`omni var get ${ANA} pk_record`, { espera: new RegExp(`${ANA}\\.pk_record = \\d+`) })
+        await srv.consola('omni var get global pk_record_nombre', { espera: /global\.pk_record_nombre = 'Ana_e2e'/ })
+        await esperarVar(srv, ANA, 'pk_activo', 'nulo')
+        m = ana.marca()
+        ana.comando('parkour record')
+        await ana.esperar('chat', /^Tu récord: [\d.]+ s · 1 de 1 partidas ganadas$/, { desde: m })
+        await ana.esperar('chat', /^Récord del servidor: [\d.]+ s, de Ana_e2e$/, { desde: m })
+
+        // H2 CA6: pasar el tiempo límite (el inicio, adelantado por consola) y teletransportarse hacen perder.
+        m = ana.marca()
+        ana.comando('parkour reiniciar')
+        await ana.esperar('title', /¡Ya!/, { desde: m })
+        await ana.hasta('volver a la placa de inicio', b => cerca(b.entity.position, 9.5, -56, 12.5))
+        await srv.consola(`omni var set ${ANA} pk_inicio now() - 400000`)
+        await ana.esperar('chat', /^✘ Perdiste: se acabó el tiempo \(300 s\)\.$/, { desde: m, timeoutMs: 4000 })
+        await esperarVar(srv, ANA, 'pk_activo', 'nulo')
+        m = ana.marca()
+        ana.comando('parkour reiniciar')
+        await ana.esperar('title', /¡Ya!/, { desde: m })
+        await srv.consola(`tp ${ANA} 7.5 -56 12.5`)
+        await ana.esperar('chat', /^✘ Perdiste: te teletransportaste\.$/, { desde: m })
+
+        // H2 CA7: /parkour salir.
+        m = ana.marca()
+        ana.comando('parkour reiniciar')
+        await ana.esperar('title', /¡Ya!/, { desde: m })
+        ana.comando('parkour salir')
+        await ana.esperar('chat', /^Saliste del parkour\.$/, { desde: m })
+        await esperarVar(srv, ANA, 'pk_activo', 'nulo')
+
+        // H4 CA1: desconectarse en plena partida la cancela; al volver no queda nada a medias.
+        m = ana.marca()
+        ana.comando('parkour reiniciar')
+        await ana.esperar('title', /¡Ya!/, { desde: m })
+        await esperarVar(srv, ANA, 'pk_activo', 'true')
+        const ml = srv.marca()
+        await ctx.salir(ANA)
+        await srv.esperarLog(/parkour: Ana_e2e salió en plena partida; se cancela/, { desde: ml })
+        await dormir(1000) // los datos de quien sale se guardan un tick después, en otro hilo
+        await esperarVar(srv, ANA, 'pk_activo', 'nulo')
+        ana = await ctx.entrar(ANA)
+        // El título de bienvenida llega 2 s después de entrar: esperarlo, o el kick del escenario siguiente lo deja a medias.
+        await ana.esperar('title', /Bienvenido/, { desde: 0 })
+        await ana.nunca('chat', /quedó a medias/, { desde: 0, ms: 300 })
+        await srv.consola(`omni var get ${ANA} pk_partidas`, { espera: new RegExp(`${ANA}\\.pk_partidas = 5(\\.0)?\\s*$`) })
+
+        await srv.consola('fill 7 -57 12 17 -56 12 air')
+        await srv.consola('omni pack disable parkour', { espera: /parkour/ })
+        await prepararJugador(ctx, ANA)
+      }
+    },
+    {
       id: 'H5 CA3',
       nombre: 'jugador: kick con su motivo',
       async fn (ctx) {

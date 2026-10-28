@@ -41,8 +41,8 @@ diamond_counter:
 ## Compatibility
 | Server | Status |
 |---|---|
-| **Paper 1.21.4** (Java 21+) | Verified with OmniEvents 1.11.0 (unit tests, a real server and 57 in-game scenarios run by bots) |
-| **Paper 26.1.2** (Java 25) | Verified with OmniEvents 1.11.0 (57 in-game scenarios) |
+| **Paper 1.21.4** (Java 21+) | Verified with OmniEvents 1.11.1 (unit tests, a real server and 58 in-game scenarios run by bots) |
+| **Paper 26.1.2** (Java 25) | Verified with OmniEvents 1.11.1 (58 in-game scenarios) |
 | Paper 1.21.5 – 1.21.11, 26.2, 26.3 | Not verified (same API, should work) |
 | Paper 1.21.3 or older | Not supported |
 | Spigot, CraftBukkit, Folia | Not supported |

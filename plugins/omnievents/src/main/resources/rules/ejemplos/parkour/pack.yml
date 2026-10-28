@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents-pack.schema.json
+# Minijuego de ejemplo (spec 018): un parkour hecho solo con reglas. Viene APAGADO: actívalo con enabled: true (y
+# /omni reload) o, hasta el próximo reload, con /omni pack enable parkour.
+#
+# El recorrido no lleva coordenadas: lo construyes donde quieras y lo marcas con placas de presión.
+#   - placa de inicio:      empieza (o reinicia) la partida
+#   - placas de checkpoint:  guardan el punto al que vuelves si te caes
+#   - placa de meta:         termina la partida y guarda el récord
+# /parkour construir (OP) arma uno de prueba hacia el este de donde estás. /parkour para ver los demás comandos.
+name: parkour
+version: 1.0.0
+description: Parkour con checkpoints, tiempo límite y récords, marcado con placas de presión
+author: OmniEvents
+enabled: false
+requires:
+  omnievents: ">=1.9.0"                      # firework (spec 014)
+# Cambia aquí el juego entero: cada ${nombre} de reglas.yml se reemplaza al cargar.
+params:
+  inicio: LIGHT_WEIGHTED_PRESSURE_PLATE        # placa de oro
+  checkpoint: HEAVY_WEIGHTED_PRESSURE_PLATE    # placa de hierro
+  meta: POLISHED_BLACKSTONE_PRESSURE_PLATE
+  limite: 300                                  # segundos para llegar a la meta
+  caida: 3                                     # bloques por debajo del último punto que cuentan como caída
+  admin: omnievents.parkour.admin              # permiso de /parkour construir (los OP lo tienen)

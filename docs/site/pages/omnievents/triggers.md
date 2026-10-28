@@ -27,7 +27,7 @@ Older ConditionalEvents names also work: `player_kill_entity` is `player_kill`, 
 | `player_death` | `killer`, `cause` | A player dies (`killer` if another player killed them). Cancellable. |
 | `player_chat` | `message` | A player chats (off the main thread; `message` is the plain text). Cancellable. |
 | `player_command` | `cmd`, `args` | A player types any command, from any plugin. Cancellable. |
-| `player_move` | `from`, `to` | A player moves (see the `move_mode` option). Cancellable. |
+| `player_move` | `from`, `to` | A player moves (see the `move_mode` option). `player.location` is still where they came from: use `to.block` and `to.y` for where they arrive. Cancellable. |
 | `player_teleport` | `from`, `to`, `cause` | A player is teleported. Cancellable. |
 | `player_world_change` | `from_world` | A player changes world. |
 | `player_sneak` | `sneaking` | A player starts or stops sneaking. Cancellable. |

@@ -235,3 +235,4 @@ low_health_warning:
 
 Want more? The plugin ships with Spanish-language examples in `plugins/OmniEvents/rules/ejemplos/`, and every
 building block is explained in [triggers](triggers.md), [conditions](conditions.md) and [actions](actions.md).
+For a whole game (start, win, lose, records), see [Build a minigame](minigames.md).

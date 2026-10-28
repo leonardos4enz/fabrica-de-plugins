@@ -182,7 +182,7 @@ public final class Triggers {
         register(TriggerType.event("player_move", g, PlayerMoveEvent.class, PlayerMoveEvent::getPlayer, (e, m) -> {
             m.put("from", e.getFrom());
             m.put("to", e.getTo());
-        }, null, false, "from", "to").doc("Un jugador se mueve (move_mode: block, chunk o any)."));
+        }, null, false, "from", "to").doc("Un jugador se mueve (move_mode: block, chunk o any). player.location todavía es el origen (from): el bloque al que llega es to.block y la altura nueva, to.y."));
         register(TriggerType.event("player_teleport", g, PlayerTeleportEvent.class, PlayerTeleportEvent::getPlayer, (e, m) -> {
             m.put("from", e.getFrom());
             m.put("to", e.getTo());

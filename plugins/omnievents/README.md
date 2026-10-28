@@ -14,6 +14,7 @@ variables persistentes y herramientas de diagnóstico. Specs: [001](../../docs/s
 [014](../../docs/sdd/specs/014-omnievents-paridad-conditionalevents/spec.md) (paridad con ConditionalEvents),
 [015](../../docs/sdd/specs/015-omnievents-paridad-conditionalevents-2/spec.md) (paridad con ConditionalEvents, segunda parte) y
 [016](../../docs/sdd/specs/016-omnievents-paridad-conditionalevents-3/spec.md) (detalles de ConditionalEvents y el chat recibido con ProtocolLib).
+**[Cómo hacer un minijuego](#cómo-hacer-un-minijuego)**: un parkour completo de ejemplo, solo con reglas ([spec 018](../../docs/sdd/specs/018-omnievents-minijuegos-con-configuracion/spec.md)).
 
 **[Documentación en inglés](https://leonardos4enz.gitbook.io/leonardos4enz-docs/)** (English docs; [fuente](../../docs/site/pages/omnievents/README.md)): una wiki para GitBook o
 Zensical con instalación, primera regla, disparadores, condiciones, acciones, variables, comandos y cómo migrar desde
@@ -33,8 +34,8 @@ Minecraft 1.21.4 ([spec 004](../../docs/sdd/specs/004-fabrica-capturas-en-juego/
 ## Compatibilidad
 | Servidor | Estado | Evidencia |
 |---|---|---|
-| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.11.0) | Compuertas 1, 2 y 3a: 200 unitarias, servidor real y 57/57 escenarios en el juego dos veces (2026-10-25, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md), [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md), [012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/verify.md), [013](../../docs/sdd/specs/013-omnievents-menus-y-formularios-bedrock/verify.md), [014](../../docs/sdd/specs/014-omnievents-paridad-conditionalevents/verify.md), [015](../../docs/sdd/specs/015-omnievents-paridad-conditionalevents-2/verify.md) y [016](../../docs/sdd/specs/016-omnievents-paridad-conditionalevents-3/verify.md)) |
-| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.11.0) | 57/57 escenarios en el juego dos veces con el mismo jar (2026-10-25, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md), [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md), [012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/verify.md), [013](../../docs/sdd/specs/013-omnievents-menus-y-formularios-bedrock/verify.md), [014](../../docs/sdd/specs/014-omnievents-paridad-conditionalevents/verify.md), [015](../../docs/sdd/specs/015-omnievents-paridad-conditionalevents-2/verify.md) y [016](../../docs/sdd/specs/016-omnievents-paridad-conditionalevents-3/verify.md)) |
+| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.11.1) | Compuertas 1, 2 y 3a: 203 unitarias, servidor real y 58/58 escenarios en el juego dos veces (2026-10-27, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md), [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md), [012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/verify.md), [013](../../docs/sdd/specs/013-omnievents-menus-y-formularios-bedrock/verify.md), [014](../../docs/sdd/specs/014-omnievents-paridad-conditionalevents/verify.md), [015](../../docs/sdd/specs/015-omnievents-paridad-conditionalevents-2/verify.md), [016](../../docs/sdd/specs/016-omnievents-paridad-conditionalevents-3/verify.md) y [018](../../docs/sdd/specs/018-omnievents-minijuegos-con-configuracion/verify.md)) |
+| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.11.1) | 58/58 escenarios en el juego dos veces con el mismo jar (2026-10-27, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md), [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md), [012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/verify.md), [013](../../docs/sdd/specs/013-omnievents-menus-y-formularios-bedrock/verify.md), [014](../../docs/sdd/specs/014-omnievents-paridad-conditionalevents/verify.md), [015](../../docs/sdd/specs/015-omnievents-paridad-conditionalevents-2/verify.md), [016](../../docs/sdd/specs/016-omnievents-paridad-conditionalevents-3/verify.md) y [018](../../docs/sdd/specs/018-omnievents-minijuegos-con-configuracion/verify.md)) |
 | Paper 1.21.5 – 1.21.11 | Sin verificar | Debería funcionar (misma API, sin NMS), pero no se probó |
 | Paper 26.2 y 26.3 | Sin verificar | El bot de pruebas (mineflayer 4.39) llega hasta 26.1 |
 | Paper 1.21.3 o anterior | No soportada | Se compila contra la API de 1.21.4 |
@@ -654,6 +655,72 @@ avisar:
   desactivar todas sus reglas hasta el próximo `reload` (para dejarlo fijo, `enabled: false` en `pack.yml`).
 - **Mover una regla a un paquete** le cambia el nombre (`diaria` → `recompensas:diaria`): sus enfriamientos, usos y
   estado guardados quedan con el nombre viejo.
+
+## Cómo hacer un minijuego
+Un minijuego de un jugador no necesita otro plugin: se arma con las reglas de siempre
+([spec 018](../../docs/sdd/specs/018-omnievents-minijuegos-con-configuracion/spec.md)). OmniEvents trae uno completo de
+ejemplo, el paquete **parkour** (`rules/ejemplos/parkour/`), que sirve para jugar y como plantilla para el tuyo.
+
+**Probarlo.** Viene **apagado**. Pon `enabled: true` en `parkour/pack.yml` y `/omni reload` (o `/omni pack enable parkour`
+hasta el próximo reload). Construye el recorrido donde quieras y márcalo con placas de presión, sin coordenadas:
+- **placa de oro** (`LIGHT_WEIGHTED_PRESSURE_PLATE`): empieza o reinicia la partida;
+- **placas de hierro** (`HEAVY_WEIGHTED_PRESSURE_PLATE`): checkpoints;
+- **placa de blackstone pulida**: la meta.
+
+Para probarlo sin construir nada, `/parkour construir` (OP o `omnievents.parkour.admin`) arma un recorrido de prueba
+hacia el este de donde estás.
+
+**Qué hace:** al pisar el inicio en supervivencia o aventura, un título con las reglas. Durante la partida, el tiempo en
+la barra de acción, el checkpoint guardado con el tiempo parcial y, si caes más de `caida` bloques, la vuelta al último
+punto. En la meta, el tiempo, las caídas, fuegos artificiales y el **récord personal y del servidor** (este se anuncia a
+todos). Pierdes si pasa el tiempo límite, mueres, cambias de modo, vuelas o te teletransportas por otro medio (un
+comando, una perla). Si te desconectas, la partida se cancela; si el servidor se cae en plena partida, se limpia al
+volver. Comandos: `/parkour` (`/pk`) `salir`, `reiniciar`, `checkpoint` (cuenta como caída), `record` y `construir`.
+
+```yaml
+# rules/ejemplos/parkour/pack.yml: el juego entero se ajusta aquí
+params:
+  inicio: LIGHT_WEIGHTED_PRESSURE_PLATE        # placa de oro
+  checkpoint: HEAVY_WEIGHTED_PRESSURE_PLATE    # placa de hierro
+  meta: POLISHED_BLACKSTONE_PRESSURE_PLATE
+  limite: 300                                  # segundos para llegar a la meta
+  caida: 3                                     # bloques por debajo del último punto que cuentan como caída
+  admin: omnievents.parkour.admin              # permiso de /parkour construir (los OP lo tienen)
+```
+Quedan guardados `pvar.pk_record` (ms), `pvar.pk_partidas`, `pvar.pk_ganadas`, `gvar.pk_record` y
+`gvar.pk_record_nombre`; con PlaceholderAPI, un plugin de marcador los muestra con `%omni_var_pk_record%` o
+`%omni_gvar_pk_record_nombre%`. Cada regla del paquete trae `tests:` y la suite juega una partida entera con un bot.
+
+**El patrón, para tu propio juego** (una carrera, un laberinto, tiro al blanco, una búsqueda del tesoro):
+1. El estado de la partida vive en variables del jugador: una dice si está jugando (`pvar.pk_activo`) y las demás guardan
+   el inicio, el punto y los contadores. Los récords son variables que no se borran nunca.
+2. Una regla por cosa que pasa (pisar una placa, caerse, morir, salir del servidor). Cada una pregunta primero si el
+   jugador está jugando, así que no le cuesta casi nada al resto.
+3. Lo común va en reglas `trigger: call` (`empezar`, `perder` con el motivo, `terminar`). Toda salida del juego termina
+   en la misma limpieza.
+4. Un `timer` por jugador para el reloj y el tiempo límite.
+5. Limpieza en `player_quit` y otra vez en `player_join`, por si el servidor se apagó en plena partida.
+6. Un paquete con `params`, para que otro servidor cambie materiales y límites sin tocar las reglas.
+
+**Trucos que usa el ejemplo:**
+- **Adónde llega el jugador:** en `player_move`, `player.location` todavía es el bloque de donde viene (el evento
+  corre antes de moverlo). La placa que pisa es `to.block.type` y la altura nueva, `to.y`.
+- **La hora en `tests:`:** `given` no evalúa expresiones. La regla usa `default(var.ahora, now())` y la prueba fija `var.ahora`.
+- **Guardar una posición:** `teleport` separa su valor por `;` al cargar la regla, así que no acepta una ubicación
+  guardada en un solo texto. Se guardan mundo, x, y, z y giro en variables separadas:
+  `teleport: "{pvar.pk_mundo};{pvar.pk_x};{pvar.pk_y};{pvar.pk_z};{pvar.pk_giro};0"`.
+- **Atajos:** `player_teleport` trae `cause` (`COMMAND`, `ENDER_PEARL`, portales…). El `teleport` de OmniEvents es
+  `PLUGIN`, así que volver al checkpoint no cuenta como atajo.
+
+**Lo que hoy no se hace solo con reglas**, y cómo resolverlo:
+
+| Quieres | Hoy |
+|---|---|
+| Guardar el inventario al empezar y devolverlo al final | Vaciar y dar un kit (`clear_inventory`, `give_item`), o jugar en otro mundo con un plugin de inventario por mundo |
+| Marcador lateral | Un plugin de marcador que lea las variables con PlaceholderAPI |
+| Un top 10 de todos los jugadores | Solo el mejor (una `gvar` que se actualiza con cada récord); una lista ordenada necesita un plugin de ranking |
+| Reiniciar el mapa al terminar | `set_block` para pocos bloques, `console` con `fill`, o un esquema de WorldEdit con `console` |
+| Equipos, salas de espera y arenas de varios jugadores | Se puede con `gvar`, pero es difícil de mantener correcto; mejor un plugin de minijuegos |
 
 ## Desde ConditionalEvents
 La [spec 014](../../docs/sdd/specs/014-omnievents-paridad-conditionalevents/spec.md) comparó OmniEvents fila por fila

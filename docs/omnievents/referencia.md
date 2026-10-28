@@ -225,7 +225,7 @@ Raíces que todos ofrecen además de las suyas: `server` `rule` `online` `source
 | `player_death` | `event` `world` `location` `player` `killer` `cause` | Un jugador muere (killer: quien lo mató, si fue otro jugador). *(se puede cancelar)* |
 | `player_chat` | `event` `world` `location` `player` `message` | Un jugador escribe en el chat (asíncrono; message es el texto, sin formato). *(se puede cancelar, asíncrono)* |
 | `player_command` | `event` `world` `location` `player` `cmd` `args` | Un jugador escribe un comando, de cualquier plugin (cmd.name, args). *(se puede cancelar)* |
-| `player_move` | `event` `world` `location` `player` `from` `to` | Un jugador se mueve (move_mode: block, chunk o any). *(se puede cancelar)* |
+| `player_move` | `event` `world` `location` `player` `from` `to` | Un jugador se mueve (move_mode: block, chunk o any). player.location todavía es el origen (from): el bloque al que llega es to.block y la altura nueva, to.y. *(se puede cancelar)* |
 | `player_teleport` | `event` `world` `location` `player` `from` `to` `cause` | Un jugador es teletransportado. *(se puede cancelar)* |
 | `player_world_change` | `event` `world` `location` `player` `from_world` | Un jugador cambia de mundo (from_world: de dónde viene). |
 | `player_sneak` | `event` `world` `location` `player` `sneaking` | Un jugador empieza o deja de agacharse (sneaking). *(se puede cancelar)* |

@@ -102,6 +102,13 @@ con `--release 21`.
   dmulloy2, `ProtocolLib.jar` es un plugin de Paper con `api-version: 26.2` (no carga en 26.1.2): usar `ProtocolLib-Spigot.jar`.
   Parar una tanda de la suite en segundo plano corta el `bash` pero **no** el `node` de `correr.mjs` ni su Paper: esperar a
   que libere el puerto 25599 antes de otra corrida (si no, «El servidor se apagó esperando Done» y escenarios rotos).
+- **Spec 018 (minijuego con reglas):** en `player_move`, `player.location` es todavía el **origen** (Bukkit dispara antes
+  de mover): la placa pisada y la altura nueva son `to.block.type` y `to.y` (018 F-01: la caída no se detectaba). `teleport` (y toda acción `a;b;c`) separa por `;` **al cargar**: una ubicación
+  guardada en un solo texto no se puede pasar; guardar mundo, x, y, z y giro en variables separadas. En `tests:`, `given`
+  no evalúa expresiones: para la hora, `default(var.ahora, now())` en la regla y `var.ahora` en la prueba. `expect.actions`
+  solo lista acciones con efecto (no `set`, `if` ni `call`). `PaquetesTest` carga los ejemplos con una versión fija: un
+  paquete de ejemplo con `requires` más alto la necesita subir. Al insertar texto con `String.replace` en Node, pasar una
+  función (`() => texto`): un `` $` `` o `$'` en el texto (regex de la suite) se interpreta y corrompe el archivo.
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.
