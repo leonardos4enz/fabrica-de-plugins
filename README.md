@@ -7,7 +7,7 @@ tarea y no se da por terminada sin una fase de verificación en un servidor real
 ## Plugins
 | Plugin | Qué hace | Versión | Paper verificado | Java |
 |---|---|---|---|---|
-| [OmniEvents](plugins/omnievents/README.md) | Eventos condicionales: «cuando pase X, si se cumple Y, haz Z». Versión propia y ampliada de ConditionalEvents ([documentación en inglés](https://leonardos4enz.gitbook.io/leonardos4enz-docs/) ([fuente](docs/site/pages/omnievents/README.md)), [galería](docs/omnievents/galeria.md), [referencia](docs/omnievents/referencia.md), autocompletado en VS Code, pruebas de reglas con `/omni test`, paquetes y plantillas, costos todo o nada con Vault, regiones de WorldGuard, NPC de Citizens, menús de inventario con formularios de Bedrock, el chat que recibe el jugador con ProtocolLib, un [minijuego de parkour de ejemplo](plugins/omnievents/README.md#cómo-hacer-un-minijuego) hecho solo con reglas y paridad comprobada con ConditionalEvents, que `/omni import` traduce casi entera) | 1.11.1 | 1.21.4 y 26.1.2 ([detalle](plugins/omnievents/README.md#compatibilidad)) | 21+ |
+| [OmniEvents](plugins/omnievents/README.md) ([Hangar](https://hangar.papermc.io/leonardos4enz/OmniEvents)) | Eventos condicionales: «cuando pase X, si se cumple Y, haz Z». Versión propia y ampliada de ConditionalEvents ([documentación en inglés](https://leonardos4enz.gitbook.io/leonardos4enz-docs/) ([fuente](docs/site/pages/omnievents/README.md)), [galería](docs/omnievents/galeria.md), [referencia](docs/omnievents/referencia.md), autocompletado en VS Code, pruebas de reglas con `/omni test`, paquetes y plantillas, costos todo o nada con Vault, regiones de WorldGuard, NPC de Citizens, menús de inventario con formularios de Bedrock, el chat que recibe el jugador con ProtocolLib, un [minijuego de parkour de ejemplo](plugins/omnievents/README.md#cómo-hacer-un-minijuego) hecho solo con reglas y paridad comprobada con ConditionalEvents, que `/omni import` traduce casi entera) | 1.11.1 | 1.21.4 y 26.1.2 ([detalle](plugins/omnievents/README.md#compatibilidad)) | 21+ |
 
 «Verificado» quiere decir que el plugin pasó la suite en el juego en esa versión; las demás están «sin verificar» en
 el README de cada plugin.
@@ -87,3 +87,6 @@ acción, títulos, HUD, inventarios y una vista 3D del mundo) en `docs/img/<plug
 **Minecraft Java 1.21.4 instalado** en la PC (se extraen a `tests-e2e/.cache/`, nunca al repositorio) y necesita Chrome
 o Edge. Cada imagen se compara por píxeles con la anterior y solo se reescribe si cambió; las capacidades sin escena se
 listan como aviso. Se usa para capturas puntuales (`--solo`), no para regenerar todo en cada spec. Diseño: [spec 004](docs/sdd/specs/004-fabrica-capturas-en-juego/spec.md).
+
+## Licencia
+[MIT](LICENSE). OmniEvents se publica en [Hangar](https://hangar.papermc.io/leonardos4enz/OmniEvents).
