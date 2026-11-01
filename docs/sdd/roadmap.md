@@ -137,7 +137,7 @@ Otras pendientes:
 
   | Idea | Qué es | Costo |
   |---|---|---|
-  | Esquemas `.schem` | Importar y exportar el formato abierto Sponge v3 (el de WorldEdit), carpeta `schematics/`, `/wc schem save|load|list`, pegar con vista previa | Medio |
+  | Esquemas `.schem` (**pedido del dueño**: WorldEdit se usa en todos lados) | Importar y exportar el formato abierto Sponge v3 (el de WorldEdit), carpeta `schematics/`, `/wc schem save|load|list`, pegar con vista previa | Medio |
   | Respetar regiones | WorldGuard (y otros) opcional: la escritura ya pasa por una sola puerta (`EditWorld.set`); sin permiso de construir ahí, se salta y se cuenta | Medio |
   | Formas | `sphere`, `cyl`, `pyramid`, huecas o llenas, con el mismo motor | Bajo–medio |
   | Pinceles | Varita de pincel: esfera, suavizar, pintar, con tamaño y patrón; vista previa siguiendo la mira | Alto |

@@ -150,6 +150,7 @@ demás siguen como propuesta de la IA que el dueño no objetó.
 2. **Alcance:** quiere que sea «muy muy superior» y sobre todo **fácil de construir**: que un novato haga montañas,
    islas y modifique terreno sin batallar, porque lo difícil de WorldEdit no es el plugin sino *cómo crear*. Eso es una
    capacidad nueva y grande: va como spec 026 (herramientas de terreno para novatos), en su propia sesión.
-3. **Migrar desde WorldEdit** (leer sus `.schem`): sin respuesta todavía; queda en el roadmap con los esquemas.
+3. **Migrar desde WorldEdit:** sí («sería bueno ya que WE se usa globalmente»). Worldcraft debe leer (y escribir) los `.schem` de
+   WorldEdit para que un servidor se cambie sin perder sus esquemas: spec propia, priorizada en el roadmap.
 4. **Confirmación:** desactivable desde `config.yml` y a partir de 50 000 bloques (hecho en esta spec).
 5. **Publicación:** todavía no: primero lo quiere probar.
