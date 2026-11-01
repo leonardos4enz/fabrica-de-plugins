@@ -48,9 +48,16 @@ transcripción, que el plugin no está afiliado a ellos ni a Mojang; `publicar.m
 una imagen. Los nombres no van en el título, el resumen ni las etiquetas.
 
 ## Publicación
-Pendiente del dueño (decisión 4), con `docs/skinstatues/presentacion/publicar.md`. Lo que debe confirmar en cada sitio:
-categorías, que el slug `skinstatues` esté libre y si SpigotMC ya ofrece 26.1 en la lista de versiones. Las imágenes
-se ven en las páginas cuando este commit está en `main`.
+La decisión 4 era que subiera el dueño; después pidió «publícalo» y aprobó las categorías y el uso de su Chrome
+(2026-11-01). Publicado con su sesión, sin escribir credenciales:
+- **Modrinth** (`modrinth.com/plugin/skinstatues`): descripción, ícono, versión 0.3.0 Release (Paper; 1.21.4 y 26.1.2),
+  MIT, categorías decoration y utility, enlaces, galería (`giant`, `row`, `palettes`) y la declaración de contenido hecho
+  con IA (código, recursos y texto). Enviado a revisión: «Under review».
+- **Hangar** (`hangar.papermc.io/leonardos4enz/SkinStatues`): Miscellaneous, MIT, enlaces, palabras clave sin nombres de
+  creadores, página principal, ícono y versión 0.3.0 Release (Paper 1.21.4 y 26.1.2).
+- **SpigotMC** (`spigotmc.org/resources/skinstatues.140190/`): Spigot → Fun, 0.3.0, versión nativa 1.21, probadas 1.21 y
+  26.1, descripción BBCode e ícono de 96 px.
+- Antes de publicar se corrigió la transcripción (las dos estatuas gigantes y la píldora «Paper 1.21.4+»).
 
 ## README
 Raíz: estructura (`docs/<plugin>/presentacion/`) y sección «Página de presentación» con los comandos de SkinStatues. Plugin:

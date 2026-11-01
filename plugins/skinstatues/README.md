@@ -16,7 +16,7 @@ Specs: [021](../../docs/sdd/specs/021-skinstatues-nucleo/spec.md) (core),
 
 Presentation page for SpigotMC, Modrinth and Hangar ([spec 024](../../docs/sdd/specs/024-skinstatues-pagina-de-presentacion/spec.md)):
 images in [docs/img/skinstatues/presentacion/](../../docs/img/skinstatues/presentacion/), descriptions in
-[docs/skinstatues/presentacion/](../../docs/skinstatues/presentacion/).
+[docs/skinstatues/presentacion/](../../docs/skinstatues/presentacion/). Published on [Modrinth](https://modrinth.com/plugin/skinstatues) (in review), [Hangar](https://hangar.papermc.io/leonardos4enz/SkinStatues) and [SpigotMC](https://www.spigotmc.org/resources/skinstatues.140190/).
 
 ![The 28 built-in poses](../../docs/img/skinstatues/poses.png)
 

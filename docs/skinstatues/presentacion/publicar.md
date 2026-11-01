@@ -1,7 +1,7 @@
 # Publicar SkinStatues 0.3.0 en SpigotMC, Modrinth y Hangar (spec 024)
 
-Todo lo que hace falta para crear los tres proyectos. **Los crea y sube el dueño** (decisión 4 de la spec): la IA no
-publicó nada. Las descripciones están al lado: [`spigotmc.bbcode`](spigotmc.bbcode) (SpigotMC) y
+Todo lo que hace falta para crear los tres proyectos. Publicados el 2026-11-01 (ver el verify de la spec 024); esta guía queda
+para las próximas versiones. Las descripciones están al lado: [`spigotmc.bbcode`](spigotmc.bbcode) (SpigotMC) y
 [`modrinth-hangar.md`](modrinth-hangar.md) (Modrinth y Hangar). `PresentacionTest` de SkinStatues comprueba que las dos
 enlazan las mismas imágenes, en el mismo orden, que existan, y que digan «not affiliated».
 

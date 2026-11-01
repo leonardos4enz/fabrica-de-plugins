@@ -1,6 +1,6 @@
 # Spec 024 — SkinStatues: multimedia y página de presentación
 
-**Estado:** Implementado y verificado; la publicación la hace el dueño · aprobada por el dueño (2026-11-01, CLARIFY) · **Plugin:** SkinStatues 0.3.0 (sin cambios de
+**Estado:** Implementado, verificado y publicado (Modrinth en revisión, Hangar, SpigotMC) · aprobada por el dueño (2026-11-01, CLARIFY) · **Plugin:** SkinStatues 0.3.0 (sin cambios de
 código) y la fábrica (fuentes HTML de imágenes, escenas de capturas) · **Depende de:** 004, 020, 021, 022, 023 ·
 **Origen:** pedido del dueño (2026-11-01): «¿puedes preparar la multimedia para publicar el plugin en Spigot, Modrinth y
 la otra? Igual que con el plugin de OmniEvents, al estilo Minecraft […]. Quiero imágenes de youtubers favoritos de habla
