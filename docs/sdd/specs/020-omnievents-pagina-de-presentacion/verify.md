@@ -40,7 +40,7 @@ No se regeneró la galería ni se hizo una imagen por capacidad. `/omni debug` v
 - **Modrinth:** versión 1.12.0 (Paper; 1.21.4 y 26.1.2) y descripción nueva. El proyecto sigue «Under review».
 - **Hangar:** versión 1.12.0 (Release, Paper 1.21.4–26.1.2, mismas dependencias opcionales) y página principal nueva.
 - **SpigotMC:** actualización 1.12.0 con su changelog y descripción nueva. SpigotMC pone un <br> por cada salto de línea entre [IMG]: el BBCode lleva las 7 imágenes en una sola línea (F-05). Aun así queda una línea fina entre franjas: es el espaciado de SpigotMC para imágenes en línea.
-- Los íconos de las tres páginas siguen siendo el logo viejo.
+- El ícono de las tres páginas es el logo nuevo (`docs/site/pages/assets/logo.png`), con el OK del dueño.
 
 ## Pendiente (fuera de alcance)
 - `docs/omnievents/galeria.md` está atrasada respecto de las reglas de ejemplo (le faltan los `tests:` de `diamantes_contados`):
