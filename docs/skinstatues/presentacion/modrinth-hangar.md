@@ -59,9 +59,9 @@ and verified with an automated in-game test suite.
 <details>
 <summary>Image transcription</summary>
 
-**Header.** SkinStatues. Any player. Any skin. Any size. 28 poses · up to 128 blocks · by name or by link.
+**Header.** SkinStatues. Any player. Any skin. Any size. Paper 1.21.4+ · 28 poses · up to 128 blocks · by name or by link.
 
-**100 blocks tall.** A 100-block statue of Technoblade standing in a generated world.
+**100 blocks tall.** Two 100-block statues, Technoblade and ElRichMC, in a generated world: `/statue build Technoblade 100 victory`.
 
 **Any player, any pose.** A row of statues of Vegetta777, Willyrex, elrubius, Mikecrack, Dream and GeorgeNotFound, each in
 a different pose.
