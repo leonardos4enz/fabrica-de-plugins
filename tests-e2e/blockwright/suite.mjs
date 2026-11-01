@@ -1,0 +1,339 @@
+// Escenarios en el juego de Blockwright (spec 025): Ana (OP) edita con /bwr y la varita; Beto mira (y, con permiso, edita
+// con los límites de «default»). Se comprueba por lo que reciben los bots: mensajes, partículas y los bloques que ve
+// cada uno (la vista previa son bloques falsos que solo ve Ana).
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const RECURSOS = fileURLToPath(new URL('../../plugins/blockwright/src/main/resources', import.meta.url))
+
+const ANA = 'Ana_e2e'
+const BETO = 'Beto_e2e'
+// Mundo plano: el pasto está en y = -61; se trabaja de y = -60 hacia arriba.
+const X = 40
+const Z = 40
+
+const v3 = (bot, x, y, z) => new bot.entity.position.constructor(x, y, z)
+const bloque = (bot, x, y, z) => bot.blockAt(v3(bot, x, y, z))?.name ?? '?'
+
+function contar (bot, [x0, x1], [y0, y1], [z0, z1], filtro = n => n !== 'air') {
+  let n = 0
+  for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) if (filtro(bloque(bot, x, y, z))) n++
+  return n
+}
+
+/** El área de trabajo sin nada (aire de y = -60 a -40) y a Ana en el punto de trabajo, en creativo, mirando al sur. */
+async function preparar ({ srv, bots }) {
+  // /fill acepta hasta 32 768 bloques: 101 × 101 × 3 por tanda.
+  for (let y = -60; y < -40; y += 3) await srv.consola(`fill ${X - 30} ${y} ${Z - 30} ${X + 70} ${y + 2} ${Z + 70} air`)
+  for (const c of [`gamemode creative ${ANA}`, `tp ${ANA} ${X + 0.5} -60 ${Z + 0.5} 0 0`, `clear ${ANA}`]) await srv.consola(c)
+  await srv.sincronizar()
+  await bots[ANA].hasta('estar en el punto de trabajo', b =>
+    Math.abs(b.entity.position.x - (X + 0.5)) < 0.6 && Math.abs(b.entity.position.z - (Z + 0.5)) < 0.6 && b.entity.onGround)
+}
+
+/** Manda un comando y espera una respuesta en el chat. */
+async function pide (jugador, comando, patron, timeoutMs = 15000) {
+  const m = jugador.marca()
+  jugador.comando(comando)
+  return jugador.esperar('chat', patron, { desde: m, timeoutMs })
+}
+
+/** Selecciona con comandos (Ana) la caja entre dos esquinas. */
+async function seleccionar (jugador, a, b) {
+  await pide(jugador, `bwr pos1 ${a.join(' ')}`, /Corner 1 at/)
+  await pide(jugador, `bwr pos2 ${b.join(' ')}`, /Corner 2 at .* selection/)
+}
+
+/** Corre una obra y espera el «Done»: devuelve cuántos bloques cambió y el número en el historial. */
+async function obra (jugador, comando, timeoutMs = 30000) {
+  const r = await pide(jugador, comando, /Done: \w+ changed ([\d,]+) blocks .*#(\d+)/, timeoutMs)
+  const [, n, id] = r.texto.match(/changed ([\d,]+) blocks .*#(\d+)/)
+  return { cambiados: Number(n.replace(/,/g, '')), id: Number(id) }
+}
+
+const comprobar = (srv, cond) => srv.consola(`execute if ${cond}`, { espera: /Test passed/ })
+
+export default {
+  jar: /^Blockwright-.*\.jar$/,
+  // La configuración tal como está en el código fuente; el historial de corridas anteriores se borra (cada corrida
+  // empieza sin obras).
+  copiar: [
+    { de: 'plugins/blockwright/src/main/resources', a: 'plugins/Blockwright' }
+  ],
+  datosDeJugador: [],
+  bots: [ANA, BETO],
+  puerto: 25599,
+  versionPorDefecto: '1.21.4',
+  ruidoDelServidor: [/No key layers/],
+  erroresDelPlugin: [/\[Blockwright\] (Could not|Edit #\d+ stopped by an error|The undo history did not)/],
+  preparar: [
+    'gamerule doDaylightCycle false', 'gamerule doWeatherCycle false', 'gamerule doMobSpawning false',
+    'gamerule advance_time false', 'gamerule advance_weather false', 'gamerule spawn_mobs false',
+    'gamerule sendCommandFeedback true', 'gamerule send_command_feedback true',
+    `setworldspawn ${X} -60 ${Z}`, 'time set noon', 'weather clear', 'kill @e[type=!player]'
+  ],
+  limpiar: [`deop ${ANA}`, `deop ${BETO}`],
+
+  async antes (ctx) {
+    await ctx.entrar(BETO)
+    await ctx.entrar(ANA)
+    await ctx.srv.consola(`op ${ANA}`, { espera: new RegExp(`Made ${ANA} a server operator|Nothing changed`) })
+    await ctx.srv.consola(`deop ${BETO}`)
+    for (const c of [`gamemode creative ${BETO}`, `tp ${BETO} ${X + 0.5} -60 ${Z - 6.5} 0 0`]) await ctx.srv.consola(c)
+  },
+
+  escenarios: [
+    {
+      id: 'H8 CA1 · H8 CA4 · H8 CA5 · H2 CA6',
+      nombre: 'sin permiso no se ve nada; la ayuda da un ejemplo; el autocompletado sugiere bloques en una lista',
+      async fn ({ bots }) {
+        const beto = bots[BETO]
+        await pide(beto, 'bwr set stone', /You don't have permission/)
+        const deBeto = await beto.bot.tabComplete('/bwr ', false, false, 2000).catch(e => /did not fire/.test(e.message) ? [] : Promise.reject(e))
+        if (deBeto.length) throw new Error(`Beto ve subcomandos: ${JSON.stringify(deBeto)}`)
+        const ana = bots[ANA]
+        const subs = (await ana.bot.tabComplete('/bwr ')).map(x => x.match ?? x)
+        for (const s of ['set', 'replace', 'undo', 'paste', 'selftest']) if (!subs.includes(s)) throw new Error(`Ana no ve '${s}': ${subs}`)
+        await pide(ana, 'bwr help replace', /Example: \/bwr replace dirt, grass_block with stone/)
+        const lista = (await ana.bot.tabComplete('/bwr set 70% stone,gra')).map(x => x.match ?? x)
+        if (!lista.includes('stone,grass_block')) throw new Error(`no sugiere stone,grass_block: ${lista.slice(0, 8)}`)
+        const etiquetas = (await ana.bot.tabComplete('/bwr replace #lo')).map(x => x.match ?? x)
+        if (!etiquetas.includes('#logs')) throw new Error(`no sugiere #logs: ${etiquetas.slice(0, 8)}`)
+        const presets = (await ana.bot.tabComplete('/bwr set $')).map(x => x.match ?? x)
+        if (!presets.includes('$castle_wall')) throw new Error(`no sugiere $castle_wall: ${presets}`)
+      }
+    },
+    {
+      id: 'H1 CA1 · H1 CA2 · H1 CA3',
+      nombre: 'la varita marca esquinas sin romper nada, el contorno lo ve solo Ana y un hacha común no es varita',
+      timeoutMs: 60000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        await pide(ana, 'bwr wand', /Here is your wand/)
+        await ana.hasta('tener la varita en la mano', b => b.heldItem?.name === 'golden_axe')
+        // Clic izquierdo: el paquete de empezar a romper (lo que manda el cliente al pegarle a un bloque).
+        let m = ana.marca()
+        ana.bot._client.write('block_dig', { status: 0, location: v3(ana.bot, X, -61, Z), face: 1, sequence: 1 })
+        await ana.esperar('chat', new RegExp(`Corner 1 at ${X} -61 ${Z}\\.`), { desde: m })
+        m = ana.marca()
+        await ana.bot.activateBlock(ana.bot.blockAt(v3(ana.bot, X + 4, -61, Z + 2)))
+        await ana.esperar('chat', new RegExp(`Corner 2 at ${X + 4} -61 ${Z + 2} · selection 5×1×3 \\(15 blocks\\)`), { desde: m })
+        await comprobar(srv, `block ${X} -61 ${Z} grass_block`) // no se rompió
+        // El contorno: partículas para Ana mientras tiene la varita; Beto, a 7 bloques, no recibe ninguna.
+        const mb = bots[BETO].marca()
+        await ana.esperar('particle', /dust/, { desde: m, timeoutMs: 5000 })
+        await bots[BETO].nunca('particle', /dust/, { desde: mb, ms: 1500 })
+        // Un hacha de oro cualquiera no marca nada.
+        await srv.consola(`item replace entity ${ANA} hotbar.1 with minecraft:golden_axe`)
+        ana.bot.setQuickBarSlot(1)
+        await ana.hasta('tener el hacha común', b => b.quickBarSlot === 1 && b.heldItem?.name === 'golden_axe')
+        m = ana.marca()
+        await ana.bot.activateBlock(ana.bot.blockAt(v3(ana.bot, X + 2, -61, Z + 2)))
+        await ana.nunca('chat', /Corner/, { desde: m, ms: 1500 })
+        ana.bot.setQuickBarSlot(0)
+        await pide(ana, 'bwr sel', /Selection 5×1×3 \(15 blocks\) in world, from 40 -61 40 to 44 -61 42/)
+      }
+    },
+    {
+      id: 'H3 CA1 · H6 CA1 · H6 CA3 · H5 CA4',
+      nombre: 'set con mezcla; deshacer deja lo que otro puso después y lo dice; rehacer; faces y replace',
+      timeoutMs: 90000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        const caja = [[X + 2, X + 11], [-60, -56], [Z + 2, Z + 11]]
+        await seleccionar(ana, [X + 2, -60, Z + 2], [X + 11, -56, Z + 11])
+        const set = await obra(ana, 'bwr set 50% stone, 50% glass')
+        if (set.cambiados !== 500) throw new Error(`set cambió ${set.cambiados}`)
+        await ana.hasta('ver 500 bloques de piedra y vidrio', b => contar(b, ...caja, n => n === 'stone' || n === 'glass') === 500)
+        const piedras = contar(ana.bot, ...caja, n => n === 'stone')
+        if (piedras < 175 || piedras > 325) throw new Error(`la mezcla dio ${piedras} piedras de 500`)
+        // Otro construye encima después de la obra.
+        await srv.consola(`setblock ${X + 3} -60 ${Z + 3} gold_block`)
+        await srv.sincronizar() // la consola no espera (lección 002 F-03)
+        const m = ana.marca()
+        ana.comando('bwr undo')
+        await ana.esperar('chat', new RegExp(`Undone #${set.id} \\(set 50% stone, 50% glass\\): 499 blocks back`), { desde: m })
+        await ana.esperar('chat', /1 block\(s\) were left alone: someone changed them after the edit/, { desde: m })
+        await ana.hasta('ver solo el oro', b => contar(b, ...caja) === 1 && bloque(b, X + 3, -60, Z + 3) === 'gold_block')
+        await pide(ana, 'bwr redo', new RegExp(`Redone #${set.id} .*: 499 blocks`))
+        await ana.hasta('ver la obra otra vez', b => contar(b, ...caja) === 500)
+        await pide(ana, 'bwr history', new RegExp(`#${set.id} .* set .*50% stone, 50% glass.* · 500 blocks in world`))
+        await pide(ana, 'bwr undo', /Undone/)
+        await srv.consola(`setblock ${X + 3} -60 ${Z + 3} air`)
+
+        // faces: hueca, con piso y techo; replace solo cambia lo que dice la máscara.
+        await seleccionar(ana, [X + 2, -60, Z + 2], [X + 8, -56, Z + 8])
+        const faces = await obra(ana, 'bwr faces glass')
+        if (faces.cambiados !== 7 * 7 * 5 - 5 * 5 * 3) throw new Error(`faces cambió ${faces.cambiados}`)
+        await ana.hasta('ver la caja hueca', b => bloque(b, X + 5, -58, Z + 5) === 'air' && bloque(b, X + 5, -56, Z + 5) === 'glass')
+        await srv.consola(`setblock ${X + 5} -58 ${Z + 5} dirt`)
+        await srv.sincronizar()
+        const rep = await obra(ana, 'bwr replace glass with oak_planks')
+        if (rep.cambiados !== faces.cambiados) throw new Error(`replace cambió ${rep.cambiados}`)
+        await ana.hasta('ver tablas y la tierra de adentro', b => bloque(b, X + 2, -58, Z + 2) === 'oak_planks' && bloque(b, X + 5, -58, Z + 5) === 'dirt')
+        await pide(ana, 'bwr undo 2', /Undone/)
+        await ana.hasta('ver solo la tierra', b => contar(b, [X + 2, X + 8], [-60, -56], [Z + 2, Z + 8]) === 1, { timeoutMs: 10000 })
+      }
+    },
+    {
+      id: 'H4 CA1 · H4 CA2 · H4 CA3 · H4 CA4 · H5 CA1',
+      nombre: 'una obra grande espera confirmación; la vista previa solo la ve Ana; confirm la hace dentro del tiempo por tick',
+      timeoutMs: 120000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        const beto = bots[BETO]
+        const caja = [[X + 2, X + 61], [-60, -51], [Z + 2, Z + 61]]
+        await seleccionar(ana, [X + 2, -60, Z + 2], [X + 61, -51, Z + 61])
+        const m = ana.marca()
+        await pide(ana, 'bwr set dirt', /This set changes up to 36,000 blocks .*\/bwr confirm/)
+        await ana.nunca('chat', /Done:/, { desde: m, ms: 1500 })
+        if (contar(ana.bot, ...caja)) throw new Error('se puso algo sin confirmar')
+
+        await pide(ana, 'bwr set 50% dirt, 50% sand --preview', /Preview ready: 36,000 blocks change\. Nothing changed yet/, 30000)
+        await ana.hasta('Ana ve la vista previa', b => contar(b, ...caja) === 36000, { timeoutMs: 10000 })
+        const vista = new Map()
+        for (let x = X + 2; x < X + 62; x += 7) for (let z = Z + 2; z < Z + 62; z += 5) vista.set(`${x},${z}`, bloque(ana.bot, x, -55, z))
+        if (contar(beto.bot, ...caja)) throw new Error('Beto ve la vista previa')
+        await comprobar(srv, `block ${X + 5} -55 ${Z + 5} air`) // el mundo no cambió
+        await pide(ana, 'bwr cancel', /Dropped: nothing was changed/)
+        await ana.hasta('Ana vuelve a ver el aire', b => contar(b, ...caja) === 0, { timeoutMs: 10000 })
+
+        await pide(ana, 'bwr set 50% dirt, 50% sand --preview', /Preview ready/, 30000)
+        await ana.hasta('Ana ve la vista previa', b => contar(b, ...caja) === 36000, { timeoutMs: 10000 })
+        const otra = new Map()
+        for (const k of vista.keys()) { const [x, z] = k.split(',').map(Number); otra.set(k, bloque(ana.bot, x, -55, z)) }
+        if ([...vista.keys()].every(k => vista.get(k) === otra.get(k))) throw new Error('dos vistas previas dieron la misma mezcla')
+        const r = await obra(ana, 'bwr confirm', 60000)
+        if (r.cambiados !== 36000) throw new Error(`confirm cambió ${r.cambiados}`)
+        await beto.hasta('Beto ve la obra', b => contar(b, ...caja) === 36000, { timeoutMs: 15000 })
+        for (const [k, v] of otra) {
+          const [x, z] = k.split(',').map(Number)
+          if (bloque(beto.bot, x, -55, z) !== v) throw new Error(`en ${k} la obra puso ${bloque(beto.bot, x, -55, z)} y la vista previa mostraba ${v}`)
+        }
+        const jobs = await pide(ana, 'bwr jobs', /Last edit: set, 36,000 blocks, longest tick ([\d.]+) ms \(budget 8 ms\)/)
+        const largo = Number(jobs.texto.match(/longest tick ([\d.]+) ms/)[1])
+        console.log(`    (tick más largo de la obra de 36 000 bloques: ${largo} ms)`)
+        if (largo > 12) throw new Error(`la obra usó ${largo} ms en un tick (presupuesto 8)`)
+        await pide(ana, 'bwr undo', /Undone .*36,000 blocks back/, 60000)
+        await beto.hasta('Beto ve el aire', b => contar(b, ...caja) === 0, { timeoutMs: 15000 })
+      }
+    },
+    {
+      id: 'H3 CA2 · H3 CA3 · H3 CA4 · H6 CA4',
+      nombre: 'copiar, girar y pegar: la escalera gira y el cofre lleva sus diamantes; cortar y deshacer los devuelve',
+      timeoutMs: 90000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        await srv.consola(`setblock ${X + 2} -60 ${Z + 2} chest{Items:[{Slot:0b,id:"minecraft:diamond",count:5}]}`)
+        await srv.consola(`setblock ${X + 3} -60 ${Z + 2} oak_stairs[facing=north]`)
+        await srv.consola(`setblock ${X + 4} -60 ${Z + 2} stone`)
+        await srv.sincronizar()
+        await seleccionar(ana, [X + 2, -60, Z + 2], [X + 4, -60, Z + 3]) // con una fila de aire en z + 3
+        await pide(ana, 'bwr copy', /Copied 3×1×2 \(6 blocks\)/)
+        await pide(ana, 'bwr rotate 90', /Clipboard turned 90°: now 2×1×3/)
+        // Donde va el aire copiado hay un bloque: no se borra.
+        await srv.consola(`setblock ${X - 3} -60 ${Z + 12} gold_block`)
+        await srv.sincronizar()
+        await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 10.5}`)
+        await ana.hasta('llegar', b => Math.abs(b.entity.position.z - (Z + 10.5)) < 0.6)
+        const p = await obra(ana, 'bwr paste')
+        if (p.cambiados !== 3) throw new Error(`paste cambió ${p.cambiados}`)
+        // (dx, dz) = (2..4, 2) desde Ana gira a (-2, 2..4): el cofre en (X-2, Z+12), la escalera en (X-2, Z+13).
+        await comprobar(srv, `block ${X - 2} -60 ${Z + 12} chest`)
+        await comprobar(srv, `block ${X - 2} -60 ${Z + 13} oak_stairs[facing=east]`)
+        await comprobar(srv, `block ${X - 2} -60 ${Z + 14} stone`)
+        await comprobar(srv, `block ${X - 3} -60 ${Z + 12} gold_block`)
+        await srv.consola(`data get block ${X - 2} -60 ${Z + 12} Items[0].count`, { espera: /has the following block data: 5/ })
+        await pide(ana, 'bwr undo', /Undone .*paste.*: 3 blocks back/)
+        await comprobar(srv, `block ${X - 2} -60 ${Z + 12} air`)
+
+        await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 0.5}`)
+        await obra(ana, 'bwr cut')
+        await comprobar(srv, `block ${X + 2} -60 ${Z + 2} air`)
+        await pide(ana, 'bwr undo', /Undone .*cut/)
+        await comprobar(srv, `block ${X + 3} -60 ${Z + 2} oak_stairs[facing=north]`)
+        await srv.consola(`data get block ${X + 2} -60 ${Z + 2} Items[0].count`, { espera: /has the following block data: 5/ })
+        await srv.consola(`setblock ${X - 3} -60 ${Z + 12} air`)
+      }
+    },
+    {
+      id: 'H7 CA1 · H7 CA2 · H7 CA3 · H7 CA6 · H6 CA6',
+      nombre: 'con los límites de default, Beto no pasa de 50 000 ni pone roca madre; un moderador deshace lo de Beto',
+      timeoutMs: 90000,
+      async fn (ctx) {
+        const { srv } = ctx
+        await preparar(ctx)
+        const permisos = path.join(srv.run, 'permissions.yml')
+        const antes = fs.existsSync(permisos) ? fs.readFileSync(permisos, 'utf8') : null
+        try {
+          // blockwright.use para todos, como hijo de un permiso propio (uno del plugin no se puede redefinir: lección 023).
+          fs.writeFileSync(permisos, ['e2e.editor:', '  default: true', '  children:', '    blockwright.use: true', ''].join('\n'))
+          await srv.consola('bukkit:reload permissions', { espera: /Permissions successfully reloaded/i })
+          await ctx.entrar(BETO)
+          for (const c of [`gamemode creative ${BETO}`, `tp ${BETO} ${X + 0.5} -60 ${Z - 6.5} 0 0`]) await srv.consola(c)
+          const beto = ctx.bots[BETO]
+          await pide(beto, 'bwr limits', /Groups: default · biggest edit 50,000 blocks · 2 at once · worlds: \* · blocked: bedrock/)
+          await seleccionar(beto, [X + 2, -60, Z + 2], [X + 101, -51, Z + 101])
+          await pide(beto, 'bwr set stone', /That is 100,000 blocks; your limit is 50,000 \(groups: default\)/)
+          await seleccionar(beto, [X + 2, -60, Z + 2], [X + 4, -60, Z + 4])
+          await pide(beto, 'bwr set 90% stone, 10% bedrock', /You may not place bedrock/)
+          const r = await obra(beto, 'bwr set glass')
+          await pide(ctx.bots[ANA], `bwr history ${BETO}`, new RegExp(`#${r.id} .* set .*glass`))
+          await pide(beto, `bwr undo --player ${ANA}`, /You don't have permission/)
+          await pide(ctx.bots[ANA], `bwr undo --player ${BETO}`, new RegExp(`Undone #${r.id} \\(set glass\\): 9 blocks back`))
+          await comprobar(srv, `block ${X + 3} -60 ${Z + 3} air`)
+        } finally {
+          if (antes == null) fs.rmSync(permisos, { force: true })
+          else fs.writeFileSync(permisos, antes)
+          await srv.consola('bukkit:reload permissions')
+          await ctx.entrar(BETO)
+          for (const c of [`gamemode creative ${BETO}`, `tp ${BETO} ${X + 0.5} -60 ${Z - 6.5} 0 0`]) await srv.consola(c)
+        }
+      }
+    },
+    {
+      id: 'H2 CA3',
+      nombre: 'los errores dicen qué corregir y no tocan nada',
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        await seleccionar(ana, [X, -60, Z], [X + 3, -60, Z + 3])
+        await pide(ana, 'bwr set stnoe', /Unknown block 'stnoe' \(did you mean 'stone'\?\)/)
+        await pide(ana, 'bwr replace #lgos with stone', /Unknown block tag '#lgos' \(did you mean 'minecraft:logs'\?\)/)
+        await pide(ana, 'bwr set stone --previwe', /Unknown option '--previwe' \(did you mean '--preview'\?\)/)
+        await pide(ana, 'bwr replace 50% dirt with stone', /weights \(%\) work in patterns, not in masks/)
+        await pide(ana, 'bwr set oak_stairs[facing=up]', /'up' is not a value of 'facing'/)
+        await pide(ana, 'bwr expand 3 left', /'left' is not a direction/)
+        await comprobar(srv, `blocks ${X} -60 ${Z} ${X + 3} -60 ${Z + 3} ${X} -50 ${Z} all`) // todo sigue en aire (igual que y = -50)
+      }
+    },
+    {
+      id: 'H8 CA2 · H8 CA6',
+      nombre: 'validate y selftest desde la consola; un config.yml con errores avisa y conserva lo que funcionaba',
+      timeoutMs: 60000,
+      async fn ({ srv }) {
+        await srv.consola('bwr validate', { espera: /Configuration OK/ })
+        await srv.consola('bwr selftest', { espera: /Selftest passed: set \d+ blocks, undo, redo and undo; the terrain is as before/, timeoutMs: 20000 })
+        const cfg = path.join(srv.run, 'plugins', 'Blockwright', 'config.yml')
+        try {
+          fs.writeFileSync(cfg, 'performance:\n  max_ms_per_tik: 5\n  max_blocks_per_tick: lots\n')
+          await srv.consola('bwr reload', { espera: /Reloaded: 1 error\(s\), 1 warning\(s\)/ })
+          await srv.consola('bwr validate', { espera: /performance\.max_ms_per_tik: unknown setting \(did you mean 'max_ms_per_tick'\?\)/ })
+        } finally {
+          fs.copyFileSync(path.join(RECURSOS, 'config.yml'), cfg)
+          await srv.consola('bwr reload', { espera: /Reloaded: 0 error\(s\), 0 warning\(s\)/ })
+        }
+      }
+    }
+  ]
+}

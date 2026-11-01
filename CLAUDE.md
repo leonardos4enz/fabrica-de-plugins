@@ -161,6 +161,14 @@ con `--release 21`.
   la obra, `build.blocks_per_tick` bajo (12). Un `Promise.race` con `dormir(timeout)` deja node vivo hasta el timeout: usar
   `setTimeout` con `clearTimeout`. **Mirar la skin actual de cada cuenta antes de usarla:** la de Quackity era Mickey Mouse
   (personaje de Disney) y se cambió por DanTDM. El servidor de las escenas es `run-capturas/` (puerto 25597), nunca `run/`.
+- **Spec 025 (Blockwright, editor de mundo):** un trabajo con tope de tiempo por tick mira el reloj **en cada bloque**
+  (`System.nanoTime` cuesta ~25 ns): mirarlo cada 64 dejó un tick de 23,5 ms con 8 de presupuesto (F-01). El máximo
+  «desde el arranque» queda marcado por picos en frío (clases, primer YAML o MiniMessage, recolector: 144 ms una vez);
+  para verificar el presupuesto se mide el tick más largo de **una obra** ya en caliente. Las sugerencias usan
+  Damerau (dos letras cambiadas de lugar = 1): con Levenshtein `stnoe` empataba con `snow` (F-02). Un servidor de prueba
+  nuevo (`plugins/<plugin>/run/`) se arma copiando el `paper-*.jar`, el `eula.txt` que ya aceptó el dueño y el
+  `server.properties` de `plugins/omnievents/run/`. La vista previa con `Player.sendMultiBlockChange` la ve el bot de
+  mineflayer como bloques reales (`bot.blockAt`), y otro bot no: así se prueba «solo la ve quien edita».
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

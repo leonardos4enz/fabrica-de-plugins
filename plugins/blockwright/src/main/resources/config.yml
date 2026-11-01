@@ -1,0 +1,52 @@
+# Blockwright - fast, safe world editing for Paper.
+# Every value is checked when the plugin loads: /bwr validate lists the problems, /bwr reload applies changes.
+
+wand:
+  # The item /bwr wand gives. Only that wand selects: an ordinary item of the same type stays an ordinary item.
+  item: minecraft:golden_axe
+
+selection:
+  show: true              # draw the selection box with particles, only for you, while you hold the wand
+  show_every_ticks: 10    # how often the box is redrawn (20 ticks = 1 second)
+  max_particles: 400      # per drawing: big boxes get fewer particles per edge, never more than this
+
+performance:
+  # The time budget of the whole plugin per server tick, shared by everybody's edits.
+  # 50 ms is a full tick: 8 ms leaves the server more than 80% of every tick, even during a huge edit.
+  max_ms_per_tick: 8
+  max_blocks_per_tick: 200000
+
+confirm:
+  # Edits bigger than this wait for /bwr confirm (they say how many blocks and how long first). 0 = always ask.
+  above_blocks: 20000
+  expire_seconds: 120     # an edit waiting for confirmation (and its preview) is dropped after this
+
+preview:
+  # --preview shows the result to you only, with fake blocks, before anything changes. Bigger edits show the first part.
+  max_blocks: 50000
+
+history:
+  # Undo history is saved to disk (plugins/Blockwright/history/): it survives restarts.
+  max_per_player: 30
+  keep_days: 7            # 0 = keep until max_per_player pushes them out
+
+# Limits per group. "default" applies to everyone with blockwright.use; give another group with the permission
+# blockwright.limit.<group> (for example blockwright.limit.builder). With several groups, the most generous value wins.
+#   max_blocks:     the biggest edit (blocks it may change)
+#   max_jobs:       edits running or waiting at the same time
+#   worlds:         where the group may edit ("*" = everywhere)
+#   blocked_blocks: blocks the group may not place (mask syntax); [] = none
+limits:
+  default:
+    max_blocks: 50000
+    max_jobs: 2
+    worlds: ["*"]
+    blocked_blocks: [bedrock, barrier, command_block, chain_command_block, repeating_command_block, structure_block,
+                     jigsaw, end_portal_frame, end_portal, end_gateway, nether_portal, spawner, light]
+  builder:
+    max_blocks: 1000000
+    max_jobs: 3
+  admin:
+    max_blocks: 10000000
+    max_jobs: 5
+    blocked_blocks: []

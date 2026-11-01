@@ -1,0 +1,21 @@
+name: Blockwright
+version: '${version}'
+main: dev.leo.blockwright.Blockwright
+api-version: '1.21'
+author: Leo
+description: Fast, safe world editing - edits that never lag the server, previews, undo that survives restarts.
+commands:
+  blockwright:
+    description: Select, edit, preview, undo and copy parts of the world.
+    usage: /blockwright help
+    aliases: [bwr]
+permissions:
+  blockwright.use:
+    description: Use the wand and every edit command on your own selection and history.
+    default: op
+  blockwright.moderate:
+    description: See and undo other players' edits, and see or cancel everybody's running edits.
+    default: op
+  blockwright.admin:
+    description: Reload, validate and selftest.
+    default: op

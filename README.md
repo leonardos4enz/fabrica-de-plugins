@@ -9,6 +9,7 @@ tarea y no se da por terminada sin una fase de verificación en un servidor real
 |---|---|---|---|---|
 | [OmniEvents](plugins/omnievents/README.md) ([Hangar](https://hangar.papermc.io/leonardos4enz/OmniEvents)) | Eventos condicionales: «cuando pase X, si se cumple Y, haz Z». Versión propia y ampliada de ConditionalEvents ([documentación en inglés](https://leonardos4enz.gitbook.io/leonardos4enz-docs/) ([fuente](docs/site/pages/omnievents/README.md)), [galería](docs/omnievents/galeria.md), [referencia](docs/omnievents/referencia.md), autocompletado en VS Code, pruebas de reglas con `/omni test`, paquetes y plantillas, costos todo o nada con Vault, regiones de WorldGuard, NPC de Citizens, menús de inventario con formularios de Bedrock, el chat que recibe el jugador con ProtocolLib, un [minijuego de parkour de ejemplo](plugins/omnievents/README.md#cómo-hacer-un-minijuego) hecho solo con reglas, un [paquete de ejemplos en inglés](plugins/omnievents/README.md#ejemplos-en-inglés-examples-en) para principiantes (con ejemplos de WorldGuard, Vault, Citizens, PlaceholderAPI, Floodgate y ProtocolLib) y paridad comprobada con ConditionalEvents, que `/omni import` traduce casi entera) | 1.12.0 | 1.21.4 y 26.1.2 ([detalle](plugins/omnievents/README.md#compatibilidad)) | 21+ |
 | [SkinStatues](plugins/skinstatues/README.md) | Estatuas de bloques con la skin de un jugador: `/statue build <name> <height> [pose]`, a la altura pedida y donde se diga (`--at x y z`, `--facing`, también desde la consola), con la segunda capa en relieve, 28 poses con codos y rodillas y poses propias (`extends`, `mirror`), la capa, paletas de bloques permitidos y `undo` que devuelve el terreno. Skin de un PNG propio, de Mojang o de un link `https` como SkinsRestorer (solo una skin válida de un sitio público; la red, apagada por defecto). En inglés ([ADR 0005](docs/adr/0005-plugins-en-ingles.md)) | 0.3.0 | 1.21.4 y 26.1.2 ([detalle](plugins/skinstatues/README.md#compatibility)) | 21+ |
+| [Blockwright](plugins/blockwright/README.md) (nombre provisional) | Editor de mundo mejorado frente a WorldEdit y FAWE ([investigación](docs/investigacion/editores-de-mundo.md)): obras por tandas con un tope de milisegundos por tick para todo el plugin (sin lag), vista previa con bloques falsos que solo ve quien edita y `confirm`, contorno de la selección con partículas sin mod, deshacer en disco que sobrevive a reinicios y no pisa lo que otro construyó después, patrones y máscaras legibles con «did you mean», límites por grupo de permisos y bloques prohibidos de fábrica, copiar/cortar/pegar/girar/voltear con cofres y carteles. Solo API de Paper. En inglés | 0.1.0 | 1.21.4 ([detalle](plugins/blockwright/README.md#compatibility)) | 21+ |
 
 «Verificado» quiere decir que el plugin pasó la suite en el juego en esa versión; las demás están «sin verificar» en
 el README de cada plugin.
@@ -18,7 +19,7 @@ el README de cada plugin.
 CLAUDE.md                 guía para sesiones de IA (leer primero)
 docs/sdd/                 constitución, metodología, verificación, roadmap, plantillas y specs
 docs/adr/                 decisiones de arquitectura
-docs/investigacion/       investigaciones para decidir specs (p. ej. plugins exitosos y propuestas)
+docs/investigacion/       investigaciones para decidir specs (plugins exitosos; editores de mundo para Blockwright)
 docs/<plugin>/galeria.md  una imagen por capacidad, generada en el juego (spec 004); imágenes en docs/img/<plugin>/
 docs/site/                documentación pública en inglés para GitBook y Zensical (spec 017): pages/, SUMMARY.md, mkdocs.yml,
                           assets-src/ (fuentes HTML de los logos, el banner y las páginas de presentación, specs 020 y 024)
@@ -44,9 +45,11 @@ Requiere JDK 21–24 para ejecutar Gradle 8.14.
 ./gradlew test                                   # 1. unitarias
 bash tools/compuerta-servidor.sh omnievents "omni validate" "omni selftest"   # 2. Paper real por consola
 bash tools/compuerta-servidor.sh skinstatues "statue validate" "statue selftest"
+bash tools/compuerta-servidor.sh blockwright "bwr validate" "bwr selftest"
 npm --prefix tests-e2e install                   # una vez
 npm --prefix tests-e2e test                      # 3a. en el juego, con bots (≈75 s)
 npm --prefix tests-e2e test -- --plugin skinstatues   # la suite de SkinStatues (≈20 s)
+npm --prefix tests-e2e test -- --plugin blockwright   # la suite de Blockwright
 npm --prefix tests-e2e test -- --paper 26.1.2 --version-bot 26.1 --java-servidor "C:utajdk-25"   # otra versión
 ```
 El servidor de prueba vive en `plugins/<plugin>/run/` (fuera de git) y el EULA de Minecraft lo acepta el dueño. Para las

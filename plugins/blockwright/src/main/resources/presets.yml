@@ -1,0 +1,13 @@
+# Named patterns and masks: write $name in a command instead of the whole list.
+#   /bwr set $castle_wall
+#   /bwr replace $natural with $castle_wall
+# Patterns: one block, or a mix with weights ("70% stone, 30% andesite"). Masks: blocks to change, with "*", "#tag"
+# and "!" (or "not") to leave some out. A preset cannot use another preset.
+
+patterns:
+  castle_wall: "60% stone_bricks, 25% cracked_stone_bricks, 15% mossy_stone_bricks"
+  rough_stone: "50% stone, 30% andesite, 20% gravel"
+
+masks:
+  natural: "grass_block, dirt, stone, gravel, sand"
+  solid_ground: "!air"
