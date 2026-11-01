@@ -22,6 +22,7 @@
 | 018 OmniEvents: minijuegos con la configuración actual | Verificado: paquete de ejemplo `parkour` (apagado por defecto) hecho solo con reglas: placas de inicio, checkpoint y meta sin coordenadas, caídas, tiempo límite, salir y reiniciar, récord personal y del servidor, limpieza al desconectarse; `/parkour construir`; guía «Cómo hacer un minijuego» en el README y en `docs/site/`; sin capacidades nuevas (decisión del dueño); 203 unitarias; 58/58 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/018-omnievents-minijuegos-con-configuracion/verify.md)) |
 | 019 OmniEvents: ejemplos en inglés y regiones de WorldGuard | Verificado: 1.12.0; paquete `examples` en `rules/examples-en/` (apagado por defecto) con bienvenida, recompensa diaria con racha, zonas sin plugins, eventos comunes y regiones de WorldGuard y un ejemplo de cada plugin opcional (Vault, Citizens, PlaceholderAPI, Floodgate, ProtocolLib), cada regla con `tests:` (53 casos); F-01: el jar no copiaba el `parkour` ni `estilo_ce.yml`; F-02: una regla apagada ya no avisa de la integración que le falta; 207 unitarias; 59/59 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/019-omnievents-ejemplos-en-ingles-y-regiones/verify.md)) |
 | 020 OmniEvents: página de presentación con imágenes | Verificado: logo nuevo y póster en pixel art para SpigotMC, Modrinth y Hangar (7 franjas de 1280 px, 2 GIF con 4 escenas nuevas en inglés), elegido por el dueño entre tres direcciones; descripciones en BBCode y Markdown con transcripción; `PresentacionTest`; sin capturas de más ([verify](specs/020-omnievents-pagina-de-presentacion/verify.md)) |
+| 021 SkinStatues: estatuas de bloques con la skin de un jugador (plugin nuevo) | Verificado: 0.1.0, el segundo plugin de la fábrica y el primero en inglés ([ADR 0005](../adr/0005-plugins-en-ingles.md)); `/statue build <name> <height> [pose]` con skin de `skins/` o de Mojang (red apagada por defecto), voxelización inversa con las dos capas unidas, 6 poses con codo y rodilla sin grietas, capa, paletas como lista de bloques permitidos (145 bloques con su color medido), construcción por tandas, diario para `undo`/`remove` que devuelven el terreno; F-01 a F-03 corregidos; 40 unitarias; 10/10 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/021-skinstatues-nucleo/verify.md)) |
 
 ## Por qué empezamos con OmniEvents
 OmniEvents es la versión propia de *ConditionalEvents* (Ajneb97): «cuando pase X, si se cumple Y, haz Z». Es el
@@ -86,5 +87,9 @@ Otras pendientes:
   mano. Por ejemplo, `/omni examples install <paquete>` o copiar los paquetes de ejemplo que falten, sin pisar nada.
 - **OmniEvents: editor en el juego** — inventario para ver, activar y probar reglas sin editar YAML.
 - **OmniEvents: almacenamiento SQL** — MySQL/MariaDB para redes con varios servidores (variables compartidas).
+- **SkinStatues: armadura y objetos en las manos** (pedido del dueño, fuera de la 021): diseños propios por material y,
+  si el dueño pone un resource pack suyo en la carpeta del plugin, sus texturas (no se redistribuyen).
+- **SkinStatues: más adelante** — estatuas rellenas, giros que no sean N/S/E/O, tramado de colores, una captura en el
+  juego para el README (la infraestructura de la 004 es de la galería de OmniEvents).
 - Después: el siguiente plugin de la fábrica, reutilizando el motor de expresiones de OmniEvents como biblioteca
   común (`libs/`), con su propio ADR.

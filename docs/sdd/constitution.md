@@ -45,7 +45,9 @@
    formato, hay migración automática con respaldo del archivo original.
 
 ## V. Experiencia del administrador
-1. Mensajes en **español claro** por defecto y traducibles (`messages.yml`); MiniMessage y códigos `&` heredados.
+1. Mensajes en **inglés claro** por defecto (en español los de OmniEvents) y traducibles (`messages.yml`); MiniMessage
+   y códigos `&` heredados. Desde la spec 021, todo lo que ve el dueño de un servidor o un jugador en un plugin nuevo
+   va en inglés; los documentos de la fábrica siguen en español ([ADR 0005](../adr/0005-plugins-en-ingles.md)).
 2. Cada plugin trae ejemplos que funcionan tal cual y documentación con un ejemplo por capacidad.
 3. Herramientas de diagnóstico de primera clase: depuración en vivo (por qué una condición falló), evaluación
    de expresiones desde el chat y estadísticas de rendimiento por regla.

@@ -1,0 +1,24 @@
+name: SkinStatues
+version: '${version}'
+main: dev.leo.skinstatues.SkinStatues
+api-version: '1.21'
+author: Leo
+description: Block statues of any player's skin, at the height and pose you choose.
+commands:
+  statue:
+    description: Build, undo and manage skin statues.
+    usage: /statue build <name> <height> [pose]
+    aliases: [statues]
+permissions:
+  skinstatues.build:
+    description: Build statues and use undo, cancel, list, info, poses and palettes.
+    default: op
+  skinstatues.remove:
+    description: Remove your own statues.
+    default: op
+  skinstatues.remove.others:
+    description: Remove or cancel statues built by other players.
+    default: op
+  skinstatues.admin:
+    description: Reload, validate and selftest.
+    default: op

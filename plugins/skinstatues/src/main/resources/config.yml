@@ -1,0 +1,36 @@
+# SkinStatues - main settings. Apply changes with /statue reload.
+
+# Statue height in blocks (a player is 32 skin pixels tall: 32 means one block per pixel).
+min_height: 8
+max_height: 128
+# Largest statue allowed, in blocks.
+max_blocks: 400000
+# The statue's feet go this many blocks above the player who builds it, so nobody gets trapped inside.
+offset_up: 2
+# Pose and palette used when /statue build does not name one (see poses.yml and palettes.yml).
+default_pose: standing
+default_palette: all
+
+# Second skin layer (hat, jacket, sleeves, pants) in relief, attached to the first layer.
+overlay:
+  enabled: true
+  # How far it sticks out, in skin pixels (the game uses 0.5). Always at least one block.
+  depth: 0.5
+  # A second-layer pixel counts as solid from this alpha (0-255).
+  alpha_threshold: 128
+
+# Put the player's cape on the statue's back when it has one.
+cape: true
+
+# Building speed. Blocks are placed in batches every tick, stopping at whichever limit comes first.
+build:
+  blocks_per_tick: 4000
+  max_ms_per_tick: 10
+
+# Skins and capes of Minecraft accounts by name. OFF by default: the server only talks to Mojang
+# (api.mojang.com, sessionserver.mojang.com, textures.minecraft.net) if you turn this on.
+# Without it, put the skin in plugins/SkinStatues/skins/<name>.png.
+network:
+  mojang: false
+  # Downloaded skins are reused for this many hours.
+  cache_hours: 24

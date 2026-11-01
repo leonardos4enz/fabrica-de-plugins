@@ -1,0 +1,5 @@
+# Options for skins/Example.png (an original example skin, not from Mojang).
+# model: classic (arms 4 pixels wide) or slim (3 pixels).
+model: classic
+# A cape PNG (64x32) in this same folder.
+cape: Example-cape.png

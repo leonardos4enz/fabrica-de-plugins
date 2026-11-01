@@ -29,6 +29,8 @@ bash tools/compuerta-servidor.sh omnievents "omni selftest"   # Paper real (el E
 npm --prefix tests-e2e test          # compuerta 3a: bots de mineflayer en el Paper de prueba (spec 002)
 npm --prefix tests-e2e test -- --sin-build --solo "H5 CA3"     # un subconjunto
 npm --prefix tests-e2e run capturas -- --sin-build --solo "accion-title"   # capturas puntuales (spec 004)
+npm --prefix tests-e2e test -- --plugin skinstatues                # suite de SkinStatues (spec 021)
+./gradlew :skinstatues:preview -Pout=x.png -Pheight=48             # SkinStatues: las poses dibujadas sin servidor
 ```
 Las capturas usan la fuente y el HUD del Minecraft Java 1.21.4 instalado del dueño (`%APPDATA%\.minecraft`) y Chrome
 o Edge; los assets se extraen a `tests-e2e/.cache/` y **nunca se copian al repositorio**.
@@ -124,6 +126,18 @@ con `--release 21`.
   Para hacer clic a una entidad el bot tiene que estar a menos de 3 bloques. `activateEntity` y `attack` giran la cabeza del
   bot: volver a la mirada anterior antes de la foto (si no, los cuadros de un GIF saltan). Silkscreen y Pixelify Sans se leen mal
   en títulos («OHNIEVENTS», «Ɛ»): la página usa Press Start 2P. Las franjas se sacan con puppeteer por elemento (`#franja-N`).
+
+- **Spec 021 (SkinStatues, el segundo plugin):** desde aquí los plugins nuevos van **en inglés** para el dueño del servidor
+  y el jugador (mensajes, configuración, README); los documentos de la fábrica siguen en español ([ADR 0005](docs/adr/0005-plugins-en-ingles.md)).
+  `Material.isSolid()/isOccluding()` y `Bukkit.createBlockData` necesitan el registro del servidor: no corren en unitarias
+  («No RegistryAccess implementation found»); se inyecta la comprobación y lo real se ve en la compuerta 2 (glowstone y
+  sea_lantern no son «occluding»: F-02). Paper **no contesta** un autocompletado sin sugerencias: `bot.tabComplete` se
+  agota, y eso es la lista vacía. Un escenario que construye limpia el área al empezar (si no, uno que falla tumba a los
+  siguientes). **Nunca un paquete Java llamado `build`:** el `.gitignore` ignora toda carpeta `build/` y sus fuentes no
+  se suben (`git status --ignored` lo muestra). El JDK 25 de la máquina está en `C:\Program Files\Eclipse Adoptium\jdk-25.0.3.9-hotspot`. En geometría,
+  las escalas no enteras ponen centros de bloque justo en el plano de una cara: comparar con igual y probar con una
+  inundación desde dentro (`VoxelizerTest`); y lo que depende de un umbral se decide con el valor pedido, no con uno ya
+  ajustado (F-03).
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

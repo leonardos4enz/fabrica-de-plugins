@@ -1,0 +1,25 @@
+# SkinStatues - palettes: the blocks a statue may be built with (a whitelist).
+# Use one with /statue build <name> <height> --palette <name>; the default is in config.yml.
+#
+# Each entry is a block id from block-colors.yml ("white_wool" or "minecraft:white_wool"),
+# a wildcard ("*_wool", "*_terracotta"), or an exclusion with "-" ("-pink_wool").
+# Entries apply in order: an exclusion removes what earlier entries added.
+
+all:
+  - "*"
+
+wool:
+  - "*_wool"
+
+concrete:
+  - "*_concrete"
+
+terracotta:
+  - "terracotta"
+  - "*_terracotta"
+
+# Example: wool and terracotta, without pink wool.
+wool_and_terracotta:
+  - "*_wool"
+  - "*_terracotta"
+  - "-pink_wool"

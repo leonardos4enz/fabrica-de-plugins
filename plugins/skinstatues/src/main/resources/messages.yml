@@ -1,0 +1,67 @@
+# SkinStatues - messages (MiniMessage). Translate freely; {placeholders} are filled in by the plugin.
+prefix: "<dark_gray>[<gold>SkinStatues</gold>]</dark_gray> "
+
+usage: |-
+  {prefix}<gray>Commands:</gray>
+  <yellow>/statue build <name> <height> [pose] [--palette <p>] [--no-overlay] [--no-cape]</yellow>
+  <yellow>/statue undo</yellow> <gray>•</gray> <yellow>/statue cancel [id]</yellow> <gray>•</gray> <yellow>/statue remove <id></yellow>
+  <yellow>/statue list [page]</yellow> <gray>•</gray> <yellow>/statue info <id></yellow> <gray>•</gray> <yellow>/statue poses</yellow> <gray>•</gray> <yellow>/statue palettes</yellow>
+  <yellow>/statue reload</yellow> <gray>•</gray> <yellow>/statue validate</yellow> <gray>•</gray> <yellow>/statue selftest</yellow>
+usage-build: "{prefix}<gray>Usage: <yellow>/statue build <name> <height> [pose] [--palette <p>] [--no-overlay] [--no-cape]</yellow>"
+usage-remove: "{prefix}<gray>Usage: <yellow>/statue remove <id></yellow> (see <yellow>/statue list</yellow>)"
+usage-info: "{prefix}<gray>Usage: <yellow>/statue info <id></yellow>"
+unknown-subcommand: "{prefix}<red>Unknown subcommand '{sub}'{hint}. Try <yellow>/statue</yellow>."
+no-permission: "{prefix}<red>You do not have permission to do that."
+players-only: "{prefix}<red>Only a player can do that (statues are built where you stand). From the console, try <yellow>/statue selftest</yellow>."
+internal-error: "{prefix}<red>Something went wrong; the details are in the server log."
+
+invalid-name: "{prefix}<red>'{name}' is not a valid account name (letters, digits and _, up to 16)."
+invalid-height: "{prefix}<red>Height '{height}' must be a whole number from {min} to {max}."
+unknown-pose: "{prefix}<red>Unknown pose '{pose}'{hint}. See <yellow>/statue poses</yellow>."
+unknown-palette: "{prefix}<red>Unknown palette '{palette}'{hint}. See <yellow>/statue palettes</yellow>."
+unknown-flag: "{prefix}<red>Unknown option '{flag}'{hint}."
+
+loading-skin: "{prefix}<gray>Getting the skin of <white>{name}</white>…"
+skin-not-found: "{prefix}<red>No skin for '{name}'. Put <white>{name}.png</white> in <white>{folder}</white>, or turn on <white>network.mojang</white> in config.yml to download it from Mojang."
+account-not-found: "{prefix}<red>There is no Minecraft account named '{name}'."
+no-skin: "{prefix}<red>'{name}' uses one of the default Minecraft skins, which cannot be downloaded. Put a PNG in skins/ instead."
+mojang-error: "{prefix}<red>Could not get the skin of '{name}' from Mojang: {reason}."
+image-invalid: "{prefix}<red>The image '{file}' cannot be used: {reason}."
+cape-not-found: "{prefix}<red>The cape file '{file}' is not in skins/."
+
+too-tall-world: "{prefix}<red>A statue of {height} blocks does not fit between here and the top of the world. The most that fits here is {max}."
+too-many-blocks: "{prefix}<red>That statue would have {blocks} blocks; the limit is {max} (max_blocks in config.yml)."
+queue-full: "{prefix}<red>There are already {max} statues waiting. Try again when some finish."
+planned: "{prefix}<green>Statue <white>#{id}</white> of <white>{name}</white>: {blocks} blocks, {width}×{height}×{depth}, about {seconds} s.</green> <gray>(skin from {source}; {waiting} waiting before it)"
+progress: "<gold>Statue #{id}</gold> <gray>{percent}% ({done}/{blocks})"
+done: "{prefix}<green>Statue <white>#{id}</white> of <white>{name}</white> is finished ({placed} blocks). Undo it with <yellow>/statue undo</yellow>."
+kept-containers: "{prefix}<yellow>{count} block(s) with contents (chests, signs, furnaces…) were left untouched."
+cancelled: "{prefix}<yellow>Statue #{id} stopped after {placed} blocks. <yellow>/statue remove {id}</yellow> takes it away."
+nothing-to-cancel: "{prefix}<gray>Nothing is being built for you right now."
+
+undo-none: "{prefix}<gray>You have no statue to undo."
+removing: "{prefix}<gray>Removing statue #{id}…"
+removed: "{prefix}<green>Statue #{id} removed: {restored} blocks restored.</green> <gray>{changed} were left because someone changed them after."
+busy: "{prefix}<gray>Statue #{id} is already being removed."
+world-missing: "{prefix}<red>The world '{world}' of statue #{id} is not loaded."
+not-found: "{prefix}<red>There is no statue '{id}'. See <yellow>/statue list</yellow>."
+not-yours: "{prefix}<red>Statue #{id} belongs to {owner}."
+
+list-empty: "{prefix}<gray>No statues yet. Build one with <yellow>/statue build <name> <height></yellow>."
+list-header: "{prefix}<gold>{count} statue(s)</gold> <gray>— page {page}/{pages}"
+list-line: "<gray> • <white>#{id}</white> {name} <dark_gray>|</dark_gray> {height} blocks, {pose} <dark_gray>|</dark_gray> {world} {x} {y} {z} <dark_gray>|</dark_gray> by {owner} <dark_gray>({state})"
+info: |-
+  {prefix}<gold>Statue #{id}</gold>
+  <gray> • Skin: <white>{name}</white>, {height} blocks, pose <white>{pose}</white>, palette <white>{palette}</white>
+  <gray> • Where: <white>{world} {x} {y} {z}</white>, facing {facing}
+  <gray> • Built by <white>{owner}</white> on {date}: {blocks} blocks ({state})
+poses: "{prefix}<gray>Poses: <white>{list}</white> <dark_gray>(default: {default})"
+palettes: "{prefix}<gray>Palettes: <white>{list}</white> <dark_gray>(default: {default})"
+
+reloaded: "{prefix}<green>Reloaded: {poses} poses, {palettes} palettes.</green> <gray>{errors} error(s), {warnings} note(s)."
+validate-ok: "{prefix}<green>✔ Configuration OK: {poses} poses, {palettes} palettes, {blocks} block colors."
+validate-header: "{prefix}<yellow>{errors} error(s), {warnings} note(s):"
+validate-error: "<red> ✘ {issue}"
+validate-warning: "<yellow> • {issue}"
+selftest-ok: "{prefix}<green>✔ Selftest passed: {blocks} blocks placed as planned ({replaced} replaced terrain) and the terrain restored exactly at {x} {y} {z}."
+selftest-fail: "{prefix}<red>✘ Selftest failed: {reason}."
