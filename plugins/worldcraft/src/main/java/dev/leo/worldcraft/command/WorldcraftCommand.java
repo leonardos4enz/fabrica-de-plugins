@@ -20,6 +20,8 @@ import dev.leo.worldcraft.pattern.Pattern;
 import dev.leo.worldcraft.region.Box;
 import dev.leo.worldcraft.region.Direction;
 import dev.leo.worldcraft.region.Shape;
+import dev.leo.worldcraft.terrain.BrushSettings;
+import dev.leo.worldcraft.terrain.Options;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -50,7 +52,7 @@ public final class WorldcraftCommand implements TabExecutor {
     static {
         for (String s : List.of("help", "wand", "pos1", "pos2", "sel", "expand", "contract", "shift", "set", "replace",
                 "walls", "faces", "copy", "cut", "paste", "rotate", "flip", "undo", "redo", "history", "confirm", "cancel",
-                "jobs", "limits")) {
+                "jobs", "limits", "mountain", "island", "floating_island", "reroll", "brush", "styles")) {
             SUBS.put(s, USE);
         }
         for (String s : List.of("reload", "validate", "selftest")) SUBS.put(s, ADMIN);
@@ -109,10 +111,15 @@ public final class WorldcraftCommand implements TabExecutor {
                 case "reload" -> reload(s);
                 case "validate" -> validate(s);
                 case "selftest" -> new SelfTest(plugin).run(s);
+                case "mountain" -> generate(s, a, Options.Tool.MOUNTAIN);
+                case "island", "floating_island" -> generate(s, a, Options.Tool.ISLAND);
+                case "reroll" -> plugin.terrain().reroll(s);
+                case "brush" -> brush(s, a);
+                case "styles" -> styles(s);
                 default -> help(s, a);
             }
         } catch (Usage u) {
-            s.sendMessage(msg().get("usage", "usage", msg().raw("help." + sub + ".usage")));
+            s.sendMessage(msg().get("usage", "usage", msg().raw("help." + helpKey(sub) + ".usage")));
         }
         return true;
     }
@@ -122,6 +129,11 @@ public final class WorldcraftCommand implements TabExecutor {
         Usage() {
             super(null, null, false, false);
         }
+    }
+
+    /** floating_island usa la ayuda de island. */
+    private static String helpKey(String sub) {
+        return sub.equals("floating_island") ? "island" : sub;
     }
 
     private static String hintText(String closest) {
@@ -143,12 +155,14 @@ public final class WorldcraftCommand implements TabExecutor {
                 s.sendMessage(msg().get("unknown-command", "input", a[1], "hint", hintText(Issues.closest(sub, SUBS.keySet()))));
                 return;
             }
-            s.sendMessage(msg().get("help-detail", "usage", msg().raw("help." + sub + ".usage"),
-                    "text", msg().raw("help." + sub + ".text"), "example", msg().raw("help." + sub + ".example")));
+            String hk = helpKey(sub);
+            s.sendMessage(msg().get("help-detail", "usage", msg().raw("help." + hk + ".usage"),
+                    "text", msg().raw("help." + hk + ".text"), "example", msg().raw("help." + hk + ".example")));
             return;
         }
         s.sendMessage(msg().get("help-header"));
         for (String sub : visible(s)) {
+            if (sub.equals("floating_island")) continue;
             s.sendMessage(msg().get("help-line", "usage", msg().raw("help." + sub + ".usage"), "text", msg().raw("help." + sub + ".text")));
         }
         s.sendMessage(msg().get("help-footer"));
@@ -618,7 +632,178 @@ public final class WorldcraftCommand implements TabExecutor {
                 "issue", i.toString()));
     }
 
+    // ------------------------------------------------------------------ terreno (spec 026)
+
+    /** Separa «clave=valor» de las palabras sueltas; las claves en minúsculas. */
+    public static Map<String, String> keyValues(List<String> positional, List<String> words) {
+        Map<String, String> kv = new LinkedHashMap<>();
+        for (String p : positional) {
+            int eq = p.indexOf('=');
+            if (eq > 0) kv.put(p.substring(0, eq).toLowerCase(Locale.ROOT), p.substring(eq + 1));
+            else words.add(p);
+        }
+        return kv;
+    }
+
+    private void generate(CommandSender s, String[] a, Options.Tool tool) {
+        Args args = Args.parse(a, 1, Set.of("now"));
+        if (args.problem != null) {
+            s.sendMessage(msg().get("error", "message", args.problem));
+            return;
+        }
+        List<String> words = new ArrayList<>();
+        Map<String, String> kv = keyValues(args.positional, words);
+        var cfg = plugin.config().terrain();
+        try {
+            Options.Resolved o = Options.resolve(tool, words, kv, cfg, cfg.maxRadius(), ThreadLocalRandom.current().nextLong(1, 1L << 40));
+            if (tool == Options.Tool.MOUNTAIN) plugin.terrain().mountain(s, o, args.flags.contains("now"));
+            else plugin.terrain().island(s, o, args.flags.contains("now"));
+        } catch (IllegalArgumentException e) {
+            s.sendMessage(msg().get("error", "message", e.getMessage()));
+        }
+    }
+
+    private void brush(CommandSender s, String[] a) {
+        Player p = player(s);
+        if (p == null) return;
+        var tool = plugin.brush();
+        var held = p.getInventory().getItemInMainHand();
+        BrushSettings current = tool.settings(held);
+        BrushSettings base = current != null ? current : BrushSettings.DEFAULT;
+        List<String> words = new ArrayList<>();
+        Map<String, String> kv = keyValues(List.of(a).subList(1, a.length), words);
+        try {
+            BrushSettings b = brushSettings(base, words, kv, plugin.config().terrain().brushMaxRadius(),
+                    plugin.config().terrain().styles().keySet());
+            if (b.pattern() != null) plugin.config().parser().pattern(b.pattern());
+            if (b.mask() != null) plugin.config().parser().mask(b.mask());
+            if (current != null) {
+                tool.write(held, b);
+                s.sendMessage(msg().get("brush-updated", "brush", b.describe()));
+            } else {
+                p.getInventory().addItem(tool.create(b));
+                s.sendMessage(msg().get("brush-given", "brush", b.describe()));
+            }
+        } catch (IllegalArgumentException | ParseException e) {
+            s.sendMessage(msg().get("error", "message", e.getMessage()));
+        }
+    }
+
+    private static final List<String> BRUSH_KEYS = List.of("mode", "radius", "strength", "style", "mask", "pattern");
+
+    /**
+     * Lo escrito tras /wc brush sobre unos ajustes: «[modo] [radio] [fuerza] [patrón…]» y mode=, radius=, strength=,
+     * style=, mask=, pattern= (H3 CA1, H4 CA4). La fuerza va de 0.1 a 1 o en porcentaje (50%). Unos bloques sueltos
+     * pasan el pincel a pintar.
+     */
+    public static BrushSettings brushSettings(BrushSettings base, List<String> words, Map<String, String> kv, int maxRadius,
+                                       java.util.Collection<String> styles) {
+        for (String k : kv.keySet()) {
+            if (!BRUSH_KEYS.contains(k)) throw new IllegalArgumentException("Unknown option '" + k + "='" + Issues.hint(k, BRUSH_KEYS));
+        }
+        BrushSettings.Mode mode = base.mode();
+        int radius = base.radius();
+        double strength = base.strength();
+        String style = base.style(), pattern = base.pattern(), mask = base.mask();
+        List<String> rest = new ArrayList<>(words);
+        int i = 0;
+        boolean modeGiven = false;
+        String m = kv.containsKey("mode") ? kv.get("mode") : !rest.isEmpty() && !isNumber(rest.get(0)) && BrushSettings.Mode.parse(rest.get(0)) != null ? rest.get(i++) : null;
+        if (m == null && kv.isEmpty() && rest.size() == 1 && !isNumber(rest.get(0)) && !rest.get(0).contains("_") && Issues.closest(rest.get(0), BrushSettings.Mode.ids()) != null) {
+            m = rest.get(i++); // «smoth»: se avisa, no se toma como un bloque
+        }
+        if (m != null) {
+            mode = BrushSettings.Mode.parse(m);
+            if (mode == null) {
+                throw new IllegalArgumentException("Unknown brush mode '" + m + "'" + Issues.hint(m, BrushSettings.Mode.ids())
+                        + ". Modes: " + String.join(", ", BrushSettings.Mode.ids()));
+            }
+            modeGiven = true;
+        }
+        String r = kv.containsKey("radius") ? kv.get("radius") : i < rest.size() && rest.get(i).matches("\\d+") ? rest.get(i++) : null;
+        if (r != null) {
+            try {
+                radius = Integer.parseInt(r);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("'radius=" + r + "' needs a whole number");
+            }
+            if (radius < 1 || radius > maxRadius) throw new IllegalArgumentException("radius " + radius + " is out of range (1.." + maxRadius + ")");
+        }
+        // «70% grass_block, 30% podzol»: un porcentaje seguido de un bloque es el peso de un patrón, no la fuerza.
+        boolean weight = i + 1 < rest.size() && rest.get(i).endsWith("%") && !isNumber(rest.get(i + 1));
+        String st = kv.containsKey("strength") ? kv.get("strength") : i < rest.size() && isNumber(rest.get(i)) && !weight ? rest.get(i++) : null;
+        if (st != null) {
+            try {
+                strength = st.endsWith("%") ? Double.parseDouble(st.substring(0, st.length() - 1)) / 100 : Double.parseDouble(st);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("'strength=" + st + "' needs a number from 0.1 to 1, or a percentage");
+            }
+            if (strength < 0.1 || strength > 1) throw new IllegalArgumentException("strength " + st + " is out of range (0.1..1, or 10%..100%)");
+        }
+        List<String> blocks = new ArrayList<>(rest.subList(i, rest.size()));
+        if (kv.containsKey("pattern")) blocks.add(0, kv.get("pattern"));
+        if (!blocks.isEmpty()) {
+            if (!modeGiven) mode = BrushSettings.Mode.PAINT;
+            if (mode != BrushSettings.Mode.PAINT) {
+                throw new IllegalArgumentException("Only the paint mode takes blocks: /wc brush paint " + String.join(" ", blocks));
+            }
+            pattern = String.join(" ", blocks);
+            style = null;
+        }
+        if (kv.containsKey("style")) {
+            String sn = kv.get("style").toLowerCase(Locale.ROOT);
+            if (!styles.contains(sn)) throw new IllegalArgumentException("Unknown style '" + sn + "'" + Issues.hint(sn, styles) + "; see /wc styles");
+            style = sn;
+            pattern = null;
+        }
+        if (kv.containsKey("mask")) mask = kv.get("mask").isBlank() || kv.get("mask").equals("*") ? null : kv.get("mask");
+        return new BrushSettings(mode, radius, strength, style, pattern, mask);
+    }
+
+    private static boolean isNumber(String s) {
+        return s.matches("\\d+(\\.\\d+)?%?") || s.matches("\\.\\d+");
+    }
+
+    private void styles(CommandSender s) {
+        var styles = plugin.config().terrain().styles();
+        s.sendMessage(msg().get("styles-header", "count", String.valueOf(styles.size())));
+        for (var st : styles.values()) s.sendMessage(msg().get("styles-line", "name", st.name(), "description", st.description()));
+    }
+
     // ------------------------------------------------------------------ autocompletado
+
+    /** Tamaños, estilos y claves («peaks=»); tras «style=», los estilos (H6 CA3). */
+    private List<String> terrainSuggestions(Options.Tool tool, String last) {
+        var styles = plugin.config().terrain().styles().keySet();
+        List<String> out = new ArrayList<>();
+        if (last.toLowerCase(Locale.ROOT).startsWith("style=")) {
+            for (String st : styles) out.add("style=" + st);
+            return filter(out, last);
+        }
+        out.addAll(Options.SIZES);
+        out.addAll(styles);
+        for (String k : Options.names(tool)) out.add(k + "=");
+        return filter(out, last);
+    }
+
+    private List<String> brushSuggestions(String[] a, String last) {
+        String l = last.toLowerCase(Locale.ROOT);
+        List<String> out = new ArrayList<>();
+        if (l.startsWith("style=")) {
+            for (String st : plugin.config().terrain().styles().keySet()) out.add("style=" + st);
+            return filter(out, last);
+        }
+        if (l.startsWith("mask=")) {
+            for (String b : blockSuggestions(last.substring(5), true)) out.add(last.substring(0, 5) + b);
+            return out;
+        }
+        if (a.length == 2) return filter(BrushSettings.Mode.ids(), last);
+        if (a.length == 3) return filter(List.of("3", "5", "8", "12"), last);
+        if (a.length == 4) return filter(List.of("0.3", "0.5", "1"), last);
+        out.addAll(List.of("style=", "mask="));
+        if (a[1].equalsIgnoreCase("paint")) out.addAll(blockSuggestions(last, false));
+        return filter(out, last);
+    }
 
     @Override
     public List<String> onTabComplete(CommandSender s, Command cmd, String label, String[] a) {
@@ -633,6 +818,7 @@ public final class WorldcraftCommand implements TabExecutor {
                 case "paste" -> Set.of("--preview", "--air");
                 case "undo", "redo" -> Set.of("--player");
                 case "pos1", "pos2" -> Set.of("--world");
+                case "mountain", "island", "floating_island" -> Set.of("--now");
                 default -> Set.of();
             };
             return filter(new ArrayList<>(opts), last);
@@ -648,6 +834,9 @@ public final class WorldcraftCommand implements TabExecutor {
             case "replace" -> blockSuggestions(last, !hasWith(a));
             case "history" -> a.length == 2 && s.hasPermission(MODERATE) ? filter(edits().history().names(), last) : List.of();
             case "jobs" -> a.length == 2 && s.hasPermission(MODERATE) ? filter(List.of("cancel"), last) : List.of();
+            case "mountain" -> terrainSuggestions(Options.Tool.MOUNTAIN, last);
+            case "island", "floating_island" -> terrainSuggestions(Options.Tool.ISLAND, last);
+            case "brush" -> brushSuggestions(a, last);
             default -> List.of();
         };
     }

@@ -3,6 +3,7 @@ package dev.leo.worldcraft.config;
 import dev.leo.worldcraft.block.BlockRegistry;
 import dev.leo.worldcraft.pattern.ParseException;
 import dev.leo.worldcraft.pattern.Parser;
+import dev.leo.worldcraft.terrain.TerrainSettings;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -16,16 +17,17 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * config.yml y presets.yml leídos y validados juntos (H8 CA2). Un archivo que no se puede leer conserva lo que ya
+ * config.yml, presets.yml y terrain.yml (spec 026) leídos y validados juntos (H8 CA2). Un archivo que no se puede leer conserva lo que ya
  * funcionaba (si había algo) y dice archivo, ruta y causa.
  */
 public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<String, String> patternPresets,
-                           Map<String, String> maskPresets, Issues issues) {
+                           Map<String, String> maskPresets, TerrainSettings terrain, Issues issues) {
 
     public static LoadedConfig load(File folder, BlockRegistry registry, LoadedConfig previous) {
         Issues issues = new Issues();
         YamlConfiguration config = read(new File(folder, "config.yml"), issues);
         YamlConfiguration presets = read(new File(folder, "presets.yml"), issues);
+        YamlConfiguration terrainFile = read(new File(folder, "terrain.yml"), issues);
         if (config == null && previous != null) {
             issues.error("config.yml", "", "kept the previous configuration");
         }
@@ -70,7 +72,10 @@ public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<
         Parser parser = new Parser(registry, Map.copyOf(pat), Map.copyOf(msk));
         Limits limits = config == null && previous != null ? previous.limits
                 : Limits.load(config == null ? null : config.getConfigurationSection("limits"), parser, "config.yml", issues);
-        return new LoadedConfig(settings, limits, parser, Map.copyOf(pat), Map.copyOf(msk), issues);
+        // Spec 026: un terrain.yml ilegible conserva el anterior; una sección terrain mala, sus valores de fábrica.
+        TerrainSettings terrain = terrainFile == null && previous != null ? previous.terrain
+                : TerrainConfig.load(config == null ? null : config.getConfigurationSection("terrain"), terrainFile, parser, issues);
+        return new LoadedConfig(settings, limits, parser, Map.copyOf(pat), Map.copyOf(msk), terrain, issues);
     }
 
     private static Map<String, String> section(YamlConfiguration y, String name) {

@@ -46,10 +46,18 @@ public final class Edits {
      * Una operación pedida.
      *
      * @param placed  los estados que puede poner (para los bloques prohibidos)
-     * @param capture para cut: a dónde va lo que había (se crea al aplicar)
+     * @param capture    para cut: a dónde va lo que había (se crea al aplicar)
+     * @param preview    la fuente de la vista previa (spec 026: la piel del terreno); null = la misma que la obra
+     * @param note       lo que se agrega al mensaje de la vista previa (semilla, medidas); vacío si nada
+     * @param rerollable la vista previa ofrece [Another] (/wc reroll)
      */
     public record Op(String kind, String detail, World world, Box bounds, long volume, Supplier<EditSource> source,
-                     Collection<Integer> placed, Supplier<EditJob.Capture> capture) {
+                     Collection<Integer> placed, Supplier<EditJob.Capture> capture, Supplier<EditSource> preview,
+                     String note, boolean rerollable) {
+        public Op(String kind, String detail, World world, Box bounds, long volume, Supplier<EditSource> source,
+                  Collection<Integer> placed, Supplier<EditJob.Capture> capture) {
+            this(kind, detail, world, bounds, volume, source, placed, capture, null, "", false);
+        }
     }
 
     /** Una operación esperando /wc confirm, quizá con su vista previa. */
@@ -163,16 +171,24 @@ public final class Edits {
             pend.preview = new PreviewSink(p, op.world(), blocks);
             PaperWorld w = world(op.world(), op.source().get());
             // La vista previa se arma con una fuente nueva: la de la obra será otra, con la misma semilla.
-            pend.previewJob = new EditJob(nextJob++, owner, "preview", w, op.source().get(), EditJob.Mode.PREVIEW,
+            pend.previewJob = new EditJob(nextJob++, owner, "preview", w, (op.preview() != null ? op.preview() : op.source()).get(), EditJob.Mode.PREVIEW,
                     pend.preview, null, settings().previewMaxBlocks(), System::nanoTime);
             EditJob pj = pend.previewJob;
             pj.onEnd(() -> {
                 w.close();
                 jobs.remove(pj.id());
                 if (pj.state() == EditJob.State.DONE) {
-                    who.sendMessage(msg.get(pj.truncated() ? "preview-partial" : "preview-ready",
-                            "shown", fmt(pend.preview.shown()), "blocks", fmt(op.volume()),
-                            "seconds", String.valueOf(settings().confirmSeconds())));
+                    if (op.preview() != null) {
+                        // Terreno (spec 026 H1 CA4): la piel, con la semilla y los botones.
+                        who.sendMessage(msg.get(pj.truncated() ? "terrain-preview-partial" : "terrain-preview-ready",
+                                "kind", op.kind(), "blocks", fmt(op.volume()), "note", op.note(),
+                                "seconds", String.valueOf(settings().confirmSeconds())));
+                        who.sendMessage(msg.get(op.rerollable() ? "terrain-buttons" : "terrain-buttons-no-reroll"));
+                    } else {
+                        who.sendMessage(msg.get(pj.truncated() ? "preview-partial" : "preview-ready",
+                                "shown", fmt(pend.preview.shown()), "blocks", fmt(op.volume()),
+                                "seconds", String.valueOf(settings().confirmSeconds())));
+                    }
                 }
             });
             ses.pending = pend;
@@ -184,7 +200,7 @@ public final class Edits {
         // El dueño puede apagar la confirmación (confirm.enabled); --preview sigue esperando su confirm.
         if (settings().confirmEnabled() && op.volume() > settings().confirmAbove()) {
             ses.pending = new Pending(op, name, expires);
-            who.sendMessage(msg.get("confirm-needed", "kind", op.kind(), "blocks", fmt(op.volume()),
+            who.sendMessage(msg.get(op.preview() != null ? "terrain-confirm-needed" : "confirm-needed", "kind", op.kind(), "blocks", fmt(op.volume()),
                     "time", seconds(estimateSeconds(op.volume())), "seconds", String.valueOf(settings().confirmSeconds())));
             ensureTask();
             return;
@@ -296,6 +312,36 @@ public final class Edits {
         });
         jobs.put(job.id(), job);
         submit(job);
+    }
+
+    /**
+     * Lee el suelo para el terreno (spec 026 H5 CA2): un trabajo de lectura por tandas, sin historial, como copy. done
+     * corre en el hilo principal si terminó; si se canceló, cancelled y se avisa.
+     */
+    public void scan(CommandSender who, World world, dev.leo.worldcraft.terrain.ColumnScan scan, Runnable done, Runnable cancelled) {
+        UUID owner = owner(who);
+        PaperWorld w = world(world, scan);
+        EditJob job = new EditJob(nextJob++, owner, "reading the ground", w, scan, EditJob.Mode.READ, new EditJob.Sink() {
+            @Override
+            public void changed(int x, int y, int z, int b, int a, byte[] tb, byte[] ta) {
+            }
+        }, scan, Long.MAX_VALUE, System::nanoTime);
+        job.onEnd(() -> {
+            w.close();
+            jobs.remove(job.id());
+            if (job.state() == EditJob.State.DONE) done.run();
+            else {
+                cancelled.run();
+                tell(owner, who, plugin.messages().get("terrain-scan-cancelled"));
+            }
+        });
+        jobs.put(job.id(), job);
+        submit(job);
+    }
+
+    /** Las obras de un dueño (en marcha o esperando), sin contar vistas previas. */
+    public int running(UUID owner) {
+        return busy(owner);
     }
 
     /** Deshace (o rehace) las últimas n operaciones de target; quien lo pide puede ser otro (con permiso). */
@@ -503,6 +549,11 @@ public final class Edits {
         if (s < 1) return "less than a second";
         if (s < 90) return String.format(Locale.ROOT, "%.0f s", s);
         return String.format(Locale.ROOT, "%.1f min", s / 60);
+    }
+
+    /** Descarta lo que espera confirmación (sin mensaje). */
+    public void dropPending(UUID owner) {
+        dropPending(session(owner));
     }
 
     public Optional<Pending> pending(UUID owner) {

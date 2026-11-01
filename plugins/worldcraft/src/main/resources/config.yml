@@ -52,3 +52,20 @@ limits:
     max_blocks: 10000000
     max_jobs: 5
     blocked_blocks: []
+
+# Terrain tools (/wc mountain, /wc island, /wc brush). Styles and sizes are in terrain.yml.
+terrain:
+  preview_first: true     # mountains and islands show a preview first and wait for /wc confirm (or the [Build] button)
+  reach: 200              # how far the crosshair looks for the ground where a mountain goes
+  max_radius: 160         # the biggest mountain or island radius
+  # What counts as natural ground (mask syntax). Brushes only move this; houses and other builds are left alone.
+  ground: "#dirt, #sand, #base_stone_overworld, #base_stone_nether, #terracotta, #nylium, gravel, clay, sandstone, red_sandstone, calcite, dripstone_block, end_stone, snow_block, powder_snow, ice, packed_ice, blue_ice, magma_block, obsidian, #coal_ores, #iron_ores, #copper_ores, #gold_ores, #redstone_ores, #lapis_ores, #diamond_ores, #emerald_ores"
+  # What may be covered or cleared: air, plants, water.
+  cover: "air, #replaceable, #flowers, #saplings"
+  # What a mountain may bury (a brush never touches it).
+  buryable: "#logs, #leaves"
+  brush:
+    item: minecraft:golden_shovel
+    max_radius: 16        # 1..64
+    range: 200            # how far a brush reaches
+    show: true            # a circle of particles where the brush would land, only for you

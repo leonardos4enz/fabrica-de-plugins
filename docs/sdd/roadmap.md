@@ -27,6 +27,7 @@
 | 023 SkinStatues: estatuas con el link de una skin | Verificado: 0.3.0; `/statue build <link> <height> …` como SkinsRestorer, solo una skin válida (PNG 64×64 o 64×32 de hasta 1 MB, tamaño leído antes de decodificar), solo `https` a sitios públicos (sin localhost, LAN ni reservadas, también tras redirecciones), `network.urls` apagado por defecto y permiso `skinstatues.build.url`, `allowed_hosts`, modelo detectado con `--slim`/`--classic`, caché por huella, `url:sitio#huella` en `list`/`info` sin guardar el link; la suite sirve las skins con un HTTPS local; 65 unitarias; 18/18 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/023-skinstatues-skin-por-link/verify.md)) |
 | 024 SkinStatues: multimedia y página de presentación | Verificado: logo y póster por capas como el de la 020 (7 franjas de 1280 px y un GIF de 10 cuadros) con escenas en un mundo de terreno normal: dos estatuas de 100 bloques, una fila de 6 poses, la construcción, por nombre y por link y tres paletas, con skins de youtubers elegidos por el dueño (bajadas a la caché, nunca al repo); BBCode, Markdown y `publicar.md` y la publicación en Modrinth (en revisión), Hangar y SpigotMC; `PresentacionTest` ([verify](specs/024-skinstatues-pagina-de-presentacion/verify.md)) |
 | 025 Worldcraft: un editor de mundo que no traba el servidor (plugin nuevo) | Verificado en 1.21.4: 0.1.0, el tercer plugin (en inglés); [investigación](../investigacion/editores-de-mundo.md) de WorldEdit/FAWE; obras por tandas con 8 ms por tick para todo el plugin y turnos entre jugadores, vista previa con bloques falsos solo para quien edita y `confirm`, contorno con partículas, varita marcada, deshacer en disco y seguro (salta lo cambiado después), patrones y máscaras legibles con «did you mean», presets, límites por grupo con bloques prohibidos, copiar/cortar/pegar/girar/voltear con cofres y carteles; confirmación desactivable sobre 50 000; F-01 a F-04 corregidos; 46 unitarias; 8/8 dos veces en Paper 1.21.4; 26.1.2 sin verificar; nombre, comando, confirmación y publicación decididos por el dueño ([verify](specs/025-worldcraft-nucleo/verify.md)) |
+| 026 Worldcraft: terreno fácil para el novato y fino para el experto | Verificado en 1.21.4: 0.2.0; [investigación](../investigacion/terreno-para-constructores.md) de WorldEdit, VoxelSniper, goBrush, WorldPainter y Axiom; `/wc mountain` donde mira el jugador (picos con crestas, contorno irregular, base que se funde con el suelo, solo agrega y no toca construcciones) y `/wc island` (cima casi plana, cono rugoso con estalactitas, raíces y árboles), vista previa de la piel con `[Build] [Another] [Cancel]` y `reroll`; pincel de terreno (subir, bajar, suavizar, aplanar, erosionar, pintar) sobre el suelo natural, con círculo de partículas; 7 estilos en `terrain.yml` con capas por altura y pendiente; opciones `clave=valor` con semilla; todo por el motor de la 025; F-01 a F-04 corregidos; 66 unitarias; 12/12 dos veces en Paper 1.21.4; CLARIFY pendiente del dueño ([verify](specs/026-worldcraft-terreno-facil/verify.md)) |
 
 ## Por qué empezamos con OmniEvents
 OmniEvents es la versión propia de *ConditionalEvents* (Ajneb97): «cuando pase X, si se cumple Y, haz Z». Es el
@@ -74,7 +75,8 @@ De la [investigación de editores de mundo](../investigacion/editores-de-mundo.m
 | Sin topes de fábrica (`maxChangeLimit: -1`) | Grupos por permiso con tope bajo de fábrica, obras a la vez, mundos y bloques prohibidos (bloques de comandos, roca madre, portales) | 025 |
 | Dos obras que se cruzan dejan bloques fantasma (FAWE) | Una obra que se cruza con otra más vieja espera | 025 |
 | Cualquier hacha de madera es varita | Solo la varita marcada que da `/wc wand` | 025 |
-| Esquemas, pinceles, formas, WorldGuard, rollback por zona | Pendiente (abajo) | — |
+| Lo difícil no es el comando sino cómo crear: una montaña natural exige matemáticas en `//generate`; no hay islas flotantes; `//smooth` derrite árboles y casas; pintar por pendiente exige WorldPainter o Axiom | `/wc mountain` y `/wc island` con buenos valores, vista previa y `[Build] [Another] [Cancel]`; pincel de terreno sobre el suelo natural (no toca árboles ni construcciones); estilos con capas por altura y pendiente en YAML; todas las opciones `clave=valor` y la semilla para el experto | 026 |
+| Esquemas, formas, WorldGuard, rollback por zona | Pendiente (abajo) | — |
 
 ## Siguientes specs (propuestas, en orden)
 Elegidas por el dueño tras la [investigación de plugins exitosos](../investigacion/plugins-exitosos.md) (§6; todas
@@ -140,7 +142,7 @@ Otras pendientes:
   | Esquemas `.schem` (**pedido del dueño**: WorldEdit se usa en todos lados) | Importar y exportar el formato abierto Sponge v3 (el de WorldEdit), carpeta `schematics/`, `/wc schem save|load|list`, pegar con vista previa | Medio |
   | Respetar regiones | WorldGuard (y otros) opcional: la escritura ya pasa por una sola puerta (`EditWorld.set`); sin permiso de construir ahí, se salta y se cuenta | Medio |
   | Formas | `sphere`, `cyl`, `pyramid`, huecas o llenas, con el mismo motor | Bajo–medio |
-  | Pinceles | Varita de pincel: esfera, suavizar, pintar, con tamaño y patrón; vista previa siguiendo la mira | Alto |
+  | ~~Pinceles~~ | Hecho en la [026](specs/026-worldcraft-terreno-facil/spec.md) para el terreno (subir, bajar, suavizar, aplanar, erosionar, pintar, con el círculo siguiendo la mira); queda un pincel de esfera o de patrón para construcciones | Medio |
   | Rollback por zona y tiempo | Como CoreProtect `u: t: r:` sobre el historial en disco, con vista previa | Medio |
   | `stack`, `move`, `smooth`, `naturalize` | Las otras operaciones comunes | Bajo–medio |
   | Gizmos | Mover y girar lo pegado con *block displays* antes de confirmar (como Axiom, sin mod) | Alto |
@@ -148,5 +150,18 @@ Otras pendientes:
   | Entidades y más datos de bloque | Copiar soportes, marcos, cabezas, estandartes, generadores | Medio–alto |
   | Página de presentación y publicación | Como la 020 y la 024 | Medio |
   | Folia | Motor por región | Alto |
+- **Worldcraft: lo que dejó fuera la 026 (terreno)** ([investigación](../investigacion/terreno-para-constructores.md); el dueño elige):
+
+  | Idea | Qué es | Costo |
+  |---|---|---|
+  | Ríos y caminos | Tallar a lo largo de un trazo marcado con la mira, con orillas suaves y agua al nivel pedido | Alto |
+  | Cordilleras y colinas sobre la selección | El generador de montaña sobre todo el rectángulo seleccionado (varias crestas, valles) | Medio |
+  | Menú del pincel | Inventario para modo, radio, fuerza, estilo y máscara (hoy: comando y clic izquierdo) | Medio |
+  | Pasadas del pincel juntas | Las pasadas seguidas de un pincel como una sola entrada del historial (hoy cada pasada es una obra y llena `history.max_per_player`) | Medio |
+  | Mapas de alturas desde PNG | Una imagen gris del dueño como forma de montaña o de pincel (como goBrush y WorldPainter) | Medio |
+  | Erosión hidráulica | Gotas que tallan cauces y depositan abajo | Alto |
+  | Cuevas, arcos y salientes | Densidad 3D en lugar de mapa de alturas | Alto |
+  | Cascadas y lagos en la isla; objetos esparcidos | Agua que cae al vacío, árboles grandes, rocas o esquemas por reglas | Medio–alto |
+  | Exportar e importar estilos | Un estilo como archivo suelto para compartir | Bajo |
 - Después: el siguiente plugin de la fábrica, reutilizando el motor de expresiones de OmniEvents como biblioteca
   común (`libs/`), con su propio ADR.

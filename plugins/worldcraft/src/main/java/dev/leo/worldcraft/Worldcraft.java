@@ -7,6 +7,8 @@ import dev.leo.worldcraft.config.Messages;
 import dev.leo.worldcraft.history.HistoryStore;
 import dev.leo.worldcraft.paper.Edits;
 import dev.leo.worldcraft.paper.PaperBlocks;
+import dev.leo.worldcraft.paper.BrushTool;
+import dev.leo.worldcraft.paper.Terrain;
 import dev.leo.worldcraft.paper.Wand;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -19,11 +21,11 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Worldcraft (spec 025): editar el mundo sin trabar el servidor, con vista previa, deshacer en disco, patrones y
- * máscaras legibles y límites por permiso.
+ * máscaras legibles y límites por permiso. Spec 026: montañas, islas flotantes y el pincel de terreno.
  */
 public final class Worldcraft extends JavaPlugin {
     /** Archivos que se crean si faltan (H8 CA3). */
-    private static final List<String> FILES = List.of("config.yml", "messages.yml", "presets.yml");
+    private static final List<String> FILES = List.of("config.yml", "messages.yml", "presets.yml", "terrain.yml");
 
     private volatile LoadedConfig config;
     private Messages messages;
@@ -32,6 +34,9 @@ public final class Worldcraft extends JavaPlugin {
     private Edits edits;
     private Wand wand;
     private WorldcraftCommand command;
+    private ExecutorService terrainThread;
+    private Terrain terrain;
+    private BrushTool brush;
 
     @Override
     public void onEnable() {
@@ -68,6 +73,16 @@ public final class Worldcraft extends JavaPlugin {
         wand = new Wand(this);
         getServer().getPluginManager().registerEvents(wand, this);
         wand.startOutline();
+        // Spec 026: el ruido y las alturas se calculan en un hilo propio (Java puro, sin Bukkit).
+        terrainThread = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "Worldcraft-Terrain");
+            t.setDaemon(true);
+            return t;
+        });
+        terrain = new Terrain(this, terrainThread);
+        brush = new BrushTool(this);
+        getServer().getPluginManager().registerEvents(brush, this);
+        brush.start();
         command = new WorldcraftCommand(this);
         PluginCommand cmd = getCommand("worldcraft");
         if (cmd != null) {
@@ -80,6 +95,8 @@ public final class Worldcraft extends JavaPlugin {
     public void onDisable() {
         try {
             if (wand != null) wand.stop();
+            if (brush != null) brush.stop();
+            if (terrainThread != null) terrainThread.shutdownNow();
             if (edits != null) edits.shutdown();
         } finally {
             // Lo que quedó en la cola de E/S (diarios, índices) se escribe antes de salir (lección 001 F-04).
@@ -104,6 +121,7 @@ public final class Worldcraft extends JavaPlugin {
             else getLogger().info("Config note: " + i);
         }
         if (wand != null) wand.startOutline();
+        if (brush != null) brush.start();
         return cfg;
     }
 
@@ -121,6 +139,14 @@ public final class Worldcraft extends JavaPlugin {
 
     public Wand wand() {
         return wand;
+    }
+
+    public Terrain terrain() {
+        return terrain;
+    }
+
+    public BrushTool brush() {
+        return brush;
     }
 
     public WorldcraftCommand command() {

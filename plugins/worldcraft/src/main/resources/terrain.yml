@@ -1,0 +1,145 @@
+# Worldcraft terrain: sizes, defaults and styles for /wc mountain, /wc island and the terrain brush.
+# Every value is checked when the plugin loads: /wc validate lists the problems, /wc reload applies changes.
+#
+# Quick start:   /wc mountain            /wc island            /wc brush smooth
+# Fine control:  /wc mountain large style=volcano peaks=1 seed=42      /wc island 20 trees=5 spikes=1
+# Every option is optional and goes as key=value. /wc help mountain lists them.
+
+# What "small", "medium", "large" and "huge" mean. A number instead (/wc mountain 40) is the radius.
+# "medium" (the default) fits the default group's limit of 50,000 blocks.
+sizes:
+  mountain:
+    small:  { radius: 20, height: 26 }
+    medium: { radius: 32, height: 40 }
+    large:  { radius: 56, height: 70 }
+    huge:   { radius: 90, height: 110 }
+  island:
+    small:  { radius: 8 }
+    medium: { radius: 16 }
+    large:  { radius: 28 }
+    huge:   { radius: 45 }
+
+# The values used when an option is not given. A style can bring its own (see "options" in volcano).
+defaults:
+  mountain:
+    style: alpine
+    peaks: 3          # 1..7: one main peak and smaller ones around it
+    roughness: 0.5    # 0..1: small bumps on the slopes
+    ridges: 0.6       # 0..1: how deep the ridges and gullies cut
+    sharpness: 1.1    # 0.5..3: above 1 makes the top sharper and the slopes steeper
+    crater: 0         # 0..0.6: a crater at the top (0 = none)
+  island:
+    style: meadow
+    depth: 0.9        # 0.2..2: how deep the underside hangs, compared to the radius
+    relief: 0.08      # 0..0.3: hills on top, compared to the radius
+    spikes: 0.5       # 0..1: stalactites hanging below
+    roots: 0.5        # 0..1: hanging roots at the thin edge
+    trees: 2          # 0..12: small trees on top (if the style has a tree)
+
+# Styles: which blocks go where. "layers" go from the surface inwards: the first layer is the surface, the next ones are
+# under it, and the last one fills the rest. In each layer the first rule that matches wins:
+#   height_above / height_below   relative height: 0 = foot of the mountain, 1 = top
+#   slope_above / slope_below     the slope in degrees: 0 = flat, 45 = one block up per block, 90 = a wall
+#   y_above / y_below             the real height in the world
+# "block" is any Worldcraft pattern: stone, or a mix like "70% stone, 30% andesite".
+# "blend" makes the borders between rules ragged (a snow line that is not a straight line).
+styles:
+  alpine:
+    description: "Snowy peaks, rocky slopes and a grassy foot"
+    blend: 0.06
+    layers:
+      - thickness: 1
+        rules:
+          - { block: snow_block, height_above: 0.8 }
+          - { block: grass_block, height_below: 0.35, slope_below: 63 }
+          - { block: "70% stone, 30% andesite", slope_above: 58 }
+          - { block: "50% stone, 30% gravel, 20% andesite", slope_above: 47 }
+          - { block: "60% stone, 40% andesite", height_above: 0.62 }
+          - { block: grass_block }
+      - thickness: 3
+        rules:
+          - { block: dirt, height_below: 0.35, slope_below: 63 }
+          - { block: "80% stone, 20% andesite", slope_above: 47 }
+          - { block: "80% stone, 20% andesite", height_above: 0.62 }
+          - { block: dirt }
+      - rules:
+          - { block: "85% stone, 10% andesite, 5% tuff" }
+    hanging: hanging_roots
+    tree: { log: spruce_log, leaves: spruce_leaves }
+
+  hills:
+    description: "Soft green hills with a little rock"
+    blend: 0.04
+    options: { peaks: 4, ridges: 0.25, sharpness: 0.8, roughness: 0.3 }
+    layers:
+      - thickness: 1
+        rules:
+          - { block: "70% stone, 30% andesite", slope_above: 55 }
+          - { block: grass_block }
+      - thickness: 3
+        rules: [ { block: dirt } ]
+      - rules: [ { block: stone } ]
+
+  desert:
+    description: "Sand dunes on sandstone, red rock on the steep parts"
+    blend: 0.05
+    options: { ridges: 0.4, sharpness: 1.0 }
+    layers:
+      - thickness: 1
+        rules:
+          - { block: "60% terracotta, 40% red_sandstone", slope_above: 50 }
+          - { block: "80% sand, 20% red_sand", height_above: 0.75 }
+          - { block: sand }
+      - thickness: 4
+        rules:
+          - { block: "70% sandstone, 30% terracotta", slope_above: 50 }
+          - { block: sandstone }
+      - rules: [ { block: "80% sandstone, 20% stone" } ]
+
+  volcano:
+    description: "A volcano with a crater, basalt slopes and a hot top"
+    blend: 0.05
+    options: { peaks: 1, crater: 0.3, ridges: 0.7, sharpness: 1.4 }
+    layers:
+      - thickness: 1
+        rules:
+          - { block: "70% magma_block, 30% blackstone", height_above: 0.9 }
+          - { block: "60% basalt, 40% blackstone", slope_above: 45 }
+          - { block: "60% blackstone, 25% basalt, 15% gravel" }
+      - thickness: 3
+        rules: [ { block: "70% blackstone, 30% basalt" } ]
+      - rules: [ { block: "80% stone, 20% blackstone" } ]
+
+  snowy:
+    description: "Covered in snow, ice on the steep parts"
+    blend: 0.04
+    layers:
+      - thickness: 1
+        rules:
+          - { block: "70% packed_ice, 30% stone", slope_above: 55 }
+          - { block: snow_block }
+      - thickness: 3
+        rules: [ { block: "70% snow_block, 30% dirt" } ]
+      - rules: [ { block: "85% stone, 15% andesite" } ]
+    hanging: hanging_roots
+    tree: { log: spruce_log, leaves: spruce_leaves }
+
+  meadow:
+    description: "A green island: grass, dirt, stone below, trees and roots"
+    blend: 0.03
+    layers:
+      - thickness: 1
+        rules:
+          - { block: "70% stone, 30% andesite", slope_above: 60 }
+          - { block: grass_block }
+      - thickness: 3
+        rules: [ { block: dirt } ]
+      - rules: [ { block: "70% stone, 20% andesite, 10% gravel" } ]
+    hanging: hanging_roots
+    tree: { log: oak_log, leaves: oak_leaves }
+
+  end:
+    description: "Pale End stone, like the outer End islands"
+    blend: 0.03
+    layers:
+      - rules: [ { block: "90% end_stone, 10% end_stone_bricks", slope_above: 60 }, { block: end_stone } ]

@@ -31,6 +31,7 @@ npm --prefix tests-e2e test -- --sin-build --solo "H5 CA3"     # un subconjunto
 npm --prefix tests-e2e run capturas -- --sin-build --solo "accion-title"   # capturas puntuales (spec 004)
 npm --prefix tests-e2e test -- --plugin skinstatues                # suite de SkinStatues (spec 021)
 ./gradlew :skinstatues:preview -Pout=x.png -Pheight=48             # SkinStatues: las poses dibujadas sin servidor
+./gradlew :worldcraft:terrainPreview -Pout=x.png "-Pwhat=mountain medium;island large"   # Worldcraft: terreno sin servidor
 ```
 Las capturas usan la fuente y el HUD del Minecraft Java 1.21.4 instalado del dueño (`%APPDATA%\.minecraft`) y Chrome
 o Edge; los assets se extraen a `tests-e2e/.cache/` y **nunca se copian al repositorio**.
@@ -169,6 +170,13 @@ con `--release 21`.
   nuevo (`plugins/<plugin>/run/`) se arma copiando el `paper-*.jar`, el `eula.txt` que ya aceptó el dueño y el
   `server.properties` de `plugins/omnievents/run/`. La vista previa con `Player.sendMultiBlockChange` la ve el bot de
   mineflayer como bloques reales (`bot.blockAt`), y otro bot no: así se prueba «solo la ve quien edita».
+- **Spec 026 (terreno de Worldcraft):** las formas «bonitas» se ajustan **mirándolas**: `terrainPreview` corre la obra por el
+  motor en el mundo en memoria y la dibuja (la primera montaña salió toda roca; se vio en el PNG, no en las pruebas). Lo
+  que se pone relativo a los pies del jugador hay que pensarlo con el jugador **en el suelo**: la isla quedaba enterrada
+  (F-01). Un `Settings.Reader` sobre una sección pierde el prefijo en los avisos: leer desde `getRoot()` con la ruta
+  completa (F-02). En Git Bash, `node -e "…"` con comillas dobles **ejecuta** las comillas invertidas (`` ` ``) del texto
+  y `$…` se expande: para insertar código JS o Java, las herramientas de edición. Con mineflayer 4.39 en 1.21.4,
+  `activateItem()` llega como `RIGHT_CLICK_AIR` y `swingArm()` como `LEFT_CLICK_AIR` (mirando a más de 5 bloques).
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

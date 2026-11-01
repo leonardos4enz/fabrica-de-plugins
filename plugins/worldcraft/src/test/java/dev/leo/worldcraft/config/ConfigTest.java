@@ -25,7 +25,7 @@ class ConfigTest {
 
     @Test
     void H8_CA3_los_archivos_que_trae_el_plugin_cargan_sin_avisos() throws Exception {
-        for (String f : new String[]{"config.yml", "presets.yml"}) Files.copy(RESOURCES.resolve(f), dir.resolve(f));
+        for (String f : new String[]{"config.yml", "presets.yml", "terrain.yml"}) Files.copy(RESOURCES.resolve(f), dir.resolve(f));
         LoadedConfig c = LoadedConfig.load(dir.toFile(), TestBlocks.REGISTRY, null);
         assertEquals("[]", c.issues().all().toString());
         assertEquals(Settings.DEFAULTS, c.settings());

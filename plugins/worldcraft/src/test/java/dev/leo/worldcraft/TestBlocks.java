@@ -30,7 +30,13 @@ public final class TestBlocks {
                 "sand", "gravel", "bedrock", "barrier", "command_block", "glass", "white_wool", "red_wool", "blue_wool",
                 "oak_planks", "stone_bricks", "cracked_stone_bricks", "mossy_stone_bricks", "gold_block", "chest",
                 "oak_sign", "chain_command_block", "repeating_command_block", "structure_block", "jigsaw",
-                "end_portal_frame", "end_portal", "end_gateway", "nether_portal", "spawner", "light")) {
+                "end_portal_frame", "end_portal", "end_gateway", "nether_portal", "spawner", "light",
+                // spec 026: terreno
+                "tuff", "snow_block", "powder_snow", "ice", "packed_ice", "blue_ice", "magma_block", "obsidian", "clay",
+                "sandstone", "red_sandstone", "red_sand", "terracotta", "calcite", "dripstone_block", "end_stone",
+                "end_stone_bricks", "blackstone", "netherrack", "podzol", "coarse_dirt", "mud", "short_grass", "poppy",
+                "dandelion", "crimson_nylium", "warped_nylium", "coal_ore", "iron_ore", "copper_ore", "gold_ore",
+                "redstone_ore", "lapis_ore", "diamond_ore", "emerald_ore", "water", "hanging_roots", "oak_sapling")) {
             BLOCKS.put("minecraft:" + b, Map.of());
         }
         Map<String, List<String>> stairs = new LinkedHashMap<>();
@@ -41,6 +47,35 @@ public final class TestBlocks {
         BLOCKS.put("minecraft:oak_stairs", stairs);
         BLOCKS.put("minecraft:oak_log", Map.of("axis", List.of("y", "x", "z")));
         BLOCKS.put("minecraft:birch_log", Map.of("axis", List.of("y", "x", "z")));
+        for (String b : List.of("spruce_log", "basalt", "deepslate")) BLOCKS.put("minecraft:" + b, Map.of("axis", List.of("y", "x", "z")));
+        for (String b : List.of("oak_leaves", "spruce_leaves")) {
+            Map<String, List<String>> leaves = new LinkedHashMap<>();
+            leaves.put("distance", List.of("7", "1", "2", "3", "4", "5", "6"));
+            leaves.put("persistent", List.of("false", "true"));
+            leaves.put("waterlogged", List.of("false", "true"));
+            BLOCKS.put("minecraft:" + b, leaves);
+        }
+    }
+
+    /** Las etiquetas que usan las pruebas (y la configuración de fábrica). */
+    static final Map<String, List<String>> TAGS = new LinkedHashMap<>();
+
+    static {
+        TAGS.put("minecraft:logs", List.of("oak_log", "birch_log", "spruce_log"));
+        TAGS.put("minecraft:wool", List.of("white_wool", "red_wool", "blue_wool"));
+        TAGS.put("minecraft:leaves", List.of("oak_leaves", "spruce_leaves"));
+        TAGS.put("minecraft:dirt", List.of("dirt", "grass_block", "podzol", "coarse_dirt", "mud"));
+        TAGS.put("minecraft:sand", List.of("sand", "red_sand"));
+        TAGS.put("minecraft:base_stone_overworld", List.of("stone", "andesite", "diorite", "granite", "tuff", "deepslate"));
+        TAGS.put("minecraft:base_stone_nether", List.of("netherrack", "basalt", "blackstone"));
+        TAGS.put("minecraft:terracotta", List.of("terracotta"));
+        TAGS.put("minecraft:nylium", List.of("crimson_nylium", "warped_nylium"));
+        for (String o : List.of("coal", "iron", "copper", "gold", "redstone", "lapis", "diamond", "emerald")) {
+            TAGS.put("minecraft:" + o + "_ores", List.of(o + "_ore"));
+        }
+        TAGS.put("minecraft:replaceable", List.of("air", "cave_air", "void_air", "short_grass", "water", "light"));
+        TAGS.put("minecraft:flowers", List.of("poppy", "dandelion"));
+        TAGS.put("minecraft:saplings", List.of("oak_sapling"));
     }
 
     public static final BlockRegistry REGISTRY = new BlockRegistry() {
@@ -72,16 +107,16 @@ public final class TestBlocks {
         @Override
         public Set<String> tag(String name) {
             String n = name.contains(":") ? name : "minecraft:" + name;
-            return switch (n) {
-                case "minecraft:logs" -> Set.of("minecraft:oak_log", "minecraft:birch_log");
-                case "minecraft:wool" -> Set.of("minecraft:white_wool", "minecraft:red_wool", "minecraft:blue_wool");
-                default -> null;
-            };
+            List<String> t = TAGS.get(n);
+            if (t == null) return null;
+            Set<String> out = new java.util.HashSet<>();
+            for (String b : t) out.add("minecraft:" + b);
+            return out;
         }
 
         @Override
         public Collection<String> tags() {
-            return List.of("minecraft:logs", "minecraft:wool");
+            return TAGS.keySet();
         }
     };
 

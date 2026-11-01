@@ -11,6 +11,10 @@ public final class Session {
     private String clipboardWorld;
     private boolean show = true;
     Edits.Pending pending;
+    /** La última montaña o isla (spec 026 H1 CA4): para /wc reroll, sin volver a leer el suelo. */
+    public java.util.function.LongConsumer terrain;
+    /** Leyendo el suelo o calculando: el pincel espera (H3 CA5). */
+    public boolean terrainBusy;
 
     /** La caja seleccionada o null si falta una esquina. */
     public Box box() {

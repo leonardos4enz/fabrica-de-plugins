@@ -54,6 +54,34 @@ async function obra (jugador, comando, timeoutMs = 30000) {
 
 const comprobar = (srv, cond) => srv.consola(`execute if ${cond}`, { espera: /Test passed/ })
 
+// ---------------------------------------------------------------- terreno (spec 026)
+const dormir = ms => new Promise(resolve => setTimeout(resolve, ms))
+
+/** Como preparar, y además el aire hasta y = -10 (las montañas e islas suben más que las obras de la 025). */
+async function prepararAlto (ctx) {
+  for (let y = -40; y < -10; y += 3) await ctx.srv.consola(`fill ${X - 30} ${y} ${Z - 30} ${X + 70} ${y + 2} ${Z + 70} air`)
+  await preparar(ctx)
+}
+
+/** La y del bloque más alto que ve el bot en esa columna (de -10 hacia abajo), o -999. */
+function alto (bot, x, z) {
+  for (let y = -10; y >= -62; y--) if (bloque(bot, x, y, z) !== 'air') return y
+  return -999
+}
+
+function alturas (bot, cx, cz, r, paso) {
+  const out = []
+  for (let dx = -r; dx <= r; dx += paso) for (let dz = -r; dz <= r; dz += paso) out.push(alto(bot, cx + dx, cz + dz))
+  return out
+}
+
+async function tickMasLargo (jugador, tipo) {
+  const jobs = await pide(jugador, 'wc jobs', new RegExp(`Last edit: ${tipo}, [\\d,]+ blocks, longest tick ([\\d.]+) ms`))
+  const largo = Number(jobs.texto.match(/longest tick ([\d.]+) ms/)[1])
+  console.log(`    (tick más largo de ${tipo}: ${largo} ms)`)
+  if (largo > 12) throw new Error(`${tipo} usó ${largo} ms en un tick (presupuesto 8)`)
+}
+
 export default {
   jar: /^Worldcraft-.*\.jar$/,
   // La configuración tal como está en el código fuente; el historial de corridas anteriores se borra (cada corrida
@@ -345,6 +373,189 @@ export default {
         } finally {
           fs.copyFileSync(path.join(RECURSOS, 'config.yml'), cfg)
           await srv.consola('wc reload', { espera: /Reloaded: 0 error\(s\), 0 warning\(s\)/ })
+        }
+      }
+    },
+    {
+      id: '026 H1 CA1 · H1 CA3 · H1 CA4 · H1 CA5 · H4 CA2 · H5 CA1',
+      nombre: 'una montaña donde mira Ana: vista previa solo suya, otra con reroll, se construye lo que mostró, no pisa una casa y se deshace',
+      timeoutMs: 240000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await prepararAlto(ctx)
+        const ana = bots[ANA]
+        const beto = bots[BETO]
+        const CZ = Z + 48 // desde el pilar (y = -44, mirando 20° hacia abajo) la mira cae en el suelo a unos 48 bloques
+        await srv.consola(`setblock ${X + 3} -60 ${CZ} oak_planks`) // una «construcción» en medio
+        await srv.consola(`setblock ${X} -45 ${Z} stone`)
+        await srv.consola(`tp ${ANA} ${X + 0.5} -44 ${Z + 0.5} 0 20`)
+        await srv.sincronizar()
+        await ana.hasta('estar en el pilar', b => Math.abs(b.entity.position.y + 44) < 0.1)
+        await pide(ana, 'wc mountain 12 height=14 seed=42', /Here is your mountain \([\d,]+ blocks, only you see it\) seed=42 · style alpine · radius 12 · height 14/, 60000)
+        await ana.esperar('chat', /\[Build\] {2}\[Another\] {2}\[Cancel\]/)
+        await ana.hasta('Ana ve la montaña donde mira', b => Math.abs(alto(b, X, CZ) - (-61 + 14)) <= 3, { timeoutMs: 15000 })
+        if (alto(beto.bot, X, CZ) !== -61) throw new Error(`Beto ve la vista previa (${alto(beto.bot, X, CZ)})`)
+        await comprobar(srv, `block ${X} -58 ${CZ} air`) // el mundo no cambió
+        const primera = alturas(ana.bot, X, CZ, 8, 4)
+        await pide(ana, 'wc reroll', /Here is your mountain .*seed=(\d+)/, 60000)
+        await ana.hasta('otra montaña', b => alturas(b, X, CZ, 8, 4).some((h, i) => h !== primera[i]), { timeoutMs: 15000 })
+        await dormir(1500)
+        const vista = alturas(ana.bot, X, CZ, 10, 2)
+        const r = await obra(ana, 'wc confirm', 90000)
+        if (r.cambiados < 500) throw new Error(`la montaña cambió solo ${r.cambiados}`)
+        await beto.hasta('Beto ve la montaña que mostró la vista previa', b => alturas(b, X, CZ, 10, 2).every((h, i) => h === vista[i]), { timeoutMs: 20000 })
+        await comprobar(srv, `block ${X + 3} -60 ${CZ} oak_planks`)
+        await comprobar(srv, `block ${X + 3} -59 ${CZ} air`) // la columna de la casa no se toca
+        const nombres = new Set()
+        for (let dx = -12; dx <= 12; dx++) for (let dz = -12; dz <= 12; dz++) {
+          const y = alto(beto.bot, X + dx, CZ + dz)
+          if (y > -61) nombres.add(bloque(beto.bot, X + dx, y, CZ + dz))
+        }
+        if (!nombres.has('grass_block') || !(nombres.has('stone') || nombres.has('andesite'))) throw new Error(`materiales: ${[...nombres]}`)
+        await tickMasLargo(ana, 'mountain')
+        await pide(ana, 'wc undo', /Undone .*mountain/, 60000)
+        await beto.hasta('Beto ve el llano otra vez', b => alturas(b, X, CZ, 10, 2).every(h => h === -61 || h === -60), { timeoutMs: 20000 })
+      }
+    },
+    {
+      id: '026 H2 CA1 · H2 CA2 · H2 CA3 · H2 CA4',
+      nombre: 'una isla flotante delante de Ana, sobre su cabeza: pasto arriba, piedra abajo, hojas que no se caen, nada toca el suelo',
+      timeoutMs: 180000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await prepararAlto(ctx)
+        const ana = bots[ANA]
+        const beto = bots[BETO]
+        await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 0.5} 0 0`)
+        await srv.sincronizar()
+        await ana.hasta('mirar al sur', b => Math.abs(b.entity.position.z - (Z + 0.5)) < 0.6)
+        await pide(ana, 'wc island small seed=5 trees=1', /Here is your island .*seed=5 · style meadow · radius 8/, 60000)
+        // Centro a 8 × 1,3 + 6 bloques hacia el sur; la cima a 13 + 6 sobre los pies.
+        const CZ = Z + 16
+        const TOP = -60 + 13 + 6
+        await ana.hasta('Ana ve la isla', b => alto(b, X, CZ) >= TOP - 3, { timeoutMs: 15000 })
+        if (alto(beto.bot, X, CZ) !== -61) throw new Error('Beto ve la vista previa')
+        await obra(ana, 'wc confirm', 60000)
+        await beto.hasta('Beto ve la isla', b => alto(b, X, CZ) >= TOP - 3, { timeoutMs: 20000 })
+        // Nada toca el suelo: de y = -60 a -57 todo aire bajo la isla.
+        await comprobar(srv, `blocks ${X - 12} -60 ${CZ - 12} ${X + 12} -57 ${CZ + 12} ${X - 12} -30 ${CZ - 12} all`)
+        let pasto = 0
+        let piedra = 0
+        let hoja = null
+        for (let dx = -12; dx <= 12; dx++) for (let dz = -12; dz <= 12; dz++) {
+          for (let y = TOP + 9; y > -57; y--) {
+            const n = bloque(beto.bot, X + dx, y, CZ + dz)
+            if (n === 'grass_block') pasto++
+            if (n === 'stone' || n === 'andesite') piedra++
+            if (n === 'oak_leaves' && !hoja) hoja = [X + dx, y, CZ + dz]
+          }
+        }
+        if (pasto < 60 || piedra < 30) throw new Error(`pasto ${pasto}, piedra ${piedra}`)
+        if (!hoja) throw new Error('sin árbol')
+        await comprobar(srv, `block ${hoja.join(' ')} oak_leaves[persistent=true]`)
+        await tickMasLargo(ana, 'island')
+        await pide(ana, 'wc undo', /Undone .*island/, 60000)
+        await beto.hasta('Beto ve el cielo', b => alto(b, X, CZ) === -61, { timeoutMs: 20000 })
+      }
+    },
+    {
+      id: '026 H3 CA1 · H3 CA2 · H3 CA3 · H3 CA4',
+      nombre: 'el pincel: sube con pasto arriba y tierra abajo, el círculo lo ve solo Ana, clic izquierdo cambia de modo, suaviza y se deshace',
+      timeoutMs: 120000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await prepararAlto(ctx)
+        const ana = bots[ANA]
+        await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 0.5} 0 12`) // la mira cae en el suelo a unos 8 bloques
+        await srv.sincronizar()
+        await ana.hasta('mirar al suelo', b => Math.abs(b.entity.pitch + 12 * Math.PI / 180) < 0.05 || Math.abs(b.entity.pitch - 12 * Math.PI / 180) < 0.05)
+        const CZ = Z + 8
+        await pide(ana, 'wc brush raise 3 1', /Here is your terrain brush \(raise · radius 3 · strength 100%\)/)
+        await ana.hasta('tener el pincel en la mano', b => b.heldItem?.name === 'golden_shovel')
+        const mb = bots[BETO].marca()
+        const m = ana.marca()
+        await ana.esperar('particle', /dust/, { desde: m, timeoutMs: 5000 })
+        await bots[BETO].nunca('particle', /dust/, { desde: mb, ms: 1500 })
+        let mc = ana.marca()
+        ana.bot.activateItem()
+        await ana.esperar('chat', /Done: brush raise changed [\d,]+ blocks/, { desde: mc, timeoutMs: 20000 })
+        await comprobar(srv, `block ${X} -59 ${CZ} grass_block`)
+        await comprobar(srv, `block ${X} -60 ${CZ} dirt`)
+        await comprobar(srv, `block ${X} -61 ${CZ} dirt`) // el viejo pasto quedó enterrado como tierra
+        mc = ana.marca()
+        ana.bot.swingArm()
+        await ana.esperar('actionbar', /Brush lower · radius 3/, { desde: mc })
+        await pide(ana, 'wc brush smooth 4 1', /Brush set to smooth · radius 4 · strength 100%/)
+        mc = ana.marca()
+        ana.bot.activateItem()
+        await ana.esperar('chat', /Done: brush smooth changed [\d,]+ blocks/, { desde: mc, timeoutMs: 20000 })
+        await comprobar(srv, `block ${X} -59 ${CZ} air`) // el bulto bajó
+        await pide(ana, 'wc undo 2', /Undone .*brush/, 30000)
+        await dormir(1000)
+        await comprobar(srv, `block ${X} -61 ${CZ} grass_block`)
+        await comprobar(srv, `block ${X} -60 ${CZ} air`)
+        await srv.consola(`clear ${ANA}`)
+      }
+    },
+    {
+      id: '026 H4 CA1 · H4 CA2 · H4 CA3 · H5 CA3 · H6 CA1 · H6 CA3',
+      nombre: 'experto: errores con sugerencia, autocompletado, la misma semilla da lo mismo, un terrain.yml malo avisa y default no pasa de 50 000',
+      timeoutMs: 180000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await prepararAlto(ctx)
+        const ana = bots[ANA]
+        await pide(ana, 'wc mountain peeks=3', /Unknown option 'peeks=' \(did you mean 'peaks'\?\)/)
+        await pide(ana, 'wc island lagre', /'lagre' is not a size or a style \(did you mean 'large'\?\)/)
+        await pide(ana, 'wc brush smoth', /Unknown brush mode 'smoth' \(did you mean 'smooth'\?\)/)
+        await pide(ana, 'wc mountain radius=900', /radius 900 is out of range \(4\.\.160\)/)
+        const m = ana.marca()
+        ana.comando('wc styles')
+        await ana.esperar('chat', /7 terrain styles/, { desde: m })
+        await ana.esperar('chat', /volcano - A volcano with a crater/, { desde: m })
+        const estilos = (await ana.bot.tabComplete('/wc mountain style=vo')).map(x => x.match ?? x)
+        if (!estilos.includes('style=volcano')) throw new Error(`no sugiere style=volcano: ${estilos}`)
+        const claves = (await ana.bot.tabComplete('/wc island tr')).map(x => x.match ?? x)
+        if (!claves.includes('trees=')) throw new Error(`no sugiere trees=: ${claves}`)
+        // La misma semilla, lo mismo (desde la consola, con at=).
+        const at = `at=${X + 20},-61,${Z + 20}`
+        await srv.consola(`wc mountain 8 height=8 seed=9 ${at} --now`, { espera: /Done: mountain changed/, timeoutMs: 60000 })
+        await srv.sincronizar()
+        await dormir(1500)
+        const una = alturas(ana.bot, X + 20, Z + 20, 8, 2)
+        if (Math.max(...una) < -61 + 5) throw new Error(`la montaña de la consola no se ve: ${una}`)
+        await srv.consola('wc undo', { espera: /Undone .*mountain/, timeoutMs: 60000 })
+        await srv.consola(`wc mountain 8 height=8 seed=9 ${at} --now`, { espera: /Done: mountain changed/, timeoutMs: 60000 })
+        await ana.hasta('la misma montaña', b => alturas(b, X + 20, Z + 20, 8, 2).every((h, i) => h === una[i]), { timeoutMs: 15000 })
+        await srv.consola('wc undo', { espera: /Undone .*mountain/, timeoutMs: 60000 })
+        // Un terrain.yml con una condición mal escrita y un valor fuera de rango.
+        const tf = path.join(srv.run, 'plugins', 'Worldcraft', 'terrain.yml')
+        try {
+          const malo = fs.readFileSync(path.join(RECURSOS, 'terrain.yml'), 'utf8')
+            .replace('{ block: snow_block, height_above: 0.8 }', () => '{ block: snow_block, height_above: 8 }')
+            .replace('slope_above: 58 }', () => 'slope_abve: 58 }')
+          fs.writeFileSync(tf, malo)
+          await srv.consola('wc reload', { espera: /Reloaded: 1 error\(s\), 1 warning\(s\)/ })
+          await srv.consola('wc validate', { espera: /styles\.alpine\.layers\[0\]\.rules\[2\]\.slope_abve: unknown condition \(did you mean 'slope_above'\?\)/ })
+        } finally {
+          fs.copyFileSync(path.join(RECURSOS, 'terrain.yml'), tf)
+          await srv.consola('wc reload', { espera: /Reloaded: 0 error\(s\), 0 warning\(s\)/ })
+        }
+        // Beto, con los límites de default: una montaña huge se rechaza antes de leer el suelo.
+        const permisos = path.join(srv.run, 'permissions.yml')
+        const antes = fs.existsSync(permisos) ? fs.readFileSync(permisos, 'utf8') : null
+        try {
+          fs.writeFileSync(permisos, ['e2e.editor:', '  default: true', '  children:', '    worldcraft.use: true', ''].join('\n'))
+          await srv.consola('bukkit:reload permissions', { espera: /Permissions successfully reloaded/i })
+          await ctx.entrar(BETO)
+          for (const c of [`gamemode creative ${BETO}`, `tp ${BETO} ${X + 0.5} -60 ${Z - 6.5} 0 0`]) await srv.consola(c)
+          await pide(ctx.bots[BETO], 'wc mountain huge', /That is about [\d,]+ blocks; your limit is 50,000 \(groups: default\)/)
+        } finally {
+          if (antes == null) fs.rmSync(permisos, { force: true })
+          else fs.writeFileSync(permisos, antes)
+          await srv.consola('bukkit:reload permissions')
+          await ctx.entrar(BETO)
+          for (const c of [`gamemode creative ${BETO}`, `tp ${BETO} ${X + 0.5} -60 ${Z - 6.5} 0 0`]) await srv.consola(c)
         }
       }
     }

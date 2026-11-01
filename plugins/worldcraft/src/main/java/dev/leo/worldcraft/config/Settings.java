@@ -15,7 +15,7 @@ public record Settings(String wandItem, boolean showSelection, int showEveryTick
             8, 200_000, true, 50_000, 120, 50_000, 30, 7);
 
     private static final Map<String, List<String>> KEYS = Map.of(
-            "", List.of("wand", "selection", "performance", "confirm", "preview", "history", "limits"),
+            "", List.of("wand", "selection", "performance", "confirm", "preview", "history", "limits", "terrain"),
             "wand", List.of("item"),
             "selection", List.of("show", "show_every_ticks", "max_particles"),
             "performance", List.of("max_ms_per_tick", "max_blocks_per_tick"),

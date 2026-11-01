@@ -39,7 +39,12 @@ help:
   cancel: { usage: "/wc cancel", text: "Drop the waiting edit or its preview, or stop your running edits.", example: "/wc cancel" }
   jobs: { usage: "/wc jobs [cancel <id>]", text: "Running edits, their progress and the plugin's time per tick.", example: "/wc jobs" }
   limits: { usage: "/wc limits", text: "Your limits: biggest edit, edits at once, worlds, blocked blocks.", example: "/wc limits" }
-  reload: { usage: "/wc reload", text: "Reload config.yml, messages.yml and presets.yml.", example: "/wc reload" }
+  mountain: { usage: "/wc mountain [small|medium|large|huge|radius] [style] [key=value...] [--now]", text: "A mountain where you look, shown first. Options: height, peaks, roughness, ridges, sharpness, crater, seed, style, at=x,y,z, world.", example: "/wc mountain large style=volcano seed=42" }
+  island: { usage: "/wc island [small|medium|large|huge|radius] [style] [key=value...] [--now]", text: "A floating island in front of you, shown first. Options: depth, relief, spikes, roots, trees, seed, style, at=x,y,z, world.", example: "/wc island large trees=5 spikes=1" }
+  reroll: { usage: "/wc reroll", text: "The last mountain or island again with another seed (a new preview).", example: "/wc reroll" }
+  brush: { usage: "/wc brush [raise|lower|smooth|flatten|erode|paint] [radius] [strength] [blocks] [style=..] [mask=..]", text: "Get or change the terrain brush: right click uses it where you look, left click picks the next mode.", example: "/wc brush smooth 6 0.5" }
+  styles: { usage: "/wc styles", text: "The terrain styles in terrain.yml (which blocks go where).", example: "/wc styles" }
+  reload: { usage: "/wc reload", text: "Reload config.yml, messages.yml, presets.yml and terrain.yml.", example: "/wc reload" }
   validate: { usage: "/wc validate", text: "List the problems in the configuration.", example: "/wc validate" }
   selftest: { usage: "/wc selftest", text: "Edit, undo, redo and undo a small box near spawn and check every step.", example: "/wc selftest" }
 
@@ -61,6 +66,7 @@ limit-blocked: "{prefix}<red>You may not place {block} (blocked for your group: 
 limit-jobs: "{prefix}<red>You already have {max} edit(s) running or waiting. Wait, or /wc cancel."
 
 confirm-needed: "{prefix}<yellow>This {kind} changes up to <white>{blocks}</white> blocks (about {time}). <white>/wc confirm</white> to go ahead, or run it again with <white>--preview</white> to see it first. It waits {seconds} s."
+terrain-confirm-needed: "{prefix}<yellow>This {kind} changes up to <white>{blocks}</white> blocks (about {time}). <white>/wc confirm</white> to go ahead (without --now it shows a preview first). It waits {seconds} s."
 preview-start: "{prefix}Preparing a preview of {kind} ({blocks} blocks): only you will see it."
 preview-ready: "{prefix}<aqua>Preview ready: {shown} blocks change. Nothing changed yet. <white>/wc confirm</white> to do it, <white>/wc cancel</white> to drop it ({seconds} s)."
 preview-partial: "{prefix}<aqua>Preview shows the first {shown} blocks of {blocks}. Nothing changed yet. <white>/wc confirm</white> to do it, <white>/wc cancel</white> to drop it ({seconds} s)."
@@ -110,3 +116,22 @@ validate-warning: "<yellow>• {issue}"
 selftest-start: "{prefix}Selftest in a 6×6×6 box at {box}..."
 selftest-ok: "{prefix}<green>Selftest passed: set {changed} blocks, undo, redo and undo; the terrain is as before."
 selftest-failed: "{prefix}<red>Selftest failed: {reason}"
+
+# Terrain (/wc mountain, /wc island, /wc brush)
+terrain-reading: "{prefix}<gray>Reading the ground for your {kind}..."
+terrain-busy: "{prefix}<red>Wait a moment: your last terrain is still being prepared."
+terrain-needs-at: "{prefix}<red>From the console, say where: /wc {kind} at=x,y,z [world=name]"
+terrain-too-big: "{prefix}<red>That is about {blocks} blocks; your limit is {max} (groups: {groups}). Try a smaller size."
+terrain-nothing: "{prefix}<yellow>Nothing to place: the {kind} would only cover blocks that are already there (or builds, which are left alone)."
+terrain-error: "{prefix}<red>Something went wrong preparing the terrain (see the server log)."
+terrain-scan-cancelled: "{prefix}<yellow>Stopped reading the ground: nothing changed."
+terrain-preview-ready: "{prefix}<green>Here is your {kind}</green> <gray>({blocks} blocks, only you see it) <dark_gray>{note}"
+terrain-preview-partial: "{prefix}<yellow>Here is part of your {kind}</yellow> <gray>({blocks} blocks; the preview shows the first part) <dark_gray>{note}"
+terrain-buttons: " <click:run_command:'/wc confirm'><hover:show_text:'Build it (/wc confirm)'><green><b>[Build]</b></green></hover></click>  <click:run_command:'/wc reroll'><hover:show_text:'Another one with a new seed (/wc reroll)'><aqua><b>[Another]</b></aqua></hover></click>  <click:run_command:'/wc cancel'><hover:show_text:'Drop it (/wc cancel)'><red><b>[Cancel]</b></red></hover></click>"
+terrain-buttons-no-reroll: " <click:run_command:'/wc confirm'><hover:show_text:'Build it (/wc confirm)'><green><b>[Build]</b></green></hover></click>  <click:run_command:'/wc cancel'><hover:show_text:'Drop it (/wc cancel)'><red><b>[Cancel]</b></red></hover></click>"
+nothing-to-reroll: "{prefix}<red>Make a mountain or an island first: /wc mountain or /wc island."
+brush-given: "{prefix}<green>Here is your terrain brush</green> <gray>({brush}). <white>Right click</white> where you look to use it, <white>left click</white> for the next mode."
+brush-updated: "{prefix}Brush set to <white>{brush}</white>."
+brush-mode: "<gold>Brush</gold> <white>{brush}</white>"
+styles-header: "{prefix}{count} terrain styles <gray>(use them with style=name; edit them in terrain.yml)"
+styles-line: " <yellow>{name}</yellow> <dark_gray>-</dark_gray> <gray>{description}"
