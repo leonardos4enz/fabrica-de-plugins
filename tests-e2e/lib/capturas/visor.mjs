@@ -32,9 +32,16 @@ export async function abrirNavegador () {
 }
 
 export class Camara {
-  constructor (bot, puerto) {
+  /**
+   * `o` (spec 024): `distancia` en chunks que arma el visor (3 por defecto) y el tamaño de la página en píxeles (por
+   * defecto el del HUD). Una estatua de 100 bloques vista de lejos necesita más distancia; el póster, 1280×720.
+   */
+  constructor (bot, puerto, { distancia = 3, ancho = ANCHO * ESCALA, alto = ALTO * ESCALA } = {}) {
     this.bot = bot
     this.puerto = puerto
+    this.distancia = distancia
+    this.ancho = ancho
+    this.alto = alto
   }
 
   async abrir (navegador) {
@@ -58,7 +65,7 @@ export class Camara {
         },
         on: socket.on.bind(socket)
       }
-      const vista = new WorldView(bot.world, 3, bot.entity.position, filtrado)
+      const vista = new WorldView(bot.world, this.distancia, bot.entity.position, filtrado)
       vista.init(bot.entity.position)
       const posicion = () => {
         emitir('position', { pos: bot.entity.position, yaw: bot.entity.yaw, pitch: bot.entity.pitch, addMesh: true })
@@ -71,7 +78,7 @@ export class Camara {
     })
     await new Promise(resolve => this.http.listen(this.puerto, '127.0.0.1', resolve))
     this.pagina = await navegador.newPage()
-    await this.pagina.setViewport({ width: ANCHO * ESCALA, height: ALTO * ESCALA })
+    await this.pagina.setViewport({ width: this.ancho, height: this.alto })
     await this.pagina.goto(`http://127.0.0.1:${this.puerto}`)
   }
 

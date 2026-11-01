@@ -12,6 +12,12 @@ Specs: [021](../../docs/sdd/specs/021-skinstatues-nucleo/spec.md) (core),
 /statue build https://i.imgur.com/abc123.png 32 victory
 ```
 
+![SkinStatues: any player, any skin, any size](../../docs/img/skinstatues/presentacion/1-header.png)
+
+Presentation page for SpigotMC, Modrinth and Hangar ([spec 024](../../docs/sdd/specs/024-skinstatues-pagina-de-presentacion/spec.md)):
+images in [docs/img/skinstatues/presentacion/](../../docs/img/skinstatues/presentacion/), descriptions in
+[docs/skinstatues/presentacion/](../../docs/skinstatues/presentacion/).
+
 ![The 28 built-in poses](../../docs/img/skinstatues/poses.png)
 
 ## What it does

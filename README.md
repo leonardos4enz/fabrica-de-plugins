@@ -21,8 +21,9 @@ docs/adr/                 decisiones de arquitectura
 docs/investigacion/       investigaciones para decidir specs (p. ej. plugins exitosos y propuestas)
 docs/<plugin>/galeria.md  una imagen por capacidad, generada en el juego (spec 004); imágenes en docs/img/<plugin>/
 docs/site/                documentación pública en inglés para GitBook y Zensical (spec 017): pages/, SUMMARY.md, mkdocs.yml,
-                          assets-src/ (fuentes HTML del logo, el banner y la página de presentación, spec 020)
-docs/omnievents/presentacion/  descripciones para SpigotMC (BBCode) y Modrinth/Hangar (Markdown), spec 020
+                          assets-src/ (fuentes HTML de los logos, el banner y las páginas de presentación, specs 020 y 024)
+docs/<plugin>/presentacion/   descripciones para SpigotMC (BBCode) y Modrinth/Hangar (Markdown), specs 020 y 024
+                          (SkinStatues: también publicar.md, el paso a paso para crear los tres proyectos)
 docs/omnievents/          también referencia.md, omnievents.schema.json y omnievents-pack.schema.json, generados del código (specs 007 y 011)
 plugins/<nombre>/         un proyecto Gradle por plugin
 tools/nuevo-plugin.ps1    crea un plugin nuevo con su spec
@@ -118,6 +119,17 @@ npm --prefix tests-e2e run presentacion                                         
   su URL de GitHub (`raw.githubusercontent.com/.../main/...`) y traen la transcripción en un Spoiler o un `<details>`.
   `PresentacionTest` exige que las dos enlacen las mismas imágenes, que existan y que la transcripción cite lo que dicen
   los ejemplos. Pegarlas en cada página lo hace el dueño.
+
+**SkinStatues** (spec 024) usa el mismo póster con sus propias escenas: estatuas de 100 bloques y una fila de poses con
+skins de youtubers, en un mundo de terreno normal con semilla fija.
+```bash
+node tests-e2e/skinstatues/skins-youtubers.mjs        # baja las skins de Mojang a tests-e2e/.cache/skins/ (nunca al repo)
+npm --prefix tests-e2e run capturas -- --plugin skinstatues --escenas presentacion --sin-build --solo "^giant$"
+npm --prefix tests-e2e run presentacion -- --plugin skinstatues   # logo, franjas y GIF en docs/img/skinstatues/presentacion/
+```
+- El servidor de esas escenas es `plugins/skinstatues/run-capturas/` (puerto 25597): se regenera el mundo en cada corrida
+  y nunca toca `run/`. Escenas: `giant`, `row`, `build` (10 cuadros y `build-close`), `name-link`, `palettes`.
+- `docs/skinstatues/presentacion/publicar.md` trae el resumen, las categorías, el changelog y el paso a paso por sitio.
 
 ## Licencia
 [MIT](LICENSE). OmniEvents se publica en [Hangar](https://hangar.papermc.io/leonardos4enz/OmniEvents).

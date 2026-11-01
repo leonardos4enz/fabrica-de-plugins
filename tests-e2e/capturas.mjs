@@ -121,7 +121,10 @@ async function principal () {
   if (o.build) compilar(o.plugin)
 
   const base = path.join(RAIZ, 'plugins', o.plugin)
-  const run = path.join(base, 'run')
+  // Spec 024: un archivo de escenas puede usar su propia carpeta de servidor (p. ej. run-capturas/, para no tocar el
+  // mundo del dueño en run/) y prepararla antes de todo (jar de Paper, mundo nuevo).
+  const run = path.join(base, cfg.carpetaServidor ?? 'run')
+  await cfg.prepararCarpeta?.({ run, base, raiz: RAIZ })
   const pluginsDir = path.join(run, 'plugins')
   fs.mkdirSync(pluginsDir, { recursive: true })
   // Spec 020: plugins de terceros que piden las escenas (los aprobados, con sha256 fijado), filtrados por nombre.
@@ -142,6 +145,8 @@ async function principal () {
 
   const srv = new Servidor({ run, java: path.join(javaHome(), 'bin', 'java'), puerto: cfg.puerto })
   srv.prepararPropiedades(cfg.propiedades)
+  // Spec 024: como la suite (023), las escenas pueden arrancar algo antes que Paper (el HTTPS local) y pasarle argumentos de Java.
+  const arranque = (await cfg.antesDeArrancar?.({ run, java: srv.java })) ?? {}
   srv.olvidarJugadores(cfg.bots, cfg.datosDeJugador)
 
   const resultados = []
@@ -154,7 +159,7 @@ async function principal () {
   const t0 = Date.now()
   try {
     console.log(`» Arrancando Paper en ${path.relative(RAIZ, run)} (127.0.0.1:${cfg.puerto})…`)
-    await srv.arrancar()
+    await srv.arrancar({ jvm: arranque.jvm ?? [], ...(cfg.memoria ? { memoria: cfg.memoria } : {}) })
     for (const c of cfg.preparar) await srv.consola(c)
     await srv.sincronizar()
     navegador = await abrirNavegador()
@@ -170,7 +175,7 @@ async function principal () {
         if (camara) {
           if (camaras[nombre]) await camaras[nombre].recargar(bots[nombre].bot)
           else {
-            camaras[nombre] = new Camara(bots[nombre].bot, cfg.puertoVisor + Object.keys(camaras).length)
+            camaras[nombre] = new Camara(bots[nombre].bot, cfg.puertoVisor + Object.keys(camaras).length, cfg.visor)
             await camaras[nombre].abrir(navegador)
           }
         }
@@ -271,6 +276,7 @@ async function principal () {
       ctx.ultimaFoto = null
       ctx.cuadros = 0
       const inicio = Date.now()
+      let reloj = null
       try {
         // La preparación entra en el tiempo límite: una reconexión colgada no frena toda la corrida.
         await Promise.race([
@@ -279,7 +285,8 @@ async function principal () {
             for (const n of Object.keys(bots)) ctx.marcas[n] = bots[n].marca()
             await e.fn(ctx)
           })(),
-          dormir(e.timeoutMs ?? 45000).then(() => { throw new Error(`tiempo agotado (${e.timeoutMs ?? 45000} ms)`) })
+          // Spec 024: el reloj se apaga al terminar; si no, una escena de 15 min dejaba a node vivo después de la corrida.
+          new Promise((resolve, reject) => { reloj = setTimeout(() => reject(new Error(`tiempo agotado (${e.timeoutMs ?? 45000} ms)`)), e.timeoutMs ?? 45000) })
         ])
         if (!ctx.ultimaFoto) await ctx.foto()
         const r = await guardar(ctx.ultimaFoto.lienzo, path.join(salida, e.id + '.png'))
@@ -291,6 +298,7 @@ async function principal () {
         resultados.push({ e, estado: 'falló', err })
         console.log(`  ✘ ${e.id}\n    ${String(err.message).split('\n').join('\n    ')}`)
       } finally {
+        clearTimeout(reloj)
         if (preparar) await cfg.despuesDeCada?.(ctx, e).catch(() => {})
       }
     }
@@ -309,6 +317,7 @@ async function principal () {
       await srv.sincronizar().catch(() => {})
     }
     await srv.detener()
+    await cfg.alTerminar?.().catch(() => {})
     for (const { a, retirar } of cfg.copiar) if (retirar) fs.rmSync(path.join(run, a), { recursive: true, force: true }) // H1 CA3
   }
   // Escenas que muestran lo que pasa al apagar (server_stop): con el log completo y sin jugadores.

@@ -1,0 +1,66 @@
+[CENTER][IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/skinstatues/presentacion/1-header.png[/IMG][IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/skinstatues/presentacion/2-giant.png[/IMG][IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/skinstatues/presentacion/3-any-player.png[/IMG][IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/skinstatues/presentacion/4-build.gif[/IMG][IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/skinstatues/presentacion/5-name-or-link.png[/IMG][IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/skinstatues/presentacion/6-features.png[/IMG][IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/skinstatues/presentacion/7-how-to-start.png[/IMG]
+
+[SIZE=5][B]Block statues of any player's skin[/B][/SIZE]
+Type a name (or a skin link) and a height, and the player's figure is built in the world out of blocks, in the pose you choose, with the second skin layer in relief and the cape on its back. From 8 to 128 blocks tall.[/CENTER]
+
+[SIZE=5][B]Commands[/B][/SIZE]
+[LIST]
+[*][FONT=Courier New]/statue build <name|link> <height> [pose] [--at <x> <y> <z>] [--facing <dir>] [--world <w>] [--palette <p>] [--slim|--classic] [--no-overlay] [--no-cape][/FONT]: build a statue. Without [FONT=Courier New]--at[/FONT] its feet go 2 blocks above you and it faces where you look.
+[*][FONT=Courier New]/statue undo[/FONT], [FONT=Courier New]/statue remove <id>[/FONT]: take a statue away and put back the terrain that was there.
+[*][FONT=Courier New]/statue cancel[/FONT], [FONT=Courier New]/statue list[/FONT], [FONT=Courier New]/statue info <id>[/FONT], [FONT=Courier New]/statue poses[/FONT], [FONT=Courier New]/statue palettes[/FONT].
+[*][FONT=Courier New]/statue reload[/FONT], [FONT=Courier New]/statue validate[/FONT], [FONT=Courier New]/statue selftest[/FONT] (admin).
+[/LIST]
+Permissions (all [B]op[/B] by default): [FONT=Courier New]skinstatues.build[/FONT], [FONT=Courier New]skinstatues.build.url[/FONT] (skins from a link), [FONT=Courier New]skinstatues.remove[/FONT], [FONT=Courier New]skinstatues.remove.others[/FONT], [FONT=Courier New]skinstatues.admin[/FONT]. Players without a permission do not see those subcommands when they press Tab.
+
+[SIZE=5][B]Key settings[/B][/SIZE] (config.yml)
+[LIST]
+[*][FONT=Courier New]network.mojang: false[/FONT]: turn it on to get skins by account name from Mojang. Without it, skins come from [FONT=Courier New]plugins/SkinStatues/skins/<name>.png[/FONT] (an original [FONT=Courier New]Example[/FONT] skin is included).
+[*][FONT=Courier New]network.urls: false[/FONT]: turn it on for skins from an https link. Only a real skin PNG (64×64 or 64×32, up to 1 MB) from a public site; [FONT=Courier New]network.allowed_hosts[/FONT] restricts the sites.
+[*][FONT=Courier New]min_height[/FONT] / [FONT=Courier New]max_height[/FONT] (8 / 128), [FONT=Courier New]max_blocks[/FONT], [FONT=Courier New]offset_up[/FONT], [FONT=Courier New]build.blocks_per_tick[/FONT].
+[*][FONT=Courier New]poses.yml[/FONT]: your own poses with angles in degrees, [FONT=Courier New]extends[/FONT] and [FONT=Courier New]mirror[/FONT]. [FONT=Courier New]palettes.yml[/FONT]: whitelists of blocks (wool, concrete, terracotta…).
+[/LIST]
+Every file is checked when it loads: a mistake names the file, the path and what is wrong, with a "did you mean…?". Messages are in English (MiniMessage) and can be translated.
+
+[SIZE=5][B]Compatibility[/B][/SIZE]
+[LIST]
+[*][B]Paper[/B] 1.21.4 and 26.1.2: verified (in-game test suite). Other Paper 1.21.x and 26.x: not verified.
+[*][B]Java 21+[/B] (Paper 26.x needs Java 25).
+[*]Not supported: Spigot/CraftBukkit and Folia.
+[*]No dependencies. Network access only if you turn on [FONT=Courier New]network.mojang[/FONT] or [FONT=Courier New]network.urls[/FONT].
+[*]Not yet: armor and items in the hands, filled statues, diagonal facing.
+[/LIST]
+
+[SIZE=5][B]Links[/B][/SIZE]
+[LIST]
+[*]Documentation: [URL]https://github.com/leonardos4enz/fabrica-de-plugins/blob/main/plugins/skinstatues/README.md[/URL]
+[*]Source (MIT): [URL]https://github.com/leonardos4enz/fabrica-de-plugins[/URL]
+[*]Bug reports: [URL=https://github.com/leonardos4enz/fabrica-de-plugins/issues]GitHub issues[/URL]
+[/LIST]
+
+[I]Skins shown belong to their respective creators; SkinStatues is not affiliated with or endorsed by them or by Mojang.[/I]
+
+[I]Code and documentation were written with the help of an AI coding assistant (Claude), directed and reviewed by the author and verified with an automated in-game test suite.[/I]
+
+[SPOILER="Image transcription"]
+[B]Header.[/B] SkinStatues. Any player. Any skin. Any size. 28 poses · up to 128 blocks · by name or by link.
+
+[B]100 blocks tall.[/B] A 100-block statue of Technoblade standing in a generated world.
+
+[B]Any player, any pose.[/B] A row of statues of Vegetta777, Willyrex, elrubius, Mikecrack, Dream and GeorgeNotFound, each in a different pose.
+
+[B]Watch it build.[/B] ElRichMC's statue appearing layer by layer, and a close-up of the second skin layer in relief.
+
+[B]By name or by link.[/B] /statue build DanTDM 40 waving and /statue build https://i.imgur.com/….png 40 pointing_left. Bobicraft built in wool, in concrete and in terracotta.
+
+[B]Features.[/B]
+[LIST]
+[*]Hollow: only the skin surface is built, so a big statue costs a fraction of the blocks.
+[*]Both skin layers: hat, jacket, sleeves and pants in relief, joined to the first layer.
+[*]28 poses + your own: poses.yml, extends and mirror.
+[*]Undo restores the terrain: every replaced block is saved and put back.
+[*]No lag: computed off the main thread, placed in batches per tick.
+[*]Anywhere: --at and --facing, from the console, even in far chunks.
+[/LIST]
+
+[B]How to start.[/B] 1. Drop the jar in plugins/. 2. /statue build Example 32. 3. network.mojang: true for skins by name, or network.urls: true for links. 4. /statue poses to see every pose.
+[/SPOILER]

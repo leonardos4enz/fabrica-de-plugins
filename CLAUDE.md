@@ -148,12 +148,19 @@ con `--release 21`.
   de edición. Dos partes que se cruzan (la cara en el brazo en `dabbing`) llenan el «interior» de otra: la prueba de
   cáscara salta esos puntos.
 - **Spec 023 (skins por link):** la suite sirve las skins con un HTTPS local (`tests-e2e/lib/https-local.mjs`, la suite
+
   lo pide con `antesDeArrancar`/`alTerminar`). El `trustStore` que se le pasa a Paper tiene que ser una **copia del
   `cacerts` del JDK** con el certificado agregado: uno con solo el local rompe el HTTPS de Paper («Failed to request
   yggdrasil public key», cuenta como error del log). `permissions.yml` **no puede redefinir** un permiso del `plugin.yml`
   («The permission skinstatues.build is already defined!»): se da como hijo de uno propio (`e2e.x: {default: true,
   children: {skinstatues.build: true}}`). `statue undo` desde la consola deshace la última **de la consola**: para la de
   un jugador, `statue remove <id>`. Paper anota en su log cada comando de un jugador (link incluido): eso no es del plugin.
+- **Spec 024 (escenas de SkinStatues):** el visor 3D de las capturas veía solo 3 chunks: `Camara(bot, puerto, { distancia })`
+  (12 para una estatua de 100, con `view-distance` 12 en el servidor) y, tras un `tp`, ~20 s hasta que arma los chunks. `tp`
+  con enteros centra en el bloque (0 → 0.5): esperar la posición exacta nunca se cumple, mandar decimales. Para un GIF de
+  la obra, `build.blocks_per_tick` bajo (12). Un `Promise.race` con `dormir(timeout)` deja node vivo hasta el timeout: usar
+  `setTimeout` con `clearTimeout`. **Mirar la skin actual de cada cuenta antes de usarla:** la de Quackity era Mickey Mouse
+  (personaje de Disney) y se cambió por DanTDM. El servidor de las escenas es `run-capturas/` (puerto 25597), nunca `run/`.
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

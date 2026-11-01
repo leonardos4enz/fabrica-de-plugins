@@ -1,6 +1,6 @@
-// Página de presentación (spec 020): saca el logo, el banner y las franjas de docs/site/assets-src/presentacion.html
-// con Chrome sin interfaz y arma los GIF de los ejemplos con ffmpeg a partir de los cuadros de las escenas en inglés
-// (npm run capturas -- --escenas presentacion). No necesita servidor. Uso: npm --prefix tests-e2e run presentacion
+// Página de presentación (specs 020 y 024): saca el logo y las franjas del HTML de cada plugin con Chrome sin interfaz y
+// arma los GIF con ffmpeg a partir de los cuadros de las escenas (npm run capturas -- --escenas presentacion). No
+// necesita servidor. Uso: npm --prefix tests-e2e run presentacion [-- --plugin skinstatues]   (sin --plugin: OmniEvents)
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -9,40 +9,82 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { abrirNavegador } from './lib/capturas/visor.mjs'
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const FUENTE = path.join(RAIZ, 'docs/site/assets-src/presentacion.html')
-const ASSETS = path.join(RAIZ, 'docs/site/pages/assets')
-const SALIDA = path.join(ASSETS, 'presentacion')
-/** Pieza del HTML → archivo. `cuadros`: cuántos pasos tiene su GIF (el más largo de sus dos escenas). */
-const PIEZAS = [
-  { id: 'logo', archivo: path.join(ASSETS, 'logo.png'), transparente: true },
-  { id: 'banner', archivo: path.join(ASSETS, 'banner.png') },
-  { id: 'franja-1', archivo: path.join(SALIDA, '1-header.png') },
-  { id: 'franja-2', archivo: path.join(SALIDA, '2-examples.gif'), cuadros: 2 },
-  { id: 'franja-3', archivo: path.join(SALIDA, '3-integrations.gif'), cuadros: 3 },
-  { id: 'franja-4', archivo: path.join(SALIDA, '4-only-in-omnievents.png') },
-  { id: 'franja-5', archivo: path.join(SALIDA, '5-yaml-to-game.png') },
-  { id: 'franja-6', archivo: path.join(SALIDA, '6-from-conditionalevents.png') },
-  { id: 'franja-7', archivo: path.join(SALIDA, '7-how-to-start.png') }
-]
+
+/**
+ * Por plugin: la fuente HTML y sus piezas (#id → archivo). `cuadros`: cuántos pasos tiene el GIF de la pieza (un número,
+ * o una función que lo calcula con las escenas que existan). `marcadores`: si el HTML puede dibujar un marcador gris en
+ * lugar de una escena que falta (se avisa); si no, una imagen que falta es un error.
+ */
+function plugins () {
+  const assets = path.join(RAIZ, 'docs/site/pages/assets')
+  const oe = path.join(assets, 'presentacion')
+  const ss = path.join(RAIZ, 'docs/img/skinstatues/presentacion')
+  return {
+    omnievents: {
+      fuente: path.join(RAIZ, 'docs/site/assets-src/presentacion.html'),
+      salida: oe,
+      piezas: [
+        { id: 'logo', archivo: path.join(assets, 'logo.png'), transparente: true },
+        { id: 'banner', archivo: path.join(assets, 'banner.png') },
+        { id: 'franja-1', archivo: path.join(oe, '1-header.png') },
+        { id: 'franja-2', archivo: path.join(oe, '2-examples.gif'), cuadros: 2 },
+        { id: 'franja-3', archivo: path.join(oe, '3-integrations.gif'), cuadros: 3 },
+        { id: 'franja-4', archivo: path.join(oe, '4-only-in-omnievents.png') },
+        { id: 'franja-5', archivo: path.join(oe, '5-yaml-to-game.png') },
+        { id: 'franja-6', archivo: path.join(oe, '6-from-conditionalevents.png') },
+        { id: 'franja-7', archivo: path.join(oe, '7-how-to-start.png') }
+      ]
+    },
+    skinstatues: {
+      fuente: path.join(RAIZ, 'docs/site/assets-src/skinstatues.html'),
+      salida: ss,
+      marcadores: true,
+      piezas: [
+        { id: 'logo', archivo: path.join(ss, 'logo.png'), transparente: true },
+        { id: 'franja-1', archivo: path.join(ss, '1-header.png') },
+        { id: 'franja-2', archivo: path.join(ss, '2-giant.png') },
+        { id: 'franja-3', archivo: path.join(ss, '3-any-player.png') },
+        // build-1.png … build-N.png de tests-e2e/skinstatues/presentacion.mjs (build-close.png es la foto de al lado)
+        { id: 'franja-4', archivo: path.join(ss, '4-build.gif'), cuadros: () => cuadrosDe(path.join(ss, 'escenas'), 'build') },
+        { id: 'franja-5', archivo: path.join(ss, '5-name-or-link.png') },
+        { id: 'franja-6', archivo: path.join(ss, '6-features.png') },
+        { id: 'franja-7', archivo: path.join(ss, '7-how-to-start.png') }
+      ]
+    }
+  }
+}
 const SEGUNDOS_POR_CUADRO = 2.4
 
-async function abrir (navegador, cuadro) {
+/** Cuántos `<prefijo>-1.png`, `<prefijo>-2.png`… seguidos hay en la carpeta (al menos 1: sin cuadros, un marcador). */
+function cuadrosDe (dir, prefijo) {
+  let n = 0
+  while (fs.existsSync(path.join(dir, `${prefijo}-${n + 1}.png`))) n++
+  return Math.max(1, n)
+}
+
+function argumento (nombre) {
+  const i = process.argv.indexOf(nombre)
+  return i >= 0 ? process.argv[i + 1] : undefined
+}
+
+async function abrir (navegador, plugin, consulta = '') {
   const pagina = await navegador.newPage()
   await pagina.setViewport({ width: 1600, height: 1000 })
-  const url = pathToFileURL(FUENTE).href + (cuadro ? `?cuadro=${cuadro}` : '')
-  await pagina.goto(url, { waitUntil: 'networkidle0' })
-  await pagina.evaluate(async () => {
+  await pagina.goto(pathToFileURL(plugin.fuente).href + consulta, { waitUntil: 'networkidle0' })
+  const faltan = await pagina.evaluate(async () => {
     await document.fonts.ready
     await Promise.all([...document.images].map(i => i.complete ? null : new Promise(r => { i.onload = i.onerror = r })))
     const rotas = [...document.images].filter(i => !i.naturalWidth).map(i => i.getAttribute('src'))
     if (rotas.length) throw new Error('Faltan imágenes (¿corriste las escenas?): ' + rotas.join(', '))
+    return [...document.querySelectorAll('[data-falta]')].map(e => e.dataset.falta)
   })
-  return pagina
+  if (faltan.length && !plugin.marcadores) throw new Error('Faltan imágenes: ' + faltan.join(', '))
+  return { pagina, faltan }
 }
 
-async function foto (pagina, id, archivo, transparente = false) {
+async function foto (pagina, plugin, id, archivo, transparente = false) {
   const el = await pagina.$('#' + id)
-  if (!el) throw new Error(`No hay #${id} en ${FUENTE}`)
+  if (!el) throw new Error(`No hay #${id} en ${plugin.fuente}`)
   await el.screenshot({ path: archivo, omitBackground: transparente })
 }
 
@@ -54,30 +96,39 @@ function gif (cuadros, archivo) {
 }
 
 async function principal () {
-  fs.mkdirSync(SALIDA, { recursive: true })
+  const nombre = argumento('--plugin') || 'omnievents'
+  const plugin = plugins()[nombre]
+  if (!plugin) throw new Error(`Plugin desconocido: ${nombre} (hay: ${Object.keys(plugins()).join(', ')})`)
+  fs.mkdirSync(plugin.salida, { recursive: true })
   const navegador = await abrirNavegador()
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'presentacion-'))
+  const marcadores = new Set()
   try {
-    const pagina = await abrir(navegador)
-    for (const p of PIEZAS.filter(x => !x.cuadros)) {
-      await foto(pagina, p.id, p.archivo, p.transparente)
+    const { pagina, faltan } = await abrir(navegador, plugin)
+    faltan.forEach(f => marcadores.add(f))
+    for (const p of plugin.piezas.filter(x => !x.cuadros)) {
+      await foto(pagina, plugin, p.id, p.archivo, p.transparente)
       console.log(`  + ${path.relative(RAIZ, p.archivo)}`)
     }
-    for (const p of PIEZAS.filter(x => x.cuadros)) {
+    for (const p of plugin.piezas.filter(x => x.cuadros)) {
+      const total = typeof p.cuadros === 'function' ? p.cuadros() : p.cuadros
       const dir = path.join(tmp, p.id)
       fs.mkdirSync(dir)
-      for (let n = 1; n <= p.cuadros; n++) {
-        const pg = await abrir(navegador, n)
-        await foto(pg, p.id, path.join(dir, `${n}.png`))
+      for (let n = 1; n <= total; n++) {
+        // OmniEvents solo lee ?cuadro; SkinStatues también ?cuadros (cuántos hay, para el rótulo n/N)
+        const { pagina: pg, faltan: f } = await abrir(navegador, plugin, `?cuadro=${n}` + (nombre === 'omnievents' ? '' : `&cuadros=${total}`))
+        f.forEach(x => marcadores.add(x))
+        await foto(pg, plugin, p.id, path.join(dir, `${n}.png`))
         await pg.close()
       }
       gif(dir, p.archivo)
-      console.log(`  + ${path.relative(RAIZ, p.archivo)} (${p.cuadros} cuadros, ${Math.round(fs.statSync(p.archivo).size / 1024)} KB)`)
+      console.log(`  + ${path.relative(RAIZ, p.archivo)} (${total} cuadros, ${Math.round(fs.statSync(p.archivo).size / 1024)} KB)`)
     }
   } finally {
     await navegador.close()
     fs.rmSync(tmp, { recursive: true, force: true })
   }
+  if (marcadores.size) console.log(`  ! Con marcador gris (faltan las escenas): ${[...marcadores].join(', ')}`)
 }
 
 principal().catch(err => {
