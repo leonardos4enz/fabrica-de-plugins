@@ -7,7 +7,7 @@ description: Block statues of any player's skin, at the height and pose you choo
 commands:
   statue:
     description: Build, undo and manage skin statues.
-    usage: /statue build <name> <height> [pose]
+    usage: /statue build <name> <height> [pose] [--at <x> <y> <z>] [--facing <dir>]
     aliases: [statues]
 permissions:
   skinstatues.build:

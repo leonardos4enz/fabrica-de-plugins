@@ -2,6 +2,10 @@ package dev.leo.skinstatues.model;
 
 import dev.leo.skinstatues.model.Pose.Angles;
 import dev.leo.skinstatues.model.Pose.Part;
+import dev.leo.skinstatues.config.Issues;
+import dev.leo.skinstatues.config.LoadedConfig;
+import dev.leo.skinstatues.config.PoseLoader;
+import dev.leo.skinstatues.config.TestResources;
 import dev.leo.skinstatues.skin.Skin;
 import org.junit.jupiter.api.Test;
 
@@ -44,20 +48,14 @@ class VoxelizerTest {
         return new Pose(name, m);
     }
 
-    /** Las mismas poses de ejemplo que trae poses.yml (PoseLoaderTest comprueba que el archivo carga). */
+    /** Las poses que trae el plugin, de builtin-poses.yml (spec 022 H1 CA5: todas pasan las mismas pruebas). */
     static List<Pose> examplePoses() {
-        return List.of(Pose.STANDING,
-                pose("waving", Part.HEAD, new double[]{-5, 10, 0}, Part.RIGHT_ARM, new double[]{0, 0, 135, 40},
-                        Part.CAPE, new double[]{8, 0, 0}),
-                pose("walking", Part.RIGHT_ARM, new double[]{30, 0, 0, 15}, Part.LEFT_ARM, new double[]{-30, 0, 0, 15},
-                        Part.RIGHT_LEG, new double[]{-25, 0, 0, 20}, Part.LEFT_LEG, new double[]{25, 0, 0, 5},
-                        Part.CAPE, new double[]{15, 0, 0}),
-                pose("victory", Part.HEAD, new double[]{-15, 0, 0}, Part.RIGHT_ARM, new double[]{0, 0, 160, 10},
-                        Part.LEFT_ARM, new double[]{0, 0, 160, 10}),
-                pose("pointing", Part.HEAD, new double[]{0, -10, 0}, Part.RIGHT_ARM, new double[]{90, 0, 0},
-                        Part.LEFT_ARM, new double[]{-5, 0, 5}),
-                pose("sitting", Part.RIGHT_LEG, new double[]{90, 0, 8, 90}, Part.LEFT_LEG, new double[]{90, 0, 8, 90},
-                        Part.RIGHT_ARM, new double[]{20, 0, 0, 30}, Part.LEFT_ARM, new double[]{20, 0, 0, 30}));
+        Issues issues = new Issues();
+        List<Pose> out = List.copyOf(PoseLoader.load(TestResources.builtinPoses(), LoadedConfig.BUILTIN_POSES, null, null,
+                issues).poses().values());
+        assertTrue(issues.all().isEmpty(), issues.all().toString());
+        assertEquals("sitting", out.get(5).name());
+        return out;
     }
 
     @Test
@@ -228,8 +226,36 @@ class VoxelizerTest {
     }
 
     @Test
+    void spec022_H1_CA5_ninguna_pose_incorporada_baja_de_los_pies() {
+        for (Pose p : examplePoses()) {
+            VoxelGrid g = Voxelizer.run(Skin.of(image(), false, cape()), p, layered(32));
+            int min = Integer.MAX_VALUE;
+            for (int i = 0; i < g.size(); i++) min = Math.min(min, g.y(i));
+            assertEquals(0, min, p.name());
+            assertTrue(g.height() <= 36, p.name() + " no pasa mucho del alto pedido: " + g.height());
+        }
+    }
+
+    @Test
+    void spec022_H2_CA2_el_espejo_de_una_pose_es_la_estatua_reflejada() {
+        BufferedImage one = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
+        fill(one, 0, 0, 64, 64, RED);
+        Skin skin = Skin.of(one, false, null);
+        for (Pose p : examplePoses()) {
+            Set<Long> want = new HashSet<>();
+            VoxelGrid g = Voxelizer.run(skin, p, flat(32));
+            for (int i = 0; i < g.size(); i++) want.add(VoxelGrid.key(-1 - g.x(i), g.y(i), g.z(i)));
+            VoxelGrid m = Voxelizer.run(skin, p.mirrored(p.name() + "_mirrored"), flat(32));
+            Set<Long> got = new HashSet<>();
+            for (int i = 0; i < m.size(); i++) got.add(VoxelGrid.key(m.x(i), m.y(i), m.z(i)));
+            assertEquals(want, got, p.name() + ": el espejo bloque por bloque");
+        }
+    }
+
+    @Test
     void H4_CA2_y_H1_CA4_cascara_cerrada_en_todas_las_poses() {
         Skin skin = Skin.of(image(), false, cape());
+        int checked = 0, overlapped = 0;
         for (Pose p : examplePoses()) {
             for (double yaw : new double[]{0, 90}) {
                 Voxelizer.Options o = new Voxelizer.Options(128, yaw, true, 0.5, 128, false);
@@ -243,12 +269,19 @@ class VoxelizerTest {
                     for (Vec3 start : seg.miterPoint == null ? List.of(c) : List.of(c, seg.miterPoint)) {
                         Vec3 w = facing.mul(seg.toModel.apply(start)).scale(g.scale());
                         int sx = (int) Math.floor(w.x()), sy = (int) Math.floor(w.y()) + g.shift(), sz = (int) Math.floor(w.z());
-                        assertFalse(solid.contains(VoxelGrid.key(sx, sy, sz)), p.name() + " " + seg.name + ": el interior es hueco");
+                        if (solid.contains(VoxelGrid.key(sx, sy, sz))) {
+                            // Otra parte pasa por dentro (la cara metida en el brazo en dabbing): no hay hueco que medir.
+                            assertNotEquals(Pose.STANDING, p, seg.name + ": de pie, el interior es hueco");
+                            overlapped++;
+                            continue;
+                        }
+                        checked++;
                         assertFalse(leaks(solid, g, sx, sy, sz), p.name() + " (" + yaw + "°) " + seg.name + ": la cáscara tiene un hueco");
                     }
                 }
             }
         }
+        assertTrue(overlapped * 20 < checked, "casi todos los puntos se comprueban: " + overlapped + " de " + checked);
     }
 
     /** Inundación por bloques vacíos (6 vecinos) desde dentro: si llega al borde de la caja, hay un agujero. */

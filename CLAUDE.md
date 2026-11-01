@@ -138,6 +138,15 @@ con `--release 21`.
   las escalas no enteras ponen centros de bloque justo en el plano de una cara: comparar con igual y probar con una
   inundación desde dentro (`VoxelizerTest`); y lo que depende de un umbral se decide con el valor pedido, no con uno ya
   ajustado (F-03).
+- **Spec 022 (SkinStatues 0.2.0):** las poses del plugin se leen **del jar** (`builtin-poses.yml`) y `poses.yml` solo
+  agrega o reemplaza: un archivo que se copia «si no existe» nunca trae lo nuevo a quien actualiza (como la 019 F-01).
+  El servidor de prueba `run/` puede tener el mundo y las estatuas del dueño (juega ahí): antes de la suite, apartar
+  `world*` y `plugins/SkinStatues` y devolverlos al final (la suite limpia el área de X, Z = 40 y pisa `config.yml`). Tras
+  construir lejos, el plugin suelta los tickets y Paper descarga el chunk: para mirar un bloque ahí, `forceload add`
+  («That position is not loaded»). Una estatua que quedó de una corrida interrumpida cambia la siguiente: limpiar
+  también lo lejano. En Git Bash, `node -e '…'` con un apóstrofo en el texto corta la cadena: usar las herramientas
+  de edición. Dos partes que se cruzan (la cara en el brazo en `dabbing`) llenan el «interior» de otra: la prueba de
+  cáscara salta esos puntos.
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

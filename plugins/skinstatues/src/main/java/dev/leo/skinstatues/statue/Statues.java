@@ -70,16 +70,21 @@ public final class Statues {
     public record Request(String name, int height, Pose pose, BlockPalette palette, boolean overlay, boolean cape) {
     }
 
-    /** H1: los pies 2 bloques arriba del jugador (offset_up), mirando hacia donde mira, redondeado a N/S/E/O. */
-    public void build(Player player, Request req) {
+    /** Dónde van los pies (el bloque base, centro de la estatua) y hacia dónde mira (0 = sur, 90 = oeste…). */
+    public record Target(World world, int x, int y, int z, int facing) {
+    }
+
+    /**
+     * Spec 021 H1 y 022 H3: la estatua en ese lugar (el comando ya decidió si es sobre el jugador o en unas
+     * coordenadas). Quien la pide puede ser un jugador o la consola.
+     */
+    public void build(CommandSender sender, Target target, Request req) {
         Settings st = plugin.config().settings();
-        Location loc = player.getLocation();
-        World world = loc.getWorld();
-        int bx = loc.getBlockX(), by = loc.getBlockY() + st.offsetUp(), bz = loc.getBlockZ();
-        int facing = Math.floorMod(Math.round(loc.getYaw() / 90f), 4) * 90;
-        UUID who = player.getUniqueId();
-        String whoName = player.getName();
-        player.sendMessage(plugin.messages().get("loading-skin", "name", req.name()));
+        World world = target.world();
+        int bx = target.x(), by = target.y(), bz = target.z(), facing = target.facing();
+        UUID who = sender instanceof Player p ? p.getUniqueId() : CONSOLE;
+        String whoName = sender instanceof Player p ? p.getName() : "Console";
+        sender.sendMessage(plugin.messages().get("loading-skin", "name", req.name()));
 
         SkinRepository repo = plugin.skins();
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
@@ -145,6 +150,7 @@ public final class Statues {
         private final BlockData[] datas;
         private final Journal[] journal = new Journal[1]; // solo se toca desde el hilo de E/S
         private int next, placed, kept, steps;
+        private ChunkHold hold;
 
         BuildJob(Statue statue, World world, StatuePlan plan, BlockData[] datas) {
             this.statue = statue;
@@ -155,6 +161,8 @@ public final class Statues {
 
         @Override
         public void start() {
+            hold = ChunkHold.acquire(plugin, world, statue.x() + plan.minX, statue.x() + plan.maxX,
+                    statue.z() + plan.minZ, statue.z() + plan.maxZ);
             io.execute(() -> {
                 try {
                     journal[0] = Journal.create(store.journal(statue.id()));
@@ -166,6 +174,7 @@ public final class Statues {
 
         @Override
         public boolean step(long deadline, int maxBlocks) {
+            if (!hold.ready()) return false; // los chunks todavía se están cargando (spec 022 H3 CA6)
             List<Journal.Entry> batch = new ArrayList<>();
             int done = 0;
             while (next < plan.size() && done < maxBlocks) {
@@ -174,8 +183,9 @@ public final class Statues {
                 Block b = world.getBlockAt(statue.x() + plan.dx[k], statue.y() + plan.dy[k], statue.z() + plan.dz[k]);
                 BlockData target = datas[plan.block[k]];
                 Journal.Entry e = place(b, target, plan.dx[k], plan.dy[k], plan.dz[k]);
-                if (e == null) kept++;
-                else {
+                // Regresión (spec 022, F-01): un bloque que ya era el de la estatua no es uno «con contenido».
+                if (e == null && !b.getBlockData().equals(target)) kept++;
+                else if (e != null) {
                     batch.add(e);
                     placed++;
                 }
@@ -206,6 +216,7 @@ public final class Statues {
         }
 
         private void finish(State state) {
+            if (hold != null) hold.release();
             io.execute(() -> {
                 try {
                     if (journal[0] != null) journal[0].close();
@@ -284,6 +295,7 @@ public final class Statues {
         private final UUID who;
         private final Map<String, BlockData> parsed = new HashMap<>();
         private int next, restored, changed;
+        private ChunkHold hold;
 
         RemoveJob(Statue statue, World world, List<Journal.Entry> entries, UUID who) {
             this.statue = statue;
@@ -293,7 +305,20 @@ public final class Statues {
         }
 
         @Override
+        public void start() {
+            int minX = 0, maxX = 0, minZ = 0, maxZ = 0;
+            for (Journal.Entry e : entries) {
+                minX = Math.min(minX, e.dx());
+                maxX = Math.max(maxX, e.dx());
+                minZ = Math.min(minZ, e.dz());
+                maxZ = Math.max(maxZ, e.dz());
+            }
+            hold = ChunkHold.acquire(plugin, world, statue.x() + minX, statue.x() + maxX, statue.z() + minZ, statue.z() + maxZ);
+        }
+
+        @Override
         public boolean step(long deadline, int maxBlocks) {
+            if (!hold.ready()) return false;
             int done = 0;
             while (next < entries.size() && done < maxBlocks) {
                 if ((done & 255) == 255 && System.nanoTime() >= deadline) break;
@@ -304,6 +329,7 @@ public final class Statues {
                 done++;
             }
             if (next < entries.size()) return false;
+            hold.release();
             store.remove(statue.id());
             saveIndex();
             io.execute(() -> {
@@ -324,6 +350,7 @@ public final class Statues {
         @Override
         public void cancel() {
             // Al apagar: lo que falta se quita la próxima vez (el diario sigue ahí).
+            if (hold != null) hold.release();
         }
 
         @Override

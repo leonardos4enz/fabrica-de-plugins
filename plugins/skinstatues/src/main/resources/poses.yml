@@ -1,40 +1,46 @@
-# SkinStatues - poses. Use one with /statue build <name> <height> <pose>.
+# SkinStatues - YOUR poses. Use one with /statue build <name> <height> <pose>, apply changes with /statue reload.
 #
-# Parts: head, body, right_arm, left_arm, right_leg, left_leg, cape.
-# Angles in degrees (-180..180):
-#   pitch  arms/legs: + raises it forward    head: + looks down    body: + leans forward    cape: + lifts it back
-#   yaw    + turns to the statue's left
-#   roll   arms/legs: + opens it outward      head/body: + tilts to its left
-#   elbow  (arms) 0..150: bends the forearm forward
-#   knee   (legs) 0..150: bends the lower leg backward
-# The body carries the head, the arms and the cape with it. "standing" (no angles) always exists.
+# The plugin already has 28 poses built in (standing, waving, running, t_pose, sitting, lying...): see them all
+# with /statue poses, and their numbers in builtin-poses.yml (next to this file). Poses written here are added
+# to those; one with the same name as a built-in pose replaces it.
+#
+# ---------------------------------------------------------------------------------------------------------
+# HOW A POSE IS WRITTEN
+#   Parts:  head, body, right_arm, left_arm, right_leg, left_leg, cape   ("right" is the statue's own right)
+#   Each part takes angles in degrees from -180 to 180. Leave out what does not move.
+#
+#   angle   arms and legs                      head                   body                   cape
+#   pitch   + forward/up, - backward           + looks down           + leans forward        + lifts it back
+#   yaw     + turns toward the statue's left   + looks to its left    + turns to its left    + turns to its left
+#   roll    + opens outward (to the side)      + tilts to its left    + tilts to its left    + tilts to its left
+#   elbow   (arms only) 0..150: bends the forearm forward
+#   knee    (legs only) 0..150: bends the lower leg backward
+#
+#   Handy values:  arm straight forward  { pitch: 90 }     arm straight up       { pitch: 180 } or { roll: 180 }
+#                  arm out to the side   { roll: 90 }      hand to the shoulder  { elbow: 150 }
+#                  leg like sitting      { pitch: 90, knee: 90 }
+#   The body carries the head, the arms and the cape with it; the legs stay where they are.
+#   Angles are applied pitch first, then yaw, then roll. A yaw on an arm that hangs down only turns the
+#   direction its elbow bends: { yaw: 60, elbow: 100 } on the right arm brings the hand across the belly.
+#
+# START FROM ANOTHER POSE: extends
+#   extends: <pose>    starts from that pose (built-in or yours) and changes only what you write, angle by
+#                      angle: "right_arm: { elbow: 90 }" keeps the pitch and roll that arm already had.
+#   mirror: true       (with extends) flips the pose left <-> right first: wave with the other hand.
+#
+# Mistakes are reported when the file loads (file, path, what is wrong, "did you mean...?"); the other poses
+# keep working. /statue validate lists them.
+# ---------------------------------------------------------------------------------------------------------
 
-standing: {}
+# Two examples of your own poses. Rename them, change them or delete them.
 
-waving:
-  head: { pitch: -5, yaw: 10 }
-  right_arm: { roll: 135, elbow: 40 }
-  cape: { pitch: 8 }
+# Like "waving", but with the elbow bent more.
+my_wave:
+  extends: waving
+  right_arm: { elbow: 90 }
 
-walking:
-  right_arm: { pitch: 30, elbow: 15 }
-  left_arm: { pitch: -30, elbow: 15 }
-  right_leg: { pitch: -25, knee: 20 }
-  left_leg: { pitch: 25, knee: 5 }
-  cape: { pitch: 15 }
-
-victory:
-  head: { pitch: -15 }
-  right_arm: { roll: 160, elbow: 10 }
-  left_arm: { roll: 160, elbow: 10 }
-
-pointing:
-  head: { yaw: -10 }
-  right_arm: { pitch: 90 }
-  left_arm: { pitch: -5, roll: 5 }
-
-sitting:
-  right_leg: { pitch: 90, roll: 8, knee: 90 }
-  left_leg: { pitch: 90, roll: 8, knee: 90 }
-  right_arm: { pitch: 20, elbow: 30 }
-  left_arm: { pitch: 20, elbow: 30 }
+# "pointing" with the left hand, looking a little down.
+my_point_left:
+  extends: pointing
+  mirror: true
+  head: { pitch: 10 }

@@ -13,16 +13,23 @@ public final class StatuePlan {
     final int[] dx, dy, dz, block;
     final String[] ids;
     final int height, width, depth;
+    /** El rectángulo que ocupa, relativo al bloque base (para los chunks). */
+    final int minX, maxX, minZ, maxZ;
 
-    private StatuePlan(int[] dx, int[] dy, int[] dz, int[] block, String[] ids, int height, int width, int depth) {
+    private StatuePlan(int[] dx, int[] dy, int[] dz, int[] block, String[] ids, int height, int minX, int maxX, int minZ,
+                       int maxZ) {
         this.dx = dx;
         this.dy = dy;
         this.dz = dz;
         this.block = block;
         this.ids = ids;
         this.height = height;
-        this.width = width;
-        this.depth = depth;
+        this.width = maxX - minX + 1;
+        this.depth = maxZ - minZ + 1;
+        this.minX = minX;
+        this.maxX = maxX;
+        this.minZ = minZ;
+        this.maxZ = maxZ;
     }
 
     public static StatuePlan of(VoxelGrid g, BlockPalette palette) {
@@ -40,7 +47,7 @@ public final class StatuePlan {
             block[k] = palette.nearest(g.color(i));
         }
         String[] ids = palette.entries().stream().map(BlockPalette.Entry::id).toArray(String[]::new);
-        return new StatuePlan(dx, dy, dz, block, ids, g.height(), g.maxX() - g.minX() + 1, g.maxZ() - g.minZ() + 1);
+        return new StatuePlan(dx, dy, dz, block, ids, g.height(), g.minX(), g.maxX(), g.minZ(), g.maxZ());
     }
 
     public int size() {

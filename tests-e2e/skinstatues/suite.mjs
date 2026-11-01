@@ -2,6 +2,9 @@
 // se comprueba por lo que recibe: mensajes, barra de acción y los bloques que ve en el mundo.
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const POSES_0_1_0 = fileURLToPath(new URL('../../plugins/skinstatues/src/test/resources/poses-0.1.0.yml', import.meta.url))
 
 const ANA = 'Ana_e2e'
 const BETO = 'Beto_e2e'
@@ -91,7 +94,8 @@ export default {
       id: 'H9 CA5 · H9 CA2 · F-02',
       nombre: 'validate sin errores ni notas y selftest desde la consola',
       async fn ({ srv }) {
-        await srv.consola('statue validate', { espera: /Configuration OK: 6 poses, 5 palettes, 145 block colors/ })
+        // 28 poses incorporadas (spec 022) + los 2 ejemplos de poses.yml.
+        await srv.consola('statue validate', { espera: /Configuration OK: 30 poses, 5 palettes, 145 block colors/ })
         await srv.consola('statue selftest', { espera: /Selftest passed: \d+ blocks placed as planned \(\d+ replaced terrain\) and the terrain restored exactly/, timeoutMs: 15000 })
       }
     },
@@ -271,7 +275,7 @@ export default {
         const original = fs.readFileSync(config, 'utf8')
         try {
           fs.writeFileSync(config, original.replace('blocks_per_tick: 4000', 'blocks_per_tick: 20'))
-          await srv.consola('statue reload', { espera: /Reloaded: 6 poses, 5 palettes\. 0 error/ })
+          await srv.consola('statue reload', { espera: /Reloaded: 30 poses, 5 palettes\. 0 error/ })
           await prepararAna(ctx, 0)
           const ana = bots[ANA]
           const m = ana.marca()
@@ -290,7 +294,7 @@ export default {
           fs.writeFileSync(poses, 'waving: [roto\n')
           try {
             await srv.consola('statue reload', { espera: /poses\.yml: invalid YAML .*keeping the previous version/ })
-            await srv.consola('statue poses', { espera: /Poses: standing, waving, walking, victory, pointing, sitting/ })
+            await srv.consola('statue poses', { espera: /Yours \(poses\.yml\): my_wave, my_point_left/ })
           } finally {
             fs.writeFileSync(poses, posesOriginal)
           }
@@ -325,6 +329,162 @@ export default {
         } finally {
           fs.rmSync(path.join(skins, 'Flaca_e2e.png'), { force: true })
           fs.rmSync(path.join(skins, 'Flaca_e2e.yml'), { force: true })
+        }
+      }
+    },
+
+    // ------------------------------------------------------------------ spec 022
+    {
+      id: '022 H3 CA1 · H3 CA2 · H3 CA7 · H1 CA1',
+      nombre: '--at relativo y --facing: los pies en ese bloque, sin offset_up, mirando al norte (pose nueva t_pose)',
+      timeoutMs: 60000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await prepararAna(ctx, 0)
+        const ana = bots[ANA]
+        const facings = (await ana.bot.tabComplete('/statue build Example 16 --facing ')).map(x => x.match ?? x)
+        if (['north', 'south', 'east', 'west'].some(f => !facings.includes(f))) throw new Error(`--facing sugiere ${facings}`)
+        const at = (await ana.bot.tabComplete('/statue build Example 16 --at ')).map(x => x.match ?? x)
+        if (!at.includes('~')) throw new Error(`--at sugiere ${at}`)
+        const flags = (await ana.bot.tabComplete('/statue build Example 16 --')).map(x => x.match ?? x)
+        for (const f of ['--at', '--facing', '--world']) if (!flags.includes(f)) throw new Error(`falta ${f}: ${flags}`)
+
+        // Ana está en (X, -60, Z) mirando al sur; la estatua va 6 bloques al sur, con los pies en y = -60.
+        const r = await construir(ana, 'statue build Example 16 t_pose --at ~ ~ ~6 --facing north')
+        const caja = [[X - 16, X + 16], [-60, -18], [Z - 4, Z + 16]]
+        await ana.hasta(`ver los ${r.puestos} bloques`, b => contar(b, ...caja) === r.puestos, { timeoutMs: 10000 })
+        if (!contar(ana.bot, caja[0], [-60, -60], caja[2])) throw new Error('los pies no están en y = -60 (sin offset_up)')
+        if (contar(ana.bot, caja[0], [-58 + 16, -18], caja[2])) throw new Error('pasa de 16 de alto')
+        if (contar(ana.bot, caja[0], caja[1], [Z - 4, Z + 2])) throw new Error('hay bloques fuera del lugar pedido')
+        // t_pose de frente al norte: los brazos van a lo ancho (x), de unos 16 bloques.
+        if (r.ancho < 16 || r.fondo > 5) throw new Error(`medidas ${r.ancho}×${r.alto}×${r.fondo}: t_pose mirando al norte`)
+        // Mirando al norte la capa queda al sur: la fila de z máxima es verde.
+        let zMax = -Infinity
+        for (let z = Z + 16; z >= Z && zMax === -Infinity; z--) if (contar(ana.bot, caja[0], caja[1], [z, z])) zMax = z
+        const atras = nombres(ana.bot, caja[0], [-56, -50], [zMax, zMax])
+        if (![...atras].some(n => /green|moss/.test(n))) throw new Error(`la capa no está al sur (z=${zMax}): ${[...atras]}`)
+        await srv.consola(`statue info ${r.id}`, { espera: new RegExp(`Where: world ${X} -60 ${Z + 6}, facing north`) })
+        await srv.consola(`statue remove ${r.id}`, { espera: new RegExp(`Statue #${r.id} removed`), timeoutMs: 20000 })
+        await ana.hasta('no ver la estatua', b => contar(b, ...caja) === 0)
+      }
+    },
+    {
+      id: '022 F-01',
+      nombre: 'construir donde ya están esos mismos bloques no dice que había cofres',
+      timeoutMs: 60000,
+      async fn (ctx) {
+        // Regresión (spec 022, F-01): un bloque que ya era el de la estatua se contaba como «con contenido».
+        await prepararAna(ctx, 0)
+        const ana = ctx.bots[ANA]
+        const r1 = await construir(ana, 'statue build Example 16')
+        await ana.hasta(`ver los ${r1.puestos} bloques`, b => contar(b, ...CAJA) === r1.puestos, { timeoutMs: 10000 })
+        const m = ana.marca()
+        const r2 = await construir(ana, 'statue build Example 16')
+        if (r2.puestos !== 0) throw new Error(`encima de una igual puso ${r2.puestos} bloques`)
+        await ana.nunca('chat', /with contents/, { desde: m, ms: 1500 })
+        for (const id of [r2.id, r1.id]) {
+          await ctx.srv.consola(`statue remove ${id}`, { espera: new RegExp(`Statue #${id} removed`), timeoutMs: 20000 })
+        }
+        await ana.hasta('no ver la estatua', b => contar(b, ...CAJA) === 0)
+      }
+    },
+    {
+      id: '022 H3 CA4 · H3 CA5 · H3 CA6',
+      nombre: 'desde la consola, lejos de todo jugador (chunks sin generar), con --world, y undo de la consola',
+      timeoutMs: 120000,
+      async fn ({ srv }) {
+        // Errores primero.
+        await srv.consola('statue build Example 16', { espera: /From the console, say where: .*--at/ })
+        await srv.consola('statue build Example 16 --at ~ 70 0', { espera: /the console is nowhere: use plain numbers with --at/ })
+        await srv.consola('statue build Example 16 --at 0 70 0 --world wrld', { espera: /There is no world 'wrld' \(did you mean 'world'\?\)/ })
+        await srv.consola('statue build Example 16 --at 0 70 zero', { espera: /'zero' is not a coordinate/ })
+        await srv.consola('statue build Example 16 --at 0 70 0 --facing up', { espera: /'up' is not a direction/ })
+        await srv.consola('worldborder set 2000')
+        try {
+          await srv.consola('statue build Example 16 --at 3000 70 3000 --world world', { espera: /3000 70 3000 is outside the world border of world/ })
+        } finally {
+          await srv.consola('worldborder set 59999968')
+        }
+        // Lejos (x = z = 4000: en un mundo nuevo nadie generó esos chunks), mirando al este. Si una corrida anterior
+        // falló a mitad, su estatua sigue ahí: se limpia primero.
+        await srv.consola('forceload add 4000 4000', { espera: /[Mm]arked chunk|force loaded/ })
+        await srv.consola('fill 3990 -60 3990 4010 -40 4010 air')
+        await srv.consola('forceload remove 4000 4000')
+        const m = srv.marca()
+        const plan = await srv.consola('statue build Example 16 waving --at 4000 -60 4000 --world world --facing east',
+          { espera: /Statue #(\d+) of Example: (\d+) blocks/, timeoutMs: 20000 })
+        const [, id, total] = plan.match(/Statue #(\d+) of Example: (\d+) blocks/)
+        await srv.esperarLog(new RegExp(`Statue #${id} of Example is finished \\(${total} blocks\\)`), { desde: m, timeoutMs: 60000 })
+        const mi = srv.marca()
+        await srv.consola(`statue info ${id}`, { espera: /Where: world 4000 -60 4000, facing east/ })
+        await srv.esperarLog(/Built by Console/, { desde: mi })
+        // Al terminar se sueltan los chunks (H3 CA6) y Paper los descarga: para mirar el bloque hay que cargarlo. Lo más alto de la cabeza
+        // (alto 16: la capa 15 sobre los pies; por dentro es hueca) está ahí.
+        await srv.consola('forceload add 4000 4000', { espera: /[Mm]arked chunk|force loaded/ })
+        await srv.consola('execute unless block 4000 -45 4000 minecraft:air', { espera: /Test passed/ })
+        await srv.consola('statue undo', { espera: new RegExp(`Statue #${id} removed: ${total} blocks restored`), timeoutMs: 60000 })
+        await srv.consola('execute if block 4000 -45 4000 minecraft:air', { espera: /Test passed/ })
+        await srv.consola('forceload remove 4000 4000')
+      }
+    },
+    {
+      id: '022 H1 CA2 · H1 CA3 · H1 CA4 · H2 CA1 · H2 CA2 · H2 CA3 · H2 CA5',
+      nombre: 'poses incorporadas y propias: extends, mirror, reemplazo, errores y el poses.yml de la 0.1.0',
+      timeoutMs: 90000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        const carpeta = path.join(srv.run, 'plugins', 'SkinStatues')
+        const poses = path.join(carpeta, 'poses.yml')
+        const original = fs.readFileSync(poses, 'utf8')
+        try {
+          // La copia de referencia existe, dice que se reescribe y vuelve si alguien la edita.
+          const ref = path.join(carpeta, 'builtin-poses.yml')
+          fs.writeFileSync(ref, 'roto: {}\n')
+          await srv.consola('statue reload', { espera: /Reloaded: 30 poses/ })
+          if (!/REWRITTEN every time/.test(fs.readFileSync(ref, 'utf8')) || !/^t_pose:/m.test(fs.readFileSync(ref, 'utf8'))) {
+            throw new Error('builtin-poses.yml no se reescribió')
+          }
+          await srv.consola('statue poses', { espera: /Built in: standing, waving, walking, victory, pointing, sitting, running/ })
+
+          // El poses.yml de la 0.1.0 (las 6 de entonces): sin errores y sin «reemplazos».
+          fs.writeFileSync(poses, fs.readFileSync(POSES_0_1_0, 'utf8'))
+          await srv.consola('statue reload', { espera: /Reloaded: 28 poses, 5 palettes\. 0 error\(s\), 0 note/ })
+          await srv.consola('statue poses', { espera: /Yours \(poses\.yml\): none/ })
+
+          // Propias: reemplazo, extends ángulo por ángulo, mirror y errores que no tumban a las demás.
+          fs.writeFileSync(poses, [
+            't_pose:', '  right_arm: { roll: 45 }', '  left_arm: { roll: 45 }',
+            'apunta_izq:', '  extends: pointing', '  mirror: true',
+            'mas_codo:', '  extends: waving', '  right_arm: { elbow: 120 }',
+            'huerfana:', '  extends: wavng',
+            'circulo:', '  extends: circulo', ''
+          ].join('\n'))
+          await srv.consola('statue reload', { espera: /Reloaded: 30 poses, 5 palettes\. 2 error/ })
+          await srv.consola('statue validate', { espera: /huerfana\.extends: there is no pose 'wavng' \(did you mean 'waving'\?\)/ })
+          const mp = srv.marca()
+          await srv.consola('statue poses', { espera: /Built in: .*t_pose\*/ })
+          await srv.esperarLog(/Yours \(poses\.yml\): apunta_izq, mas_codo/, { desde: mp })
+
+          // El espejo en el mundo: pointing apunta con la mano derecha (al oeste, mirando al sur), apunta_izq con la izquierda.
+          await prepararAna(ctx, 0)
+          const ana = bots[ANA]
+          const adelante = [Z + 3, Z + 9]
+          const r1 = await construir(ana, 'statue build Example 16 pointing --no-cape')
+          await ana.hasta(`ver los ${r1.puestos} bloques`, b => contar(b, ...CAJA) === r1.puestos, { timeoutMs: 10000 })
+          const der = [contar(ana.bot, [X - 16, X - 1], CAJA[1], adelante), contar(ana.bot, [X, X + 16], CAJA[1], adelante)]
+          await srv.consola(`statue remove ${r1.id}`, { espera: new RegExp(`Statue #${r1.id} removed`), timeoutMs: 20000 })
+          await ana.hasta('no ver la estatua', b => contar(b, ...CAJA) === 0)
+          const r2 = await construir(ana, 'statue build Example 16 apunta_izq --no-cape')
+          await ana.hasta(`ver los ${r2.puestos} bloques`, b => contar(b, ...CAJA) === r2.puestos, { timeoutMs: 10000 })
+          const izq = [contar(ana.bot, [X - 16, X - 1], CAJA[1], adelante), contar(ana.bot, [X, X + 16], CAJA[1], adelante)]
+          await srv.consola(`statue remove ${r2.id}`, { espera: new RegExp(`Statue #${r2.id} removed`), timeoutMs: 20000 })
+          await ana.hasta('no ver la estatua', b => contar(b, ...CAJA) === 0)
+          if (!(der[0] > 4 && der[1] === 0)) throw new Error(`pointing: brazo adelante al oeste/este = ${der}`)
+          if (!(izq[1] > 4 && izq[0] === 0)) throw new Error(`apunta_izq: brazo adelante al oeste/este = ${izq}`)
+          if (r1.puestos !== r2.puestos) throw new Error(`el espejo tiene otro número de bloques: ${r1.puestos} y ${r2.puestos}`)
+        } finally {
+          fs.writeFileSync(poses, original)
+          await srv.consola('statue reload', { espera: /Reloaded: 30 poses/ })
         }
       }
     }

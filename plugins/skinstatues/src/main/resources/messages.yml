@@ -3,16 +3,15 @@ prefix: "<dark_gray>[<gold>SkinStatues</gold>]</dark_gray> "
 
 usage: |-
   {prefix}<gray>Commands:</gray>
-  <yellow>/statue build <name> <height> [pose] [--palette <p>] [--no-overlay] [--no-cape]</yellow>
+  <yellow>/statue build <name> <height> [pose] [--at <x> <y> <z>] [--facing <dir>] [--world <w>] [--palette <p>] [--no-overlay] [--no-cape]</yellow>
   <yellow>/statue undo</yellow> <gray>•</gray> <yellow>/statue cancel [id]</yellow> <gray>•</gray> <yellow>/statue remove <id></yellow>
   <yellow>/statue list [page]</yellow> <gray>•</gray> <yellow>/statue info <id></yellow> <gray>•</gray> <yellow>/statue poses</yellow> <gray>•</gray> <yellow>/statue palettes</yellow>
   <yellow>/statue reload</yellow> <gray>•</gray> <yellow>/statue validate</yellow> <gray>•</gray> <yellow>/statue selftest</yellow>
-usage-build: "{prefix}<gray>Usage: <yellow>/statue build <name> <height> [pose] [--palette <p>] [--no-overlay] [--no-cape]</yellow>"
+usage-build: "{prefix}<gray>Usage: <yellow>/statue build <name> <height> [pose] [--at <x> <y> <z>] [--facing <dir>] [--world <w>] [--palette <p>] [--no-overlay] [--no-cape]</yellow>"
 usage-remove: "{prefix}<gray>Usage: <yellow>/statue remove <id></yellow> (see <yellow>/statue list</yellow>)"
 usage-info: "{prefix}<gray>Usage: <yellow>/statue info <id></yellow>"
 unknown-subcommand: "{prefix}<red>Unknown subcommand '{sub}'{hint}. Try <yellow>/statue</yellow>."
 no-permission: "{prefix}<red>You do not have permission to do that."
-players-only: "{prefix}<red>Only a player can do that (statues are built where you stand). From the console, try <yellow>/statue selftest</yellow>."
 internal-error: "{prefix}<red>Something went wrong; the details are in the server log."
 
 invalid-name: "{prefix}<red>'{name}' is not a valid account name (letters, digits and _, up to 16)."
@@ -20,6 +19,13 @@ invalid-height: "{prefix}<red>Height '{height}' must be a whole number from {min
 unknown-pose: "{prefix}<red>Unknown pose '{pose}'{hint}. See <yellow>/statue poses</yellow>."
 unknown-palette: "{prefix}<red>Unknown palette '{palette}'{hint}. See <yellow>/statue palettes</yellow>."
 unknown-flag: "{prefix}<red>Unknown option '{flag}'{hint}."
+missing-coords: "{prefix}<red>--at needs three coordinates: <yellow>--at <x> <y> <z></yellow> (numbers, or ~ / ~5 relative to you)."
+invalid-coord: "{prefix}<red>'{value}' is not a coordinate: use a number, or ~ / ~5 / ~-3 relative to you."
+invalid-facing: "{prefix}<red>'{facing}' is not a direction{hint}: use north, south, east or west."
+unknown-world: "{prefix}<red>There is no world '{world}'{hint}."
+console-needs-at: "{prefix}<red>From the console, say where: <yellow>/statue build <name> <height> [pose] --at <x> <y> <z> [--world <w>]</yellow>"
+console-relative: "{prefix}<red>~ means 'from where you are', and the console is nowhere: use plain numbers with --at."
+outside-border: "{prefix}<red>{x} {y} {z} is outside the world border of {world}."
 
 loading-skin: "{prefix}<gray>Getting the skin of <white>{name}</white>…"
 skin-not-found: "{prefix}<red>No skin for '{name}'. Put <white>{name}.png</white> in <white>{folder}</white>, or turn on <white>network.mojang</white> in config.yml to download it from Mojang."
@@ -55,7 +61,10 @@ info: |-
   <gray> • Skin: <white>{name}</white>, {height} blocks, pose <white>{pose}</white>, palette <white>{palette}</white>
   <gray> • Where: <white>{world} {x} {y} {z}</white>, facing {facing}
   <gray> • Built by <white>{owner}</white> on {date}: {blocks} blocks ({state})
-poses: "{prefix}<gray>Poses: <white>{list}</white> <dark_gray>(default: {default})"
+poses: |-
+  {prefix}<gray>{count} poses <dark_gray>(default: {default})</dark_gray>
+  <gray> • Built in: <white>{builtin}</white>
+  <gray> • Yours (poses.yml): <white>{custom}</white> <dark_gray>(* = a built-in one you replaced)
 palettes: "{prefix}<gray>Palettes: <white>{list}</white> <dark_gray>(default: {default})"
 
 reloaded: "{prefix}<green>Reloaded: {poses} poses, {palettes} palettes.</green> <gray>{errors} error(s), {warnings} note(s)."

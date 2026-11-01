@@ -1,0 +1,154 @@
+# SkinStatues - BUILT-IN POSES (reference copy).
+#
+# These poses come inside the plugin and are always available. This file is only a copy so you can read
+# their numbers: it is REWRITTEN every time the server starts and editing it does nothing.
+#
+# To change one, copy it to poses.yml and edit it there (a pose in poses.yml with the same name replaces
+# the built-in one). To make a new one from a built-in, use "extends" in poses.yml (see the guide there).
+
+standing: {}
+
+waving:
+  head: { pitch: -5, yaw: 10 }
+  right_arm: { roll: 135, elbow: 40 }
+  cape: { pitch: 8 }
+
+walking:
+  right_arm: { pitch: 30, elbow: 15 }
+  left_arm: { pitch: -30, elbow: 15 }
+  right_leg: { pitch: -25, knee: 20 }
+  left_leg: { pitch: 25, knee: 5 }
+  cape: { pitch: 15 }
+
+victory:
+  head: { pitch: -15 }
+  right_arm: { roll: 160, elbow: 10 }
+  left_arm: { roll: 160, elbow: 10 }
+
+pointing:
+  head: { yaw: -10 }
+  right_arm: { pitch: 90 }
+  left_arm: { pitch: -5, roll: 5 }
+
+sitting:
+  right_leg: { pitch: 90, roll: 8, knee: 90 }
+  left_leg: { pitch: 90, roll: 8, knee: 90 }
+  right_arm: { pitch: 20, elbow: 30 }
+  left_arm: { pitch: 20, elbow: 30 }
+
+running:
+  head: { pitch: -10 }
+  body: { pitch: 15 }
+  right_arm: { pitch: 50, elbow: 80 }
+  left_arm: { pitch: -50, elbow: 60 }
+  right_leg: { pitch: -40, knee: 70 }
+  left_leg: { pitch: 55, knee: 40 }
+  cape: { pitch: 35 }
+
+saluting:
+  right_arm: { pitch: 20, roll: 105, elbow: 145 }
+
+thinking:
+  head: { pitch: 10, yaw: 10 }
+  right_arm: { pitch: 40, yaw: 30, elbow: 120 }
+  left_arm: { pitch: 35, yaw: -45, elbow: 90 }
+
+arms_crossed:
+  right_arm: { pitch: 15, yaw: 60, elbow: 100 }
+  left_arm: { pitch: 15, yaw: -60, elbow: 100 }
+
+hands_on_hips:
+  right_arm: { yaw: 90, roll: 40, elbow: 100 }
+  left_arm: { yaw: -90, roll: 40, elbow: 100 }
+
+kneeling:
+  head: { pitch: 10 }
+  right_arm: { pitch: 10 }
+  right_leg: { knee: 90 }
+  left_leg: { pitch: 90, knee: 90 }
+
+flexing:
+  right_arm: { pitch: 90, yaw: -90, elbow: 100 }
+  left_arm: { pitch: 90, yaw: 90, elbow: 100 }
+
+dabbing:
+  head: { pitch: 30, yaw: 30 }
+  right_arm: { roll: 135 }
+  left_arm: { pitch: 100, yaw: -70, elbow: 130 }
+
+charging:
+  body: { pitch: 10 }
+  right_arm: { pitch: 160, elbow: 10 }
+  left_arm: { pitch: 30, elbow: 40 }
+  right_leg: { pitch: -20 }
+  left_leg: { pitch: 30, knee: 20 }
+  cape: { pitch: 30 }
+
+bowing:
+  body: { pitch: 45 }
+  right_arm: { pitch: 60, yaw: 60, elbow: 110 }
+  left_arm: { pitch: 45 }
+  cape: { pitch: -20 }
+
+t_pose:
+  right_arm: { roll: 90 }
+  left_arm: { roll: 90 }
+
+zombie:
+  head: { pitch: 5, roll: 8 }
+  right_arm: { pitch: 90 }
+  left_arm: { pitch: 85 }
+  right_leg: { pitch: 10 }
+
+sitting_floor:
+  body: { pitch: -15 }
+  right_arm: { pitch: -45 }
+  left_arm: { pitch: -45 }
+  right_leg: { pitch: 90 }
+  left_leg: { pitch: 90 }
+
+lying:
+  body: { pitch: -90 }
+  right_leg: { pitch: 90 }
+  left_leg: { pitch: 90 }
+
+praying:
+  head: { pitch: 20 }
+  right_arm: { pitch: 50, yaw: 35, elbow: 100 }
+  left_arm: { pitch: 50, yaw: -35, elbow: 100 }
+
+crouching:
+  head: { pitch: -15 }
+  body: { pitch: 25 }
+  right_arm: { pitch: 25 }
+  left_arm: { pitch: 25 }
+  right_leg: { pitch: 20, knee: 40 }
+  left_leg: { pitch: 20, knee: 40 }
+
+fighting:
+  head: { pitch: 10 }
+  right_arm: { pitch: 60, yaw: 20, elbow: 110 }
+  left_arm: { pitch: 60, yaw: -20, elbow: 110 }
+  right_leg: { pitch: -15 }
+  left_leg: { pitch: 20, knee: 10 }
+
+archer:
+  head: { yaw: 70 }
+  right_arm: { yaw: -20, roll: 90, elbow: 110 }
+  left_arm: { pitch: 90, yaw: 70 }
+
+relaxing:
+  right_arm: { pitch: -15, yaw: -90, roll: 140, elbow: 130 }
+  left_arm: { pitch: -15, yaw: 90, roll: 140, elbow: 130 }
+
+facepalm:
+  head: { pitch: 20 }
+  right_arm: { pitch: 100, yaw: 40, elbow: 140 }
+
+waving_left:
+  extends: waving
+  mirror: true
+
+pointing_left:
+  extends: pointing
+  mirror: true

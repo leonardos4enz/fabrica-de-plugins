@@ -23,6 +23,7 @@
 | 019 OmniEvents: ejemplos en inglés y regiones de WorldGuard | Verificado: 1.12.0; paquete `examples` en `rules/examples-en/` (apagado por defecto) con bienvenida, recompensa diaria con racha, zonas sin plugins, eventos comunes y regiones de WorldGuard y un ejemplo de cada plugin opcional (Vault, Citizens, PlaceholderAPI, Floodgate, ProtocolLib), cada regla con `tests:` (53 casos); F-01: el jar no copiaba el `parkour` ni `estilo_ce.yml`; F-02: una regla apagada ya no avisa de la integración que le falta; 207 unitarias; 59/59 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/019-omnievents-ejemplos-en-ingles-y-regiones/verify.md)) |
 | 020 OmniEvents: página de presentación con imágenes | Verificado: logo nuevo y póster en pixel art para SpigotMC, Modrinth y Hangar (7 franjas de 1280 px, 2 GIF con 4 escenas nuevas en inglés), elegido por el dueño entre tres direcciones; descripciones en BBCode y Markdown con transcripción; `PresentacionTest`; sin capturas de más ([verify](specs/020-omnievents-pagina-de-presentacion/verify.md)) |
 | 021 SkinStatues: estatuas de bloques con la skin de un jugador (plugin nuevo) | Verificado: 0.1.0, el segundo plugin de la fábrica y el primero en inglés ([ADR 0005](../adr/0005-plugins-en-ingles.md)); `/statue build <name> <height> [pose]` con skin de `skins/` o de Mojang (red apagada por defecto), voxelización inversa con las dos capas unidas, 6 poses con codo y rodilla sin grietas, capa, paletas como lista de bloques permitidos (145 bloques con su color medido), construcción por tandas, diario para `undo`/`remove` que devuelven el terreno; F-01 a F-03 corregidos; 40 unitarias; 10/10 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/021-skinstatues-nucleo/verify.md)) |
+| 022 SkinStatues: más poses, poses propias fáciles y coordenadas | Verificado: 0.2.0; 28 poses incorporadas (22 nuevas, ajustadas con la vista previa) que se leen del jar y una copia de referencia (`builtin-poses.yml`), `extends` ángulo por ángulo y `mirror` en `poses.yml`, `/statue build … --at x y z --facing --world` (con `~`; desde la consola), chunks cargados con `getChunkAtAsync` y tickets; 51 unitarias; 14/14 dos veces en Paper 1.21.4 y en 26.1.2; F-01 corregido ([verify](specs/022-skinstatues-poses-y-coordenadas/verify.md)) |
 
 ## Por qué empezamos con OmniEvents
 OmniEvents es la versión propia de *ConditionalEvents* (Ajneb97): «cuando pase X, si se cumple Y, haz Z». Es el
@@ -89,7 +90,32 @@ Otras pendientes:
 - **OmniEvents: almacenamiento SQL** — MySQL/MariaDB para redes con varios servidores (variables compartidas).
 - **SkinStatues: armadura y objetos en las manos** (pedido del dueño, fuera de la 021): diseños propios por material y,
   si el dueño pone un resource pack suyo en la carpeta del plugin, sus texturas (no se redistribuyen).
-- **SkinStatues: más adelante** — estatuas rellenas, giros que no sean N/S/E/O, tramado de colores, una captura en el
-  juego para el README (la infraestructura de la 004 es de la galería de OmniEvents).
+- **SkinStatues: lluvia de ideas** (spec 022 H4; el dueño elige de aquí las próximas). Costo aproximado: bajo (horas),
+  medio (una spec normal), alto (varias specs o investigación).
+
+  | Idea | Qué es | Costo |
+  |---|---|---|
+  | Vista previa | `/statue preview …` dibuja el contorno con partículas o *block displays* unos segundos; `/statue confirm` la construye | Medio |
+  | Pedestal | `--pedestal <bloque>`: una base rellena bajo los pies (tapa el hueco de `offset_up`), opcionalmente con una placa con el nombre | Bajo |
+  | Nombre flotante | Un *text display* con el nombre del jugador sobre o frente a la estatua; `remove`/`undo` lo quitan | Bajo |
+  | La skin del que miras | `/statue build @looking 32`: el jugador al que apunta la mira (y `@online` para todos en fila) | Bajo |
+  | Filas y galerías | `/statue row Ana,Beto,Caro 32 --spacing 4`: varias estatuas alineadas, deshechas juntas | Medio |
+  | 8 direcciones y giro libre | `--facing north_east` o `--yaw 30`: el voxelizador ya acepta cualquier giro; falta probar la cáscara y el autocompletado | Bajo–medio |
+  | Rellenas | `--solid`: macizas por dentro (más bloques, más resistentes a explosiones) | Bajo |
+  | Tramado de colores | *Dithering* (Floyd–Steinberg sobre la textura) para degradados con paletas chicas (solo lana) | Medio |
+  | Armadura y objetos en las manos | Ver arriba | Alto |
+  | Pose desde un soporte de armadura | `/statue pose save <nombre>` mirando un *armor stand* posado: guarda sus ángulos en `poses.yml` (el dueño prefirió los números en la 022) | Medio |
+  | Palabras en vez de grados | `right_arm: up` / `forward` / `side` como atajos de los ángulos | Bajo |
+  | Editor de poses en el juego | Menú o comandos (`/statue pose set <p> right_arm pitch 45`) con vista previa al cambiar | Alto |
+  | Mover, girar o cambiar de pose | `/statue move <id> ~ ~ ~5`, `/statue repose <id> <pose>`: quitar y volver a construir guardando el terreno | Medio |
+  | Escenas | `scenes.yml` con varias estatuas y poses a la vez («podio de 3», «apretón de manos») | Medio |
+  | Límites por permiso y costo | Alto máximo por `skinstatues.height.<n>`, cuántas estatuas por jugador, costo con Vault | Medio |
+  | Respetar regiones | Con WorldGuard (opcional), no construir donde quien la pide no puede construir | Medio |
+  | Estatuas que brillan | Bloques de luz dentro del hueco (o `--glow`) para que se vean de noche | Bajo |
+  | Exportar a esquema | `/statue export <id>`: un `.schem` de WorldEdit para pegarla en otro servidor | Medio |
+  | Integración con OmniEvents | Una acción `statue_build` para reglas (la estatua del ganador de un minijuego, del jugador del mes) | Medio |
+  | Escala libre | `--scale 2` (bloques por píxel) en vez de alto | Bajo |
+  | Otras figuras | Modelos de criaturas (zombie, aldeano) con su textura del resource pack del dueño | Alto |
+  | Captura en el juego para el README | La infraestructura de la 004 es de la galería de OmniEvents; hoy el README usa la hoja de la vista previa | Bajo |
 - Después: el siguiente plugin de la fábrica, reutilizando el motor de expresiones de OmniEvents como biblioteca
   común (`libs/`), con su propio ADR.

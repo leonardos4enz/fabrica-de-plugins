@@ -1,4 +1,4 @@
-version = "0.1.0"
+version = "0.2.0"
 
 tasks.named<Jar>("jar") {
     archiveBaseName.set("SkinStatues")
@@ -27,12 +27,13 @@ tasks.register<JavaExec>("exampleSkin") {
 }
 
 // Vista previa sin servidor de las poses con la skin de ejemplo (herramienta de desarrollo):
-// ./gradlew :skinstatues:preview -Pout=<archivo.png> [-Pheight=48]
+// ./gradlew :skinstatues:preview -Pout=<archivo.png> [-Pheight=48] [-Ponly=waving,sitting] [-Pgrid=true]
 tasks.register<JavaExec>("preview") {
     group = "skinstatues"
     description = "Dibuja las poses de poses.yml con la skin de ejemplo (frente, costado, espalda, isométrica)"
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("dev.leo.skinstatues.tools.PreviewMain")
     args(resources.asFile.absolutePath, providers.gradleProperty("out").orElse("build/preview.png").get(),
-        providers.gradleProperty("height").orElse("48").get())
+        providers.gradleProperty("height").orElse("48").get(), providers.gradleProperty("only").orElse("").get(),
+        providers.gradleProperty("grid").orElse("false").get())
 }

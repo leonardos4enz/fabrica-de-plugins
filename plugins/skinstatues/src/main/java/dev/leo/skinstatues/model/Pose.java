@@ -33,6 +33,17 @@ public record Pose(String name, Map<Part, Angles> parts) {
             return this == LEFT_ARM || this == LEFT_LEG;
         }
 
+        /** La misma parte del otro lado (la cabeza, el cuerpo y la capa son la misma). */
+        public Part opposite() {
+            return switch (this) {
+                case RIGHT_ARM -> LEFT_ARM;
+                case LEFT_ARM -> RIGHT_ARM;
+                case RIGHT_LEG -> LEFT_LEG;
+                case LEFT_LEG -> RIGHT_LEG;
+                default -> this;
+            };
+        }
+
         /** Nombre de la clave del doblez de la mitad de abajo, o null si la parte no se dobla. */
         public String bendKey() {
             return arm() ? "elbow" : limb() ? "knee" : null;
@@ -49,6 +60,20 @@ public record Pose(String name, Map<Part, Angles> parts) {
 
     public Angles of(Part p) {
         return parts.getOrDefault(p, Angles.NONE);
+    }
+
+    /**
+     * La pose volteada de izquierda a derecha (spec 022 H2 CA2): brazos y piernas cambian de lado, todo yaw cambia de
+     * signo y también el roll de cabeza, cuerpo y capa; el roll de un miembro ya es «hacia afuera» de su lado.
+     */
+    public Pose mirrored(String newName) {
+        Map<Part, Angles> out = new EnumMap<>(Part.class);
+        for (Map.Entry<Part, Angles> e : parts.entrySet()) {
+            Part p = e.getKey();
+            Angles a = e.getValue();
+            out.put(p.opposite(), new Angles(a.pitch(), 0.0 - a.yaw(), p.limb() ? a.roll() : 0.0 - a.roll(), a.bend()));
+        }
+        return new Pose(newName, out);
     }
 
     /** Rotación de la parte (sin el doblez) en el orden de Minecraft: primero x, luego y, luego z. */

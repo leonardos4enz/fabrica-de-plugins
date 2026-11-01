@@ -10,11 +10,21 @@ import dev.leo.skinstatues.skin.MojangClient;
 import dev.leo.skinstatues.skin.SkinRepository;
 import org.bukkit.Material;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Clock;
 import java.util.List;
+import java.util.logging.Level;
 
 /** SkinStatues (spec 021): estatuas de bloques con la skin de un jugador, a la altura pedida y en la pose elegida. */
 public final class SkinStatues extends JavaPlugin {
@@ -67,7 +77,7 @@ public final class SkinStatues extends JavaPlugin {
     /** Lee de nuevo los archivos; lo que no se pueda leer conserva lo anterior (H9 CA2). */
     public LoadedConfig reload() {
         messages = new Messages(new File(getDataFolder(), "messages.yml"), getResource("messages.yml"));
-        LoadedConfig cfg = LoadedConfig.load(getDataFolder(), SkinStatues::checkBlock, config);
+        LoadedConfig cfg = LoadedConfig.load(getDataFolder(), builtinPoses(), SkinStatues::checkBlock, config);
         config = cfg;
         for (Issues.Issue i : cfg.issues().all()) {
             if (i.level() == Issues.Level.ERROR) getLogger().warning("Config error: " + i);
@@ -75,6 +85,40 @@ public final class SkinStatues extends JavaPlugin {
         }
         if (cfg.settings().mojang()) getLogger().info("network.mojang is on: skins not found in skins/ are downloaded from Mojang");
         return cfg;
+    }
+
+    /**
+     * Las poses del jar (spec 022 H1 CA2) y su copia de referencia en la carpeta, reescrita si cambió (H1 CA4): esa
+     * copia no se lee, solo sirve para copiar una pose a poses.yml.
+     */
+    private ConfigurationSection builtinPoses() {
+        String text;
+        try (InputStream in = getResource(LoadedConfig.BUILTIN_POSES)) {
+            if (in == null) return null;
+            text = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            getLogger().log(Level.SEVERE, "Could not read the built-in poses", e);
+            return null;
+        }
+        Path copy = getDataFolder().toPath().resolve(LoadedConfig.BUILTIN_POSES);
+        try {
+            if (!Files.exists(copy) || !Files.readString(copy, StandardCharsets.UTF_8).equals(text)) {
+                Files.createDirectories(copy.getParent());
+                Path tmp = copy.resolveSibling(LoadedConfig.BUILTIN_POSES + ".tmp");
+                Files.writeString(tmp, text, StandardCharsets.UTF_8);
+                Files.move(tmp, copy, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            }
+        } catch (IOException e) {
+            getLogger().warning("Could not write " + LoadedConfig.BUILTIN_POSES + " (reference copy): " + e.getMessage());
+        }
+        YamlConfiguration y = new YamlConfiguration();
+        try {
+            y.loadFromString(text);
+        } catch (InvalidConfigurationException e) {
+            getLogger().log(Level.SEVERE, "The built-in poses are not valid YAML", e);
+            return null;
+        }
+        return y;
     }
 
     /** Un bloque sirve si existe en este servidor, es sólido, opaco y no cae (H6 CA5). */

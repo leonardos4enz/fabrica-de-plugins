@@ -40,14 +40,14 @@ class ResourcesTest {
 
     @Test
     void block_colors_tiene_todos_los_bloques_del_generador() {
-        LoadedConfig cfg = LoadedConfig.load(RES, id -> null, null);
+        LoadedConfig cfg = dev.leo.skinstatues.config.TestResources.load();
         assertEquals(BlockColorsMain.blocks().keySet(), cfg.catalog().colors().keySet(),
                 "./gradlew :skinstatues:blockColors -Pmc=<jar del cliente>");
     }
 
     @Test
     void H1_la_estatua_de_ejemplo_usa_la_paleta_con_colores_reconocibles() throws Exception {
-        LoadedConfig cfg = LoadedConfig.load(RES, id -> null, null);
+        LoadedConfig cfg = dev.leo.skinstatues.config.TestResources.load();
         Skin skin = Skin.of(ImageIO.read(new File(RES, "skins/Example.png")), false,
                 ImageIO.read(new File(RES, "skins/Example-cape.png")));
         VoxelGrid g = Voxelizer.run(skin, Pose.STANDING, new Voxelizer.Options(32, 0, true, 0.5, 128, true));

@@ -1,0 +1,40 @@
+# SkinStatues - poses. Use one with /statue build <name> <height> <pose>.
+#
+# Parts: head, body, right_arm, left_arm, right_leg, left_leg, cape.
+# Angles in degrees (-180..180):
+#   pitch  arms/legs: + raises it forward    head: + looks down    body: + leans forward    cape: + lifts it back
+#   yaw    + turns to the statue's left
+#   roll   arms/legs: + opens it outward      head/body: + tilts to its left
+#   elbow  (arms) 0..150: bends the forearm forward
+#   knee   (legs) 0..150: bends the lower leg backward
+# The body carries the head, the arms and the cape with it. "standing" (no angles) always exists.
+
+standing: {}
+
+waving:
+  head: { pitch: -5, yaw: 10 }
+  right_arm: { roll: 135, elbow: 40 }
+  cape: { pitch: 8 }
+
+walking:
+  right_arm: { pitch: 30, elbow: 15 }
+  left_arm: { pitch: -30, elbow: 15 }
+  right_leg: { pitch: -25, knee: 20 }
+  left_leg: { pitch: 25, knee: 5 }
+  cape: { pitch: 15 }
+
+victory:
+  head: { pitch: -15 }
+  right_arm: { roll: 160, elbow: 10 }
+  left_arm: { roll: 160, elbow: 10 }
+
+pointing:
+  head: { yaw: -10 }
+  right_arm: { pitch: 90 }
+  left_arm: { pitch: -5, roll: 5 }
+
+sitting:
+  right_leg: { pitch: 90, roll: 8, knee: 90 }
+  left_leg: { pitch: 90, roll: 8, knee: 90 }
+  right_arm: { pitch: 20, elbow: 30 }
+  left_arm: { pitch: 20, elbow: 30 }

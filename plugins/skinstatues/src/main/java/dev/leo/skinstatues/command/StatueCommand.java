@@ -8,12 +8,18 @@ import dev.leo.skinstatues.color.BlockPalette;
 import dev.leo.skinstatues.config.Issues;
 import dev.leo.skinstatues.config.LoadedConfig;
 import dev.leo.skinstatues.config.Messages;
+import dev.leo.skinstatues.config.PoseLoader;
 import dev.leo.skinstatues.model.Pose;
 import dev.leo.skinstatues.skin.MojangClient;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
 import java.text.SimpleDateFormat;
@@ -34,7 +40,6 @@ public final class StatueCommand implements TabExecutor {
             Map.entry("info", BUILD), Map.entry("poses", BUILD), Map.entry("palettes", BUILD),
             Map.entry("remove", REMOVE), Map.entry("reload", ADMIN), Map.entry("validate", ADMIN),
             Map.entry("selftest", ADMIN));
-    private static final List<String> FLAGS = List.of("--palette", "--no-overlay", "--no-cape");
     private static final int PAGE = 8;
 
     private final SkinStatues plugin;
@@ -70,8 +75,7 @@ public final class StatueCommand implements TabExecutor {
             case "remove" -> remove(s, args);
             case "list" -> list(s, args);
             case "info" -> info(s, args);
-            case "poses" -> s.sendMessage(msg().get("poses", "list", String.join(", ", plugin.config().poses().keySet()),
-                    "default", plugin.config().defaultPose()));
+            case "poses" -> poses(s);
             case "palettes" -> palettes(s);
             case "reload" -> reload(s);
             case "validate" -> validate(s, plugin.config());
@@ -82,10 +86,6 @@ public final class StatueCommand implements TabExecutor {
     }
 
     private void build(CommandSender s, String[] args) {
-        if (!(s instanceof Player p)) {
-            s.sendMessage(msg().get("players-only"));
-            return;
-        }
         if (args.length < 3) {
             s.sendMessage(msg().get("usage-build"));
             return;
@@ -107,29 +107,14 @@ public final class StatueCommand implements TabExecutor {
             s.sendMessage(msg().get("invalid-height", "height", args[2], "min", min, "max", max));
             return;
         }
-        String pose = cfg.defaultPose(), palette = cfg.defaultPalette();
-        boolean overlay = cfg.settings().overlay(), cape = cfg.settings().cape();
-        for (int i = 3; i < args.length; i++) {
-            String a = args[i].toLowerCase(Locale.ROOT);
-            switch (a) {
-                case "--no-overlay" -> overlay = false;
-                case "--no-cape" -> cape = false;
-                case "--palette" -> {
-                    if (i + 1 >= args.length) {
-                        s.sendMessage(msg().get("usage-build"));
-                        return;
-                    }
-                    palette = args[++i].toLowerCase(Locale.ROOT);
-                }
-                default -> {
-                    if (a.startsWith("--")) {
-                        s.sendMessage(msg().get("unknown-flag", "flag", args[i], "hint", Issues.hint(a, FLAGS)));
-                        return;
-                    }
-                    pose = a;
-                }
-            }
+        BuildArgs.Parsed parsed = BuildArgs.parse(args, 3, cfg.settings().overlay(), cfg.settings().cape());
+        if (parsed.error() != null) {
+            s.sendMessage(msg().get(parsed.error().key(), parsed.error().args()));
+            return;
         }
+        BuildArgs b = parsed.args();
+        String pose = b.pose() != null ? b.pose() : cfg.defaultPose();
+        String palette = b.palette() != null ? b.palette() : cfg.defaultPalette();
         Pose ps = cfg.poses().get(pose);
         if (ps == null) {
             s.sendMessage(msg().get("unknown-pose", "pose", pose, "hint", Issues.hint(pose, cfg.poses().keySet())));
@@ -140,15 +125,56 @@ public final class StatueCommand implements TabExecutor {
             s.sendMessage(msg().get("unknown-palette", "palette", palette, "hint", Issues.hint(palette, cfg.palettes().keySet())));
             return;
         }
-        plugin.statues().build(p, new Statues.Request(name, height, ps, pal, overlay, cape));
+        Statues.Target target = target(s, b, cfg.settings().offsetUp());
+        if (target == null) return;
+        plugin.statues().build(s, target, new Statues.Request(name, height, ps, pal, b.overlay(), b.cape()));
+    }
+
+    /**
+     * Dónde y hacia dónde (spec 022 H3): sin --at, como la 0.1.0 (sobre el jugador + offset_up, mirando hacia donde
+     * mira); con --at, los pies en ese bloque, con ~ relativo a quien la pide. Null si no se puede (ya avisó).
+     */
+    private Statues.Target target(CommandSender s, BuildArgs b, int offsetUp) {
+        Location origin = s instanceof Entity e ? e.getLocation()
+                : s instanceof BlockCommandSender bc ? bc.getBlock().getLocation().add(0.5, 0, 0.5) : null;
+        World world;
+        if (b.world() != null) {
+            world = Bukkit.getWorld(b.world());
+            if (world == null) {
+                List<String> names = new ArrayList<>();
+                for (World w : Bukkit.getWorlds()) names.add(w.getName());
+                s.sendMessage(msg().get("unknown-world", "world", b.world(), "hint", Issues.hint(b.world(), names)));
+                return null;
+            }
+        } else {
+            world = origin != null ? origin.getWorld() : Bukkit.getWorlds().get(0);
+        }
+        int facing = b.facing() != null ? b.facing()
+                : origin != null ? Math.floorMod(Math.round(origin.getYaw() / 90f), 4) * 90 : 0;
+        if (!b.hasAt()) {
+            if (origin == null) {
+                s.sendMessage(msg().get("console-needs-at"));
+                return null;
+            }
+            return new Statues.Target(world, origin.getBlockX(), origin.getBlockY() + offsetUp, origin.getBlockZ(), facing);
+        }
+        if (origin == null && b.relative()) {
+            s.sendMessage(msg().get("console-relative"));
+            return null;
+        }
+        BuildArgs.Coord[] c = b.at();
+        int x = c[0].resolve(origin == null ? 0 : origin.getX());
+        int y = c[1].resolve(origin == null ? 0 : origin.getY());
+        int z = c[2].resolve(origin == null ? 0 : origin.getZ());
+        if (!world.getWorldBorder().isInside(new Location(world, x + 0.5, y, z + 0.5))) {
+            s.sendMessage(msg().get("outside-border", "x", x, "y", y, "z", z, "world", world.getName()));
+            return null;
+        }
+        return new Statues.Target(world, x, y, z, facing);
     }
 
     private void undo(CommandSender s) {
-        if (!(s instanceof Player p)) {
-            s.sendMessage(msg().get("players-only"));
-            return;
-        }
-        Statue last = plugin.statues().store().lastBy(p.getUniqueId());
+        Statue last = plugin.statues().store().lastBy(s instanceof Player p ? p.getUniqueId() : Statues.CONSOLE);
         if (last == null) {
             s.sendMessage(msg().get("undo-none"));
             return;
@@ -248,6 +274,21 @@ public final class StatueCommand implements TabExecutor {
         };
     }
 
+    /** Spec 022 H2 CA5: las incorporadas y las propias por separado; una incorporada reemplazada lleva «*». */
+    private void poses(CommandSender s) {
+        LoadedConfig cfg = plugin.config();
+        List<String> builtin = new ArrayList<>(), custom = new ArrayList<>();
+        cfg.poses().keySet().forEach(n -> {
+            PoseLoader.Origin o = cfg.poseOrigins().getOrDefault(n, PoseLoader.Origin.CUSTOM);
+            if (o == PoseLoader.Origin.CUSTOM) custom.add(n);
+            else builtin.add(o == PoseLoader.Origin.OVERRIDE ? n + "*" : n);
+        });
+        // "list" sigue para un messages.yml de la 0.1.0.
+        s.sendMessage(msg().get("poses", "builtin", String.join(", ", builtin),
+                "custom", custom.isEmpty() ? "none" : String.join(", ", custom), "count", cfg.poses().size(),
+                "list", String.join(", ", cfg.poses().keySet()), "default", cfg.defaultPose()));
+    }
+
     private void palettes(CommandSender s) {
         List<String> parts = new ArrayList<>();
         plugin.config().palettes().forEach((n, p) -> parts.add(n + " (" + p.entries().size() + ")"));
@@ -309,12 +350,30 @@ public final class StatueCommand implements TabExecutor {
                     yield starting(names, args[1]);
                 }
                 if (args.length == 3) yield starting(List.of("16", "32", "64", "128"), args[2]);
-                if ("--palette".equalsIgnoreCase(args[args.length - 2])) {
-                    yield starting(new ArrayList<>(cfg.palettes().keySet()), args[args.length - 1]);
+                String last = args[args.length - 1], prev = args[args.length - 2];
+                if ("--palette".equalsIgnoreCase(prev)) yield starting(new ArrayList<>(cfg.palettes().keySet()), last);
+                if ("--facing".equalsIgnoreCase(prev)) yield starting(BuildArgs.FACINGS, last);
+                if ("--world".equalsIgnoreCase(prev)) {
+                    List<String> worlds = new ArrayList<>();
+                    for (World w : Bukkit.getWorlds()) worlds.add(w.getName());
+                    yield starting(worlds, last);
                 }
-                List<String> opts = new ArrayList<>(FLAGS);
+                // Tras --at: «~» o la coordenada del bloque que mira el jugador (H3 CA7).
+                for (int k = 0; k < 3; k++) {
+                    int at = args.length - 2 - k;
+                    if (at >= 3 && "--at".equalsIgnoreCase(args[at])) {
+                        List<String> opts = new ArrayList<>(List.of("~"));
+                        if (s instanceof Player p) {
+                            Block t = p.getTargetBlockExact(8);
+                            Location l = t != null ? t.getLocation().add(0, 1, 0) : p.getLocation();
+                            opts.add(String.valueOf(k == 0 ? l.getBlockX() : k == 1 ? l.getBlockY() : l.getBlockZ()));
+                        }
+                        yield starting(opts, last);
+                    }
+                }
+                List<String> opts = new ArrayList<>(BuildArgs.FLAGS);
                 if (args.length == 4) opts.addAll(cfg.poses().keySet());
-                yield starting(opts, args[args.length - 1]);
+                yield starting(opts, last);
             }
             case "remove", "info", "cancel" -> {
                 List<String> ids = new ArrayList<>();
