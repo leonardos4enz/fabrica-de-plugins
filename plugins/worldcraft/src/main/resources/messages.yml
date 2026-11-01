@@ -44,6 +44,7 @@ help:
   reroll: { usage: "/wc reroll", text: "The last mountain or island again with another seed (a new preview).", example: "/wc reroll" }
   brush: { usage: "/wc brush [raise|lower|smooth|flatten|erode|paint] [radius] [strength] [blocks] [style=..] [mask=..]", text: "Get or change the terrain brush: right click uses it where you look, left click picks the next mode.", example: "/wc brush smooth 6 0.5" }
   styles: { usage: "/wc styles", text: "The terrain styles in terrain.yml (which blocks go where).", example: "/wc styles" }
+  schem: { usage: "/wc schem list [page] [filter] | load <name> | save <name> [--overwrite] | delete <name>", text: "WorldEdit's .schem files: load one into your clipboard (then /wc paste --preview), save your clipboard, list or delete them. WorldEdit's folder is read too.", example: "/wc schem load castles/tower" }
   reload: { usage: "/wc reload", text: "Reload config.yml, messages.yml, presets.yml and terrain.yml.", example: "/wc reload" }
   validate: { usage: "/wc validate", text: "List the problems in the configuration.", example: "/wc validate" }
   selftest: { usage: "/wc selftest", text: "Edit, undo, redo and undo a small box near spawn and check every step.", example: "/wc selftest" }
@@ -135,3 +136,35 @@ brush-updated: "{prefix}Brush set to <white>{brush}</white>."
 brush-mode: "<gold>Brush</gold> <white>{brush}</white>"
 styles-header: "{prefix}{count} terrain styles <gray>(use them with style=name; edit them in terrain.yml)"
 styles-line: " <yellow>{name}</yellow> <dark_gray>-</dark_gray> <gray>{description}"
+
+# Schematics (/wc schem)
+schem-unknown: "{prefix}<red>Unknown schem command '{input}'{hint}. <gray>Usage: <white>{usage}"
+schem-busy: "{prefix}<red>Wait a moment: your last schematic is still being read or written."
+schem-loading: "{prefix}<gray>Loading {name}..."
+schem-saving: "{prefix}<gray>Saving {name}..."
+schem-loaded: "{prefix}<green>Loaded {name}{folder} (Sponge v{version}): {size} ({blocks} blocks) is now your clipboard."
+schem-loaded-next: " <gray>/wc paste --preview to see it where you stand, /wc rotate and /wc flip to turn it."
+schem-note-tiles: " <gray>• {count} chest(s), container(s) or sign(s) keep their contents."
+schem-note-kept: " <yellow>• {count} other block data ({kinds}) is not pasted, but is kept if you save it again."
+schem-note-unknown: " <yellow>• {count} block(s) this server does not know were loaded as air: {kinds}."
+schem-note-adjusted: " <gray>• {count} block state(s) lost a property this server does not have."
+schem-note-renamed: " <gray>• {count} block(s) renamed since that version of the game were translated."
+schem-note-entities: " <yellow>• {count} entity(ies) in the file are not loaded (only blocks)."
+schem-note-bad: " <yellow>• {count} block data entry(ies) in the file were damaged and skipped."
+schem-note-newer: " <yellow>• The file is from a newer version of the game (data version {version}; this server: {server}): some blocks may be missing."
+schem-note-tiles-failed: "{prefix}<yellow>{count} block data entry(ies) could not be saved (see the server log)."
+schem-saved: "{prefix}<green>Saved {name}: {size} ({blocks} blocks), {kb} KB.</green> <gray>WorldEdit can load it too."
+schem-save-cancelled: "{prefix}<yellow>Saving {name} was stopped: no file was written."
+schem-exists: "{prefix}<red>{name} already exists. <gray>Pick another name, or add --overwrite to replace it."
+schem-overwrite-permission: "{prefix}<red>Replacing a schematic needs the permission to delete them."
+schem-not-found: "{prefix}<red>There is no schematic called {name}{hint}. <gray>/wc schem list shows them."
+schem-bad: "{prefix}<red>Could not load {name}: {reason}. Your clipboard did not change."
+schem-io: "{prefix}<red>Could not read or write {name}: {reason}"
+schem-error: "{prefix}<red>Something went wrong with {name} (see the server log)."
+schem-list-empty: "{prefix}No schematics yet. <gray>/wc copy, then /wc schem save <name>."
+schem-list-none: "{prefix}No schematic matches '{filter}'."
+schem-list-header: "{prefix}{count} schematic(s), page {page} of {pages} <gray>(click a name to load it)"
+schem-list-line: " <click:suggest_command:'/wc schem load {name}'><hover:show_text:'/wc schem load {name}'><white>{name}</white></hover></click> <dark_gray>{folder}</dark_gray><gray>{kb} KB · {date}"
+schem-list-more: " <gray>/wc schem list {next} for more"
+schem-deleted: "{prefix}Deleted {name}. <gray>It waits {days} day(s) in schematics/.trash/ in case you want it back."
+schem-read-only: "{prefix}<red>{name} is in the {folder} folder: Worldcraft only reads there, never deletes."

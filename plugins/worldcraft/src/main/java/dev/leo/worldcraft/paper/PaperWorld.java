@@ -2,6 +2,7 @@ package dev.leo.worldcraft.paper;
 
 import dev.leo.worldcraft.edit.EditWorld;
 import dev.leo.worldcraft.region.ChunkOrder;
+import dev.leo.worldcraft.schem.TileData;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import org.bukkit.World;
@@ -141,6 +142,9 @@ public final class PaperWorld implements EditWorld {
                 }
                 s.setWaxed(in.readBoolean());
                 st.update(true, false);
+            } else if (TileData.is(data)) {
+                // Spec 027: los datos de un esquema, en la forma estándar del juego.
+                TileNbt.restore(st, TileData.decode(data));
             }
         } catch (IOException | RuntimeException e) {
             plugin.getLogger().warning("Could not restore the contents of the block at " + x + " " + y + " " + z + ": " + e);

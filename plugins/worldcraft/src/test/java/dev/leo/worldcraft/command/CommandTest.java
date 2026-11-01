@@ -55,10 +55,10 @@ class CommandTest {
         YamlConfiguration m = new YamlConfiguration();
         m.loadFromString(Files.readString(Path.of("src/main/resources/messages.yml")));
         String cmd = Files.readString(Path.of("src/main/java/dev/leo/worldcraft/command/WorldcraftCommand.java"));
-        Matcher subs = Pattern.compile("\"(help|wand|pos1|pos2|sel|expand|contract|shift|set|replace|walls|faces|copy|cut|paste|rotate|flip|undo|redo|history|confirm|cancel|jobs|limits|reload|validate|selftest|mountain|island|reroll|brush|styles)\"").matcher(cmd);
+        Matcher subs = Pattern.compile("\"(help|wand|pos1|pos2|sel|expand|contract|shift|set|replace|walls|faces|copy|cut|paste|rotate|flip|undo|redo|history|confirm|cancel|jobs|limits|reload|validate|selftest|mountain|island|reroll|brush|styles|schem)\"").matcher(cmd);
         Set<String> names = new TreeSet<>();
         while (subs.find()) names.add(subs.group(1));
-        assertEquals(32, names.size());
+        assertEquals(33, names.size());
         for (String s : names) {
             for (String k : new String[]{"usage", "text", "example"}) {
                 assertNotNull(m.getString("help." + s + "." + k), "falta help." + s + "." + k);

@@ -437,6 +437,19 @@ public final class Edits {
                 pw.set(x, top, z, air);
             }
             blocks.table().state(s);
+            // Spec 027 F-01: los datos de un cofre (copiar, pegar, guardar un esquema) también pagan código frío.
+            try {
+                org.bukkit.inventory.ItemStack one = new org.bukkit.inventory.ItemStack(org.bukkit.Material.STONE);
+                byte[] raw = org.bukkit.inventory.ItemStack.serializeItemsAsBytes(new org.bukkit.inventory.ItemStack[]{one});
+                byte[] tile = new byte[raw.length + 1];
+                tile[0] = 'C';
+                System.arraycopy(raw, 0, tile, 1, raw.length);
+                // De la forma de la 025 a la estándar y de vuelta a un ítem: lo que hacen guardar y pegar un esquema.
+                byte[] std = TileNbt.standard(tile, "minecraft:chest");
+                TileNbt.items(dev.leo.worldcraft.schem.TileData.decode(std), 27);
+            } catch (java.io.IOException | RuntimeException ignored) {
+                // solo es calentar
+            }
             blocks.data(blocks.air());
             blocks.hasTile(blocks.air());
             plugin.messages().text("edit-done", "kind", "set", "changed", "0", "time", "0", "id", "0");
@@ -452,6 +465,12 @@ public final class Edits {
     /** Un trabajo armado por fuera (selftest), con el mismo planificador. */
     public void submitJob(EditJob job) {
         submit(job);
+    }
+
+    /** Spec 027: un trabajo de pasos sueltos (TaskJob) dentro del mismo presupuesto por tick; make recibe su número. */
+    public void submitTask(java.util.function.IntFunction<Scheduler.Job> make) {
+        scheduler.submit(make.apply(nextJob++));
+        ensureTask();
     }
 
     private void submit(EditJob job) {

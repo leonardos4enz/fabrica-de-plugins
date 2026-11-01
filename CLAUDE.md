@@ -177,6 +177,16 @@ con `--release 21`.
   completa (F-02). En Git Bash, `node -e "…"` con comillas dobles **ejecuta** las comillas invertidas (`` ` ``) del texto
   y `$…` se expande: para insertar código JS o Java, las herramientas de edición. Con mineflayer 4.39 en 1.21.4,
   `activateItem()` llega como `RIGHT_CLICK_AIR` y `swingArm()` como `LEFT_CLICK_AIR` (mirando a más de 5 bloques).
+- **Spec 027 (esquemas `.schem`):** el NBT y Sponge v1–v3 son Java propio (`schem/`), escrito desde la especificación; los
+  ítems de un cofre pasan por `ItemStack.serializeAsBytes`/`deserializeBytes`, que son NBT con GZip y `DataVersion`: el juego
+  actualiza los ítems viejos sin NMS. Los v2 de WorldEdit 7.0–7.2 guardan en `Offset` la posición del **mundo** y lo relativo
+  en `Metadata.WEOffsetX/Y/Z`; v3 usa `Offset`. Los carteles guardan cada línea como JSON en un String hasta 1.21.4 y como NBT
+  desde 1.21.5 (`DataVersion` 4325). WorldEdit 7.3.19 en la suite de Worldcraft (`pluginsExtra: /worldedit/i`: `correr.mjs`
+  acepta una expresión e instala solo esos jars): `//copy` dice «6 blocks affected» (no «were copied»), `//schem save x
+  sponge.2` escribe v2 (el de fábrica es v3) y `//undo` dice «Undo successful». El primer `copy` con un cofre tras arrancar
+  pagaba ~15 ms de código frío al serializar los ítems (F-01, como la 025 F-04): `warmUp` ya hace esa ida y vuelta. Se repitió
+  la lección de la 026 (`node -e` con comillas invertidas en Git Bash corrompió el README): los scripts van a un archivo
+  en el scratchpad con la herramienta de escritura.
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

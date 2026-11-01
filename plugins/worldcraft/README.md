@@ -4,7 +4,7 @@ World editing for Paper that never lags the server: select with a wand and see t
 happens, undo even after a restart (without erasing what others built since), and write patterns and masks the way
 you would say them. And terrain that is easy to make: a mountain or a floating island with one word, a terrain brush,
 and full control for experienced builders. Specs: [025](../../docs/sdd/specs/025-worldcraft-nucleo/spec.md) (core),
-[026](../../docs/sdd/specs/026-worldcraft-terreno-facil/spec.md) (terrain).
+[026](../../docs/sdd/specs/026-worldcraft-terreno-facil/spec.md) (terrain), [027](../../docs/sdd/specs/027-worldcraft-esquemas-schem/spec.md) (`.schem` schematics).
 
 ```
 /wc wand                                        left click = corner 1, right click = corner 2
@@ -14,6 +14,7 @@ and full control for experienced builders. Specs: [025](../../docs/sdd/specs/025
 /wc mountain                                    a mountain where you look: [Build] [Another] [Cancel]
 /wc island                                      a floating island in front of you
 /wc brush smooth                                a terrain brush: right click to use it, left click for the next mode
+/wc schem load castles/tower                     a WorldEdit .schem into your clipboard: then /wc paste --preview
 ```
 
 ## Terrain: easy for beginners, precise for experts
@@ -142,6 +143,35 @@ oak_log[axis=y]                        only upright oak logs
 $natural                               a preset from presets.yml
 ```
 
+## Schematics (.schem): coming from WorldEdit
+Worldcraft reads and writes the `.schem` files of WorldEdit and FAWE (the open Sponge format), so a server can switch
+without losing its schematics, and a schematic made here works on a server that uses WorldEdit.
+```
+/wc schem list [page] [filter]          yours and WorldEdit's (marked [WorldEdit]); click a name to load it
+/wc schem load castles/tower            into your clipboard; then /wc paste --preview, /wc rotate, /wc flip, /wc undo
+/wc schem save gate                     your clipboard (already turned if you rotated it) as schematics/gate.schem
+/wc schem save gate --overwrite         replace it (needs the permission to delete)
+/wc schem delete gate                   moved to schematics/.trash/ for 7 days, in case you want it back
+```
+- **WorldEdit's folder is read where it is:** `plugins/WorldEdit/schematics` and `plugins/FastAsyncWorldEdit/schematics`
+  (`schematics.extra_folders`), subfolders included. Worldcraft never writes or deletes there, and it keeps working if
+  you remove WorldEdit and leave its folder. Your own folder is searched first.
+- **Reads Sponge v1, v2 and v3** (WorldEdit 6 and 7, FAWE); **writes v3**. It pastes in the same place relative to you as
+  WorldEdit does.
+- **Chests, barrels, furnaces, hoppers, shulker boxes and signs keep their contents** (items from older game versions are
+  upgraded by the game). Other block data (heads, banners, spawners…) is not pasted yet, but it is kept if you save the
+  schematic again; the message says how many. Entities and biomes are not loaded (the message counts the entities).
+- **Old or unknown blocks:** renamed blocks are translated (`grass` → `short_grass`, `grass_path` → `dirt_path`,
+  `chain` ↔ `iron_chain`), a property this server does not have is dropped, and a block it does not know (from a mod)
+  becomes air, with the names in the message.
+- **Safe with anybody's files:** names are letters, numbers, `_`, `-` and `.` with up to 3 folders (never `..`, and a
+  link that points outside the folder is refused); a file bigger than `max_file_kb`, a schematic bigger than
+  `max_blocks` (read from the header, before using any memory), a zip bomb or a damaged file is refused with the
+  reason and your clipboard does not change. Loading never skips your limits: pasting still checks your biggest edit,
+  your worlds and the blocked blocks (the `default` group cannot paste the command blocks of a schematic).
+- **No lag:** reading, writing and compressing run on their own thread; the block data that needs the game is converted
+  in small steps inside the same 8 ms per tick as every edit.
+
 ## Configuration
 `config.yml` (every value is checked on load; `/wc validate` lists problems, `/wc reload` applies changes):
 ```yaml
@@ -163,11 +193,17 @@ terrain:
   cover: "air, #replaceable, #flowers, #saplings"    # what may be covered or cleared
   buryable: "#logs, #leaves"                         # what a mountain may bury
   brush: { item: minecraft:golden_shovel, max_radius: 16, range: 200, show: true }
+schematics:
+  max_file_kb: 10240     # the biggest .schem that is loaded
+  max_blocks: 5000000    # the biggest schematic that is loaded (pasting still uses your limits)
+  trash_days: 7          # deleted schematics wait this long in schematics/.trash/
+  extra_folders: [plugins/WorldEdit/schematics, plugins/FastAsyncWorldEdit/schematics]   # read-only
 ```
 With several groups the most generous value wins: the biggest number, every world of every group, and a block is
 blocked only if every group blocks it. `presets.yml` names patterns and masks; `terrain.yml` has the terrain sizes,
 defaults and styles; `messages.yml` has every text (MiniMessage, translatable). Updating from 0.1.0: `terrain.yml` is
-created on the next start and a `config.yml` without the `terrain` section uses the values above.
+created on the next start and a `config.yml` without the `terrain` section uses the values above. Updating from 0.2.0: a
+`config.yml` without `schematics` uses the values above and `schematics/` is created on the next start.
 
 ## Permissions
 | Permission | Default | What it allows |
@@ -175,18 +211,20 @@ created on the next start and a `config.yml` without the `terrain` section uses 
 | `worldcraft.use` | op | The wand and every edit on your own selection and history |
 | `worldcraft.moderate` | op | See and undo other players' edits; see and cancel everybody's running edits |
 | `worldcraft.admin` | op | `reload`, `validate`, `selftest` |
+| `worldcraft.schematic` | op | `/wc schem list`, `load` and `save` (pasting also needs `worldcraft.use`) |
+| `worldcraft.schematic.delete` | op | `/wc schem delete` and `save --overwrite` |
 | `worldcraft.limit.<group>` | — | The limits of that group in `config.yml` |
 
 ## Compatibility
 | Server | Status | Evidence |
 |---|---|---|
-| Paper 1.21.4 (build 232, Java 24) | **Verified** (0.2.0) | Gate 2 (2026-11-01): updating from 0.1.0, mountains (up to 811 675 blocks), an island and undo from the console. In-game suite 12/12 twice (2026-11-01), terrain included. 0.1.0: gate 2 with a 100 000-block edit and undo after a restart, suite 8/8 twice |
+| Paper 1.21.4 (build 232, Java 24) | **Verified** (0.3.0) | 0.3.0 (2026-11-01): gate 2 updating from 0.2.0 (save, load and paste a rotated chest and sign from the console, damaged files and unsafe names refused); in-game suite 15/15 twice with WorldEdit 7.3.19 on the server (WorldEdit's v3 and v2 files loaded and pasted by Worldcraft, Worldcraft's loaded and pasted by WorldEdit). 0.2.0: gate 2 (2026-11-01): updating from 0.1.0, mountains (up to 811 675 blocks), an island and undo from the console. In-game suite 12/12 twice (2026-11-01), terrain included. 0.1.0: gate 2 with a 100 000-block edit and undo after a restart, suite 8/8 twice |
 | Paper 26.1.2 and other 1.21.x / 26.x | Not verified | |
 | Spigot, Folia | Not supported | |
 
 - **Java:** 21 or newer.
 - **Optional:** nothing. No network access, no server internals (only the Paper API).
-- **Not yet:** `.schem` schematics, shapes, rivers, height maps from images, a brush menu, WorldGuard regions,
+- **Not yet:** entities and biomes in schematics, `.schematic` (MCEdit) and `.litematic` files, shapes, rivers, height maps from images, a brush menu, WorldGuard regions,
   rollback by area and time, entities
   (ideas in the [roadmap](../../docs/sdd/roadmap.md)). Running next to WorldEdit works: different command and wand.
 

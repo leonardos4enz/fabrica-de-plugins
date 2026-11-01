@@ -82,6 +82,37 @@ async function tickMasLargo (jugador, tipo) {
   if (largo > 12) throw new Error(`${tipo} usó ${largo} ms en un tick (presupuesto 8)`)
 }
 
+// ---------------------------------------------------------------- esquemas (spec 027)
+const carpetaWE = srv => path.join(srv.run, 'plugins', 'WorldEdit', 'schematics')
+
+/** Un cofre con 5 diamantes, una escalera al norte, piedra y un cartel «Hola» encima, en X+20..22, Z+20. */
+async function construirMuestra (srv) {
+  await srv.consola(`setblock ${X + 20} -60 ${Z + 20} chest{Items:[{Slot:0b,id:"minecraft:diamond",count:5}]}`)
+  await srv.consola(`setblock ${X + 21} -60 ${Z + 20} oak_stairs[facing=north]`)
+  await srv.consola(`setblock ${X + 22} -60 ${Z + 20} stone`)
+  await srv.consola(`setblock ${X + 22} -59 ${Z + 20} oak_sign{front_text:{messages:['"Hola"','""','""','""']}}`)
+  await srv.sincronizar()
+}
+
+/** La muestra pegada con su esquina en (x, z): bloques, ítems del cofre y texto del cartel. */
+async function revisarMuestra (srv, x, z) {
+  await comprobar(srv, `block ${x} -60 ${z} chest`)
+  await comprobar(srv, `block ${x + 1} -60 ${z} oak_stairs[facing=north]`)
+  await comprobar(srv, `block ${x + 2} -60 ${z} stone`)
+  await comprobar(srv, `block ${x + 2} -59 ${z} oak_sign`)
+  await srv.consola(`data get block ${x} -60 ${z} Items[0].count`, { espera: /has the following block data: 5/ })
+  await srv.consola(`data get block ${x + 2} -59 ${z} front_text.messages[0]`, { espera: /Hola/ })
+}
+
+async function esperarArchivo (archivo, timeoutMs = 20000) {
+  const fin = Date.now() + timeoutMs
+  while (Date.now() < fin) {
+    if (fs.existsSync(archivo) && fs.statSync(archivo).size > 0) return
+    await dormir(250)
+  }
+  throw new Error(`no apareció ${archivo}`)
+}
+
 export default {
   jar: /^Worldcraft-.*\.jar$/,
   // La configuración tal como está en el código fuente; el historial de corridas anteriores se borra (cada corrida
@@ -91,6 +122,8 @@ export default {
   ],
   datosDeJugador: [],
   bots: [ANA, BETO],
+  // Spec 027: WorldEdit 7.3.19 en el servidor de prueba (aprobado en la 012) para comprobar que los dos leen los .schem del otro.
+  pluginsExtra: /worldedit/i,
   puerto: 25599,
   versionPorDefecto: '1.21.4',
   ruidoDelServidor: [/No key layers/],
@@ -557,6 +590,129 @@ export default {
           await ctx.entrar(BETO)
           for (const c of [`gamemode creative ${BETO}`, `tp ${BETO} ${X + 0.5} -60 ${Z - 6.5} 0 0`]) await srv.consola(c)
         }
+      }
+    },
+    // ---------------------------------------------------------------- esquemas (spec 027)
+    {
+      id: '027 H3 CA1 · H2 CA1 · H2 CA2 · H2 CA3',
+      nombre: 'esquemas de WorldEdit (v3 y v2) se ven en la lista, se cargan y se pegan con el cofre, la escalera y el cartel',
+      timeoutMs: 120000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        const we = carpetaWE(srv)
+        for (const f of ['e2e_we.schem', 'e2e_we2.schem']) fs.rmSync(path.join(we, f), { force: true })
+        await construirMuestra(srv)
+        // WorldEdit copia relativo a Ana (en X, Z) y guarda en su carpeta, en su formato de fábrica y en v2.
+        await pide(ana, `/pos1 ${X + 20},-60,${Z + 20}`, /First position set/)
+        await pide(ana, `/pos2 ${X + 22},-59,${Z + 20}`, /Second position set/)
+        await pide(ana, '/copy', /were copied|blocks affected/)
+        await pide(ana, '/schem save e2e_we', /saved/i, 30000)
+        await pide(ana, '/schem save e2e_we2 sponge.2', /saved/i, 30000)
+        await esperarArchivo(path.join(we, 'e2e_we.schem'))
+        await esperarArchivo(path.join(we, 'e2e_we2.schem'))
+        await pide(ana, 'wc schem list e2e_we', /e2e_we2 \[WorldEdit\]/)
+        for (const [nombre, version, dz] of [['e2e_we', 3, 10], ['e2e_we2', 2, 14]]) {
+          await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + dz + 0.5}`)
+          await ana.hasta('llegar', b => Math.abs(b.entity.position.z - (Z + dz + 0.5)) < 0.6)
+          await pide(ana, `wc schem load ${nombre}`, new RegExp(`Loaded ${nombre} \\[WorldEdit\\] \\(Sponge v${version}\\): 3×2×1 \\(6 blocks\\)`))
+          const p = await obra(ana, 'wc paste')
+          if (p.cambiados !== 4) throw new Error(`${nombre}: paste cambió ${p.cambiados}`)
+          await revisarMuestra(srv, X + 20, Z + 20 + dz)
+          await pide(ana, 'wc undo', /Undone .*paste/)
+        }
+      }
+    },
+    {
+      id: '027 H1 CA1 · H1 CA2 · H1 CA3 · H1 CA4 · H1 CA5',
+      nombre: 'un esquema guardado por Worldcraft (girado) lo carga y lo pega WorldEdit en el mismo lugar, con el cofre y el cartel',
+      timeoutMs: 120000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        await construirMuestra(srv)
+        await seleccionar(ana, [X + 20, -60, Z + 20], [X + 22, -59, Z + 20])
+        await pide(ana, 'wc copy', /Copied 3×2×1 \(6 blocks\)/)
+        await pide(ana, 'wc schem save e2e_wc --overwrite', /Saved e2e_wc: 3×2×1 \(6 blocks\), \d+ KB/)
+        await pide(ana, 'wc schem save e2e_wc', /e2e_wc already exists.*--overwrite/)
+        // Girado 90: se guarda ya girado (el este pasa al sur: 1×2×3).
+        await pide(ana, 'wc rotate 90', /now 1×2×3/)
+        await pide(ana, 'wc schem save e2e_wc_g --overwrite', /Saved e2e_wc_g: 1×2×3 \(6 blocks\)/)
+        const we = carpetaWE(srv)
+        fs.mkdirSync(we, { recursive: true })
+        for (const n of ['e2e_wc', 'e2e_wc_g']) fs.copyFileSync(path.join(srv.run, 'plugins', 'Worldcraft', 'schematics', `${n}.schem`), path.join(we, `${n}.schem`))
+        await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 18.5}`)
+        await ana.hasta('llegar', b => Math.abs(b.entity.position.z - (Z + 18.5)) < 0.6)
+        await pide(ana, '/schem load e2e_wc', /loaded/i, 30000)
+        await pide(ana, '/paste', /pasted/i, 30000)
+        await revisarMuestra(srv, X + 20, Z + 38)
+        await pide(ana, '/undo', /Undo successful|undid|undone/i)
+        await pide(ana, '/schem load e2e_wc_g', /loaded/i, 30000)
+        await pide(ana, '/paste', /pasted/i, 30000)
+        // (dx, dz) = (20..22, 20) desde Ana gira a (-20, 20..22): el cofre en (X-20, Z+38), la escalera mira al este.
+        await comprobar(srv, `block ${X - 20} -60 ${Z + 38} chest`)
+        await comprobar(srv, `block ${X - 20} -60 ${Z + 39} oak_stairs[facing=east]`)
+        await srv.consola(`data get block ${X - 20} -60 ${Z + 38} Items[0].count`, { espera: /has the following block data: 5/ })
+        await pide(ana, '/undo', /Undo successful|undid|undone/i)
+        for (const n of ['e2e_wc', 'e2e_wc_g']) fs.rmSync(path.join(we, `${n}.schem`), { force: true })
+      }
+    },
+    {
+      id: '027 H5 CA1 · H5 CA3 · H5 CA4 · H5 CA5 · H4 CA1 · H4 CA2 · H4 CA3',
+      nombre: 'esquemas seguros: Beto no pega bloques de comandos ni borra; nombres peligrosos y archivos rotos no tocan nada; borrar va a la papelera',
+      timeoutMs: 120000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        await srv.consola(`setblock ${X + 25} -60 ${Z + 20} command_block`)
+        await srv.sincronizar()
+        await seleccionar(ana, [X + 25, -60, Z + 20], [X + 25, -60, Z + 20])
+        await pide(ana, 'wc copy', /Copied 1×1×1/)
+        await pide(ana, 'wc schem save e2e_cmd --overwrite', /Saved e2e_cmd/)
+        await srv.consola(`setblock ${X + 25} -60 ${Z + 20} air`)
+        const propia = path.join(srv.run, 'plugins', 'Worldcraft', 'schematics')
+        fs.writeFileSync(path.join(propia, 'e2e_roto.schem'), Buffer.from('esto no es un esquema'))
+        fs.mkdirSync(carpetaWE(srv), { recursive: true })
+        fs.copyFileSync(path.join(propia, 'e2e_cmd.schem'), path.join(carpetaWE(srv), 'e2e_ajeno.schem'))
+        await pide(ana, 'wc schem load e2e_roto', /Could not load e2e_roto: .*Your clipboard did not change/)
+        await pide(ana, 'wc paste', /Done: paste changed 1 blocks/) // sigue con el bloque de comandos
+        await pide(ana, 'wc undo', /Undone .*paste/)
+        const permisos = path.join(srv.run, 'permissions.yml')
+        const antes = fs.existsSync(permisos) ? fs.readFileSync(permisos, 'utf8') : null
+        try {
+          fs.writeFileSync(permisos, ['e2e.editor:', '  default: true', '  children:', '    worldcraft.use: true', '    worldcraft.schematic: true', ''].join('\n'))
+          await srv.consola('bukkit:reload permissions', { espera: /Permissions successfully reloaded/i })
+          await ctx.entrar(BETO)
+          for (const c of [`gamemode creative ${BETO}`, `tp ${BETO} ${X + 0.5} -60 ${Z - 6.5} 0 0`]) await srv.consola(c)
+          const beto = ctx.bots[BETO]
+          await pide(beto, 'wc schem load e2e_cmd', /Loaded e2e_cmd \(Sponge v3\): 1×1×1/)
+          await pide(beto, 'wc paste', /You may not place command_block/)
+          await pide(beto, 'wc schem delete e2e_cmd', /You don't have permission/)
+          await pide(beto, 'wc schem save e2e_cmd --overwrite', /Replacing a schematic needs the permission/)
+          await pide(beto, 'wc schem load ../../server', /is not a valid name/)
+          await pide(beto, 'wc schem load C:/Windows/win', /is not a valid name/)
+          const nombres = (await beto.bot.tabComplete('/wc schem load e2e_')).map(x => x.match ?? x)
+          for (const n of ['e2e_cmd', 'e2e_ajeno']) if (!nombres.includes(n)) throw new Error(`no sugiere ${n}: ${nombres}`)
+          const ops = (await beto.bot.tabComplete('/wc schem ')).map(x => x.match ?? x)
+          if (ops.includes('delete')) throw new Error(`Beto ve delete: ${ops}`)
+        } finally {
+          if (antes == null) fs.rmSync(permisos, { force: true })
+          else fs.writeFileSync(permisos, antes)
+          await srv.consola('bukkit:reload permissions')
+          await ctx.entrar(BETO)
+          for (const c of [`gamemode creative ${BETO}`, `tp ${BETO} ${X + 0.5} -60 ${Z - 6.5} 0 0`]) await srv.consola(c)
+        }
+        await pide(ana, 'wc schem delete e2e_ajeno', /is in the WorldEdit folder: Worldcraft only reads there/)
+        await pide(ana, 'wc schem delete e2e_cmd', /Deleted e2e_cmd\. It waits 7 day/)
+        if (fs.existsSync(path.join(propia, 'e2e_cmd.schem'))) throw new Error('e2e_cmd sigue en la carpeta')
+        if (!fs.readdirSync(path.join(propia, '.trash')).some(f => f.startsWith('e2e_cmd-'))) throw new Error('e2e_cmd no está en la papelera')
+        await pide(ana, 'wc schem load e2e_cmd', /There is no schematic called e2e_cmd/)
+        if (!fs.existsSync(path.join(carpetaWE(srv), 'e2e_ajeno.schem'))) throw new Error('se borró el de WorldEdit')
+        fs.rmSync(path.join(propia, 'e2e_roto.schem'), { force: true })
+        fs.rmSync(path.join(carpetaWE(srv), 'e2e_ajeno.schem'), { force: true })
       }
     }
   ]

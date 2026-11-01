@@ -11,6 +11,7 @@ import dev.leo.worldcraft.edit.RegionSource;
 import dev.leo.worldcraft.history.HistoryStore;
 import dev.leo.worldcraft.paper.Edits;
 import dev.leo.worldcraft.paper.PaperBlocks;
+import dev.leo.worldcraft.paper.Schematics;
 import dev.leo.worldcraft.paper.SelfTest;
 import dev.leo.worldcraft.paper.Session;
 import dev.leo.worldcraft.paper.Wand;
@@ -55,6 +56,9 @@ public final class WorldcraftCommand implements TabExecutor {
                 "jobs", "limits", "mountain", "island", "floating_island", "reroll", "brush", "styles")) {
             SUBS.put(s, USE);
         }
+        // Spec 027: esquemas, con su propio permiso (un ayudante puede pegar sin poder llenar el disco).
+        SUBS.put("schem", Schematics.PERM);
+        SUBS.put("schematic", Schematics.PERM);
         for (String s : List.of("reload", "validate", "selftest")) SUBS.put(s, ADMIN);
     }
 
@@ -116,6 +120,7 @@ public final class WorldcraftCommand implements TabExecutor {
                 case "reroll" -> plugin.terrain().reroll(s);
                 case "brush" -> brush(s, a);
                 case "styles" -> styles(s);
+                case "schem", "schematic" -> schem(s, a);
                 default -> help(s, a);
             }
         } catch (Usage u) {
@@ -133,7 +138,7 @@ public final class WorldcraftCommand implements TabExecutor {
 
     /** floating_island usa la ayuda de island. */
     private static String helpKey(String sub) {
-        return sub.equals("floating_island") ? "island" : sub;
+        return sub.equals("floating_island") ? "island" : sub.equals("schematic") ? "schem" : sub;
     }
 
     private static String hintText(String closest) {
@@ -162,7 +167,7 @@ public final class WorldcraftCommand implements TabExecutor {
         }
         s.sendMessage(msg().get("help-header"));
         for (String sub : visible(s)) {
-            if (sub.equals("floating_island")) continue;
+            if (sub.equals("floating_island") || sub.equals("schematic")) continue;
             s.sendMessage(msg().get("help-line", "usage", msg().raw("help." + sub + ".usage"), "text", msg().raw("help." + sub + ".text")));
         }
         s.sendMessage(msg().get("help-footer"));
@@ -764,6 +769,41 @@ public final class WorldcraftCommand implements TabExecutor {
         return s.matches("\\d+(\\.\\d+)?%?") || s.matches("\\.\\d+");
     }
 
+    /** /wc schem list|load|save|delete (spec 027). */
+    private void schem(CommandSender s, String[] a) {
+        String op = a.length < 2 ? "" : a[1].toLowerCase(Locale.ROOT);
+        Args args = Args.parse(a, 2, op.equals("save") ? Set.of("overwrite") : Set.of());
+        if (args.problem != null) {
+            s.sendMessage(msg().get("error", "message", args.problem));
+            return;
+        }
+        Schematics sch = plugin.schematics();
+        switch (op) {
+            case "list" -> {
+                int page = 1;
+                String filter = null;
+                for (String p : args.positional) {
+                    if (p.matches("\\d{1,6}")) page = Integer.parseInt(p);
+                    else filter = p;
+                }
+                sch.list(s, page, filter);
+            }
+            case "load", "save", "delete" -> {
+                if (args.positional.size() != 1) {
+                    s.sendMessage(msg().get("usage", "usage", msg().raw("help.schem.usage")));
+                    return;
+                }
+                String name = args.positional.get(0);
+                if (op.equals("load")) sch.load(s, name);
+                else if (op.equals("save")) sch.save(s, name, args.flags.contains("overwrite"));
+                else if (!s.hasPermission(Schematics.PERM_DELETE)) s.sendMessage(msg().get("no-permission"));
+                else sch.delete(s, name);
+            }
+            default -> s.sendMessage(msg().get(op.isEmpty() ? "usage" : "schem-unknown", "usage", msg().raw("help.schem.usage"),
+                    "input", op, "hint", hintText(Issues.closest(op, List.of("list", "load", "save", "delete")))));
+        }
+    }
+
     private void styles(CommandSender s) {
         var styles = plugin.config().terrain().styles();
         s.sendMessage(msg().get("styles-header", "count", String.valueOf(styles.size())));
@@ -819,6 +859,8 @@ public final class WorldcraftCommand implements TabExecutor {
                 case "undo", "redo" -> Set.of("--player");
                 case "pos1", "pos2" -> Set.of("--world");
                 case "mountain", "island", "floating_island" -> Set.of("--now");
+                case "schem", "schematic" -> a.length > 1 && a[1].equalsIgnoreCase("save") && s.hasPermission(Schematics.PERM_DELETE)
+                        ? Set.of("--overwrite") : Set.of();
                 default -> Set.of();
             };
             return filter(new ArrayList<>(opts), last);
@@ -837,6 +879,22 @@ public final class WorldcraftCommand implements TabExecutor {
             case "mountain" -> terrainSuggestions(Options.Tool.MOUNTAIN, last);
             case "island", "floating_island" -> terrainSuggestions(Options.Tool.ISLAND, last);
             case "brush" -> brushSuggestions(a, last);
+            case "schem", "schematic" -> schemSuggestions(s, a, last);
+            default -> List.of();
+        };
+    }
+
+    private List<String> schemSuggestions(CommandSender s, String[] a, String last) {
+        if (a.length == 2) {
+            List<String> ops = new ArrayList<>(List.of("list", "load", "save"));
+            if (s.hasPermission(Schematics.PERM_DELETE)) ops.add("delete");
+            return filter(ops, last);
+        }
+        if (a.length != 3) return List.of();
+        return switch (a[1].toLowerCase(Locale.ROOT)) {
+            case "load" -> filter(plugin.schematics().names(false), last);
+            case "delete" -> s.hasPermission(Schematics.PERM_DELETE) ? filter(plugin.schematics().names(true), last) : List.of();
+            case "save" -> filter(plugin.schematics().names(true), last);
             default -> List.of();
         };
     }

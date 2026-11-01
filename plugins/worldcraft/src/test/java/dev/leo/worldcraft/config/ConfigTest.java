@@ -81,6 +81,22 @@ class ConfigTest {
         assertTrue(bad.issues().all().toString().contains("confirm.enabled: 'maybe' is not true or false"));
     }
 
+    /** Spec 027 H6 CA1: la sección schematics, con rangos; un config.yml de la 0.2.0 sin ella usa los de fábrica. */
+    @Test
+    void spec027_H6_CA1_seccion_schematics_validada() throws Exception {
+        assertEquals(Settings.Schematics.DEFAULTS, load("history: { keep_days: 3 }\n", "").settings().schematics());
+        assertEquals(java.util.List.of("plugins/WorldEdit/schematics", "plugins/FastAsyncWorldEdit/schematics"),
+                Settings.Schematics.DEFAULTS.extraFolders());
+        LoadedConfig c = load("schematics:\n  max_file_kb: 0\n  max_blocks: 1000\n  trash_dayz: 3\n  extra_folders: [a/b]\n", "");
+        Settings.Schematics s = c.settings().schematics();
+        assertEquals(10_240, s.maxFileKb());
+        assertEquals(1000, s.maxBlocks());
+        assertEquals(java.util.List.of("a/b"), s.extraFolders());
+        String all = c.issues().all().toString();
+        assertTrue(all.contains("schematics.max_file_kb: 0 is out of range"), all);
+        assertTrue(all.contains("schematics.trash_dayz: unknown setting (did you mean 'trash_days'?)"), all);
+    }
+
     @Test
     void H8_CA2_un_archivo_roto_conserva_lo_anterior() throws Exception {
         LoadedConfig first = load("performance: { max_ms_per_tick: 4 }\n", "patterns: { a: stone }\n");

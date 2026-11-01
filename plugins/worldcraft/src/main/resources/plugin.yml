@@ -19,3 +19,9 @@ permissions:
   worldcraft.admin:
     description: Reload, validate and selftest.
     default: op
+  worldcraft.schematic:
+    description: List, load and save schematics (/wc schem list|load|save).
+    default: op
+  worldcraft.schematic.delete:
+    description: Delete schematics and replace them with save --overwrite.
+    default: op

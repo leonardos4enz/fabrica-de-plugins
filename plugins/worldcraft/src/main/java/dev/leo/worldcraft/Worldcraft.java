@@ -8,6 +8,7 @@ import dev.leo.worldcraft.history.HistoryStore;
 import dev.leo.worldcraft.paper.Edits;
 import dev.leo.worldcraft.paper.PaperBlocks;
 import dev.leo.worldcraft.paper.BrushTool;
+import dev.leo.worldcraft.paper.Schematics;
 import dev.leo.worldcraft.paper.Terrain;
 import dev.leo.worldcraft.paper.Wand;
 import org.bukkit.command.PluginCommand;
@@ -37,6 +38,8 @@ public final class Worldcraft extends JavaPlugin {
     private ExecutorService terrainThread;
     private Terrain terrain;
     private BrushTool brush;
+    private ExecutorService schematicThread;
+    private Schematics schematics;
 
     @Override
     public void onEnable() {
@@ -83,6 +86,14 @@ public final class Worldcraft extends JavaPlugin {
         brush = new BrushTool(this);
         getServer().getPluginManager().registerEvents(brush, this);
         brush.start();
+        // Spec 027: el disco, la compresión y el NBT de los esquemas, en un hilo propio (no atrasa los diarios).
+        schematicThread = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "Worldcraft-Schematics");
+            t.setDaemon(true);
+            return t;
+        });
+        schematics = new Schematics(this, schematicThread);
+        schematics.start();
         command = new WorldcraftCommand(this);
         PluginCommand cmd = getCommand("worldcraft");
         if (cmd != null) {
@@ -97,6 +108,15 @@ public final class Worldcraft extends JavaPlugin {
             if (wand != null) wand.stop();
             if (brush != null) brush.stop();
             if (terrainThread != null) terrainThread.shutdownNow();
+            if (schematicThread != null) {
+                // Un esquema a medio escribir va a un temporal: cortar no deja un .schem roto.
+                schematicThread.shutdown();
+                try {
+                    schematicThread.awaitTermination(5, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
             if (edits != null) edits.shutdown();
         } finally {
             // Lo que quedó en la cola de E/S (diarios, índices) se escribe antes de salir (lección 001 F-04).
@@ -147,6 +167,10 @@ public final class Worldcraft extends JavaPlugin {
 
     public BrushTool brush() {
         return brush;
+    }
+
+    public Schematics schematics() {
+        return schematics;
     }
 
     public WorldcraftCommand command() {

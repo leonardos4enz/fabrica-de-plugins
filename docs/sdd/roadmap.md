@@ -28,6 +28,7 @@
 | 024 SkinStatues: multimedia y página de presentación | Verificado: logo y póster por capas como el de la 020 (7 franjas de 1280 px y un GIF de 10 cuadros) con escenas en un mundo de terreno normal: dos estatuas de 100 bloques, una fila de 6 poses, la construcción, por nombre y por link y tres paletas, con skins de youtubers elegidos por el dueño (bajadas a la caché, nunca al repo); BBCode, Markdown y `publicar.md` y la publicación en Modrinth (en revisión), Hangar y SpigotMC; `PresentacionTest` ([verify](specs/024-skinstatues-pagina-de-presentacion/verify.md)) |
 | 025 Worldcraft: un editor de mundo que no traba el servidor (plugin nuevo) | Verificado en 1.21.4: 0.1.0, el tercer plugin (en inglés); [investigación](../investigacion/editores-de-mundo.md) de WorldEdit/FAWE; obras por tandas con 8 ms por tick para todo el plugin y turnos entre jugadores, vista previa con bloques falsos solo para quien edita y `confirm`, contorno con partículas, varita marcada, deshacer en disco y seguro (salta lo cambiado después), patrones y máscaras legibles con «did you mean», presets, límites por grupo con bloques prohibidos, copiar/cortar/pegar/girar/voltear con cofres y carteles; confirmación desactivable sobre 50 000; F-01 a F-04 corregidos; 46 unitarias; 8/8 dos veces en Paper 1.21.4; 26.1.2 sin verificar; nombre, comando, confirmación y publicación decididos por el dueño ([verify](specs/025-worldcraft-nucleo/verify.md)) |
 | 026 Worldcraft: terreno fácil para el novato y fino para el experto | Verificado en 1.21.4: 0.2.0; [investigación](../investigacion/terreno-para-constructores.md) de WorldEdit, VoxelSniper, goBrush, WorldPainter y Axiom; `/wc mountain` donde mira el jugador (picos con crestas, contorno irregular, base que se funde con el suelo, solo agrega y no toca construcciones) y `/wc island` (cima casi plana, cono rugoso con estalactitas, raíces y árboles), vista previa de la piel con `[Build] [Another] [Cancel]` y `reroll`; pincel de terreno (subir, bajar, suavizar, aplanar, erosionar, pintar) sobre el suelo natural, con círculo de partículas; 7 estilos en `terrain.yml` con capas por altura y pendiente; opciones `clave=valor` con semilla; todo por el motor de la 025; F-01 a F-04 corregidos; 66 unitarias; 12/12 dos veces en Paper 1.21.4; CLARIFY pendiente del dueño ([verify](specs/026-worldcraft-terreno-facil/verify.md)) |
+| 027 Worldcraft: esquemas `.schem` de WorldEdit (pedido del dueño) | Verificado en 1.21.4: 0.3.0; `/wc schem save|load|list|delete` (alias `schematic`) sobre `plugins/Worldcraft/schematics/`; lector y escritor NBT/GZip y Sponge v1, v2 y v3 propios en Java, desde la especificación pública (sin código ni API de WorldEdit); carga al portapapeles de la 025 (pegar con vista previa, girar, voltear, deshacer) en el mismo lugar relativo que WorldEdit; cofres y carteles con su contenido (ítems actualizados por el juego), otros datos de bloque conservados; bloques desconocidos a aire con nombres, nombres cambiados traducidos; carpetas de WorldEdit y FAWE de solo lectura; nombres seguros, topes antes de reservar, papelera de 7 días; disco y NBT en un hilo propio y los datos de bloque por pasos en el planificador; WorldEdit 7.3.19 lee lo de Worldcraft y al revés (en la suite); F-01 corregido; 94 unitarias; 15/15 dos veces en Paper 1.21.4; CLARIFY pendiente del dueño ([verify](specs/027-worldcraft-esquemas-schem/verify.md)) |
 
 ## Por qué empezamos con OmniEvents
 OmniEvents es la versión propia de *ConditionalEvents* (Ajneb97): «cuando pase X, si se cumple Y, haz Z». Es el
@@ -76,7 +77,8 @@ De la [investigación de editores de mundo](../investigacion/editores-de-mundo.m
 | Dos obras que se cruzan dejan bloques fantasma (FAWE) | Una obra que se cruza con otra más vieja espera | 025 |
 | Cualquier hacha de madera es varita | Solo la varita marcada que da `/wc wand` | 025 |
 | Lo difícil no es el comando sino cómo crear: una montaña natural exige matemáticas en `//generate`; no hay islas flotantes; `//smooth` derrite árboles y casas; pintar por pendiente exige WorldPainter o Axiom | `/wc mountain` y `/wc island` con buenos valores, vista previa y `[Build] [Another] [Cancel]`; pincel de terreno sobre el suelo natural (no toca árboles ni construcciones); estilos con capas por altura y pendiente en YAML; todas las opciones `clave=valor` y la semilla para el experto | 026 |
-| Esquemas, formas, WorldGuard, rollback por zona | Pendiente (abajo) | — |
+| Cambiarse desde WorldEdit es perder los esquemas; un `.schem` roto, enorme o con nombres raros llega sin aviso; los cofres pierden lo de adentro al pegar (FAWE #1548) | `/wc schem save|load|list|delete` con Sponge v1–v3 propio en Java (sin código GPL), la carpeta de WorldEdit y FAWE leída donde está (solo lectura), cofres y carteles con su contenido, nombres seguros, topes antes de gastar memoria, papelera, todo fuera del hilo principal | 027 |
+| Formas, WorldGuard, rollback por zona | Pendiente (abajo) | — |
 
 ## Siguientes specs (propuestas, en orden)
 Elegidas por el dueño tras la [investigación de plugins exitosos](../investigacion/plugins-exitosos.md) (§6; todas
@@ -139,7 +141,7 @@ Otras pendientes:
 
   | Idea | Qué es | Costo |
   |---|---|---|
-  | Esquemas `.schem` (**pedido del dueño**: WorldEdit se usa en todos lados) | Importar y exportar el formato abierto Sponge v3 (el de WorldEdit), carpeta `schematics/`, `/wc schem save|load|list`, pegar con vista previa | Medio |
+  | ~~Esquemas `.schem`~~ (**pedido del dueño**) | Hecho en la [027](specs/027-worldcraft-esquemas-schem/spec.md): leer v1–v3, escribir v3, la carpeta de WorldEdit, cofres y carteles | — |
   | Respetar regiones | WorldGuard (y otros) opcional: la escritura ya pasa por una sola puerta (`EditWorld.set`); sin permiso de construir ahí, se salta y se cuenta | Medio |
   | Formas | `sphere`, `cyl`, `pyramid`, huecas o llenas, con el mismo motor | Bajo–medio |
   | ~~Pinceles~~ | Hecho en la [026](specs/026-worldcraft-terreno-facil/spec.md) para el terreno (subir, bajar, suavizar, aplanar, erosionar, pintar, con el círculo siguiendo la mira); queda un pincel de esfera o de patrón para construcciones | Medio |
@@ -163,5 +165,16 @@ Otras pendientes:
   | Cuevas, arcos y salientes | Densidad 3D en lugar de mapa de alturas | Alto |
   | Cascadas y lagos en la isla; objetos esparcidos | Agua que cae al vacío, árboles grandes, rocas o esquemas por reglas | Medio–alto |
   | Exportar e importar estilos | Un estilo como archivo suelto para compartir | Bajo |
+- **Worldcraft: lo que dejó fuera la 027 (esquemas)** (el dueño elige):
+
+  | Idea | Qué es | Costo |
+  |---|---|---|
+  | Entidades del esquema | Soportes, marcos, cuadros, criaturas con su NBT (sin NMS: lo que la API de Paper deje) | Medio–alto |
+  | Más datos de bloque | Cabezas con skin, estandartes, generadores, libros de atriles al pegar (hoy se conservan pero no se ponen) | Medio |
+  | Biomas | Leer y escribir los biomas del esquema | Bajo–medio |
+  | `.schematic` y `.litematic` | MCEdit (ids numéricos de antes de 1.13) y Litematica | Medio |
+  | Copiar la carpeta de WorldEdit | `/wc schem import-worldedit` para quedarse sin WorldEdit del todo (pregunta 1 del CLARIFY) | Bajo |
+  | Pegar al azar | Uno al azar de una carpeta (árboles, rocas), como pide WorldEdit #2063 | Bajo |
+  | Vista en miniatura | Ver un esquema antes de cargarlo (*block displays*, como TinyBuilds) | Medio |
 - Después: el siguiente plugin de la fábrica, reutilizando el motor de expresiones de OmniEvents como biblioteca
   común (`libs/`), con su propio ADR.

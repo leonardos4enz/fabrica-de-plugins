@@ -65,7 +65,10 @@ async function principal () {
   if (!jar) throw new Error(`No hay ${suite.jar} en dist/: compila con gradlew :${o.plugin}:dist`)
   fs.copyFileSync(path.join(RAIZ, 'dist', jar), path.join(pluginsDir, jar))
   // Spec 012: plugins de terceros de las integraciones (Vault, EssentialsX, WorldEdit, WorldGuard, Citizens).
-  if (suite.pluginsExtra) {
+  // Spec 027: una expresión (/worldedit/i) instala solo esos jars (Worldcraft prueba los .schem con WorldEdit).
+  if (suite.pluginsExtra instanceof RegExp) {
+    await instalarPluginsExtra(o.paper ?? suite.versionPorDefecto, pluginsDir, path.join(AQUI, '.cache', 'plugins'), suite.pluginsExtra)
+  } else if (suite.pluginsExtra) {
     await instalarPluginsExtra(o.paper ?? suite.versionPorDefecto, pluginsDir, path.join(AQUI, '.cache', 'plugins'))
     configurarEssentials(pluginsDir, suite.comandosDeMinecraft ?? [])
     // Spec 013: Geyser + Floodgate para los jugadores de Bedrock (solo 127.0.0.1).

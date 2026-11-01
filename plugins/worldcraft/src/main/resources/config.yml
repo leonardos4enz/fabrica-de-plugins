@@ -69,3 +69,13 @@ terrain:
     max_radius: 16        # 1..64
     range: 200            # how far a brush reaches
     show: true            # a circle of particles where the brush would land, only for you
+
+# Schematics (/wc schem save|load|list|delete): .schem files in the Sponge format that WorldEdit and FAWE use.
+# Yours are in plugins/Worldcraft/schematics/; deleted ones wait in schematics/.trash/ for trash_days.
+schematics:
+  max_file_kb: 10240      # the biggest .schem that is loaded (10 MB)
+  max_blocks: 5000000     # the biggest schematic (width × height × length) that is loaded; pasting still uses your limits
+  trash_days: 7           # 0 = empty the trash at every start
+  # Read-only folders (relative to the server folder): WorldEdit's and FAWE's schematics are loaded from where they are.
+  # Worldcraft never writes or deletes there.
+  extra_folders: [plugins/WorldEdit/schematics, plugins/FastAsyncWorldEdit/schematics]

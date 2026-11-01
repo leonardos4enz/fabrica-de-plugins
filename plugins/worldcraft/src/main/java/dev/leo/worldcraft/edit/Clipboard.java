@@ -31,6 +31,79 @@ public final class Clipboard {
         java.util.Arrays.fill(states, -1);
     }
 
+    private Clipboard(int w, int h, int d, int offX, int offY, int offZ, int[] states, Map<Integer, byte[]> tiles) {
+        if (states.length != (long) w * h * d) throw new IllegalArgumentException("size");
+        this.w = w;
+        this.h = h;
+        this.d = d;
+        this.offX = offX;
+        this.offY = offY;
+        this.offZ = offZ;
+        this.states = states;
+        this.tiles.putAll(tiles);
+    }
+
+    /**
+     * Un portapapeles hecho de un esquema (spec 027): states en el orden (y·d + z)·w + x (el mismo del formato Sponge),
+     * off la esquina mínima respecto de quien pega. Se puede armar fuera del hilo principal.
+     */
+    public static Clipboard of(int w, int h, int d, int offX, int offY, int offZ, int[] states, Map<Integer, byte[]> tiles) {
+        return new Clipboard(w, h, d, offX, offY, offZ, states, tiles);
+    }
+
+    /**
+     * Una copia con el giro y el volteo ya aplicados y sin transformación (spec 027 H1 CA1: se guarda girado). turn da
+     * el estado girado de cada estado (calculado antes en el hilo principal); no toca Bukkit.
+     */
+    public Clipboard baked(java.util.function.IntUnaryOperator turn) {
+        if (transform.steps().isEmpty()) return this;
+        Box t = target(0, 0, 0);
+        int nw = t.width(), nh = t.height(), nd = t.depth();
+        int[] out = new int[states.length];
+        Map<Integer, byte[]> nt = new HashMap<>();
+        int[] v = new int[3];
+        int i = 0;
+        for (int y = 0; y < nh; y++) {
+            for (int z = 0; z < nd; z++) {
+                for (int x = 0; x < nw; x++, i++) {
+                    transform.inverse(t.minX() + x, t.minY() + y, t.minZ() + z, v);
+                    int s = at(v[0], v[1], v[2]);
+                    out[i] = s < 0 ? s : turn.applyAsInt(s);
+                    byte[] tile = tileAt(v[0], v[1], v[2]);
+                    if (tile != null) nt.put(i, tile);
+                }
+            }
+        }
+        return new Clipboard(nw, nh, nd, t.minX(), t.minY(), t.minZ(), out, nt);
+    }
+
+    public int width() {
+        return w;
+    }
+
+    public int height() {
+        return h;
+    }
+
+    public int depth() {
+        return d;
+    }
+
+    /** La esquina mínima respecto de quien copió (sin transformar): {x, y, z}. */
+    public int[] offset() {
+        return new int[]{offX, offY, offZ};
+    }
+
+    /** Los estados sin transformar, en el orden (y·d + z)·w + x (-1 = sin leer). No se cambian. */
+    public int[] rawStates() {
+        return states;
+    }
+
+    /** Los datos de bloque por índice, sin transformar. No se cambian. */
+    public Map<Integer, byte[]> rawTiles() {
+        return java.util.Collections.unmodifiableMap(tiles);
+    }
+
     private int index(int rx, int ry, int rz) {
         return (ry * d + rz) * w + rx;
     }
