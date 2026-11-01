@@ -32,6 +32,10 @@ public final class SkinPng {
         for (int i = 0; i < SIGNATURE.length; i++) {
             if (data[i] != SIGNATURE[i]) throw new SkinException("image-invalid", "file", what, "reason", "not a PNG image");
         }
+        // Spec 023 H2 CA1: el primer bloque tiene que ser la cabecera, si no el «tamaño» leído no es el de la imagen.
+        if (data[12] != 'I' || data[13] != 'H' || data[14] != 'D' || data[15] != 'R') {
+            throw new SkinException("image-invalid", "file", what, "reason", "not a PNG image");
+        }
         int w = readInt(data, 16), h = readInt(data, 20);
         boolean ok = false;
         StringBuilder expected = new StringBuilder();

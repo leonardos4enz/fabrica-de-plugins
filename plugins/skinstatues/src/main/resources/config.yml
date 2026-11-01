@@ -32,5 +32,11 @@ build:
 # Without it, put the skin in plugins/SkinStatues/skins/<name>.png.
 network:
   mojang: false
+  # Skins from a link, like /statue build https://i.imgur.com/abc.png 32 (needs skinstatues.build.url). OFF by default.
+  # Only https links to public sites: local and LAN addresses are always refused, and the file must be a real
+  # skin (a PNG of 64x64 or 64x32, up to 1 MB).
+  urls: false
+  # Sites allowed for links, e.g. ["i.imgur.com", "*.imgur.com", "textures.minecraft.net"]. Empty = any public site.
+  allowed_hosts: []
   # Downloaded skins are reused for this many hours.
   cache_hours: 24

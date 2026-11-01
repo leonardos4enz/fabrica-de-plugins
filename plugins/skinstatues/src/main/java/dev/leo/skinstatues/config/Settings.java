@@ -1,7 +1,9 @@
 package dev.leo.skinstatues.config;
 
+import dev.leo.skinstatues.skin.LinkPolicy;
 import org.bukkit.configuration.ConfigurationSection;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -9,17 +11,18 @@ import java.util.Map;
 /** config.yml (plan 021 §2) validado: un valor inválido avisa y se usa el de por defecto. */
 public record Settings(int minHeight, int maxHeight, int maxBlocks, int offsetUp, String defaultPose, String defaultPalette,
                        boolean overlay, double overlayDepth, int alphaThreshold, boolean cape,
-                       int blocksPerTick, int maxMsPerTick, boolean mojang, int cacheHours) {
+                       int blocksPerTick, int maxMsPerTick, boolean mojang, int cacheHours,
+                       boolean urls, List<String> allowedHosts) {
 
     public static final Settings DEFAULTS = new Settings(8, 128, 400_000, 2, "standing", "all", true, 0.5, 128, true,
-            4000, 10, false, 24);
+            4000, 10, false, 24, false, List.of());
 
     private static final Map<String, List<String>> KEYS = Map.of(
             "", List.of("min_height", "max_height", "max_blocks", "offset_up", "default_pose", "default_palette",
                     "overlay", "cape", "build", "network"),
             "overlay", List.of("enabled", "depth", "alpha_threshold"),
             "build", List.of("blocks_per_tick", "max_ms_per_tick"),
-            "network", List.of("mojang", "cache_hours"));
+            "network", List.of("mojang", "urls", "allowed_hosts", "cache_hours"));
 
     public static Settings load(ConfigurationSection c, String file, Issues issues) {
         for (Map.Entry<String, List<String>> e : KEYS.entrySet()) {
@@ -52,7 +55,30 @@ public record Settings(int minHeight, int maxHeight, int maxBlocks, int offsetUp
                 r.integer("build.blocks_per_tick", d.blocksPerTick, 1, 1_000_000),
                 r.integer("build.max_ms_per_tick", d.maxMsPerTick, 1, 45),
                 r.bool("network.mojang", d.mojang),
-                r.integer("network.cache_hours", d.cacheHours, 0, 24 * 365));
+                r.integer("network.cache_hours", d.cacheHours, 0, 24 * 365),
+                r.bool("network.urls", d.urls),
+                hosts(c, file, issues));
+    }
+
+    /** Spec 023 H2 CA4: los sitios permitidos para links; uno que no es un sitio se informa y se omite. */
+    private static List<String> hosts(ConfigurationSection c, String file, Issues issues) {
+        Object v = c.get("network.allowed_hosts");
+        if (v == null) return List.of();
+        if (!(v instanceof List<?> list)) {
+            issues.error(file, "network.allowed_hosts", "must be a list of sites, like [\"i.imgur.com\", \"*.imgur.com\"]: allowing any site");
+            return List.of();
+        }
+        List<String> out = new ArrayList<>();
+        for (int i = 0; i < list.size(); i++) {
+            String h = String.valueOf(list.get(i)).trim().toLowerCase(Locale.ROOT);
+            if (LinkPolicy.HOST_PATTERN.matcher(h).matches()) out.add(h);
+            else issues.error(file, "network.allowed_hosts[" + i + "]", "'" + list.get(i) + "' is not a site name (like i.imgur.com or *.imgur.com): skipped");
+        }
+        if (out.isEmpty() && !list.isEmpty()) {
+            issues.error(file, "network.allowed_hosts", "no valid site in the list: links are refused until you fix it");
+            out.add("invalid.invalid");
+        }
+        return List.copyOf(out);
     }
 
     private record Reader(ConfigurationSection c, String file, Issues issues) {

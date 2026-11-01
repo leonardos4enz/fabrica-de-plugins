@@ -46,6 +46,23 @@ public final class Skin {
         return cape == null ? this : new Skin(px, slim, null);
     }
 
+    /** El mismo dibujo con el modelo forzado (`--slim`/`--classic`, spec 023 H1 CA3). */
+    public Skin withSlim(boolean s) {
+        return s == slim ? this : new Skin(px, s, cape);
+    }
+
+    /**
+     * Spec 023 H1 CA3: una skin de 64×64 es delgada si las dos columnas que solo usan los brazos anchos (la espalda de
+     * cada brazo: x 54–55, y 20–31 en el derecho; x 46–47, y 52–63 en el izquierdo) son todas transparentes. Se mira la
+     * imagen tal como llegó (antes de volver opaca la primera capa); la de 64×32 siempre es clásica.
+     */
+    public static boolean detectSlim(BufferedImage image) {
+        if (image.getWidth() != SIZE || image.getHeight() != SIZE) return false;
+        for (int y = 20; y < 32; y++) for (int x = 54; x < 56; x++) if ((image.getRGB(x, y) >>> 24) != 0) return false;
+        for (int y = 52; y < 64; y++) for (int x = 46; x < 48; x++) if ((image.getRGB(x, y) >>> 24) != 0) return false;
+        return true;
+    }
+
     /**
      * Arma la skin desde la imagen ya validada: 64×64 o 64×32. La capa, si hay, es de 64×32 o la antigua de 22×17.
      *

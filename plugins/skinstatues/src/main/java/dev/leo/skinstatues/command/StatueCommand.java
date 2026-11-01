@@ -11,6 +11,8 @@ import dev.leo.skinstatues.config.Messages;
 import dev.leo.skinstatues.config.PoseLoader;
 import dev.leo.skinstatues.model.Pose;
 import dev.leo.skinstatues.skin.MojangClient;
+import dev.leo.skinstatues.skin.SkinException;
+import dev.leo.skinstatues.skin.SkinLink;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -33,7 +35,7 @@ import java.util.UUID;
 
 /** /statue (plan 021 §2). Cada subcomando pide su permiso; el autocompletado solo muestra lo permitido (H9 CA4). */
 public final class StatueCommand implements TabExecutor {
-    private static final String BUILD = "skinstatues.build", REMOVE = "skinstatues.remove",
+    private static final String BUILD = "skinstatues.build", BUILD_URL = "skinstatues.build.url", REMOVE = "skinstatues.remove",
             OTHERS = "skinstatues.remove.others", ADMIN = "skinstatues.admin";
     private static final Map<String, String> SUBS = Map.ofEntries(
             Map.entry("build", BUILD), Map.entry("undo", BUILD), Map.entry("cancel", BUILD), Map.entry("list", BUILD),
@@ -92,7 +94,25 @@ public final class StatueCommand implements TabExecutor {
         }
         LoadedConfig cfg = plugin.config();
         String name = args[1];
-        if (!MojangClient.NAME.matcher(name).matches()) {
+        SkinLink link = null;
+        if (SkinLink.looksLike(name)) {
+            // Spec 023 H1 CA4, CA5 y H2 CA2: permiso aparte, interruptor apagado por defecto y el link validado sin red.
+            if (!s.hasPermission(BUILD_URL)) {
+                s.sendMessage(msg().get("no-permission"));
+                return;
+            }
+            if (!cfg.settings().urls()) {
+                s.sendMessage(msg().get("links-off"));
+                return;
+            }
+            try {
+                link = SkinLink.parse(name, plugin.links().localLinks());
+            } catch (SkinException e) {
+                s.sendMessage(msg().get(e.key(), e.args()));
+                return;
+            }
+            name = link.label();
+        } else if (!MojangClient.NAME.matcher(name).matches()) {
             s.sendMessage(msg().get("invalid-name", "name", name));
             return;
         }
@@ -127,7 +147,8 @@ public final class StatueCommand implements TabExecutor {
         }
         Statues.Target target = target(s, b, cfg.settings().offsetUp());
         if (target == null) return;
-        plugin.statues().build(s, target, new Statues.Request(name, height, ps, pal, b.overlay(), b.cape()));
+        plugin.statues().build(s, target, new Statues.Request(name, link, b.slim(), height, ps, pal, b.overlay(),
+                link == null && b.cape()));
     }
 
     /**
@@ -347,6 +368,7 @@ public final class StatueCommand implements TabExecutor {
                     List<String> names = new ArrayList<>();
                     for (Player p : Bukkit.getOnlinePlayers()) names.add(p.getName());
                     names.add("Example");
+                    if (cfg.settings().urls() && s.hasPermission(BUILD_URL)) names.add("https://");
                     yield starting(names, args[1]);
                 }
                 if (args.length == 3) yield starting(List.of("16", "32", "64", "128"), args[2]);

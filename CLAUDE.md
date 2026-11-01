@@ -147,6 +147,13 @@ con `--release 21`.
   también lo lejano. En Git Bash, `node -e '…'` con un apóstrofo en el texto corta la cadena: usar las herramientas
   de edición. Dos partes que se cruzan (la cara en el brazo en `dabbing`) llenan el «interior» de otra: la prueba de
   cáscara salta esos puntos.
+- **Spec 023 (skins por link):** la suite sirve las skins con un HTTPS local (`tests-e2e/lib/https-local.mjs`, la suite
+  lo pide con `antesDeArrancar`/`alTerminar`). El `trustStore` que se le pasa a Paper tiene que ser una **copia del
+  `cacerts` del JDK** con el certificado agregado: uno con solo el local rompe el HTTPS de Paper («Failed to request
+  yggdrasil public key», cuenta como error del log). `permissions.yml` **no puede redefinir** un permiso del `plugin.yml`
+  («The permission skinstatues.build is already defined!»): se da como hijo de uno propio (`e2e.x: {default: true,
+  children: {skinstatues.build: true}}`). `statue undo` desde la consola deshace la última **de la consola**: para la de
+  un jugador, `statue remove <id>`. Paper anota en su log cada comando de un jugador (link incluido): eso no es del plugin.
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

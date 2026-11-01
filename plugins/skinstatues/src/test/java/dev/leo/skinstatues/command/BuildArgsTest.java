@@ -24,6 +24,16 @@ class BuildArgsTest {
     }
 
     @Test
+    void spec023_H1_CA3_slim_y_classic_fuerzan_el_modelo() {
+        assertNull(ok("").slim(), "sin opción, el modelo de la skin");
+        assertEquals(Boolean.TRUE, ok("--slim").slim());
+        assertEquals(Boolean.FALSE, ok("waving --classic --at 1 2 3").slim());
+        assertEquals(Boolean.TRUE, ok("--slim --slim").slim());
+        fails("--slim --classic", "model-conflict");
+        fails("--slm", "unknown-flag");
+    }
+
+    @Test
     void H3_CA3_sin_opciones_todo_como_antes() {
         BuildArgs b = ok("");
         assertNull(b.pose());

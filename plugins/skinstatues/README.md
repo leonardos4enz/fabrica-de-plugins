@@ -3,11 +3,13 @@
 Block statues of any player's skin: type a name and a height, and the player's figure is built in the world out of
 blocks, in the pose you choose, with the second skin layer in relief and the cape on its back.
 Specs: [021](../../docs/sdd/specs/021-skinstatues-nucleo/spec.md) (core),
-[022](../../docs/sdd/specs/022-skinstatues-poses-y-coordenadas/spec.md) (more poses, your own poses, coordinates).
+[022](../../docs/sdd/specs/022-skinstatues-poses-y-coordenadas/spec.md) (more poses, your own poses, coordinates),
+[023](../../docs/sdd/specs/023-skinstatues-skin-por-link/spec.md) (skins from a link).
 
 ```
 /statue build Example 32 waving
 /statue build Example 48 t_pose --at 100 64 -20 --facing north
+/statue build https://i.imgur.com/abc123.png 32 victory
 ```
 
 ![The 28 built-in poses](../../docs/img/skinstatues/poses.png)
@@ -28,6 +30,8 @@ Specs: [021](../../docs/sdd/specs/021-skinstatues-nucleo/spec.md) (core),
   `arms_crossed`, `hands_on_hips`, `kneeling`, `flexing`, `dabbing`, `charging`, `bowing`, `t_pose`, `zombie`,
   `sitting_floor`, `lying`, `praying`, `crouching`, `fighting`, `archer`, `relaxing`, `facepalm`, `waving_left`,
   `pointing_left`.
+- **Skins from a link**, like SkinsRestorer: paste the https link of a skin PNG instead of a name. Only a real skin
+  file is accepted (a PNG of 64×64 or 64×32), only from public sites, and only if you turn it on.
 - **Your own poses, the easy way.** Write them in `poses.yml` with angles in degrees; start from another pose with
   `extends` and change only what is different, or flip one left to right with `mirror`.
 - **The cape** of the account (or your own PNG), with its outside facing out.
@@ -42,7 +46,8 @@ Specs: [021](../../docs/sdd/specs/021-skinstatues-nucleo/spec.md) (core),
 ## Commands and permissions
 | Command | What it does | Permission (all `op` by default) |
 |---|---|---|
-| `/statue build <name> <height> [pose] [--at <x> <y> <z>] [--facing <dir>] [--world <w>] [--palette <p>] [--no-overlay] [--no-cape]` | Build a statue | `skinstatues.build` |
+| `/statue build <name> <height> [pose] [--at <x> <y> <z>] [--facing <dir>] [--world <w>] [--palette <p>] [--slim|--classic] [--no-overlay] [--no-cape]` | Build a statue | `skinstatues.build` |
+| `/statue build <link> <height> [pose] …` | The same, with the skin from an https link (see [Skins from a link](#skins-from-a-link)) | `skinstatues.build` **and** `skinstatues.build.url` |
 | `/statue undo` | Remove your last statue (from the console, the console's last one) | `skinstatues.build` |
 | `/statue cancel [id]` | Stop a statue being built (what was placed can be removed) | `skinstatues.build` |
 | `/statue remove <id>` | Remove a statue and restore what was there | `skinstatues.remove` (`skinstatues.remove.others` for other players' statues) |
@@ -77,6 +82,38 @@ placed, so the server does not freeze. Coordinates outside the world border are 
 2. **Mojang, by account name**, only if you turn it on in `config.yml` (`network.mojang: true`). The plugin then asks
    Mojang's servers (and nothing else) for the skin, the arm model and the official cape, and keeps them in `cache/`
    for `network.cache_hours`. If Mojang does not answer, the last downloaded copy is used.
+3. **A link** to the skin's PNG (below).
+
+`--slim` or `--classic` forces the arm width for any of them (3 or 4 pixels).
+
+## Skins from a link
+```
+/statue build https://i.imgur.com/abc123.png 32
+/statue build https://textures.minecraft.net/texture/1a2b3c… 48 waving --at 0 70 0
+/statue build https://example.com/my-skin.png 32 --slim
+```
+The link goes where the account name goes; everything else (height, pose, `--at`, palettes, the console) works the
+same. Statues from a link have no cape.
+
+- **Off by default.** Turn it on with `network.urls: true` in `config.yml` and `/statue reload`. Using a link also
+  needs the `skinstatues.build.url` permission (`op` by default), so you can give `skinstatues.build` without links.
+- **Only a real skin.** The file must be a PNG of 64×64 (or the old 64×32), up to 1 MB. Its size is read from the
+  file header before the image is decoded, and the download stops at 1 MB. A web page, a JPG, a 128×128 image or a
+  site that does not answer in 8 seconds gives a clear message and nothing is built. Use the link to the **image
+  itself** (on Imgur, the `i.imgur.com/….png` one; on NameMC, the skin's download link), not to the page that shows it.
+- **Arm model detected.** A 64×64 skin whose wide-arm-only columns are transparent is built with slim (3-pixel)
+  arms; otherwise classic. `--slim` / `--classic` override it.
+- **Only public sites.** Links must be `https` (an `http://` link is tried over `https`) on the standard port,
+  without a user or password. The plugin never asks your own machine or network: `localhost`, private and LAN
+  addresses (10.x, 172.16–31.x, 192.168.x, IPv6 local ones), link-local, CGNAT and reserved addresses are refused,
+  whether written as an IP or as a name that points to one, and redirects (up to 3) are checked the same way.
+- **Restrict the sites** with `network.allowed_hosts`, e.g. `["i.imgur.com", "textures.minecraft.net"]`;
+  `"*.imgur.com"` allows every `….imgur.com`. Empty (the default) allows any public site.
+- **Cached** in `cache/links/` for `network.cache_hours`; if the site stops answering, the last copy is used.
+- **The link is not stored.** `/statue list` and `/statue info` show `url:<site>#<fingerprint>` (e.g.
+  `url:i.imgur.com#3f9a1c2e`, the first 8 characters of the link's SHA-256), and neither `data/statues.yml`, the
+  cache file names nor the plugin's log lines contain the full link. (Paper itself logs every command a player
+  types, links included, as it does for any plugin.)
 
 ## Configuration
 Five files in `plugins/SkinStatues/`, all checked when they load: a mistake names the file, the path inside it and
@@ -99,7 +136,9 @@ build:
   blocks_per_tick: 4000
   max_ms_per_tick: 10
 network:
-  mojang: false
+  mojang: false            # skins by account name from Mojang
+  urls: false              # skins from a link (needs skinstatues.build.url)
+  allowed_hosts: []        # sites allowed for links; empty = any public site
   cache_hours: 24
 ```
 
@@ -165,16 +204,17 @@ Every message, in English, with MiniMessage. Translate freely.
 ## Compatibility
 | Server | Status | Evidence |
 |---|---|---|
-| Paper 1.21.4 (build 232, Java 24) | **Verified** (0.2.0) | Gate 2 and in-game suite 14/14 twice (2026-11-01) |
-| Paper 26.1.2 (build 74, Java 25) | **Verified** (0.2.0) | In-game suite 14/14 twice (2026-11-01) |
+| Paper 1.21.4 (build 232, Java 24) | **Verified** (0.3.0) | Gate 2 and in-game suite 18/18 twice (2026-11-01) |
+| Paper 26.1.2 (build 74, Java 25) | **Verified** (0.3.0) | In-game suite 18/18 twice (2026-11-01) |
 | Other Paper 1.21.x and 26.x | Not verified | |
 | Spigot, Folia | Not supported | |
 
 - **Java:** 21 or newer (26.x needs Java 25).
-- **Optional:** nothing. Network access only if you turn on `network.mojang`.
+- **Optional:** nothing. Network access only if you turn on `network.mojang` or `network.urls`.
 - **Not yet:** armor and items in the hands, filled statues, diagonal facing (ideas in the [roadmap](../../docs/sdd/roadmap.md)).
 
 ## Installation
 1. Copy `SkinStatues-x.y.z.jar` to `plugins/` and start the server.
 2. Try `/statue build Example 32` (as an operator), and `/statue poses` to see every pose.
-3. For your players' skins, put their PNGs in `plugins/SkinStatues/skins/`, or set `network.mojang: true`.
+3. For your players' skins, put their PNGs in `plugins/SkinStatues/skins/`, set `network.mojang: true`, or set
+   `network.urls: true` and use skin links.

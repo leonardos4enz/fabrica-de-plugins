@@ -7,11 +7,13 @@ import java.util.Locale;
 
 /**
  * Lo que sigue a `/statue build <name> <height>` (plan 022 §2.1), sin Bukkit para probarlo en unitarias:
- * `[pose] [--palette <p>] [--no-overlay] [--no-cape] [--at <x> <y> <z>] [--facing <dir>] [--world <w>]`.
+ * `[pose] [--palette <p>] [--no-overlay] [--no-cape] [--at <x> <y> <z>] [--facing <dir>] [--world <w>] [--slim|--classic]`.
  * Un valor que falta o no se entiende devuelve el error con la clave del mensaje y sus valores.
  */
-public record BuildArgs(String pose, String palette, boolean overlay, boolean cape, Coord[] at, Integer facing, String world) {
-    public static final List<String> FLAGS = List.of("--palette", "--no-overlay", "--no-cape", "--at", "--facing", "--world");
+public record BuildArgs(String pose, String palette, boolean overlay, boolean cape, Coord[] at, Integer facing, String world,
+                        Boolean slim) {
+    public static final List<String> FLAGS = List.of("--palette", "--no-overlay", "--no-cape", "--at", "--facing", "--world",
+            "--slim", "--classic");
     public static final List<String> FACINGS = List.of("north", "south", "east", "west");
     /** Más allá del borde máximo de un mundo de Minecraft no hay nada que construir. */
     public static final double MAX_COORD = 30_000_000;
@@ -46,11 +48,18 @@ public record BuildArgs(String pose, String palette, boolean overlay, boolean ca
         String pose = null, palette = null, world = null;
         Coord[] at = null;
         Integer facing = null;
+        Boolean slim = null;
         for (int i = from; i < args.length; i++) {
             String a = args[i].toLowerCase(Locale.ROOT);
             switch (a) {
                 case "--no-overlay" -> overlay = false;
                 case "--no-cape" -> cape = false;
+                // Spec 023 H1 CA3: fuerzan el modelo de la skin; los dos a la vez no tienen sentido.
+                case "--slim", "--classic" -> {
+                    boolean want = a.equals("--slim");
+                    if (slim != null && slim != want) return fail("model-conflict");
+                    slim = want;
+                }
                 case "--palette", "--world", "--facing" -> {
                     if (i + 1 >= args.length) return fail("usage-build");
                     String v = args[++i];
@@ -77,7 +86,7 @@ public record BuildArgs(String pose, String palette, boolean overlay, boolean ca
                 }
             }
         }
-        return new Parsed(new BuildArgs(pose, palette, overlay, cape, at, facing, world), null);
+        return new Parsed(new BuildArgs(pose, palette, overlay, cape, at, facing, world, slim), null);
     }
 
     /** `123`, `-4.5`, `~`, `~5`, `~-2.5`; null si no es una coordenada. */

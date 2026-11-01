@@ -8,7 +8,7 @@ tarea y no se da por terminada sin una fase de verificación en un servidor real
 | Plugin | Qué hace | Versión | Paper verificado | Java |
 |---|---|---|---|---|
 | [OmniEvents](plugins/omnievents/README.md) ([Hangar](https://hangar.papermc.io/leonardos4enz/OmniEvents)) | Eventos condicionales: «cuando pase X, si se cumple Y, haz Z». Versión propia y ampliada de ConditionalEvents ([documentación en inglés](https://leonardos4enz.gitbook.io/leonardos4enz-docs/) ([fuente](docs/site/pages/omnievents/README.md)), [galería](docs/omnievents/galeria.md), [referencia](docs/omnievents/referencia.md), autocompletado en VS Code, pruebas de reglas con `/omni test`, paquetes y plantillas, costos todo o nada con Vault, regiones de WorldGuard, NPC de Citizens, menús de inventario con formularios de Bedrock, el chat que recibe el jugador con ProtocolLib, un [minijuego de parkour de ejemplo](plugins/omnievents/README.md#cómo-hacer-un-minijuego) hecho solo con reglas, un [paquete de ejemplos en inglés](plugins/omnievents/README.md#ejemplos-en-inglés-examples-en) para principiantes (con ejemplos de WorldGuard, Vault, Citizens, PlaceholderAPI, Floodgate y ProtocolLib) y paridad comprobada con ConditionalEvents, que `/omni import` traduce casi entera) | 1.12.0 | 1.21.4 y 26.1.2 ([detalle](plugins/omnievents/README.md#compatibilidad)) | 21+ |
-| [SkinStatues](plugins/skinstatues/README.md) | Estatuas de bloques con la skin de un jugador: `/statue build <name> <height> [pose]`, a la altura pedida y donde se diga (`--at x y z`, `--facing`, también desde la consola), con la segunda capa en relieve, 28 poses con codos y rodillas y poses propias (`extends`, `mirror`), la capa, paletas de bloques permitidos y `undo` que devuelve el terreno. Skin de un PNG propio o de Mojang (la red, apagada por defecto). En inglés ([ADR 0005](docs/adr/0005-plugins-en-ingles.md)) | 0.2.0 | 1.21.4 y 26.1.2 ([detalle](plugins/skinstatues/README.md#compatibility)) | 21+ |
+| [SkinStatues](plugins/skinstatues/README.md) | Estatuas de bloques con la skin de un jugador: `/statue build <name> <height> [pose]`, a la altura pedida y donde se diga (`--at x y z`, `--facing`, también desde la consola), con la segunda capa en relieve, 28 poses con codos y rodillas y poses propias (`extends`, `mirror`), la capa, paletas de bloques permitidos y `undo` que devuelve el terreno. Skin de un PNG propio, de Mojang o de un link `https` como SkinsRestorer (solo una skin válida de un sitio público; la red, apagada por defecto). En inglés ([ADR 0005](docs/adr/0005-plugins-en-ingles.md)) | 0.3.0 | 1.21.4 y 26.1.2 ([detalle](plugins/skinstatues/README.md#compatibility)) | 21+ |
 
 «Verificado» quiere decir que el plugin pasó la suite en el juego en esa versión; las demás están «sin verificar» en
 el README de cada plugin.
@@ -59,6 +59,11 @@ traducciones). La primera corrida con Geyser genera su configuración: si una co
 Para `player_receive_chat` (spec 016, [ADR 0004](docs/adr/0004-protocollib-opcional.md)) baja ProtocolLib: el release
 5.4.0 de GitHub para Paper 1.21.4 y, como no hay release para 26.1, la build de desarrollo #765 del Jenkins oficial de
 dmulloy2 para 26.1.2 (también con su sha256 fijado).
+Para las skins por link de SkinStatues (spec 023) la suite no usa internet: arranca un servidor HTTPS en `127.0.0.1` con
+un certificado hecho en cada corrida por el `keytool` del JDK del servidor (en `run/e2e-https/`, que se borra al
+terminar) y le pasa a Paper, por la línea de comandos de Java, el almacén de confianza con ese certificado y
+`-Dskinstatues.test.localLinks=true` (deja al plugin pedir a una dirección local; nunca va en `config.yml`). Una suite
+lo pide con `antesDeArrancar` (devuelve los argumentos de Java) y `alTerminar` (`tests-e2e/lib/https-local.mjs`).
 Detalle de las compuertas: [verificacion.md](docs/sdd/verificacion.md).
 
 

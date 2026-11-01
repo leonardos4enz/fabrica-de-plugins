@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Clock;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -26,13 +27,54 @@ public final class SkinRepository {
 
     private final Path skins, cache;
     private final MojangClient client;
+    private final LinkClient links;
     private final Clock clock;
 
     public SkinRepository(Path skins, Path cache, MojangClient client, Clock clock) {
+        this(skins, cache, client, null, clock);
+    }
+
+    public SkinRepository(Path skins, Path cache, MojangClient client, LinkClient links, Clock clock) {
         this.skins = skins;
         this.cache = cache;
         this.client = client;
+        this.links = links;
         this.clock = clock;
+    }
+
+    /**
+     * Spec 023: la skin de un link (sin capa; el modelo se detecta de la imagen). Caché en cache/links/ con la huella
+     * del link como nombre (H3 CA2); vencida, sirve si el sitio no contesta (H1 CA6). Lo que no es una skin no se
+     * guarda (H2 CA1).
+     */
+    public Result loadLink(SkinLink link, List<String> allowedHosts, int cacheHours) throws SkinException {
+        Path png = cache.resolve("links").resolve(link.hash() + ".png"), meta = cache.resolve("links").resolve(link.hash() + ".yml");
+        YamlConfiguration cached = readMeta(meta);
+        boolean have = cached != null && Files.exists(png);
+        if (have && clock.millis() - cached.getLong("time") < cacheHours * 3_600_000L) return fromLinkCache(png, link);
+        byte[] data;
+        try {
+            data = links.fetch(link, allowedHosts);
+        } catch (SkinException e) {
+            if (have && e.key().equals("link-error")) return fromLinkCache(png, link);
+            throw e;
+        }
+        BufferedImage img = SkinPng.read(data, SkinPng.Kind.SKIN, link.label());
+        try {
+            save(png, data);
+            YamlConfiguration m = new YamlConfiguration();
+            m.set("host", link.host());
+            m.set("time", clock.millis());
+            save(meta, m.saveToString().getBytes(StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            throw new SkinException("link-error", "host", link.host(), "reason", "could not write the cache");
+        }
+        return new Result(Skin.of(img, Skin.detectSlim(img), null), "link (" + link.host() + ")");
+    }
+
+    private Result fromLinkCache(Path png, SkinLink link) throws SkinException {
+        BufferedImage img = SkinPng.read(bytes(png), SkinPng.Kind.SKIN, link.label());
+        return new Result(Skin.of(img, Skin.detectSlim(img), null), "cache");
     }
 
     /**

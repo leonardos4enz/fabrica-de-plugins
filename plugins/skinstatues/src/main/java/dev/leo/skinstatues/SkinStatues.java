@@ -6,6 +6,7 @@ import dev.leo.skinstatues.command.StatueCommand;
 import dev.leo.skinstatues.config.Issues;
 import dev.leo.skinstatues.config.LoadedConfig;
 import dev.leo.skinstatues.config.Messages;
+import dev.leo.skinstatues.skin.LinkClient;
 import dev.leo.skinstatues.skin.MojangClient;
 import dev.leo.skinstatues.skin.SkinRepository;
 import org.bukkit.Material;
@@ -36,6 +37,7 @@ public final class SkinStatues extends JavaPlugin {
     private volatile LoadedConfig config;
     private Messages messages;
     private SkinRepository skins;
+    private LinkClient links;
     private Statues statues;
 
     @Override
@@ -45,8 +47,12 @@ public final class SkinStatues extends JavaPlugin {
         if (firstSkins) for (String f : EXAMPLE_SKINS) saveResource(f, false);
 
         reload();
+        // Solo la suite en el juego (servidor HTTPS local) lo pone, en la línea de comandos de Java (plan 023 §3).
+        boolean localLinks = Boolean.getBoolean("skinstatues.test.localLinks");
+        if (localLinks) getLogger().warning("skinstatues.test.localLinks is set: skin links may point to local addresses (testing only)");
+        links = new LinkClient(LinkClient.realHttp(), LinkClient.realResolver(), localLinks);
         skins = new SkinRepository(getDataFolder().toPath().resolve("skins"), getDataFolder().toPath().resolve("cache"),
-                new MojangClient(MojangClient.realHttp()), Clock.systemUTC());
+                new MojangClient(MojangClient.realHttp()), links, Clock.systemUTC());
         StatueStore store = new StatueStore(getDataFolder().toPath().resolve("data"));
         try {
             int interrupted = store.load();
@@ -84,6 +90,10 @@ public final class SkinStatues extends JavaPlugin {
             else getLogger().info("Config note: " + i);
         }
         if (cfg.settings().mojang()) getLogger().info("network.mojang is on: skins not found in skins/ are downloaded from Mojang");
+        if (cfg.settings().urls()) {
+            getLogger().info("network.urls is on: /statue build accepts skin links" + (cfg.settings().allowedHosts().isEmpty()
+                    ? " from any public site" : " from " + String.join(", ", cfg.settings().allowedHosts())));
+        }
         return cfg;
     }
 
@@ -140,6 +150,10 @@ public final class SkinStatues extends JavaPlugin {
 
     public SkinRepository skins() {
         return skins;
+    }
+
+    public LinkClient links() {
+        return links;
     }
 
     public Statues statues() {

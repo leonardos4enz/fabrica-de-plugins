@@ -85,13 +85,14 @@ export class Servidor {
     }
   }
 
-  arrancar ({ memoria = '1536M', timeoutMs = 180000 } = {}) {
+  /** `jvm`: argumentos de Java propios de la suite (spec 023: el certificado del servidor HTTPS local). */
+  arrancar ({ memoria = '1536M', timeoutMs = 180000, jvm = [] } = {}) {
     const jar = fs.readdirSync(this.run).find(f => /^paper-.*\.jar$/.test(f))
     if (!jar) throw new Error(`No hay paper-*.jar en ${this.run}`)
     this.salida = fs.createWriteStream(path.join(this.run, 'e2e.log'))
     this.proceso = spawn(this.java, [`-Xms512M`, `-Xmx${memoria}`, '-Dterminal.jline=false', '-Dterminal.ansi=false',
       '-Dstdout.encoding=UTF-8', '-Dstderr.encoding=UTF-8', '-Dfile.encoding=UTF-8',
-      '-jar', jar, '--nogui'], { cwd: this.run, stdio: ['pipe', 'pipe', 'pipe'] })
+      ...jvm, '-jar', jar, '--nogui'], { cwd: this.run, stdio: ['pipe', 'pipe', 'pipe'] })
     let resto = ''
     const leer = (buf) => {
       resto += buf.toString('utf8')

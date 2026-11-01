@@ -3,11 +3,11 @@ prefix: "<dark_gray>[<gold>SkinStatues</gold>]</dark_gray> "
 
 usage: |-
   {prefix}<gray>Commands:</gray>
-  <yellow>/statue build <name> <height> [pose] [--at <x> <y> <z>] [--facing <dir>] [--world <w>] [--palette <p>] [--no-overlay] [--no-cape]</yellow>
+  <yellow>/statue build <name|link> <height> [pose] [--at <x> <y> <z>] [--facing <dir>] [--world <w>] [--palette <p>] [--slim|--classic] [--no-overlay] [--no-cape]</yellow>
   <yellow>/statue undo</yellow> <gray>•</gray> <yellow>/statue cancel [id]</yellow> <gray>•</gray> <yellow>/statue remove <id></yellow>
   <yellow>/statue list [page]</yellow> <gray>•</gray> <yellow>/statue info <id></yellow> <gray>•</gray> <yellow>/statue poses</yellow> <gray>•</gray> <yellow>/statue palettes</yellow>
   <yellow>/statue reload</yellow> <gray>•</gray> <yellow>/statue validate</yellow> <gray>•</gray> <yellow>/statue selftest</yellow>
-usage-build: "{prefix}<gray>Usage: <yellow>/statue build <name> <height> [pose] [--at <x> <y> <z>] [--facing <dir>] [--world <w>] [--palette <p>] [--no-overlay] [--no-cape]</yellow>"
+usage-build: "{prefix}<gray>Usage: <yellow>/statue build <name|link> <height> [pose] [--at <x> <y> <z>] [--facing <dir>] [--world <w>] [--palette <p>] [--slim|--classic] [--no-overlay] [--no-cape]</yellow>"
 usage-remove: "{prefix}<gray>Usage: <yellow>/statue remove <id></yellow> (see <yellow>/statue list</yellow>)"
 usage-info: "{prefix}<gray>Usage: <yellow>/statue info <id></yellow>"
 unknown-subcommand: "{prefix}<red>Unknown subcommand '{sub}'{hint}. Try <yellow>/statue</yellow>."
@@ -25,6 +25,7 @@ invalid-facing: "{prefix}<red>'{facing}' is not a direction{hint}: use north, so
 unknown-world: "{prefix}<red>There is no world '{world}'{hint}."
 console-needs-at: "{prefix}<red>From the console, say where: <yellow>/statue build <name> <height> [pose] --at <x> <y> <z> [--world <w>]</yellow>"
 console-relative: "{prefix}<red>~ means 'from where you are', and the console is nowhere: use plain numbers with --at."
+model-conflict: "{prefix}<red>Use --slim or --classic, not both."
 outside-border: "{prefix}<red>{x} {y} {z} is outside the world border of {world}."
 
 loading-skin: "{prefix}<gray>Getting the skin of <white>{name}</white>…"
@@ -33,6 +34,11 @@ account-not-found: "{prefix}<red>There is no Minecraft account named '{name}'."
 no-skin: "{prefix}<red>'{name}' uses one of the default Minecraft skins, which cannot be downloaded. Put a PNG in skins/ instead."
 mojang-error: "{prefix}<red>Could not get the skin of '{name}' from Mojang: {reason}."
 image-invalid: "{prefix}<red>The image '{file}' cannot be used: {reason}."
+loading-link: "{prefix}<gray>Getting the skin from <white>{host}</white>…"
+links-off: "{prefix}<red>Skin links are off. Turn on <white>network.urls</white> in config.yml and run <yellow>/statue reload</yellow>."
+invalid-link: "{prefix}<red>That link cannot be used: {reason}."
+host-not-allowed: "{prefix}<red>Links from {host} are not allowed. Allowed sites: <white>{hosts}</white> (network.allowed_hosts in config.yml)."
+link-error: "{prefix}<red>Could not get the skin from {host}: {reason}."
 cape-not-found: "{prefix}<red>The cape file '{file}' is not in skins/."
 
 too-tall-world: "{prefix}<red>A statue of {height} blocks does not fit between here and the top of the world. The most that fits here is {max}."

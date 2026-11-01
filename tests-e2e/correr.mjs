@@ -89,7 +89,9 @@ async function principal () {
   const t0 = Date.now()
   try {
     console.log(`» Arrancando Paper en ${path.relative(RAIZ, run)} (127.0.0.1:${suite.puerto})…`)
-    await srv.arrancar()
+    // Spec 023: lo que la suite necesita antes de arrancar (un servidor HTTPS local) y sus argumentos de Java.
+    const previo = (await suite.antesDeArrancar?.({ run, java: srv.java })) ?? {}
+    await srv.arrancar({ jvm: previo.jvm ?? [] })
     for (const c of suite.preparar) await srv.consola(c)
     await srv.sincronizar()
 
@@ -143,6 +145,7 @@ async function principal () {
       await srv.sincronizar().catch(() => {})
     }
     await srv.detener()
+    await suite.alTerminar?.()
     for (const { a, retirar } of suite.copiar) if (retirar) fs.rmSync(path.join(run, a), { recursive: true, force: true }) // H1 CA4
   }
 

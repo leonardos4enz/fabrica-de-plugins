@@ -8,7 +8,9 @@ import dev.leo.skinstatues.config.Settings;
 import dev.leo.skinstatues.model.Pose;
 import dev.leo.skinstatues.model.VoxelGrid;
 import dev.leo.skinstatues.model.Voxelizer;
+import dev.leo.skinstatues.skin.Skin;
 import dev.leo.skinstatues.skin.SkinException;
+import dev.leo.skinstatues.skin.SkinLink;
 import dev.leo.skinstatues.skin.SkinRepository;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -67,7 +69,13 @@ public final class Statues {
 
     // ---------------------------------------------------------------- construir
 
-    public record Request(String name, int height, Pose pose, BlockPalette palette, boolean overlay, boolean cape) {
+    /**
+     * @param name la cuenta o, con link, su etiqueta `url:sitio#huella` (lo que se guarda y se muestra)
+     * @param link el link de la skin (spec 023) o null
+     * @param slim `--slim`/`--classic`, o null para el modelo de la skin
+     */
+    public record Request(String name, SkinLink link, Boolean slim, int height, Pose pose, BlockPalette palette,
+                          boolean overlay, boolean cape) {
     }
 
     /** Dónde van los pies (el bloque base, centro de la estatua) y hacia dónde mira (0 = sur, 90 = oeste…). */
@@ -84,16 +92,19 @@ public final class Statues {
         int bx = target.x(), by = target.y(), bz = target.z(), facing = target.facing();
         UUID who = sender instanceof Player p ? p.getUniqueId() : CONSOLE;
         String whoName = sender instanceof Player p ? p.getName() : "Console";
-        sender.sendMessage(plugin.messages().get("loading-skin", "name", req.name()));
+        sender.sendMessage(req.link() == null ? plugin.messages().get("loading-skin", "name", req.name())
+                : plugin.messages().get("loading-link", "host", req.link().host()));
 
         SkinRepository repo = plugin.skins();
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             StatuePlan plan;
             String source;
             try {
-                SkinRepository.Result r = repo.load(req.name(), st.mojang(), st.cacheHours());
+                SkinRepository.Result r = req.link() == null ? repo.load(req.name(), st.mojang(), st.cacheHours())
+                        : repo.loadLink(req.link(), st.allowedHosts(), st.cacheHours());
                 source = r.source();
-                VoxelGrid g = Voxelizer.run(r.skin(), req.pose(), new Voxelizer.Options(req.height(), facing,
+                Skin skin = req.slim() == null ? r.skin() : r.skin().withSlim(req.slim());
+                VoxelGrid g = Voxelizer.run(skin, req.pose(), new Voxelizer.Options(req.height(), facing,
                         req.overlay(), st.overlayDepth(), st.alphaThreshold(), req.cape()));
                 plan = StatuePlan.of(g, req.palette());
             } catch (SkinException e) {

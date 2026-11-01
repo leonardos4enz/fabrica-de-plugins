@@ -3,8 +3,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { httpsLocal, png } from '../lib/https-local.mjs'
 
 const POSES_0_1_0 = fileURLToPath(new URL('../../plugins/skinstatues/src/test/resources/poses-0.1.0.yml', import.meta.url))
+const EXAMPLE_PNG = fileURLToPath(new URL('../../plugins/skinstatues/src/main/resources/skins/Example.png', import.meta.url))
 
 const ANA = 'Ana_e2e'
 const BETO = 'Beto_e2e'
@@ -52,11 +54,68 @@ async function limpiarArea (srv) {
 async function construir (ana, comando, { timeoutMs = 30000 } = {}) {
   const m = ana.marca()
   ana.comando(comando)
-  const plan = await ana.esperar('chat', /Statue #(\d+) of \w+: (\d+) blocks, (\d+)×(\d+)×(\d+)/, { desde: m, timeoutMs })
-  const [, id, total, ancho, alto, fondo] = plan.texto.match(/Statue #(\d+) of \w+: (\d+) blocks, (\d+)×(\d+)×(\d+)/).map(Number)
-  const fin = await ana.esperar('chat', new RegExp(`Statue #${id} of \\w+ is finished \\((\\d+) blocks\\)`), { desde: m, timeoutMs })
+  // \S+: el nombre de la cuenta o, con link (spec 023), url:sitio#huella.
+  const plan = await ana.esperar('chat', /Statue #(\d+) of \S+: (\d+) blocks, (\d+)×(\d+)×(\d+)/, { desde: m, timeoutMs })
+  const [, id, total, ancho, alto, fondo] = plan.texto.match(/Statue #(\d+) of \S+: (\d+) blocks, (\d+)×(\d+)×(\d+)/).map(Number)
+  const fin = await ana.esperar('chat', new RegExp(`Statue #${id} of \\S+ is finished \\((\\d+) blocks\\)`), { desde: m, timeoutMs })
   const puestos = Number(fin.texto.match(/\((\d+) blocks\)/)[1])
   return { id, total, puestos, ancho, alto, fondo, texto: plan.texto }
+}
+
+// ---------------------------------------------------------------- spec 023: skins por link
+
+/** Skin delgada sintética: la primera capa opaca menos las columnas que solo usan los brazos anchos. */
+function skinDelgada () {
+  const dentro = (x, y, [x0, y0, x1, y1]) => x >= x0 && x < x1 && y >= y0 && y < y1
+  const base = [[0, 0, 32, 16], [0, 16, 64, 32], [16, 48, 48, 64]]
+  const libres = [[54, 20, 56, 32], [50, 16, 52, 20], [46, 52, 48, 64], [42, 48, 44, 52]]
+  return png(64, 64, (x, y) => base.some(r => dentro(x, y, r)) && !libres.some(r => dentro(x, y, r))
+    ? (y < 16 ? [205, 160, 120, 255] : y < 32 ? [40, 90, 180, 255] : [60, 60, 70, 255])
+    : [0, 0, 0, 0])
+}
+
+/** El servidor HTTPS local de la corrida: se arranca antes que Paper, que confía en su certificado. */
+let web = null
+const imagen = datos => (req, res) => {
+  res.writeHead(200, { 'Content-Type': 'image/png' })
+  res.end(datos())
+}
+const RUTAS = {
+  '/e2e/Skin01.png': imagen(() => fs.readFileSync(EXAMPLE_PNG)),
+  '/e2e/slim.png': imagen(skinDelgada),
+  '/e2e/big.png': imagen(() => png(128, 128, () => [200, 0, 0, 255])),
+  '/e2e/huge.png': imagen(() => Buffer.concat([png(64, 64, () => [0, 0, 0, 255]), Buffer.alloc(1200 * 1024, 7)])),
+  '/e2e/redir': (req, res) => {
+    res.writeHead(302, { Location: '/e2e/slim.png' })
+    res.end()
+  },
+  '/e2e/page.png': (req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/html' })
+    res.end('<html><body>not a skin</body></html>')
+  },
+  // Manda la cabecera y dos bytes y no termina nunca: el plugin tiene que cortar a los 8 s.
+  '/e2e/lento.png': (req, res) => {
+    res.writeHead(200, { 'Content-Type': 'image/png' })
+    res.write(Buffer.from([0x89, 0x50]))
+  }
+}
+const pedidosDe = ruta => web?.pedidos[ruta] ?? 0
+
+/** network.urls y allowed_hosts en el config.yml del servidor de prueba, y reload. */
+async function links (srv, { urls, hosts = [] }) {
+  const archivo = path.join(srv.run, 'plugins', 'SkinStatues', 'config.yml')
+  const texto = fs.readFileSync(archivo, 'utf8')
+    .replace(/^(\s*)urls: .*$/m, (m, sangria) => `${sangria}urls: ${urls}`)
+    .replace(/^(\s*)allowed_hosts: .*$/m, (m, sangria) => `${sangria}allowed_hosts: ${JSON.stringify(hosts)}`)
+  fs.writeFileSync(archivo, texto)
+  await srv.consola('statue reload', { espera: /Reloaded: \d+ poses/ })
+}
+
+/** Manda el comando y espera el mensaje de rechazo. */
+async function rechaza (ana, comando, patron, timeoutMs = 15000) {
+  const m = ana.marca()
+  ana.comando(comando)
+  await ana.esperar('chat', patron, { desde: m, timeoutMs })
 }
 
 export default {
@@ -80,6 +139,15 @@ export default {
     `setworldspawn ${X} -60 ${Z}`, 'time set noon', 'weather clear', 'kill @e[type=!player]'
   ],
   limpiar: [`deop ${ANA}`, `deop ${BETO}`],
+
+  async antesDeArrancar ({ run, java }) {
+    web = await httpsLocal({ carpeta: path.join(run, 'e2e-https'), java, rutas: RUTAS })
+    return { jvm: web.jvm }
+  },
+  async alTerminar () {
+    await web?.cerrar()
+    web = null
+  },
 
   async antes (ctx) {
     await ctx.entrar(BETO)
@@ -486,6 +554,134 @@ export default {
           fs.writeFileSync(poses, original)
           await srv.consola('statue reload', { espera: /Reloaded: 30 poses/ })
         }
+      }
+    },
+    {
+      id: '023 H1 CA4 · H1 CA5 · H2 CA4',
+      nombre: 'links: apagados por defecto, permiso aparte y lista de sitios, sin pedir nada a la red',
+      timeoutMs: 60000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        const link = `${web.base}/e2e/Skin01.png`
+        const permisos = path.join(srv.run, 'permissions.yml')
+        const antes = fs.existsSync(permisos) ? fs.readFileSync(permisos, 'utf8') : null
+        try {
+          await links(srv, { urls: false })
+          await rechaza(bots[ANA], `statue build ${link} 16`, /Skin links are off\. Turn on network\.urls/)
+
+          await links(srv, { urls: true })
+          await srv.esperarLog(/network\.urls is on: \/statue build accepts skin links from any public site/, { desde: 0 })
+          const sugerencias = (await bots[ANA].bot.tabComplete('/statue build h')).map(x => x.match ?? x)
+          if (!sugerencias.includes('https://')) throw new Error(`el autocompletado no sugiere https://: ${sugerencias}`)
+
+          // Beto con skinstatues.build (dado a todos por permissions.yml, como hijo de uno propio: el del plugin ya está
+          // definido y no se puede redefinir) pero sin skinstatues.build.url.
+          fs.writeFileSync(permisos, ['e2e.constructor:', '  default: true', '  children:', '    skinstatues.build: true', ''].join('\n'))
+          await srv.consola('bukkit:reload permissions', { espera: /Permissions successfully reloaded/i })
+          await ctx.entrar(BETO)
+          await rechaza(ctx.bots[BETO], `statue build ${link} 16`, /You do not have permission/)
+
+          await links(srv, { urls: true, hosts: ['textures.minecraft.net', '*.imgur.com'] })
+          await rechaza(bots[ANA], `statue build ${link} 16`,
+            /Links from 127\.0\.0\.1 are not allowed\. Allowed sites: textures\.minecraft\.net, \*\.imgur\.com/)
+          if (pedidosDe('/e2e/Skin01.png')) throw new Error(`se pidió la skin ${pedidosDe('/e2e/Skin01.png')} veces`)
+        } finally {
+          if (antes == null) fs.rmSync(permisos, { force: true })
+          else fs.writeFileSync(permisos, antes)
+          await srv.consola('bukkit:reload permissions')
+          await ctx.entrar(BETO)
+          await links(srv, { urls: true })
+        }
+      }
+    },
+    {
+      id: '023 H1 CA1 · H1 CA6 · H3 CA1 · H3 CA2',
+      nombre: 'build con un link: la estatua, url:sitio#huella en list e info sin el link, y la caché',
+      timeoutMs: 90000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await links(srv, { urls: true })
+        await prepararAna(ctx, 0)
+        const ana = bots[ANA]
+        const link = `${web.base}/e2e/Skin01.png`
+        const r = await construir(ana, `statue build ${link} 16`)
+        if (!/Statue #\d+ of url:127\.0\.0\.1#[0-9a-f]{8}:/.test(r.texto)) throw new Error(`la estatua no se llama url:sitio#huella: ${r.texto}`)
+        if (!/skin from link \(127\.0\.0\.1\)/.test(r.texto)) throw new Error(`no dice de dónde salió: ${r.texto}`)
+        await ana.hasta(`ver los ${r.puestos} bloques`, b => contar(b, ...CAJA) === r.puestos, { timeoutMs: 10000 })
+        // La misma skin que el archivo de ejemplo: el mismo número de bloques.
+        const huella = r.texto.match(/url:127\.0\.0\.1#([0-9a-f]{8})/)[1]
+        await srv.consola('statue list', { espera: new RegExp(`#${r.id} url:127\\.0\\.0\\.1#${huella} \\| 16 blocks, standing`) })
+        await srv.consola(`statue info ${r.id}`, { espera: new RegExp(`Skin: url:127\\.0\\.0\\.1#${huella}, 16 blocks`) })
+        const indice = fs.readFileSync(path.join(srv.run, 'plugins', 'SkinStatues', 'data', 'statues.yml'), 'utf8')
+        if (indice.includes('Skin01') || indice.includes('/e2e/')) throw new Error('data/statues.yml guarda el link')
+        if (!indice.includes(`url:127.0.0.1#${huella}`)) throw new Error('data/statues.yml no guarda la etiqueta')
+        // Paper anota cada comando de un jugador («issued server command»); el plugin no escribe el link en ningún otro lado.
+        const conLink = srv.lineas.filter(l => l.includes('Skin01') && !/issued server command/.test(l))
+        if (conLink.length) throw new Error(`el log tiene el link: ${conLink[0]}`)
+        const cache = path.join(srv.run, 'plugins', 'SkinStatues', 'cache', 'links')
+        if (fs.readdirSync(cache).some(n => /Skin01|127/.test(n))) throw new Error('la caché se llama como el link')
+        await srv.consola(`statue remove ${r.id}`, { espera: new RegExp(`Statue #${r.id} removed`), timeoutMs: 20000 })
+        await ana.hasta('no ver la estatua', b => contar(b, ...CAJA) === 0)
+
+        // La segunda vez, de la caché: el servidor no recibe otro pedido.
+        const pedidos = pedidosDe('/e2e/Skin01.png')
+        const r2 = await construir(ana, `statue build ${link} 16`)
+        if (!/skin from cache/.test(r2.texto)) throw new Error(`no salió de la caché: ${r2.texto}`)
+        if (pedidosDe('/e2e/Skin01.png') !== pedidos) throw new Error('se volvió a pedir la skin')
+        if (r2.puestos !== r.puestos) throw new Error(`la caché dio otra estatua: ${r2.puestos} y ${r.puestos}`)
+        await srv.consola(`statue remove ${r2.id}`, { espera: new RegExp(`Statue #${r2.id} removed`), timeoutMs: 20000 })
+        await ana.hasta('no ver la estatua', b => contar(b, ...CAJA) === 0)
+      }
+    },
+    {
+      id: '023 H1 CA2 · H1 CA3',
+      nombre: 'http pasa a https y sigue una redirección; el modelo delgado se detecta y --classic lo fuerza',
+      timeoutMs: 90000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await links(srv, { urls: true })
+        await prepararAna(ctx, 0)
+        const ana = bots[ANA]
+        // http:// → https:// y /e2e/redir → /e2e/slim.png (el servidor local solo habla https).
+        const delgada = await construir(ana, `statue build ${web.base.replace('https', 'http')}/e2e/redir 32`)
+        await ana.hasta(`ver los ${delgada.puestos} bloques`, b => contar(b, ...CAJA) === delgada.puestos, { timeoutMs: 10000 })
+        await srv.consola(`statue remove ${delgada.id}`, { espera: new RegExp(`Statue #${delgada.id} removed`), timeoutMs: 20000 })
+        await ana.hasta('no ver la estatua', b => contar(b, ...CAJA) === 0)
+        if (!pedidosDe('/e2e/redir') || !pedidosDe('/e2e/slim.png')) throw new Error('no siguió la redirección')
+
+        const clasica = await construir(ana, `statue build ${web.base}/e2e/slim.png 32 --classic`)
+        await ana.hasta(`ver los ${clasica.puestos} bloques`, b => contar(b, ...CAJA) === clasica.puestos, { timeoutMs: 10000 })
+        await srv.consola(`statue remove ${clasica.id}`, { espera: new RegExp(`Statue #${clasica.id} removed`), timeoutMs: 20000 })
+        await ana.hasta('no ver la estatua', b => contar(b, ...CAJA) === 0)
+        // De pie, el ancho es el de los hombros: 16 píxeles con brazos de 4 y 14 con brazos de 3 (a 32 de alto, 1 bloque por píxel).
+        if (!(delgada.ancho === 14 && clasica.ancho === 16)) throw new Error(`anchos: detectada ${delgada.ancho}, --classic ${clasica.ancho}`)
+        await rechaza(ana, `statue build ${web.base}/e2e/slim.png 32 --slim --classic`, /Use --slim or --classic, not both/)
+      }
+    },
+    {
+      id: '023 H2 CA1 · H2 CA2 · H2 CA5',
+      nombre: 'solo una skin válida: otro tamaño, una página, más de 1 MB, 404, usuario en el link y un sitio que no termina',
+      timeoutMs: 90000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await links(srv, { urls: true })
+        await prepararAna(ctx, 0)
+        const ana = bots[ANA]
+        const b = web.base
+        const cache = path.join(srv.run, 'plugins', 'SkinStatues', 'cache', 'links')
+        const enCache = () => fs.existsSync(cache) ? fs.readdirSync(cache).sort().join(',') : ''
+        const antes = enCache()
+        await rechaza(ana, `statue build ${b}/e2e/big.png 16`, /cannot be used: it is 128x128, expected 64x64 or 64x32/)
+        await rechaza(ana, `statue build ${b}/e2e/page.png 16`, /cannot be used: not a PNG image/)
+        await rechaza(ana, `statue build ${b}/e2e/huge.png 16`, /Could not get the skin from 127\.0\.0\.1: the file is larger than 1 MB/)
+        await rechaza(ana, `statue build ${b}/e2e/nada.png 16`, /Could not get the skin from 127\.0\.0\.1: HTTP 404/)
+        await rechaza(ana, `statue build https://ana:secreto@127.0.0.1:${web.puerto}/e2e/Skin01.png 16`,
+          /That link cannot be used: links with a user or password are not allowed/)
+        await rechaza(ana, `statue build ${b}/e2e/lento.png 16`, /Could not get the skin from 127\.0\.0\.1: no answer from 127\.0\.0\.1/, 20000)
+        if (contar(ana.bot, ...CAJA)) throw new Error('se construyó algo')
+        // Lo que no es una skin no queda en la caché.
+        if (enCache() !== antes) throw new Error(`la caché cambió: ${antes} → ${enCache()}`)
+        await srv.consola('statue list', { espera: /No statues yet|statue\(s\)/ })
       }
     }
   ]

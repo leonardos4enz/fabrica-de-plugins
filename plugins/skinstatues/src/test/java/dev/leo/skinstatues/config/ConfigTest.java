@@ -286,4 +286,32 @@ class ConfigTest {
         assertTrue(all.contains("did you mean 'offset_up'"), all);
         assertEquals(3, issues.errors(), all);
     }
+
+    @Test
+    void spec023_H1_CA4_y_H2_CA4_links_apagados_por_defecto_y_lista_de_sitios() throws Exception {
+        Issues issues = new Issues();
+        // Un config.yml de la 0.2.0 (sin las claves nuevas) carga sin avisos y deja los links apagados.
+        Settings old = Settings.load(yaml("network: { mojang: true, cache_hours: 24 }\n"), "config.yml", issues);
+        assertFalse(old.urls());
+        assertTrue(old.allowedHosts().isEmpty());
+        assertTrue(issues.all().isEmpty(), issues.all().toString());
+
+        Settings s = Settings.load(yaml("""
+                network:
+                  urls: true
+                  allowed_hosts: ["I.Imgur.com", "*.minecraft.net", "http://x.com/", "bad host"]
+                """), "config.yml", issues);
+        assertTrue(s.urls());
+        assertEquals(List.of("i.imgur.com", "*.minecraft.net"), s.allowedHosts());
+        String all = issues.all().toString();
+        assertEquals(2, issues.errors(), all);
+        assertTrue(all.contains("network.allowed_hosts[2]") && all.contains("network.allowed_hosts[3]"), all);
+
+        // Una lista sin ningún sitio válido no abre los links a todos: los cierra (y lo dice).
+        Issues more = new Issues();
+        Settings none = Settings.load(yaml("network: { urls: true, allowed_hosts: ['::'] }\n"), "config.yml", more);
+        assertFalse(none.allowedHosts().isEmpty());
+        assertFalse(dev.leo.skinstatues.skin.LinkPolicy.hostAllowed("i.imgur.com", none.allowedHosts()));
+        assertTrue(more.all().toString().contains("links are refused"), more.all().toString());
+    }
 }
