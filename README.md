@@ -19,12 +19,15 @@ docs/sdd/                 constitución, metodología, verificación, roadmap, p
 docs/adr/                 decisiones de arquitectura
 docs/investigacion/       investigaciones para decidir specs (p. ej. plugins exitosos y propuestas)
 docs/<plugin>/galeria.md  una imagen por capacidad, generada en el juego (spec 004); imágenes en docs/img/<plugin>/
-docs/site/                documentación pública en inglés para GitBook y Zensical (spec 017): pages/, SUMMARY.md, mkdocs.yml, assets-src/ (fuente del banner)
+docs/site/                documentación pública en inglés para GitBook y Zensical (spec 017): pages/, SUMMARY.md, mkdocs.yml,
+                          assets-src/ (fuentes HTML del logo, el banner y la página de presentación, spec 020)
+docs/omnievents/presentacion/  descripciones para SpigotMC (BBCode) y Modrinth/Hangar (Markdown), spec 020
 docs/omnievents/          también referencia.md, omnievents.schema.json y omnievents-pack.schema.json, generados del código (specs 007 y 011)
 plugins/<nombre>/         un proyecto Gradle por plugin
 tools/nuevo-plugin.ps1    crea un plugin nuevo con su spec
 tests-e2e/                pruebas en el juego con bots (compuerta 3a): npm --prefix tests-e2e test
-                          y capturas de la galería: npm --prefix tests-e2e run capturas
+                          capturas de la galería: npm --prefix tests-e2e run capturas
+                          y la página de presentación: npm --prefix tests-e2e run presentacion
 dist/                     jars generados (gradlew dist)
 ```
 
@@ -87,6 +90,26 @@ acción, títulos, HUD, inventarios y una vista 3D del mundo) en `docs/img/<plug
 **Minecraft Java 1.21.4 instalado** en la PC (se extraen a `tests-e2e/.cache/`, nunca al repositorio) y necesita Chrome
 o Edge. Cada imagen se compara por píxeles con la anterior y solo se reescribe si cambió; las capacidades sin escena se
 listan como aviso. Se usa para capturas puntuales (`--solo`), no para regenerar todo en cada spec. Diseño: [spec 004](docs/sdd/specs/004-fabrica-capturas-en-juego/spec.md).
+
+## Página de presentación (SpigotMC, Modrinth, Hangar)
+La página de OmniEvents es un póster en pixel art (spec 020): siete franjas de 1280 px que, apiladas sin espacio, se leen
+como un corte del mundo (cielo, pasto, tierra, piedra, pizarra, roca madre), con dos GIF de ejemplos grabados en el juego.
+Todo sale de fuentes versionadas:
+```bash
+npm --prefix tests-e2e run capturas -- --escenas presentacion --sin-build --solo "en-npc"   # escenas en inglés (cuadros)
+npm --prefix tests-e2e run presentacion                                                    # logo, banner, franjas y GIF
+```
+- **Escenas** (`tests-e2e/omnievents/presentacion.mjs`): el paquete `examples-en` tal cual, en un Paper con WorldEdit,
+  WorldGuard y Citizens (los jars aprobados de `plugins-extra.mjs`). Cada escena guarda sus cuadros en
+  `docs/img/omnievents/presentacion/` (`en-npc-1.png`, `en-npc-2.png`…); no toca la galería.
+- **Piezas** (`docs/site/assets-src/presentacion.html`): Chrome sin interfaz saca cada una y `ffmpeg` arma los GIF. Salen a
+  `docs/site/pages/assets/presentacion/`, y `logo.png` y `banner.png` a `docs/site/pages/assets/`. Sin texturas de
+  Mojang ni logos de otros plugins: el ruido de píxeles, el bloque y los minerales se dibujan en el HTML; la letra es
+  Press Start 2P (OFL).
+- **Descripciones** (`docs/omnievents/presentacion/`): `spigotmc.bbcode` y `modrinth-hangar.md` enlazan las imágenes por
+  su URL de GitHub (`raw.githubusercontent.com/.../main/...`) y traen la transcripción en un Spoiler o un `<details>`.
+  `PresentacionTest` exige que las dos enlacen las mismas imágenes, que existan y que la transcripción cite lo que dicen
+  los ejemplos. Pegarlas en cada página lo hace el dueño.
 
 ## Licencia
 [MIT](LICENSE). OmniEvents se publica en [Hangar](https://hangar.papermc.io/leonardos4enz/OmniEvents).

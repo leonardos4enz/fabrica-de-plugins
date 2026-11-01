@@ -4,6 +4,7 @@
 //   npm --prefix tests-e2e run capturas [-- --plugin omnievents] [--sin-build] [--solo "accion-title"]
 //   npm --prefix tests-e2e run capturas -- --solo-galeria      (solo reescribe la galería, sin servidor)
 //   --cobertura: falla si una capacidad del servidor vivo no tiene escena (por defecto es solo un aviso)
+//   --escenas presentacion: otro archivo de escenas del plugin (<plugin>/<nombre>.mjs; spec 020, sin galería)
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -17,16 +18,18 @@ import { Hud, recortar, plano, archivoDeEfecto } from './lib/capturas/hud.mjs'
 import { Camara, abrirNavegador } from './lib/capturas/visor.mjs'
 import { guardar } from './lib/capturas/png.mjs'
 import { escribirGaleria } from './lib/capturas/galeria.mjs'
+import { instalarPluginsExtra } from './lib/plugins-extra.mjs'
 
 const require = createRequire(import.meta.url)
 const AQUI = path.dirname(fileURLToPath(import.meta.url))
 const RAIZ = path.resolve(AQUI, '..')
 
 function opciones (argv) {
-  const o = { plugin: 'omnievents', build: true, solo: null, soloGaleria: false, cobertura: false }
+  const o = { plugin: 'omnievents', escenas: 'capturas', build: true, solo: null, soloGaleria: false, cobertura: false }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--plugin') o.plugin = argv[++i]
+    else if (a === '--escenas') o.escenas = argv[++i]
     else if (a === '--sin-build') o.build = false
     else if (a === '--solo-galeria') o.soloGaleria = true
     else if (a === '--cobertura') o.cobertura = true
@@ -105,7 +108,7 @@ function datosDeGaleria (cfg, salida, previo) {
 
 async function principal () {
   const o = opciones(process.argv.slice(2))
-  const cfg = (await import(`./${o.plugin}/capturas.mjs`)).default
+  const cfg = (await import(`./${o.plugin}/${o.escenas}.mjs`)).default
   if (o.soloGaleria) {
     // Solo regenera el Markdown con las imágenes y los textos alternativos ya guardados (sin servidor).
     const salida = path.join(RAIZ, cfg.salida)
@@ -121,13 +124,15 @@ async function principal () {
   const run = path.join(base, 'run')
   const pluginsDir = path.join(run, 'plugins')
   fs.mkdirSync(pluginsDir, { recursive: true })
+  // Spec 020: plugins de terceros que piden las escenas (los aprobados, con sha256 fijado), filtrados por nombre.
+  if (cfg.pluginsExtra) await instalarPluginsExtra(cfg.version, pluginsDir, path.join(AQUI, '.cache', 'plugins'), cfg.pluginsExtra)
   for (const f of fs.readdirSync(pluginsDir)) if (cfg.jar.test(f)) fs.rmSync(path.join(pluginsDir, f))
   const jar = jarMasNuevo(path.join(RAIZ, 'dist'), cfg.jar)
   if (!jar) throw new Error(`No hay ${cfg.jar} en dist/: compila con gradlew :${o.plugin}:dist`)
   fs.copyFileSync(path.join(RAIZ, 'dist', jar), path.join(pluginsDir, jar))
   for (const { de, a } of cfg.copiar) {
     fs.rmSync(path.join(run, a), { recursive: true, force: true })
-    fs.cpSync(path.join(RAIZ, de), path.join(run, a), { recursive: true })
+    if (de) fs.cpSync(path.join(RAIZ, de), path.join(run, a), { recursive: true }) // de: null solo la quita (spec 020)
   }
 
   const salida = path.join(RAIZ, cfg.salida)
@@ -176,6 +181,12 @@ async function principal () {
         delete bots[nombre]
       },
       camara: (nombre) => camaras[nombre],
+      /** Spec 020: guarda la última foto como un cuadro numerado de la escena (<id>-1.png, <id>-2.png…) para un GIF. */
+      async cuadro () {
+        if (!ctx.ultimaFoto) await ctx.foto()
+        ctx.cuadros = (ctx.cuadros ?? 0) + 1
+        await guardar(ctx.ultimaFoto.lienzo, path.join(salida, `${ctx.escena.id}-${ctx.cuadros}.png`))
+      },
       /**
        * Foto de la escena actual vista por un bot: mundo 3D + HUD con lo que ese bot recibió desde su marca.
        * `o`: { camara, desde, chatAbierto, recorte, gui, desconexion, consola, sinMundo, sinHud, chat, titulo }
@@ -258,6 +269,7 @@ async function principal () {
     correrEscena = async (e, { preparar = true } = {}) => {
       ctx.escena = e
       ctx.ultimaFoto = null
+      ctx.cuadros = 0
       const inicio = Date.now()
       try {
         // La preparación entra en el tiempo límite: una reconexión colgada no frena toda la corrida.
@@ -287,7 +299,7 @@ async function principal () {
       if (e.alApagar) { alApagar.push(e); continue }
       await correrEscena(e)
     }
-    if (!o.solo) cobertura = await cfg.cobertura(ctx)
+    if (!o.solo && cfg.cobertura) cobertura = await cfg.cobertura(ctx)
   } finally {
     for (const c of Object.values(camaras)) await c.cerrarServidor().catch(() => {})
     await navegador?.close().catch(() => {})
@@ -307,13 +319,13 @@ async function principal () {
   const faltan = cobertura ? cobertura.filter(c => !cubiertas.has(c)) : []
   for (const e of cfg.escenas.filter(x => x.soloTexto)) previo[e.id] = { soloTexto: e.soloTexto }
   fs.writeFileSync(manifiesto, JSON.stringify(Object.fromEntries(Object.entries(previo).sort()), null, 2) + '\n')
-  escribirGaleria(datosDeGaleria(cfg, salida, previo))
+  if (cfg.galeria) escribirGaleria(datosDeGaleria(cfg, salida, previo))
 
   const cuenta = (est) => resultados.filter(r => r.estado === est).length
   const inesperadas = resultados.filter(r => r.estado === 'cambió' && !r.e.varia)
   console.log(`\n${resultados.length} escenas en ${Math.round((Date.now() - t0) / 1000)} s: ${cuenta('igual')} iguales, ` +
     `${cuenta('cambió')} cambiaron (${inesperadas.length} inesperadas), ${cuenta('nueva')} nuevas, ${cuenta('texto')} solo texto, ` +
-    `${cuenta('falló')} fallaron · galería: ${cfg.galeria.archivo}`)
+    `${cuenta('falló')} fallaron` + (cfg.galeria ? ` · galería: ${cfg.galeria.archivo}` : ''))
   if (inesperadas.length) console.log('  Cambiaron sin estar marcadas como «varía»: ' + inesperadas.map(r => r.e.id).join(', '))
   // Capturas solo puntuales (lección de la 004): una capacidad sin escena es un aviso; --cobertura la vuelve a exigir.
   if (faltan.length) console.log(`${o.cobertura ? '✘' : '·'} Sin escena en la galería: ${faltan.join(', ')}`)

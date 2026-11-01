@@ -22,6 +22,14 @@ Zensical con instalación, primera regla, disparadores, condiciones, acciones, v
 ConditionalEvents ([spec 017](../../docs/sdd/specs/017-omnievents-documentacion-publica-en-ingles/spec.md); cómo
 previsualizarla y publicarla: [README raíz](../../README.md#documentación-pública-en-inglés-docssite)).
 
+**Página de presentación** (SpigotMC, Modrinth y Hangar; [spec 020](../../docs/sdd/specs/020-omnievents-pagina-de-presentacion/spec.md)):
+un póster en pixel art con el logo nuevo, ejemplos en inglés grabados en el juego, lo que solo tiene OmniEvents y la
+comparación con ConditionalEvents. Las descripciones listas para pegar están en
+[docs/omnievents/presentacion/](../../docs/omnievents/presentacion/) y cómo regenerar las imágenes, en el
+[README raíz](../../README.md#página-de-presentación-spigotmc-modrinth-hangar).
+
+![OmniEvents: el logo nuevo y la frase «When X happens, if Y is true, do Z»](../../docs/site/pages/assets/presentacion/1-header.png)
+
 **[Referencia completa](../../docs/omnievents/referencia.md)**: cada opción, disparador, acción y función, generada del
 código (nunca queda desactualizada). **[Autocompletado en VS Code](#editor-autocompletado-y-errores-en-vs-code)** con
 el esquema JSON.

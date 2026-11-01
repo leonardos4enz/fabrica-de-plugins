@@ -10,7 +10,8 @@
   "scripts": {
     "test": "node --test \"lib/*.test.mjs\" \"lib/capturas/*.test.mjs\" && node correr.mjs",
     "test:arnes": "node --test \"lib/*.test.mjs\" \"lib/capturas/*.test.mjs\"",
-    "capturas": "node capturas.mjs"
+    "capturas": "node capturas.mjs",
+    "presentacion": "node presentacion.mjs"
   },
   "dependencies": {
     "bedrock-protocol": "3.59.0",

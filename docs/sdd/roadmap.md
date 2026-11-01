@@ -21,6 +21,7 @@
 | 017 OmniEvents: documentación pública en inglés | Verificado: wiki en inglés en `docs/site/` (12 páginas) para GitBook (`SUMMARY.md`, `.gitbook.yaml`) y Zensical (`mkdocs.yml`); `DocsSiteTest` carga cada regla de ejemplo, compara los dos índices y exige todos los disparadores, acciones y funciones; 203 unitarias; `zensical build` sin avisos ([verify](specs/017-omnievents-documentacion-publica-en-ingles/verify.md)) |
 | 018 OmniEvents: minijuegos con la configuración actual | Verificado: paquete de ejemplo `parkour` (apagado por defecto) hecho solo con reglas: placas de inicio, checkpoint y meta sin coordenadas, caídas, tiempo límite, salir y reiniciar, récord personal y del servidor, limpieza al desconectarse; `/parkour construir`; guía «Cómo hacer un minijuego» en el README y en `docs/site/`; sin capacidades nuevas (decisión del dueño); 203 unitarias; 58/58 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/018-omnievents-minijuegos-con-configuracion/verify.md)) |
 | 019 OmniEvents: ejemplos en inglés y regiones de WorldGuard | Verificado: 1.12.0; paquete `examples` en `rules/examples-en/` (apagado por defecto) con bienvenida, recompensa diaria con racha, zonas sin plugins, eventos comunes y regiones de WorldGuard y un ejemplo de cada plugin opcional (Vault, Citizens, PlaceholderAPI, Floodgate, ProtocolLib), cada regla con `tests:` (53 casos); F-01: el jar no copiaba el `parkour` ni `estilo_ce.yml`; F-02: una regla apagada ya no avisa de la integración que le falta; 207 unitarias; 59/59 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/019-omnievents-ejemplos-en-ingles-y-regiones/verify.md)) |
+| 020 OmniEvents: página de presentación con imágenes | Verificado: logo nuevo y póster en pixel art para SpigotMC, Modrinth y Hangar (7 franjas de 1280 px, 2 GIF con 4 escenas nuevas en inglés), elegido por el dueño entre tres direcciones; descripciones en BBCode y Markdown con transcripción; `PresentacionTest`; sin capturas de más ([verify](specs/020-omnievents-pagina-de-presentacion/verify.md)) |
 
 ## Por qué empezamos con OmniEvents
 OmniEvents es la versión propia de *ConditionalEvents* (Ajneb97): «cuando pase X, si se cumple Y, haz Z». Es el
@@ -54,6 +55,7 @@ los siguientes plugins de la fábrica.
 | Oyentes siempre registrados | Solo se escucha un evento si alguna regla lo usa | 001 |
 | Un minijuego necesita otro plugin (o un desarrollador) | Un parkour completo de ejemplo hecho solo con reglas y la guía del patrón para armar el propio | 018 |
 | Los ejemplos vienen activos y en un solo idioma; para probar uno hay que tocar el servidor | Un paquete de ejemplos en inglés, apagado hasta activarlo, con pruebas en cada regla y ejemplos de WorldGuard, Vault, Citizens, PlaceholderAPI, Floodgate y ProtocolLib que cargan sin esos plugins | 019 |
+| La página de presentación entra por los ojos (capturas, tarjetas) | La nuestra también, y además dice qué tiene OmniEvents que ConditionalEvents no, con una comparación honesta y ejemplos grabados en el juego | 020 |
 | — | Importador de configuraciones de ConditionalEvents | 001 |
 
 ## Siguientes specs (propuestas, en orden)

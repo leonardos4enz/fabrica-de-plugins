@@ -1,0 +1,171 @@
+<!doctype html><html><head><meta charset="utf-8"><title>OmniEvents — presentación</title>
+<!-- Spec 020: el logo, el banner y las franjas de la página de presentación (SpigotMC, Modrinth, Hangar). La página es un
+     corte del mundo: cielo, pasto, tierra, piedra, pizarra y roca madre. Cada franja mide 1280 px de ancho y, apiladas sin
+     espacio, se leen como un solo póster. tests-e2e/presentacion.mjs saca cada pieza (#id) y arma los GIF con ?cuadro=n.
+     Texturas, bloque y minerales dibujados aquí (ruido con semilla): nada de Mojang ni de otros plugins. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@600;800;900&display=block">
+<style>
+:root{--ink:#1d2433;--gold:#ffcc33;--W:1280px}
+html,body{margin:0;background:transparent;font-family:Nunito,"Segoe UI",sans-serif;color:#fff}
+body{width:1600px}
+.pieza{position:relative;overflow:hidden;box-sizing:border-box}
+.strip{width:var(--W)}
+.edge{position:absolute;left:0;right:0;bottom:0}
+.center{text-align:center}
+code{font-family:"Cascadia Code",Consolas,monospace}
+/* logo */
+#logo{width:512px;height:512px}
+/* cielo: cabecera y banner */
+.sky{background:linear-gradient(#59c2ff,#b9ecff 85%)}
+.cloud{position:absolute;background:#fff;height:24px;box-shadow:24px -24px 0 #fff,48px 0 0 #fff,72px -24px 0 #fff,96px 0 0 #fff}
+.hdr{position:absolute;display:flex;align-items:center;gap:40px}
+.hdr .t{font-family:"Press Start 2P";font-weight:700;line-height:1;color:#fff;text-shadow:6px 6px 0 var(--ink)}
+.hdr .xyz{font-weight:900;color:var(--ink);margin:18px 0 14px}
+.hdr .xyz i{font-style:normal;background:var(--gold);padding:0 8px}
+.hdr .sub{font-weight:800;color:#24405e;margin:0;line-height:1.35}
+.pill{display:inline-block;font-family:"Press Start 2P";font-size:12px;background:var(--ink);color:var(--gold);padding:8px 12px;margin:14px 8px 0 0;box-shadow:3px 3px 0 #0005}
+/* Press Start 2P tiene un solo peso */
+.sign,.ex h4,.ore h5,.hdr .t,.pill,.rule,.slot h6,.slot b,th,.y,.n{font-weight:400 !important}
+/* letreros */
+.sign{display:inline-block;font-family:"Press Start 2P";font-weight:700;font-size:28px;color:var(--ink);background:#e8c37a;padding:10px 28px;border:5px solid var(--ink);box-shadow:inset -6px -6px 0 #c99a4a,inset 6px 6px 0 #f6dca0,6px 6px 0 #0006}
+.lead{font-size:21px;font-weight:800;margin:14px 0 0;text-shadow:2px 2px 0 #0008}
+.lead code{color:var(--gold)}
+/* ejemplos */
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:40px}
+.ex h4{margin:0 0 6px;font-family:"Press Start 2P";font-size:19px;color:var(--gold);text-shadow:3px 3px 0 #0008}
+.ex p{margin:4px 0 12px;font-size:17px;font-weight:800;text-shadow:2px 2px 0 #0008;min-height:46px}
+.frame{position:relative;border:6px solid var(--ink);box-shadow:0 0 0 4px #8b6a3e,10px 10px 0 4px #0007;background:#000;line-height:0}
+.frame img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;image-rendering:auto}
+.rule{position:absolute;left:10px;top:10px;font:400 10px "Press Start 2P";background:#1d2433e6;color:var(--gold);padding:5px 8px;line-height:1}
+/* minerales */
+.ores{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:36px}
+.ore{background:#2b3140ee;border:5px solid var(--ink);box-shadow:inset 0 0 0 3px #4a5268,8px 8px 0 #0008;padding:20px 22px;display:flex;gap:16px;align-items:flex-start}
+.ore svg{width:64px;height:64px;flex:none}
+.ore h5{margin:0 0 10px;font-family:"Press Start 2P";font-size:14px;color:#fff;line-height:1.4}
+.ore p{margin:0;font-size:16px;font-weight:600;color:#d5dbea;line-height:1.4}
+.ore code{color:var(--gold);font-size:14.5px}
+/* YAML → juego */
+.flow{display:grid;grid-template-columns:1.08fr 70px 1fr;align-items:center;gap:12px;margin-top:34px}
+.yaml{background:#11151f;border:5px solid var(--ink);box-shadow:inset 0 0 0 3px #3a4256,8px 8px 0 #0008;padding:16px 18px;font-family:"Cascadia Code",Consolas,monospace;font-size:14.5px;line-height:1.55;color:#e8edf5;white-space:pre}
+.k1{color:#7fd3ff}.s1{color:#b8f27a}.c1{color:#8d97ab}
+.arrow svg{width:70px;height:70px}
+/* tabla */
+table{width:100%;border-collapse:separate;border-spacing:0 8px;margin-top:26px;font-size:19px;font-weight:800}
+td{background:#1c202bee;padding:11px 18px;border-top:4px solid var(--ink);border-bottom:4px solid var(--ink)}
+td:first-child{border-left:4px solid var(--ink)}td:last-child{border-right:4px solid var(--ink)}
+th{font-family:"Press Start 2P";font-size:12px;padding:0 10px;color:var(--gold)}
+.y{color:#7dff6a;font-family:"Press Start 2P";text-align:center;width:170px;font-size:18px}
+.n{color:#8790a6;font-family:"Press Start 2P";text-align:center;width:250px;font-size:18px}
+tr.otro td{background:#1c202b99;color:#aab2c5}
+.foot{font-size:16px;font-weight:700;color:#aab2c5;margin-top:10px}
+/* cómo empezar */
+.hotbar{display:flex;justify-content:center;margin-top:36px}
+.slot{width:262px;height:156px;background:#8b8b8b;border:6px solid var(--ink);box-shadow:inset 6px 6px 0 #5a5a5a,inset -6px -6px 0 #c6c6c6;position:relative;margin-left:-6px;padding:18px 18px;box-sizing:border-box}
+.slot.sel{outline:6px solid #fff;z-index:1}
+.slot b{font-family:"Press Start 2P";font-size:22px;position:absolute;right:12px;bottom:4px;color:#fff;text-shadow:3px 3px 0 #3f3f3f}
+.slot h6{margin:0;font-family:"Press Start 2P";font-size:15px;color:#fff;text-shadow:2px 2px 0 #3f3f3f}
+.slot p{margin:8px 0 0;font-size:16px;font-weight:800;color:#1d2433;line-height:1.3}
+.slot code{font-size:14.5px}
+</style></head><body><div id="todo"></div>
+<script>
+const Q=new URLSearchParams(location.search);const CUADRO=+(Q.get('cuadro')||99);
+// ——— texturas propias: ruido de píxeles con semilla (siempre el mismo resultado) ———
+function azar(s){return()=>((s=(s*16807)%2147483647)/2147483647)}
+function tex(cols,s,cell=8,n=16){const r=azar(s);let o=`<svg xmlns='http://www.w3.org/2000/svg' width='${n*cell}' height='${n*cell}' shape-rendering='crispEdges'>`;
+ for(let y=0;y<n;y++)for(let x=0;x<n;x++)o+=`<rect x='${x*cell}' y='${y*cell}' width='${cell}' height='${cell}' fill='${cols[Math.floor(r()*cols.length)]}'/>`;
+ return `url("data:image/svg+xml,${encodeURIComponent(o+'</svg>')}")`}
+const T={grass:tex(['#5ccf4a','#52c241','#66d955','#4fb83e'],11),dirt:tex(['#7b5434','#86603d','#704b2d','#8e6744','#6a4529'],23),
+ stone:tex(['#7d7f86','#74767d','#868890','#6c6e75','#8e9098'],37),deep:tex(['#3b3d47','#34363f','#43454f','#2e3038'],41),bed:tex(['#222','#3a3a3a','#555','#161616','#2c2c2c'],53)};
+// borde dentado: columnas de la capa de abajo que suben a alturas distintas
+function edge(capa,s,ancho=1280,h=48,cell=16){const r=azar(s);let o='';for(let x=0;x<ancho;x+=cell){const k=cell*Math.floor(r()*3+1);o+=`<div data-tex="${capa}" style="position:absolute;left:${x}px;bottom:0;width:${cell}px;height:${k}px"></div>`}
+ return `<div class="edge" style="height:${h}px">${o}</div>`}
+const P=(x,y,c)=>`<rect x="${x}" y="${y}" width="1.04" height="1.04" fill="${c}"/>`;
+function ore(c1,c2){const v=[[1,1],[2,1],[2,2],[5,2],[6,2],[5,3],[1,5],[2,5],[2,6],[5,5],[6,6],[5,6]];let s='';
+ for(let y=0;y<8;y++)for(let x=0;x<8;x++)s+=P(x,y,(x*5+y*3)%4?'#7d7f86':'#6c6e75');for(const[x,y]of v)s+=P(x,y,(x+y)%3?c1:c2);
+ return `<svg viewBox="0 0 8 8" shape-rendering="crispEdges">${s}<rect x=".1" y=".1" width="7.8" height="7.8" fill="none" stroke="#1d2433" stroke-width=".3"/></svg>`}
+// ——— logo: bloque isométrico; pasto arriba, un rayo (el evento) a la izquierda y una O a la derecha ———
+const G='#5ccf4a',G2='#49b83a',S='#3a4560',S2='#323b53',R='#2b3247',R2='#262c3f',Y='#ffcc33',Wt='#fff6c8',O='#7fd3ff';
+function cara(f,r,d){let s='';for(let y=0;y<8;y++)for(let x=0;x<8;x++)s+=P(x,y,(x*7+y*13)%5===0?r:f);for(const[x,y,c]of d)s+=P(x,y,c);return s}
+const rayo=[[5,0,Y],[6,0,Y],[4,1,Y],[5,1,Wt],[3,2,Y],[4,2,Y],[2,3,Y],[3,3,Y],[4,3,Wt],[5,3,Y],[6,3,Y],[4,4,Y],[5,4,Y],[3,5,Y],[4,5,Wt],[2,6,Y],[3,6,Y],[1,7,Y],[2,7,Y]];
+const ooo=[[2,1,O],[3,1,O],[4,1,O],[5,1,O],[1,2,O],[6,2,O],[1,3,O],[6,3,O],[1,4,O],[6,4,O],[1,5,O],[6,5,O],[2,6,O],[3,6,O],[4,6,O],[5,6,O]];
+const pasto=[[1,1,'#8be36f'],[5,2,'#8be36f'],[2,5,'#8be36f'],[6,6,'#8be36f']];
+const HEX='256,40 452,153 452,379 256,492 60,379 60,153';
+const LOGO=`<svg viewBox="0 0 512 512" width="100%" height="100%" shape-rendering="crispEdges"><polygon points="${HEX}" fill="#1d2433"/>
+<g transform="matrix(24.5,-14.1,24.5,14.1,60,153)">${cara(G,G2,pasto)}</g><g transform="matrix(24.5,14.1,0,28.2,60,153)">${cara(S,S2,rayo)}</g>
+<g transform="matrix(24.5,-14.1,0,28.2,256,266)">${cara(R,R2,ooo)}</g><polygon points="${HEX}" fill="none" stroke="#1d2433" stroke-width="16" stroke-linejoin="round" shape-rendering="geometricPrecision"/></svg>`;
+// ——— escenas (cuadros de tests-e2e/omnievents/presentacion.mjs) ———
+const IMG='../../img/omnievents/presentacion/';const N={'en-welcome':2,'en-daily':2,'en-region':3,'en-npc':3};
+const shot=(id)=>`${IMG}${id}-${Math.min(CUADRO,N[id])}.png`;
+const ex=(t,p,id,regla)=>`<div class="ex"><h4>${t}</h4><p>${p}</p><div class="frame"><img src="${shot(id)}"><span class="rule">${regla}</span></div></div>`;
+const oreCard=(c1,c2,t,p)=>`<div class="ore">${ore(c1,c2)}<div><h5>${t}</h5><p>${p}</p></div></div>`;
+const nubes=(l)=>l.map(([x,y,w])=>`<div class="cloud" style="left:${x}px;top:${y}px;width:${w}px"></div>`).join('');
+const cabecera=(tam)=>`<div class="hdr" style="left:${tam.l}px;top:${tam.t}px"><div style="width:${tam.logo}px;height:${tam.logo}px">${LOGO}</div><div>
+ <div class="t" style="font-size:${tam.titulo}px">OmniEvents</div>
+ <p class="xyz" style="font-size:${tam.xyz}px">When <i>X</i> happens, if <i>Y</i> is true, do <i>Z</i>.</p>
+ <p class="sub" style="font-size:${tam.sub}px">Built to replace ConditionalEvents: <code>/omni import</code> brings your config,<br>then you get real expressions, live debugging, tests and Bedrock forms.</p>
+ <span class="pill">Paper 1.21.4+</span><span class="pill">Free · MIT</span><span class="pill">Plain YAML</span></div></div>`;
+document.getElementById('todo').innerHTML=`
+<div id="logo" class="pieza">${LOGO}</div>
+<section id="banner" class="pieza sky" style="width:1600px;height:500px">${nubes([[700,46,96],[1330,96,72],[260,40,60],[1080,30,48]])}
+ ${cabecera({l:110,t:84,logo:270,titulo:68,xyz:32,sub:22})}
+ <div style="position:absolute;left:0;right:0;bottom:0;height:34px" data-tex="dirt"></div><div style="position:absolute;left:0;right:0;bottom:34px;height:66px">${edge('grass',3,1600,66)}</div></section>
+<section id="franja-1" class="pieza strip sky" style="height:480px">${nubes([[560,50,96],[1040,90,72],[180,40,60]])}
+ ${cabecera({l:70,t:78,logo:250,titulo:62,xyz:30,sub:20})}${edge('grass',5)}</section>
+<section id="franja-2" class="pieza strip" data-tex="grass" style="padding-top:40px">
+ <div style="position:absolute;left:0;right:0;top:0;height:40px">${edge('dirt',7,1280,40)}</div>
+ <div data-tex="dirt" style="padding:50px 60px 56px">
+ <div class="center"><span class="sign">See it in game</span><p class="lead">Rules from the English example pack, recorded on a real Paper server.</p></div>
+ <div class="pair" style="margin-top:34px">${ex('Welcome','First join: a broadcast, a starter kit and 100 coins. Then a title.','en-welcome','examples:welcome')}
+ ${ex('/daily streak','Day 5 of the streak pays 5 × 25 coins. Twice in a day? The cooldown says when.','en-daily','examples:daily')}</div></div></section>
+<section id="franja-3" class="pieza strip" data-tex="dirt" style="padding:20px 60px 100px">
+ <div class="pair">${ex('WorldGuard regions','The mine gives Haste on enter. Without permission, the VIP area stays closed.','en-region','examples:mine_haste · vip_only')}
+ ${ex('Citizens NPC','Right click: a tip and some bread. Hit it: it complains.','en-npc','examples:npc_guide · npc_punch')}</div>${edge('stone',13)}</section>
+<section id="franja-4" class="pieza strip" data-tex="stone" style="padding:54px 60px 96px">
+ <div class="center"><span class="sign">Only in OmniEvents</span></div>
+ <div class="ores">
+ ${oreCard('#5ef0e6','#c8fffb','/omni debug','See every condition with the value it read, live: <code>player.level (10) &gt;= 3 → true</code>')}
+ ${oreCard('#3ee86b','#b6ffc8','Tests in YAML','Each rule carries its own <code>tests:</code>. <code>/omni test</code> runs them without players or side effects.')}
+ ${oreCard('#ffd23d','#fff3b0','Real expressions','<code>&amp;&amp; || ! ( )</code>, math and lists in conditions; <code>if</code>/<code>else</code> and loops inside actions.')}
+ ${oreCard('#4a7dff','#bcd0ff','Menus → Bedrock','One <code>menu:</code> is a chest GUI on Java and a native form for Bedrock players (Floodgate).')}
+ ${oreCard('#ff4040','#ffc0c0','Packs &amp; templates','<code>pack:rule</code> names, <code>extends</code> with <code>\${params}</code>, versions and migrations.')}
+ ${oreCard('#b06cff','#e4ccff','VS Code','A JSON schema gives autocomplete and errors while you type your rules.')}
+ </div>${edge('deep',17)}</section>
+<section id="franja-5" class="pieza strip" data-tex="deep" style="padding:54px 60px 40px">
+ <div class="center"><span class="sign">Your YAML → the game</span></div>
+ <div class="flow"><div class="yaml"><span class="k1">welcome</span>:
+  <span class="k1">trigger</span>: player_join
+  <span class="k1">actions</span>:
+    - <span class="k1">if</span>: <span class="s1">"first_join"</span>
+      <span class="k1">then</span>:
+        - <span class="k1">broadcast</span>: <span class="s1">"&lt;gold&gt;Please welcome &lt;yellow&gt;{player.name}</span>
+<span class="s1">            &lt;/yellow&gt;, it's their first time here!"</span>
+        - <span class="k1">give_item</span>: <span class="s1">"STONE_SWORD;1;&lt;yellow&gt;Starter sword"</span>
+        - <span class="k1">give_item</span>: <span class="s1">"BREAD;16;&lt;yellow&gt;Starter bread"</span>
+        - <span class="k1">set</span>: <span class="s1">"pvar.coins = 100"</span>
+    - <span class="k1">delay</span>: 2s
+    - <span class="k1">title</span>: <span class="s1">"&lt;gold&gt;Welcome!;&lt;gray&gt;Type /daily for…"</span></div>
+ <div class="arrow"><svg viewBox="0 0 8 8" shape-rendering="crispEdges"><path d="M0 3h4V1h1v1h1v1h1v2H6v1H5v1H4V5H0z" fill="#ffcc33" stroke="#1d2433" stroke-width=".3"/></svg></div>
+ <div class="frame"><img src="${IMG}en-welcome.png"></div></div></section>
+<section id="franja-6" class="pieza strip" data-tex="deep" style="padding:30px 60px 92px">
+ <div class="center"><span class="sign">Coming from ConditionalEvents?</span><p class="lead"><code>/omni import</code> translates your config. On top of that you get:</p></div>
+ <table><tr><th></th><th>OmniEvents</th><th>ConditionalEvents</th></tr>
+ <tr><td>and / or with parentheses, math in conditions</td><td class="y">✔</td><td class="n">—</td></tr>
+ <tr><td>if / else and loops inside actions</td><td class="y">✔</td><td class="n">—</td></tr>
+ <tr><td>Debug that shows the value behind each condition</td><td class="y">✔</td><td class="n">—</td></tr>
+ <tr><td>Tests inside your YAML</td><td class="y">✔</td><td class="n">—</td></tr>
+ <tr><td>Menus that become Bedrock forms</td><td class="y">✔</td><td class="n">—</td></tr>
+ <tr><td>Packs, templates and VS Code autocomplete</td><td class="y">✔</td><td class="n">—</td></tr>
+ <tr><td>Variables that expire, stored on blocks and items</td><td class="y">✔</td><td class="n">—</td></tr>
+ <tr><td>All-or-nothing costs (Vault money, items, levels)</td><td class="y">✔</td><td class="n">—</td></tr>
+ <tr class="otro"><td>Spigot and versions before 1.21.4</td><td class="n">—</td><td class="y">✔</td></tr>
+ </table>${edge('bed',19)}</section>
+<section id="franja-7" class="pieza strip" data-tex="bed" style="padding:48px 60px 56px">
+ <div class="center"><span class="sign">How to start</span></div>
+ <div class="hotbar">
+  <div class="slot sel"><h6>Install</h6><p>Drop the jar in <code>plugins/</code>. Paper 1.21.4+, Java 21.</p><b>1</b></div>
+  <div class="slot"><h6>Try</h6><p><code>/omni pack enable examples</code></p><b>2</b></div>
+  <div class="slot"><h6>Edit</h6><p>Change a rule in <code>rules/</code> or write your own.</p><b>3</b></div>
+  <div class="slot"><h6>Reload</h6><p><code>/omni reload</code>. No restart.</p><b>4</b></div>
+ </div></section>`;
+document.querySelectorAll('[data-tex]').forEach(e=>{e.style.backgroundImage=T[e.dataset.tex];e.style.backgroundSize='128px'});
+</script></body></html>

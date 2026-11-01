@@ -1,0 +1,62 @@
+[CENTER][IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/site/pages/assets/presentacion/1-header.png[/IMG]
+[IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/site/pages/assets/presentacion/2-examples.gif[/IMG]
+[IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/site/pages/assets/presentacion/3-integrations.gif[/IMG]
+[IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/site/pages/assets/presentacion/4-only-in-omnievents.png[/IMG]
+[IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/site/pages/assets/presentacion/5-yaml-to-game.png[/IMG]
+[IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/site/pages/assets/presentacion/6-from-conditionalevents.png[/IMG]
+[IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/site/pages/assets/presentacion/7-how-to-start.png[/IMG]
+
+[SIZE=5][B]Script your Paper server in YAML[/B][/SIZE]
+When something happens, if your conditions are true, run your actions. No Java, no Skript: plain YAML rules that are checked when they load, with the file, the path and a "did you mean?" when something is wrong.[/CENTER]
+
+[SIZE=5][B]Requirements[/B][/SIZE]
+[LIST]
+[*][B]Paper[/B] 1.21.4 or 26.1.x (or a Paper fork) and [B]Java 21+[/B]. Verified on Paper 1.21.4 and 26.1.2.
+[*]Not supported: Spigot/CraftBukkit and Folia (OmniEvents uses Paper's Adventure API).
+[*]Optional: Vault, WorldGuard, Citizens, Floodgate/Geyser, ProtocolLib, PlaceholderAPI.
+[/LIST]
+
+[SIZE=5][B]Getting started[/B][/SIZE]
+[LIST=1]
+[*]Drop the jar into [FONT=Courier New]plugins/[/FONT] and start the server.
+[*]Try the English example pack: [FONT=Courier New]/omni pack enable examples[/FONT] (it ships turned off and changes nothing until you enable it).
+[*]Edit a rule in [FONT=Courier New]plugins/OmniEvents/rules/[/FONT] or write your own. The plugin's own messages are in Spanish and can be translated in [FONT=Courier New]messages.yml[/FONT].
+[*]Run [FONT=Courier New]/omni reload[/FONT]. No restart. Admin commands are OP-only by default.
+[/LIST]
+
+[SIZE=5][B]Links[/B][/SIZE]
+[LIST]
+[*]Documentation (English): [URL]https://leonardos4enz.gitbook.io/leonardos4enz-docs/[/URL]
+[*]Source (MIT): [URL]https://github.com/leonardos4enz/fabrica-de-plugins[/URL]
+[*]Bug reports: [URL=https://github.com/leonardos4enz/fabrica-de-plugins/issues]GitHub issues[/URL]
+[/LIST]
+
+[I]Code and documentation were written with the help of an AI coding assistant (Claude), directed and reviewed by the author and verified with an automated in-game test suite.[/I]
+
+[SPOILER="Image transcription"]
+[B]Header.[/B] OmniEvents. When X happens, if Y is true, do Z. Built to replace ConditionalEvents: /omni import brings your config, then you get real expressions, live debugging, tests and Bedrock forms. Paper 1.21.4+. Free, MIT. Plain YAML.
+
+[B]See it in game.[/B] Rules from the English example pack, recorded on a real Paper server.
+[LIST]
+[*][I]Welcome[/I] (examples:welcome): first join: a broadcast ("Please welcome Ana, it's their first time here!"), a starter kit and 100 coins. Then the title "Welcome!" with "Type /daily for your daily reward".
+[*][I]/daily streak[/I] (examples:daily): day 5 of the streak pays 5 × 25 coins ("Daily reward: +125 coins (streak: 5 days, you have 250)"). A second /daily the same day: "You already claimed today. Come back in 24h 0m."
+[*][I]WorldGuard regions[/I] (examples:mine_haste, examples:vip_only): entering the mine shows "Mining boost on" and gives Haste. Without permission, the VIP area stays closed: "Only VIP players can enter this area."
+[*][I]Citizens NPC[/I] (examples:npc_guide, examples:npc_punch): right click: "[Guide] Hi Ana! Try /daily, /shop and /coins." and 4 bread. Hit it: "Guide says: hey, that hurts!"
+[/LIST]
+
+[B]Only in OmniEvents.[/B]
+[LIST]
+[*]/omni debug: see every condition with the value it read, live: player.level (10) >= 3 → true.
+[*]Tests in YAML: each rule carries its own tests:. /omni test runs them without players or side effects.
+[*]Real expressions: && || ! ( ), math and lists in conditions; if/else and loops inside actions.
+[*]Menus → Bedrock: one menu: is a chest GUI on Java and a native form for Bedrock players (Floodgate).
+[*]Packs & templates: pack:rule names, extends with ${params}, versions and migrations.
+[*]VS Code: a JSON schema gives autocomplete and errors while you type your rules.
+[/LIST]
+
+[B]Your YAML → the game.[/B] The welcome rule (trigger player_join; if first_join, a broadcast, a stone sword, 16 bread and pvar.coins = 100; after 2 seconds, the title) next to the screenshot of what the player sees.
+
+[B]Coming from ConditionalEvents?[/B] /omni import translates your config. On top of that you get, in OmniEvents and not in ConditionalEvents: and / or with parentheses and math in conditions; if / else and loops inside actions; debug that shows the value behind each condition; tests inside your YAML; menus that become Bedrock forms; packs, templates and VS Code autocomplete; variables that expire, stored on blocks and items; all-or-nothing costs (Vault money, items, levels). ConditionalEvents, and not OmniEvents, runs on Spigot and on versions before 1.21.4.
+
+[B]How to start.[/B] 1. Install: drop the jar in plugins/, Paper 1.21.4+, Java 21. 2. Try: /omni pack enable examples. 3. Edit: change a rule in rules/ or write your own. 4. Reload: /omni reload, no restart.
+[/SPOILER]

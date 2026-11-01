@@ -1,0 +1,14 @@
+{
+  "en-daily": {
+    "alt": "Chat: Daily reward: +125 coins (streak: 5 days, you have 250). / You already claimed today. Come back in 24h 0m."
+  },
+  "en-npc": {
+    "alt": "Barra de acción: Guide says: hey, that hurts!. Chat: [Guide] Hi Ana! Try /daily, /shop and /coins."
+  },
+  "en-region": {
+    "alt": "Chat: Only VIP players can enter this area."
+  },
+  "en-welcome": {
+    "alt": "Título: Welcome!. Subtítulo: Type /daily for your daily reward. Chat: Please welcome Ana, it's their first time here! / [+] Ana"
+  }
+}

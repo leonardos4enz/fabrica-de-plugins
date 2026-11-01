@@ -1,0 +1,153 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Boceto B2 — Póster por capas</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Nunito:wght@600;800;900&display=block">
+<style>
+/* Boceto: la página es un corte del mundo. Cada franja (cielo, pasto, tierra, piedra, pizarra, roca madre) será una imagen
+   del mismo ancho; apiladas sin espacio se leen como un solo póster. Las marcas rojas a la izquierda muestran los cortes. */
+:root{--ink:#1d2433;--gold:#ffcc33;--W:1280px}
+html,body{margin:0;background:#2a2f3a;font-family:Nunito,"Segoe UI",sans-serif;color:#fff}
+.wrap{width:var(--W);margin:0 auto;position:relative}
+.strip{position:relative;box-sizing:border-box;width:var(--W);overflow:hidden;image-rendering:pixelated}
+.cut{position:absolute;left:-150px;width:140px;text-align:right;font:700 12px Nunito;color:#ff7a7a;border-top:2px dashed #ff7a7a;padding-top:4px}
+.px{font-family:Silkscreen,monospace}
+.edge{position:absolute;left:0;right:0;bottom:0;height:48px}
+/* cabecera */
+.sky{height:480px;background:linear-gradient(#59c2ff,#b9ecff 80%)}
+.sky .cloud{position:absolute;background:#fff;height:24px;box-shadow:24px -24px 0 #fff,48px 0 0 #fff,72px -24px 0 #fff,96px 0 0 #fff}
+.hdr{position:absolute;left:80px;top:90px;display:flex;align-items:center;gap:36px}
+.hdr .logo{width:250px;height:250px}
+.hdr .t{font-family:Silkscreen;font-weight:700;font-size:84px;line-height:1;color:#fff;text-shadow:6px 6px 0 var(--ink)}
+.hdr p{font-size:30px;font-weight:900;color:var(--ink);margin:18px 0 16px}
+.hdr p i{font-style:normal;background:var(--gold);padding:0 8px}
+.hdr .sub{font-size:21px;font-weight:800;color:#24405e;margin:0}
+.pill{display:inline-block;font-family:Silkscreen;font-size:16px;background:var(--ink);color:var(--gold);padding:6px 12px;margin:14px 8px 0 0;box-shadow:3px 3px 0 #0005}
+/* letreros de sección */
+.sign{display:inline-block;position:relative;font-family:Silkscreen;font-weight:700;font-size:40px;color:var(--ink);background:#e8c37a;padding:10px 28px;border:5px solid var(--ink);box-shadow:inset -6px -6px 0 #c99a4a,inset 6px 6px 0 #f6dca0,6px 6px 0 #0006}
+.center{text-align:center}
+.lead{font-size:21px;font-weight:800;margin:14px 0 0;text-shadow:2px 2px 0 #0007}
+/* ejemplos (serán GIF de dos en dos) */
+.dirt{padding:56px 60px 70px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:34px}
+.ex h4{margin:0;font-family:Silkscreen;font-size:26px;color:var(--gold);text-shadow:3px 3px 0 #0008}
+.ex p{margin:4px 0 12px;font-size:17px;font-weight:800;text-shadow:2px 2px 0 #0008}
+.frame{position:relative;border:6px solid var(--ink);box-shadow:0 0 0 4px #8b6a3e,10px 10px 0 4px #0007;background:#000}
+.frame img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}
+.frame .gif{position:absolute;right:8px;top:8px;font:700 12px Silkscreen;background:#e33;color:#fff;padding:3px 7px}
+/* minerales */
+.stone{padding:60px 60px 80px}
+.ores{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:36px}
+.ore{background:#2b3140ee;border:5px solid var(--ink);box-shadow:inset 0 0 0 3px #4a5268,8px 8px 0 #0008;padding:20px 22px;display:flex;gap:16px;align-items:flex-start}
+.ore svg{width:64px;height:64px;flex:none}
+.ore h5{margin:0 0 6px;font-family:Silkscreen;font-size:20px;color:#fff}
+.ore p{margin:0;font-size:16px;font-weight:600;color:#cfd6e6;line-height:1.35}
+.ore code{font-family:"Cascadia Code",Consolas,monospace;color:var(--gold);font-size:15px}
+/* YAML → juego */
+.flow{display:grid;grid-template-columns:1fr 80px 1fr;align-items:center;gap:10px;margin-top:34px}
+.yaml{background:#11151f;border:5px solid var(--ink);box-shadow:inset 0 0 0 3px #3a4256,8px 8px 0 #0008;padding:16px 20px;font-family:"Cascadia Code",Consolas,monospace;font-size:16px;line-height:1.55;color:#e8edf5;white-space:pre}
+.k1{color:#7fd3ff}.s1{color:#b8f27a}.c1{color:#8d97ab}
+.arrow svg{width:80px;height:80px}
+/* tabla */
+.deep{padding:60px 60px 80px}
+table{width:100%;border-collapse:separate;border-spacing:0 8px;margin-top:30px;font-size:19px;font-weight:800}
+td{background:#1c202bdd;padding:12px 18px;border-top:4px solid var(--ink);border-bottom:4px solid var(--ink)}
+td:first-child{border-left:4px solid var(--ink)}td:last-child{border-right:4px solid var(--ink)}
+th{font-family:Silkscreen;font-size:18px;text-align:left;padding:0 18px;color:var(--gold)}
+.y{color:#7dff6a;font-family:Silkscreen;text-align:center;width:150px}.n{color:#8790a6;font-family:Silkscreen;text-align:center;width:190px}
+/* cómo empezar */
+.hotbar{display:flex;justify-content:center;gap:0;margin-top:36px}
+.slot{width:250px;height:150px;background:#8b8b8b;border:6px solid var(--ink);box-shadow:inset 6px 6px 0 #5a5a5a,inset -6px -6px 0 #c6c6c6;position:relative;margin-left:-6px;color:var(--ink);padding:18px;box-sizing:border-box}
+.slot.sel{outline:6px solid #fff;z-index:1}
+.slot b{font-family:Silkscreen;font-size:30px;position:absolute;right:12px;bottom:6px;color:#fff;text-shadow:3px 3px 0 #3f3f3f}
+.slot h6{margin:0;font-family:Silkscreen;font-size:18px;color:#fff;text-shadow:2px 2px 0 #3f3f3f}
+.slot p{margin:6px 0 0;font-size:15px;font-weight:800;color:#1d2433}
+.slot code{font-family:"Cascadia Code",Consolas,monospace;font-size:14px}
+.foot{padding:34px 60px 40px;font-family:Silkscreen;font-size:18px;color:#ddd}
+.foot span{color:var(--gold)}
+</style></head><body><div class="wrap" id="w"></div>
+<script>
+// ——— texturas propias (ruido de píxeles con semilla; ninguna textura de Mojang) ———
+let seed=7;const rnd=()=>((seed=(seed*16807)%2147483647)/2147483647);
+function tex(cols,cell=8,n=16){let s=`<svg xmlns='http://www.w3.org/2000/svg' width='${n*cell}' height='${n*cell}' shape-rendering='crispEdges'>`;
+ for(let y=0;y<n;y++)for(let x=0;x<n;x++)s+=`<rect x='${x*cell}' y='${y*cell}' width='${cell}' height='${cell}' fill='${cols[Math.floor(rnd()*cols.length)]}'/>`;
+ return `url("data:image/svg+xml,${encodeURIComponent(s+'</svg>')}")`}
+const T={grass:tex(['#5ccf4a','#52c241','#66d955','#4fb83e']),dirt:tex(['#7b5434','#86603d','#704b2d','#8e6744','#6a4529']),
+ stone:tex(['#7d7f86','#74767d','#868890','#6c6e75','#8e9098']),deep:tex(['#3b3d47','#34363f','#43454f','#2e3038']),bed:tex(['#222','#3a3a3a','#555','#161616','#2c2c2c'])};
+// borde dentado: columnas de píxeles de la capa de abajo que suben a alturas distintas
+function edge(bg,h=48,cell=16){let s='';for(let x=0;x<1280;x+=cell){const k=cell*Math.floor(rnd()*3+1);s+=`<div data-tex="${bg}" style="position:absolute;left:${x}px;bottom:0;width:${cell}px;height:${k}px;"></div>`}
+ return `<div class="edge" style="height:${h}px">${s}</div>`}
+const P=(x,y,c)=>`<rect x="${x}" y="${y}" width="1.04" height="1.04" fill="${c}"/>`;
+function ore(c1,c2){ // ícono de mineral 8×8 propio: piedra con vetas del color dado
+ const vetas=[[1,1],[2,1],[2,2],[5,2],[6,2],[5,3],[1,5],[2,5],[2,6],[5,5],[6,6],[5,6]];let s='';
+ for(let y=0;y<8;y++)for(let x=0;x<8;x++)s+=P(x,y,(x*5+y*3)%4?'#7d7f86':'#6c6e75');
+ for(const[x,y]of vetas)s+=P(x,y,(x+y)%3?c1:c2);
+ return `<svg viewBox="0 0 8 8" shape-rendering="crispEdges">${s}<rect x=".1" y=".1" width="7.8" height="7.8" fill="none" stroke="#1d2433" stroke-width=".3"/></svg>`}
+// logo de la propuesta B
+const G='#5ccf4a',G2='#49b83a',S='#3a4560',S2='#323b53',R='#2b3247',R2='#262c3f',Y='#ffcc33',Wt='#fff6c8',O='#7fd3ff';
+function cara(f,r,d){let s='';for(let y=0;y<8;y++)for(let x=0;x<8;x++)s+=P(x,y,(x*7+y*13)%5===0?r:f);for(const[x,y,c]of d)s+=P(x,y,c);return s}
+const rayo=[[5,0,Y],[6,0,Y],[4,1,Y],[5,1,Wt],[3,2,Y],[4,2,Y],[2,3,Y],[3,3,Y],[4,3,Wt],[5,3,Y],[6,3,Y],[4,4,Y],[5,4,Y],[3,5,Y],[4,5,Wt],[2,6,Y],[3,6,Y],[1,7,Y],[2,7,Y]];
+const ooo=[[2,1,O],[3,1,O],[4,1,O],[5,1,O],[1,2,O],[6,2,O],[1,3,O],[6,3,O],[1,4,O],[6,4,O],[1,5,O],[6,5,O],[2,6,O],[3,6,O],[4,6,O],[5,6,O]];
+const pasto=[[1,1,'#8be36f'],[5,2,'#8be36f'],[2,5,'#8be36f'],[6,6,'#8be36f']];
+const LOGO=`<svg viewBox="0 0 512 512" width="100%" height="100%" shape-rendering="crispEdges"><polygon points="256,40 452,153 452,379 256,492 60,379 60,153" fill="#1d2433"/>
+<g transform="matrix(24.5,-14.1,24.5,14.1,60,153)">${cara(G,G2,pasto)}</g><g transform="matrix(24.5,14.1,0,28.2,60,153)">${cara(S,S2,rayo)}</g>
+<g transform="matrix(24.5,-14.1,0,28.2,256,266)">${cara(R,R2,ooo)}</g><polygon points="256,40 452,153 452,379 256,492 60,379 60,153" fill="none" stroke="#1d2433" stroke-width="16" stroke-linejoin="round" shape-rendering="geometricPrecision"/></svg>`;
+const IMG='../../../../img/omnievents/';
+const cut=(t)=>`<div class="cut" style="top:0">${t}</div>`;
+const ex=(t,p,img)=>`<div class="ex"><h4>${t}</h4><p>${p}</p><div class="frame"><img src="${IMG}${img}"><span class="gif">GIF</span></div></div>`;
+const oreCard=(c1,c2,t,p)=>`<div class="ore">${ore(c1,c2)}<div><h5>${t}</h5><p>${p}</p></div></div>`;
+document.getElementById('w').innerHTML=`
+<section class="strip sky">${cut('1 · cabecera<br>1280×480')}
+ <div class="cloud" style="left:560px;top:50px;width:96px"></div><div class="cloud" style="left:1040px;top:90px;width:72px"></div><div class="cloud" style="left:180px;top:40px;width:60px"></div>
+ <div class="hdr"><div class="logo">${LOGO}</div><div><div class="t">OmniEvents</div>
+ <p>When <i>X</i> happens, if <i>Y</i> is true, do <i>Z</i>.</p>
+ <p class="sub">Everything ConditionalEvents does, plus real expressions,<br>live debugging, tests and Bedrock forms. Plain YAML.</p>
+ <span class="pill">Paper 1.21.4+</span><span class="pill">Free · MIT</span><span class="pill">/omni import</span></div></div>
+ ${edge('grass')}</section>
+<section class="strip" data-tex="grass" style="height:40px">${edge('dirt',40)}</section>
+<section class="strip dirt" data-tex="dirt" style="">${cut('2 · título + GIF<br>de dos ejemplos')}
+ <div class="center"><span class="sign">See it in game</span><p class="lead">Four rules from the English example pack, recorded on a real Paper server.</p></div>
+ <div class="pair">${ex('Welcome','First join: a broadcast, a starter kit and 100 coins.','ejemplo-bienvenida.png')}${ex('/daily streak','24 h cooldown and a streak that resets after 48 h.','ejemplo-diamantes_contados.png')}</div>
+ <div class="cut" style="top:640px">3 · GIF de dos<br>ejemplos</div>
+ <div class="pair" style="margin-top:46px">${ex('VIP region','WorldGuard enter / leave, with a permission check.','ejemplo-bloque_protegido.png')}${ex('Citizens NPC','Click the guide NPC, pay with Vault, all or nothing.','ejemplo-cazador.png')}</div>
+ ${edge('stone')}</section>
+<section class="strip stone" data-tex="stone" style="">${cut('4 · funciones<br>(minerales)')}
+ <div class="center"><span class="sign">Only in OmniEvents</span></div>
+ <div class="ores">
+ ${oreCard('#5ef0e6','#c8fffb','/omni debug','Every condition with the value it read: <code>level (10) >= 3 → true</code>')}
+ ${oreCard('#3ee86b','#b6ffc8','tests: in YAML','Each rule carries its own tests. <code>/omni test</code> runs them, no server needed.')}
+ ${oreCard('#ffd23d','#fff3b0','Real expressions','<code>&amp;&amp; || ! ( )</code>, math, lists, and if / else, loops and delays inside actions.')}
+ ${oreCard('#4a7dff','#bcd0ff','Menus → Bedrock','One <code>menu:</code> is a chest GUI on Java and a native form on Bedrock.')}
+ ${oreCard('#ff4040','#ffc0c0','Packs &amp; templates','<code>pack:rule</code> names, <code>extends</code>, <code>\${params}</code>, versions and migrations.')}
+ ${oreCard('#b06cff','#e4ccff','VS Code','JSON schema: autocomplete and errors while you type your rules.')}
+ </div>${edge('deep')}</section>
+<section class="strip deep" data-tex="deep" style="">${cut('5 · YAML → juego')}
+ <div class="center"><span class="sign">Your YAML → the game</span></div>
+ <div class="flow"><div class="yaml"><span class="k1">welcome</span>:
+  <span class="k1">trigger</span>: player_join
+  <span class="k1">actions</span>:
+    - <span class="k1">if</span>: <span class="s1">"first_join"</span>
+      <span class="k1">then</span>:
+        - <span class="k1">broadcast</span>: <span class="s1">"Please welcome {player.name}!"</span>
+        - <span class="k1">give_item</span>: <span class="s1">"STONE_SWORD;1"</span>
+    - <span class="k1">title</span>: <span class="s1">"&lt;gold&gt;Welcome!"</span></div>
+ <div class="arrow"><svg viewBox="0 0 8 8" shape-rendering="crispEdges"><path d="M0 3h4V1h1v1h1v1h1v2H6v1H5v1H4V5H0z" fill="#ffcc33" stroke="#1d2433" stroke-width=".3"/></svg></div>
+ <div class="frame"><img src="${IMG}ejemplo-bienvenida.png"></div></div>
+ <div class="cut" style="top:520px">6 · comparación</div>
+ <div class="center" style="margin-top:70px"><span class="sign">Coming from ConditionalEvents?</span><p class="lead"><code>/omni import</code> translates your config. Then you also get:</p></div>
+ <table><tr><th></th><th style="text-align:center">OmniEvents</th><th style="text-align:center">ConditionalEvents</th></tr>
+ <tr><td>Mix and / or with parentheses, math in conditions</td><td class="y">✔</td><td class="n">—</td></tr>
+ <tr><td>if / else, loops and delays inside actions</td><td class="y">✔</td><td class="n">—</td></tr>
+ <tr><td>Debug that shows the value of each condition</td><td class="y">✔</td><td class="n">—</td></tr>
+ <tr><td>Tests inside your YAML</td><td class="y">✔</td><td class="n">—</td></tr>
+ <tr><td>Menus that become Bedrock forms</td><td class="y">✔</td><td class="n">—</td></tr>
+ <tr><td>Packs, templates, VS Code autocomplete</td><td class="y">✔</td><td class="n">—</td></tr>
+ </table>${edge('bed')}</section>
+<section class="strip" data-tex="bed" style="padding:54px 60px 50px">${cut('7 · cómo empezar')}
+ <div class="center"><span class="sign">How to start</span></div>
+ <div class="hotbar">
+  <div class="slot sel"><h6>Install</h6><p>Drop the jar in <code>plugins/</code> (Paper 1.21.4+).</p><b>1</b></div>
+  <div class="slot"><h6>Try</h6><p><code>/omni pack enable examples</code></p><b>2</b></div>
+  <div class="slot"><h6>Edit</h6><p>Change a rule in <code>rules/</code> or write yours.</p><b>3</b></div>
+  <div class="slot"><h6>Reload</h6><p><code>/omni reload</code>, no restart.</p><b>4</b></div>
+ </div></section>
+<section class="strip foot" data-tex="bed" style="">${cut('8 · pie')}<div class="center">Docs <span>·</span> Examples <span>·</span> GitHub <span>·</span> Issues</div></section>`;
+document.querySelectorAll("[data-tex]").forEach(e=>{e.style.backgroundImage=T[e.dataset.tex];e.style.backgroundSize="128px"});
+</script></body></html>

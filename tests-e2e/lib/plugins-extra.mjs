@@ -65,8 +65,9 @@ async function enCache (p, cache) {
 }
 
 /** Deja en pluginsDir los jars de esa versión de Paper (y quita los de otras versiones). Devuelve sus nombres. */
-export async function instalarPluginsExtra (version, pluginsDir, cache) {
-  const lista = PLUGINS_EXTRA[version]
+export async function instalarPluginsExtra (version, pluginsDir, cache, filtro = null) {
+  // filtro (spec 020): solo los jars cuyo nombre coincide (las capturas de la presentación no quieren EssentialsX).
+  const lista = PLUGINS_EXTRA[version]?.filter(p => !filtro || filtro.test(p.archivo))
   if (!lista) {
     console.log(`  (sin plugins de terceros para Paper ${version}: las integraciones no se prueban)`)
     return []

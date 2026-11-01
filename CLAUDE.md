@@ -118,6 +118,13 @@ con `--release 21`.
   su skin en segundo plano y Paper puede registrar al apagar un «Nag author(s)… Citizens» que el arnés cuenta como error:
   es ruido de terceros (`ruidoDelServidor`, 019 F-05).
 
+- **Spec 020 (página de presentación):** el visor 3D no dibuja jugadores (`visor.mjs` los filtra) ni aldeanos (prismarine-viewer
+  no tiene textura por defecto para `villager`): un NPC de Citizens para una captura va con `--type WANDERING_TRADER` u otra
+  criatura con textura `default`, y el visor la dibuja siempre mirando al sur (+z): la cámara se pone al sur, mirando al norte.
+  Para hacer clic a una entidad el bot tiene que estar a menos de 3 bloques. `activateEntity` y `attack` giran la cabeza del
+  bot: volver a la mirada anterior antes de la foto (si no, los cuadros de un GIF saltan). Silkscreen y Pixelify Sans se leen mal
+  en títulos («OHNIEVENTS», «Ɛ»): la página usa Press Start 2P. Las franjas se sacan con puppeteer por elemento (`#franja-N`).
+
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.
 - **README del plugin** (`plugins/<nombre>/README.md`): cada capacidad nueva o cambiada con su ejemplo, y la sección

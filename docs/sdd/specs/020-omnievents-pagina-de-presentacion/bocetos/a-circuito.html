@@ -1,0 +1,111 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Boceto A — Circuito</title><style>
+:root{--bg:#0d0e12;--panel:#16171d;--line:#2a2b33;--red:#ff3b3b;--ember:#ff8a3d;--txt:#ecebf0;--mut:#9a98a6}
+html,body{margin:0;width:1600px;background:var(--bg);color:var(--txt);font-family:"Segoe UI",system-ui,sans-serif}
+body{padding:48px;box-sizing:border-box}
+.lbl{font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);margin:0 0 14px}
+h2{margin:0 0 6px;font-size:40px}
+.desc{color:var(--mut);font-size:19px;margin:0 0 34px}
+.row{display:flex;gap:40px;align-items:center;margin-bottom:44px}
+.big svg{width:300px;height:300px;display:block}
+.sizes{display:flex;gap:22px;align-items:flex-end}
+.tile{padding:18px;border-radius:14px;display:flex;align-items:center;justify-content:center}
+.tile.dk{background:#24252d}.tile.lt{background:#f1f1f4}
+.lock{display:flex;align-items:center;gap:22px}
+.lock svg{width:96px;height:96px}
+.word{font-size:64px;font-weight:800;letter-spacing:-.02em}
+.word b{color:var(--red);text-shadow:0 0 24px #ff3b3b88}
+mono,code,.mono{font-family:"Cascadia Code",Consolas,monospace}
+/* banner */
+.banner{position:relative;width:1504px;height:470px;border-radius:18px;overflow:hidden;background:radial-gradient(ellipse at 78% 50%,#3a0d0d 0%,transparent 60%),#0b0c10;display:flex;align-items:center;padding:0 80px;box-sizing:border-box;margin-bottom:44px}
+.banner:before{content:"";position:absolute;inset:0;background-image:linear-gradient(#ffffff08 1px,transparent 1px),linear-gradient(90deg,#ffffff08 1px,transparent 1px);background-size:32px 32px}
+.bl{position:relative;width:640px}
+.bl .t{font-size:96px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.bl .t b{color:var(--red);text-shadow:0 0 40px #ff3b3baa}
+.bl p{font-size:30px;color:#cfcdd8;margin:22px 0 26px}
+.bl p i{font-style:normal;color:var(--ember);font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.chip{border:1px solid #ff3b3b55;color:#ffb3b3;border-radius:999px;padding:6px 14px;font-size:17px;background:#ff3b3b12}
+.flow{position:relative;display:flex;flex-direction:column;gap:26px;margin-left:auto}
+.node{position:relative;width:560px;background:#15161c;border:1px solid #33343d;border-radius:14px;padding:16px 22px;box-shadow:0 18px 40px #0008}
+.node .k{font-size:15px;letter-spacing:.16em;font-weight:700}
+.node .v{font-family:"Cascadia Code",Consolas,monospace;font-size:22px;margin-top:4px;color:#e6e4ee}
+.node.w .k{color:#ff8a3d}.node.i .k{color:#ffd23d}.node.d .k{color:#ff3b3b}
+.node.d{border-color:#ff3b3b88;box-shadow:0 0 0 1px #ff3b3b44,0 0 40px #ff3b3b33}
+.wire{position:absolute;left:-30px;top:36px;bottom:36px;width:4px;background:linear-gradient(#ff8a3d,#ffd23d,#ff3b3b);border-radius:2px;box-shadow:0 0 14px #ff3b3b}
+.node:before{content:"";position:absolute;left:-36px;top:50%;width:14px;height:14px;margin-top:-7px;border-radius:50%;background:#0b0c10;border:3px solid currentColor}
+.node.w:before{color:#ff8a3d}.node.i:before{color:#ffd23d}.node.d:before{color:#ff3b3b;background:#ff3b3b;box-shadow:0 0 16px #ff3b3b}
+/* cards */
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:32px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden}
+.card .top{padding:22px 26px 0}
+.card .eyebrow{font-size:14px;letter-spacing:.16em;text-transform:uppercase;color:var(--red);font-weight:700}
+.card h3{margin:6px 0 6px;font-size:30px}
+.card .sub{color:var(--mut);font-size:18px;margin:0 0 18px}
+.card img{display:block;width:100%}
+.shot{position:relative;margin:0 26px;border-radius:10px;overflow:hidden;border:1px solid #2f3038}
+.yaml{margin:18px 26px 26px;background:#0e0f13;border:1px solid var(--line);border-radius:10px;padding:14px 18px;font-family:"Cascadia Code",Consolas,monospace;font-size:17px;line-height:1.55;color:#d8d6e0}
+.k1{color:#ff8a3d}.s1{color:#9fe07a}.c1{color:#6c6a76}
+.note{margin-top:30px;color:var(--mut);font-size:15px}
+</style></head><body>
+<p class="lbl">Propuesta A</p>
+<h2>Circuito</h2>
+<p class="desc">Oscuro y técnico, con rojo «redstone» que brilla. El logo es una O hecha de un circuito: tres nodos (cuándo, si, haz) y la señal que corre. Las tarjetas cuentan el flujo WHEN → IF → DO.</p>
+
+<div class="row">
+  <div class="big" data-logo></div>
+  <div class="sizes">
+    <div class="tile dk" style="width:128px;height:128px"><div data-logo style="width:128px;height:128px"></div></div>
+    <div class="tile dk"><div data-logo style="width:64px;height:64px"></div></div>
+    <div class="tile lt"><div data-logo style="width:64px;height:64px"></div></div>
+    <div class="tile lt"><div data-logo style="width:32px;height:32px"></div></div>
+  </div>
+  <div class="lock"><div data-logo style="width:96px;height:96px"></div><div class="word">Omni<b>Events</b></div></div>
+</div>
+
+<div class="banner">
+  <div class="bl">
+    <div class="t">Omni<b>Events</b></div>
+    <p>When <i>X</i> happens, if <i>Y</i> is true, do <i>Z</i>.<br>Your server's logic, wired in plain YAML.</p>
+    <div class="chips"><span class="chip">Real expressions</span><span class="chip">/omni debug with values</span><span class="chip">Tests in YAML</span><span class="chip">Bedrock forms</span><span class="chip">Imports ConditionalEvents</span></div>
+  </div>
+  <div class="flow"><div class="wire"></div>
+    <div class="node w"><div class="k">WHEN</div><div class="v">trigger: player_join</div></div>
+    <div class="node i"><div class="k">IF</div><div class="v">first_join &amp;&amp; !player.op</div></div>
+    <div class="node d"><div class="k">DO</div><div class="v">broadcast · give_item · title</div></div>
+  </div>
+</div>
+
+<div class="cards">
+  <div class="card">
+    <div class="top"><div class="eyebrow">Example · welcome</div><h3>First join, starter kit</h3><p class="sub">A broadcast, a kit and 100 coins the first time; a welcome back after that.</p></div>
+    <div class="shot"><img src="../../../../img/omnievents/ejemplo-bienvenida.png"></div>
+    <div class="yaml"><span class="k1">welcome</span>:<br>&nbsp;&nbsp;<span class="k1">trigger</span>: player_join<br>&nbsp;&nbsp;<span class="k1">actions</span>:<br>&nbsp;&nbsp;&nbsp;&nbsp;- <span class="k1">if</span>: <span class="s1">"first_join"</span><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="k1">then</span>: [broadcast, give_item, <span class="s1">"set: pvar.coins = 100"</span>]</div>
+  </div>
+  <div class="card">
+    <div class="top"><div class="eyebrow">Only in OmniEvents</div><h3>/omni debug shows every value</h3><p class="sub">Not just «failed»: each condition with the value it read, live, while you play.</p></div>
+    <div class="shot"><img src="../../../../img/omnievents/comando-debug.png"></div>
+    <div class="yaml"><span class="c1"># player.gamemode (SURVIVAL) == 'survival' → true</span><br><span class="c1"># pvar.diamonds % 10 (1) == 0 → false</span></div>
+  </div>
+</div>
+<p class="note">Capturas provisionales (en español, de la galería de la 004). Las finales serán escenas nuevas en inglés.</p>
+
+<script>
+const LOGO=`<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+<defs>
+ <radialGradient id="ag" cx="50%" cy="50%" r="60%"><stop offset="0" stop-color="#3b0f12"/><stop offset="1" stop-color="#121318"/></radialGradient>
+ <linearGradient id="aw" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#ff8a3d"/><stop offset=".5" stop-color="#ffd23d"/><stop offset="1" stop-color="#ff3b3b"/></linearGradient>
+ <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect width="512" height="512" rx="116" fill="url(#ag)"/>
+<rect x="6" y="6" width="500" height="500" rx="110" fill="none" stroke="#ffffff14" stroke-width="4"/>
+<circle cx="256" cy="256" r="148" fill="none" stroke="#3a1a1c" stroke-width="40"/>
+<path d="M 128 330 A 148 148 0 1 1 384 330" fill="none" stroke="url(#aw)" stroke-width="40" stroke-linecap="round" filter="url(#glow)"/>
+<circle cx="128" cy="330" r="36" fill="#121318" stroke="#ff8a3d" stroke-width="14"/>
+<circle cx="256" cy="108" r="36" fill="#121318" stroke="#ffd23d" stroke-width="14"/>
+<circle cx="384" cy="330" r="38" fill="#ff3b3b" filter="url(#glow)"/>
+<circle cx="384" cy="330" r="16" fill="#fff2f0"/>
+<path d="M 256 196 l 20 44 44 16 -44 16 -20 44 -20 -44 -44 -16 44 -16 z" fill="#ffe0d0" filter="url(#glow)"/>
+</svg>`;
+document.querySelectorAll('[data-logo]').forEach(e=>e.innerHTML=LOGO);
+</script>
+</body></html>
