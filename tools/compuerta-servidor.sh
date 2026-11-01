@@ -25,12 +25,16 @@ PJAR="$(ls -t "$ROOT"/dist/*.jar 2>/dev/null | grep -i "/$PLUGIN-[^/]*\.jar$" | 
 find plugins -maxdepth 1 -iname "$PLUGIN-*.jar" -delete
 cp "$PJAR" plugins/
 # Los ejemplos tal como están en el código fuente: el plugin solo los copia si su carpeta no existe, y la compuerta
-# probaba los de una versión vieja (regresión 010 F-02; la suite ya lo hacía, 002 F-05).
+# probaba los de una versión vieja (regresión 010 F-02; la suite ya lo hacía, 002 F-05). Cada carpeta de rules/
+# (ejemplos/, examples-en/ desde la 019). Sin rules/ no se copia nada: así se prueba lo que el jar crea solo (019 F-01).
 NAME="$(grep -m1 '^name:' "$ROOT/plugins/$PLUGIN/src/main/resources/plugin.yml" 2>/dev/null | sed 's/^name:[[:space:]]*//')"
-EJ="$ROOT/plugins/$PLUGIN/src/main/resources/rules/ejemplos"
-if [ -n "$NAME" ] && [ -d "$EJ" ] && [ -d "plugins/$NAME/rules" ]; then
-  rm -rf "plugins/$NAME/rules/ejemplos"
-  cp -r "$EJ" "plugins/$NAME/rules/ejemplos"
+SRC="$ROOT/plugins/$PLUGIN/src/main/resources/rules"
+if [ -n "$NAME" ] && [ -d "$SRC" ] && [ -d "plugins/$NAME/rules" ]; then
+  for EJ in "$SRC"/*/; do
+    D="$(basename "$EJ")"
+    rm -rf "plugins/$NAME/rules/$D"
+    cp -r "$EJ" "plugins/$NAME/rules/$D"
+  done
 fi
 
 wait_done() {

@@ -15,6 +15,7 @@ variables persistentes y herramientas de diagnóstico. Specs: [001](../../docs/s
 [015](../../docs/sdd/specs/015-omnievents-paridad-conditionalevents-2/spec.md) (paridad con ConditionalEvents, segunda parte) y
 [016](../../docs/sdd/specs/016-omnievents-paridad-conditionalevents-3/spec.md) (detalles de ConditionalEvents y el chat recibido con ProtocolLib).
 **[Cómo hacer un minijuego](#cómo-hacer-un-minijuego)**: un parkour completo de ejemplo, solo con reglas ([spec 018](../../docs/sdd/specs/018-omnievents-minijuegos-con-configuracion/spec.md)).
+**[Ejemplos en inglés](#ejemplos-en-inglés-examples-en)**: un paquete para principiantes (bienvenida, recompensa diaria, zonas, eventos comunes y regiones de WorldGuard), apagado hasta activarlo ([spec 019](../../docs/sdd/specs/019-omnievents-ejemplos-en-ingles-y-regiones/spec.md)).
 
 **[Documentación en inglés](https://leonardos4enz.gitbook.io/leonardos4enz-docs/)** (English docs; [fuente](../../docs/site/pages/omnievents/README.md)): una wiki para GitBook o
 Zensical con instalación, primera regla, disparadores, condiciones, acciones, variables, comandos y cómo migrar desde
@@ -34,8 +35,8 @@ Minecraft 1.21.4 ([spec 004](../../docs/sdd/specs/004-fabrica-capturas-en-juego/
 ## Compatibilidad
 | Servidor | Estado | Evidencia |
 |---|---|---|
-| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.11.1) | Compuertas 1, 2 y 3a: 203 unitarias, servidor real y 58/58 escenarios en el juego dos veces (2026-10-27, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md), [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md), [012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/verify.md), [013](../../docs/sdd/specs/013-omnievents-menus-y-formularios-bedrock/verify.md), [014](../../docs/sdd/specs/014-omnievents-paridad-conditionalevents/verify.md), [015](../../docs/sdd/specs/015-omnievents-paridad-conditionalevents-2/verify.md), [016](../../docs/sdd/specs/016-omnievents-paridad-conditionalevents-3/verify.md) y [018](../../docs/sdd/specs/018-omnievents-minijuegos-con-configuracion/verify.md)) |
-| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.11.1) | 58/58 escenarios en el juego dos veces con el mismo jar (2026-10-27, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md), [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md), [012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/verify.md), [013](../../docs/sdd/specs/013-omnievents-menus-y-formularios-bedrock/verify.md), [014](../../docs/sdd/specs/014-omnievents-paridad-conditionalevents/verify.md), [015](../../docs/sdd/specs/015-omnievents-paridad-conditionalevents-2/verify.md), [016](../../docs/sdd/specs/016-omnievents-paridad-conditionalevents-3/verify.md) y [018](../../docs/sdd/specs/018-omnievents-minijuegos-con-configuracion/verify.md)) |
+| **Paper 1.21.4** (build 232, Java 24) | Verificada (1.12.0) | Compuertas 1, 2 y 3a: 207 unitarias, servidor real y 59/59 escenarios en el juego dos veces (2026-11-01, specs [001](../../docs/sdd/specs/001-omnievents-nucleo/verify.md), [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md), [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md), [012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/verify.md), [013](../../docs/sdd/specs/013-omnievents-menus-y-formularios-bedrock/verify.md), [014](../../docs/sdd/specs/014-omnievents-paridad-conditionalevents/verify.md), [015](../../docs/sdd/specs/015-omnievents-paridad-conditionalevents-2/verify.md), [016](../../docs/sdd/specs/016-omnievents-paridad-conditionalevents-3/verify.md), [018](../../docs/sdd/specs/018-omnievents-minijuegos-con-configuracion/verify.md) y [019](../../docs/sdd/specs/019-omnievents-ejemplos-en-ingles-y-regiones/verify.md)) |
+| **Paper 26.1.2** (build 74, Java 25) | Verificada (1.12.0) | 59/59 escenarios en el juego dos veces con el mismo jar (2026-11-01, specs [002](../../docs/sdd/specs/002-fabrica-pruebas-en-juego/verify.md), [005](../../docs/sdd/specs/005-omnievents-comandos-sin-resync/verify.md), [006](../../docs/sdd/specs/006-omnievents-herramientas-de-autor/verify.md), [007](../../docs/sdd/specs/007-omnievents-esquema-y-referencia/verify.md), [008](../../docs/sdd/specs/008-omnievents-disparador-de-estado/verify.md), [009](../../docs/sdd/specs/009-omnievents-variables-caducidad-y-objetos/verify.md), [010](../../docs/sdd/specs/010-omnievents-pruebas-de-reglas/verify.md), [011](../../docs/sdd/specs/011-omnievents-paquetes-plantillas-version/verify.md), [012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/verify.md), [013](../../docs/sdd/specs/013-omnievents-menus-y-formularios-bedrock/verify.md), [014](../../docs/sdd/specs/014-omnievents-paridad-conditionalevents/verify.md), [015](../../docs/sdd/specs/015-omnievents-paridad-conditionalevents-2/verify.md), [016](../../docs/sdd/specs/016-omnievents-paridad-conditionalevents-3/verify.md), [018](../../docs/sdd/specs/018-omnievents-minijuegos-con-configuracion/verify.md) y [019](../../docs/sdd/specs/019-omnievents-ejemplos-en-ingles-y-regiones/verify.md)) |
 | Paper 1.21.5 – 1.21.11 | Sin verificar | Debería funcionar (misma API, sin NMS), pero no se probó |
 | Paper 26.2 y 26.3 | Sin verificar | El bot de pruebas (mineflayer 4.39) llega hasta 26.1 |
 | Paper 1.21.3 o anterior | No soportada | Se compila contra la API de 1.21.4 |
@@ -61,11 +62,38 @@ Minecraft 1.21.4 ([spec 004](../../docs/sdd/specs/004-fabrica-capturas-en-juego/
 ## Instalación
 1. Copia `OmniEvents-x.y.z.jar` a `plugins/` (opcionales: PlaceholderAPI, Vault con un plugin de economía, WorldGuard,
    Citizens y Floodgate; ver [Integraciones](#integraciones-costos-vault-worldguard-y-citizens) y [Menús](#menús-de-inventario-y-formularios-de-bedrock)).
-2. Arranca el servidor: se crean `config.yml`, `messages.yml` y ejemplos en `plugins/OmniEvents/rules/ejemplos/`.
+2. Arranca el servidor: se crean `config.yml`, `messages.yml`, ejemplos en `plugins/OmniEvents/rules/ejemplos/` y el
+   paquete de [ejemplos en inglés](#ejemplos-en-inglés-examples-en) en `rules/examples-en/` (apagado).
 3. Edita o agrega archivos en `rules/` y usa `/omni reload`.
 
 ¿Vienes de ConditionalEvents? `/omni import conditionalevents` convierte tus eventos a `rules/importado/` ([qué se
 traduce](#desde-conditionalevents)).
+
+## Ejemplos en inglés (`examples-en`)
+Desde la 1.12.0 ([spec 019](../../docs/sdd/specs/019-omnievents-ejemplos-en-ingles-y-regiones/spec.md)). Para quien
+descarga el plugin y lee inglés: el paquete `examples` en `rules/examples-en/`, con lo más pedido por principiantes. Viene
+**apagado**: no cambia nada hasta que pones `enabled: true` en su `pack.yml` y `/omni reload` (o `/omni pack enable
+examples` hasta el próximo reload). Sus reglas se llaman `examples:<regla>` y cada una trae un comentario y `tests:`
+(38 casos; `/omni test examples:daily`).
+
+| Archivo | Qué muestra |
+|---|---|
+| `welcome.yml` | Mensajes de entrada y salida; la primera vez, anuncio, kit de inicio y 100 monedas; `/coins [jugador]` |
+| `daily.yml` | Bono del primer ingreso del día (`limit` diario), `/daily` con enfriamiento de 24 h y una racha que caduca a las 48 h (`expire`), monedas por hora jugada |
+| `zones.yml` | Zona del spawn por coordenadas (`state` al entrar y salir, sin daño de caída ni PvP) y plataformas de salto, sin otro plugin |
+| `common.yml` | Anuncios, filtro de palabras, ocultar `/plugins` a quien no es staff, coordenadas al morir, vida baja, primer diamante |
+| `regions.yml` | WorldGuard: `region_enter`/`region_leave` (saludo, despedida, zona VIP con `cancel`, Haste dentro de la mina), `in_region()` (recompensa en la zona AFK) y `regions()` (`/where`) |
+
+Lo que un dueño querría cambiar va en `params` de `pack.yml`: `daily_coins`, `hourly_coins`, el mundo, el centro y el
+radio del spawn (`spawn_world`, `spawn_x`, `spawn_z`, `spawn_radius`), la placa de salto, los permisos
+(`staff_permission`, `vip_permission`; los OP los tienen) y los ids de las regiones (`spawn`, `vip`, `mine`, `afk`). Las
+pruebas usan esos mismos parámetros, así que siguen pasando si los cambias. **Sin WorldGuard** el paquete carga igual: las
+reglas de región no corren, `in_region()` da falso y `/where` dice que no estás en ninguna.
+
+**En un servidor que ya tenía OmniEvents** el paquete no aparece solo: los ejemplos se copian del jar únicamente si
+`rules/` no existe. Copia la carpeta [`examples-en`](src/main/resources/rules/examples-en/) a `plugins/OmniEvents/rules/` y
+`/omni reload`. La página [Examples](../../docs/site/pages/omnievents/examples.md) de la documentación en inglés lo explica
+y suma ejemplos sueltos de regiones.
 
 ## Editor: autocompletado y errores en VS Code
 Con la extensión **YAML** de Red Hat, pon esta línea al inicio de cada archivo de reglas (los ejemplos ya la traen):
@@ -438,7 +466,8 @@ Las raíces de cada disparador y si se puede cancelar: [referencia](../../docs/o
 ## Integraciones: costos, Vault, WorldGuard y Citizens
 Desde la 1.7.0 ([spec 012](../../docs/sdd/specs/012-omnievents-integraciones-con-costos/spec.md)). Los tres plugins son
 **opcionales** (`softdepend`): sin ellos OmniEvents carga igual y una regla que los usa carga con un aviso
-(«necesita Vault, que no está instalado») y no hace esa parte. `/omni stats` dice qué integraciones detectó.
+(«necesita Vault, que no está instalado») y no hace esa parte. Una regla apagada, o de un paquete apagado, no avisa
+(desde la 1.12.0). `/omni stats` dice qué integraciones detectó.
 
 **Costos todo o nada.** `cost` se revisa después de las condiciones, el límite y el enfriamiento. Si todo alcanza se
 cobra y corren las acciones; si algo falta **no se cobra nada**, no cuenta como uso ni activa el enfriamiento y corre

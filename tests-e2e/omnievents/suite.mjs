@@ -51,6 +51,7 @@ export default {
   // servidor de prueba ya usado (o recién creado por la suite) podrían faltar o estar viejos.
   copiar: [
     { de: 'plugins/omnievents/src/main/resources/rules/ejemplos', a: 'plugins/OmniEvents/rules/ejemplos' },
+    { de: 'plugins/omnievents/src/main/resources/rules/examples-en', a: 'plugins/OmniEvents/rules/examples-en' },
     { de: 'tests-e2e/omnievents/reglas', a: 'plugins/OmniEvents/rules/e2e', retirar: true }
   ],
   datosDeJugador: ['plugins/OmniEvents/data/players/{uuid}.yml'],
@@ -1583,6 +1584,110 @@ export default {
 
         await srv.consola('fill 7 -57 12 17 -56 12 air')
         await srv.consola('omni pack disable parkour', { espera: /parkour/ })
+        await prepararJugador(ctx, ANA)
+      }
+    },
+    {
+      // Spec 019: el paquete de ejemplos en inglés (rules/examples-en), apagado por defecto; las regiones con WorldGuard.
+      id: '019 H1 CA1 · H2 CA1–CA3 · H3 CA1–CA2',
+      nombre: 'ejemplos en inglés: /daily con racha y enfriamiento, saludo y bono al volver, spawn sin daño de caída, regiones (mina, VIP, /where)',
+      timeoutMs: 90000,
+      async fn (ctx) {
+        const { srv } = ctx
+        let ana = ctx.bots[ANA]
+        await srv.consola('omni pack enable examples', { espera: /examples/ })
+        for (const v of ['coins', 'daily_streak', 'minutes_played']) await srv.consola(`omni var del ${ANA} ${v}`)
+        await srv.consola(`omni cooldown reset examples:daily ${ANA}`)
+        await srv.consola(`omni limit reset examples:daily_login ${ANA}`)
+        await prepararJugador(ctx, ANA)
+
+        // H2 CA2: /daily da las monedas y empieza la racha; la segunda vez, el enfriamiento dice cuánto falta.
+        let m = ana.marca()
+        ana.comando('daily')
+        await ana.esperar('chat', /^Daily reward: \+25 coins \(streak: 1 days, you have 25\)\.$/, { desde: m })
+        m = ana.marca()
+        ana.comando('daily')
+        await ana.esperar('chat', /^You already claimed today\. Come back in 2[34]h \d+m\.$/, { desde: m })
+        // La racha caduca sola a las 48 h (expire).
+        await srv.consola(`omni var get ${ANA} daily_streak`, { espera: new RegExp(`${ANA}\\.daily_streak = 1 \\(caduca en 4[78]h`) })
+
+        // H2 CA1 · H2 CA2: al volver, el saludo con sus monedas y el bono del primer ingreso del día.
+        await ctx.salir(ANA)
+        await dormir(1000) // los datos de quien sale se guardan un tick después, en otro hilo
+        ana = await ctx.entrar(ANA)
+        await ana.esperar('chat', /^Welcome back, Ana_e2e! You have 25 coins\.$/, { desde: 0 })
+        await ana.esperar('title', /Welcome!/, { desde: 0 })
+        // El título de los ejemplos en español llega a la vez: esperarlo, o el kick de un escenario siguiente lo deja a medias.
+        await ana.esperar('title', /Bienvenido/, { desde: 0 })
+        await ana.esperar('chat', /^Daily login bonus: \+25 coins \(you have 50\)\.$/, { desde: 0, timeoutMs: 8000 })
+
+        // H2 CA3: la zona del spawn avisa al entrar y dentro no hay daño de caída.
+        await prepararJugador(ctx, ANA)
+        await srv.consola(`tp ${ANA} -100.5 -60 -100.5`)
+        await srv.sincronizar()
+        await ana.hasta('estar fuera del spawn', b => cerca(b.entity.position, -100.5, -60, -100.5))
+        m = ana.marca()
+        await srv.consola(`tp ${ANA} 12.5 -50 12.5`)
+        await ana.esperar('actionbar', /^You entered the spawn: a safe zone\.$/, { desde: m })
+        await ana.hasta('caer al suelo', b => b.entity.onGround && cerca(b.entity.position, 12.5, -60, 12.5))
+        await dormir(500)
+        if (ana.bot.health < 20) throw new Error(`recibió daño de caída en el spawn: ${ana.bot.health}`)
+
+        // H3 CA1–CA2: regiones con los nombres de pack.yml (mine, vip), marcadas con WorldEdit como en el escenario 012.
+        await prepararJugador(ctx, ANA, 'creative')
+        for (const r of ['mine', 'vip']) await srv.consola(`rg remove -w world ${r}`)
+        await srv.sincronizar()
+        for (const [id, x] of [['mine', 30], ['vip', 40]]) {
+          m = ana.marca()
+          ana.comando(`/pos1 ${x},-61,30`)
+          await ana.esperar('chat', /First position set/i, { desde: m })
+          m = ana.marca()
+          ana.comando(`/pos2 ${x + 4},-55,34`)
+          await ana.esperar('chat', /Second position set/i, { desde: m })
+          m = ana.marca()
+          ana.comando(`rg define ${id}`)
+          await ana.esperar('chat', new RegExp(`region.*${id}|${id}.*region`, 'i'), { desde: m })
+        }
+        await srv.consola(`tp ${ANA} 32 -60 20`)
+        await srv.sincronizar()
+        await ana.hasta('estar fuera de las regiones', b => cerca(b.entity.position, 32, -60, 20))
+        m = ana.marca()
+        ana.comando('where')
+        await ana.esperar('chat', /^You are not in any region\.$/, { desde: m })
+        // Entrar a la mina da Haste y salir la quita (region_enter / region_leave); /where la nombra (regions()).
+        m = ana.marca()
+        await srv.consola(`tp ${ANA} 32 -60 32`)
+        await ana.esperar('actionbar', /^Mining boost on$/, { desde: m })
+        await ana.hasta('tener Haste', b => Object.keys(b.entity.effects).length > 0)
+        m = ana.marca()
+        ana.comando('where')
+        await ana.esperar('chat', /^You are in: mine$/, { desde: m })
+        m = ana.marca()
+        await srv.consola(`tp ${ANA} 32 -60 20`)
+        await ana.esperar('actionbar', /^Mining boost off$/, { desde: m })
+        await ana.hasta('perder Haste', b => Object.keys(b.entity.effects).length === 0)
+        // Un OP tiene el permiso no declarado examples.vip y entra; sin OP, cancel la deja afuera.
+        m = ana.marca()
+        await srv.consola(`tp ${ANA} 42 -60 32`)
+        await ana.hasta('entrar a la región VIP como OP', b => cerca(b.entity.position, 42, -60, 32))
+        await ana.nunca('chat', /Only VIP players/, { desde: m, ms: 300 })
+        await srv.consola(`tp ${ANA} 32 -60 20`)
+        await srv.sincronizar()
+        await ana.hasta('volver afuera', b => cerca(b.entity.position, 32, -60, 20))
+        await srv.consola(`deop ${ANA}`, { espera: /no longer a server operator|Nothing changed/ })
+        try {
+          m = ana.marca()
+          await srv.consola(`tp ${ANA} 42 -60 32`)
+          await ana.esperar('chat', /^Only VIP players can enter this area\.$/, { desde: m })
+          await dormir(500)
+          if (!cerca(ana.bot.entity.position, 32, -60, 20)) throw new Error(`entró a la región VIP sin permiso: ${ana.bot.entity.position}`)
+        } finally {
+          await srv.consola(`op ${ANA}`, { espera: /Made Ana_e2e a server operator|Nothing changed/ })
+        }
+
+        for (const r of ['mine', 'vip']) await srv.consola(`rg remove -w world ${r}`)
+        await srv.consola('omni pack disable examples', { espera: /examples/ })
+        for (const v of ['coins', 'daily_streak', 'minutes_played']) await srv.consola(`omni var del ${ANA} ${v}`)
         await prepararJugador(ctx, ANA)
       }
     },

@@ -43,11 +43,15 @@ import java.util.List;
 import java.util.Map;
 
 public final class OmniEvents extends JavaPlugin implements Listener {
-    private static final List<String> EXAMPLES = List.of(
+    /** Lo que se copia del jar a rules/ la primera vez; EjemplosDelJarTest exige que estén todos (spec 019, F-01). */
+    static final List<String> EXAMPLES = List.of(
             "rules/ejemplos/bienvenida.yml", "rules/ejemplos/mineria.yml", "rules/ejemplos/comandos.yml",
             "rules/ejemplos/combate.yml", "rules/ejemplos/chat.yml", "rules/ejemplos/temporizadores.yml",
             "rules/ejemplos/herramientas.yml", "rules/ejemplos/estados.yml", "rules/ejemplos/variables.yml", "rules/ejemplos/integraciones.yml", "rules/ejemplos/menus.yml",
-            "rules/ejemplos/recompensas/pack.yml", "rules/ejemplos/recompensas/reglas.yml");
+            "rules/ejemplos/estilo_ce.yml", "rules/ejemplos/recompensas/pack.yml", "rules/ejemplos/recompensas/reglas.yml",
+            "rules/ejemplos/parkour/pack.yml", "rules/ejemplos/parkour/reglas.yml",
+            "rules/examples-en/pack.yml", "rules/examples-en/welcome.yml", "rules/examples-en/daily.yml", "rules/examples-en/zones.yml",
+            "rules/examples-en/common.yml", "rules/examples-en/regions.yml");
 
     private Settings settings;
     private Messages messages;

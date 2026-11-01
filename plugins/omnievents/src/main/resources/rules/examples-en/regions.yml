@@ -1,0 +1,97 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
+# WorldGuard regions (pack examples). Create the regions with WorldGuard as usual (//wand, then /rg define spawn) and
+# set their ids in pack.yml. region_enter and region_leave run once for each region the player enters or leaves
+# (walking, teleporting, joining or changing worlds); region.id is the region's id.
+# Without WorldGuard these rules still load: region_enter and region_leave never run, in_region() is false and
+# regions() is empty.
+
+# A greeting when entering the spawn region and a goodbye when leaving it.
+region_welcome:
+  trigger: region_enter
+  conditions: "region.id == '${spawn_region}'"
+  actions:
+    - actionbar: "<gold>Welcome to the spawn, {player.name}"
+  tests:
+    - given: {player.name: Ana, region.id: "${spawn_region}"}
+      expect: {messages: ["Welcome to the spawn, Ana"]}
+    - given: {region.id: "${mine_region}"}
+      expect: {fired: false}
+
+region_goodbye:
+  trigger: region_leave
+  conditions: "region.id == '${spawn_region}'"
+  actions:
+    - actionbar: "<gray>You left the spawn"
+  tests:
+    - given: {region.id: "${spawn_region}"}
+      expect: {messages: ["You left the spawn"]}
+
+# Only players with the permission can walk (or teleport) into the VIP region: cancel keeps them where they were.
+vip_only:
+  trigger: region_enter
+  conditions:
+    - "region.id == '${vip_region}'"
+    - "!perm('${vip_permission}')"
+  actions:
+    - cancel
+    - message: "<red>Only VIP players can enter this area."
+  tests:
+    - given: {region.id: "${vip_region}"}
+      expect: {cancelled: true, messages: ["Only VIP players"]}
+
+# Haste while inside the mine: given when entering, removed when leaving.
+mine_haste:
+  trigger: region_enter
+  conditions: "region.id == '${mine_region}'"
+  actions:
+    - effect: HASTE;-1;2;false           # effect;seconds (-1 = until removed);level;particles
+    - actionbar: "<aqua>Mining boost on"
+  tests:
+    - given: {region.id: "${mine_region}"}
+      expect: {actions: ["effect: HASTE", actionbar]}
+
+mine_haste_off:
+  trigger: region_leave
+  conditions: "region.id == '${mine_region}'"
+  actions:
+    - remove_effect: HASTE
+    - actionbar: "<gray>Mining boost off"
+  tests:
+    - given: {region.id: "${mine_region}"}
+      expect: {actions: ["remove_effect: HASTE", actionbar]}
+
+# in_region() works in any rule: a coin every 5 minutes for players standing in the AFK region.
+afk_reward:
+  trigger: timer
+  every: 5m
+  conditions: "in_region('${afk_region}')"
+  actions:
+    - set: "pvar.coins = default(pvar.coins, 0) + 1"
+    - actionbar: "<gray>AFK reward: <yellow>+1 coin</yellow> (you have {pvar.coins})"
+  tests:
+    - given: {regions: ["${afk_region}"], pvar.coins: 4}
+      expect: {pvar.coins: 5}
+    - given: {regions: [spawn]}
+      expect: {fired: false}
+
+# /where lists the regions you are standing in, highest priority first (regions()).
+where:
+  trigger: command
+  command:
+    name: where
+    description: Shows the WorldGuard regions you are in
+  actions:
+    - if: "player == null"
+      then:
+        - log: "/where is for players"
+        - stop
+    - if: "len(regions()) == 0"
+      then:
+        - message: "<gray>You are not in any region."
+      else:
+        - message: "<gray>You are in: <yellow>{join(regions(), ', ')}"
+  tests:
+    - given: {player.name: Ana, regions: [mine, spawn]}
+      expect: {messages: ["You are in: mine, spawn"]}
+    - given: {player.name: Ana, regions: []}
+      expect: {messages: ["You are not in any region."]}

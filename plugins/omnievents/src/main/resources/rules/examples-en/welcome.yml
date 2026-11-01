@@ -1,0 +1,61 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
+# Welcome rewards (pack examples). Each top-level key is a rule: trigger says WHEN it runs, conditions (optional)
+# say IF it runs, and actions say WHAT it does. The tests: at the end of each rule check it without a server.
+
+# Everyone gets a join message. The first time, the whole server says hello and the player gets a starter kit and
+# 100 coins; after that, a "welcome back" with their coins.
+welcome:
+  trigger: player_join
+  actions:
+    - set_join_message: "<gray>[<green>+</green>] {player.name}"
+    - if: "first_join"
+      then:
+        - broadcast: "<gold>Please welcome <yellow>{player.name}</yellow>, it's their first time here!"
+        - give_item: "STONE_SWORD;1;<yellow>Starter sword"
+        - give_item: "BREAD;16;<yellow>Starter bread"
+        - set: "pvar.coins = 100"
+      else:
+        - message: "<green>Welcome back, {player.name}! You have <yellow>{default(pvar.coins, 0)}</yellow> coins."
+    - delay: 2s                          # wait until the player has loaded the world
+    - title: "<gold>Welcome!;<gray>Type /daily for your daily reward;10;60;20"
+  tests:
+    - name: first join gets the kit and 100 coins
+      given: {player.name: Ana, first_join: true}
+      expect:
+        messages: ["Please welcome Ana, it's their first time here!", "Welcome!"]
+        actions: [set_join_message, give_item, give_item, title]
+        pvar.coins: 100
+    - name: coming back shows the coins
+      given: {player.name: Ana, first_join: false, pvar.coins: 40}
+      expect:
+        messages: ["Welcome back, Ana! You have 40 coins."]
+        pvar.coins: 40
+
+# Your own quit message instead of "Ana left the game".
+goodbye:
+  trigger: player_quit
+  actions:
+    - set_quit_message: "<gray>[<red>-</red>] {player.name}"
+  tests:
+    - given: {player.name: Ana}
+      expect: {actions: [set_quit_message]}
+
+# /coins shows your coins, or another player's: /coins Ana.
+coins:
+  trigger: command
+  command:
+    name: coins
+    description: Shows your coins or another player's
+    tab: [["{players}"]]
+  actions:
+    - if: "len(args) == 0"
+      then:
+        - message: "<gold>You have <yellow>{default(pvar.coins, 0)}</yellow> coins."
+      else:
+        - message: "<gold>{args[0]} has <yellow>{default(pvar_of(args[0], 'coins'), 0)}</yellow> coins."
+  tests:
+    - name: your own coins
+      given: {pvar.coins: 75}
+      expect: {messages: ["You have 75 coins."]}
+    - name: nobody has coins yet
+      expect: {messages: ["You have 0 coins."]}

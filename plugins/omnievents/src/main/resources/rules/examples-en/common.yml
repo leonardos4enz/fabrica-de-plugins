@@ -1,0 +1,88 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
+# Common server events (pack examples).
+
+# A random tip for everyone every 10 minutes. per_player: false runs it once for the server, not once per player.
+announcer:
+  trigger: timer
+  every: 10m
+  per_player: false
+  actions:
+    - random:
+        - do: [{broadcast: "<gold>[Tip]</gold> <gray>Claim your daily reward with <yellow>/daily</yellow>."}]
+        - do: [{broadcast: "<gold>[Tip]</gold> <gray>Check your coins with <yellow>/coins</yellow>."}]
+        - do: [{broadcast: "<gold>[Tip]</gold> <gray>The spawn is a safe zone: no PvP and no fall damage."}]
+  tests:
+    - name: one tip each time
+      expect: {messages: ["[Tip]"]}
+
+# Blocks messages with words you don't want in chat. "matches" is a regular expression over the whole message.
+chat_filter:
+  trigger: player_chat
+  conditions: "lower(message) matches '.*(badword|anotherbadword).*'"
+  actions:
+    - cancel
+    - message: "<red>Please keep the chat friendly."
+  tests:
+    - given: {message: "this has a BadWord in it"}
+      expect: {cancelled: true, messages: ["keep the chat friendly"]}
+    - given: {message: "hello everyone"}
+      expect: {fired: false}
+
+# Only staff can see the plugin list and the server version.
+hide_plugins:
+  trigger: player_command
+  conditions:
+    - "lower(cmd.name) in ['pl', 'plugins', 'bukkit:pl', 'bukkit:plugins', 'ver', 'version', 'bukkit:ver', 'bukkit:version', 'about', 'icanhasbukkit']"
+    - "!perm('${staff_permission}')"
+  actions:
+    - cancel
+    - message: "<red>You don't have permission to use that command."
+  tests:
+    - given: {cmd.name: plugins}
+      expect: {cancelled: true}
+    - given: {cmd.name: spawn}
+      expect: {fired: false}
+
+# Tells players where they died, so they can go back for their items.
+death_coordinates:
+  trigger: player_death
+  actions:
+    - message: "<gray>You died at <white>{location.block.x} {location.block.y} {location.block.z}</white> in {world.name}."
+  tests:
+    - given: {location.block.x: 120, location.block.y: 64, location.block.z: -35, world.name: world}
+      expect: {messages: ["You died at 120 64 -35 in world."]}
+
+# A warning when health drops to 3 hearts, and a note when it goes back up. cooldown keeps it from repeating.
+low_health:
+  trigger: state
+  when: "player.health <= 6"
+  cooldown: 30s
+  on_enter:
+    - title: "<red>Low health!;<gray>Eat something or find shelter;5;40;10"
+    - sound: BLOCK_NOTE_BLOCK_BASS;1;0.6
+  on_exit:
+    - actionbar: "<green>You're safe again."
+  tests:
+    - given: {player.health: 4}
+      expect: {branch: on_enter, messages: ["Low health!"]}
+    - given: {player.health: 15}
+      expect: {fired: false}
+
+# The first diamond ore a player mines is announced to everyone (once per player, remembered in pvar.found_diamond).
+first_diamond:
+  trigger: block_break
+  conditions:
+    - "block.type == 'DIAMOND_ORE' || block.type == 'DEEPSLATE_DIAMOND_ORE'"
+    - "player.gamemode == 'survival'"
+    - "pvar.found_diamond != true"
+  actions:
+    - set: "pvar.found_diamond = true"
+    - broadcast: "<aqua>{player.name}</aqua> <gray>found their first diamond!"
+    - firework: "colors:AQUA,WHITE type:BALL power:0"
+  tests:
+    - name: the first one is announced
+      given: {player.name: Ana, player.gamemode: SURVIVAL, block.type: DEEPSLATE_DIAMOND_ORE}
+      expect: {messages: ["Ana found their first diamond!"], pvar.found_diamond: true}
+    - name: the second one is not
+      given: {player.gamemode: SURVIVAL, block.type: DIAMOND_ORE, pvar.found_diamond: true}
+      expect: {fired: false}

@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
+# Zones without any other plugin (pack examples). The spawn area is a square of ${spawn_radius} blocks around
+# (${spawn_x}, ${spawn_z}) in ${spawn_world}: change it in pack.yml. With WorldGuard, see regions.yml instead.
+
+# trigger: state runs on_enter once when "when" becomes true and on_exit once when it stops being true.
+# OmniEvents works out that this depends on the player's position and only checks it when they move.
+spawn_zone:
+  trigger: state
+  when: "player.world.name == '${spawn_world}' && abs(player.location.x - ${spawn_x}) <= ${spawn_radius} && abs(player.location.z - ${spawn_z}) <= ${spawn_radius}"
+  on_enter:
+    - actionbar: "<green>You entered the spawn: a safe zone."
+  on_exit:
+    - actionbar: "<yellow>You left the spawn. Be careful out there!"
+  tests:
+    - name: walking into the spawn
+      given: {player.world.name: "${spawn_world}", player.location.x: "${spawn_x}", player.location.z: "${spawn_z}"}
+      expect: {branch: on_enter, messages: ["You entered the spawn"]}
+    - name: far away
+      given: {player.world.name: another_world, player.location.x: "${spawn_x}", player.location.z: "${spawn_z}"}
+      expect: {fired: false}
+
+# Inside the spawn area nobody takes fall damage or damage from other players (arrows included).
+safe_spawn:
+  trigger: player_damage
+  conditions:
+    - "player.world.name == '${spawn_world}' && abs(player.location.x - ${spawn_x}) <= ${spawn_radius} && abs(player.location.z - ${spawn_z}) <= ${spawn_radius}"
+    - "cause == 'FALL' || (damager != null && damager.type == 'PLAYER')"
+  actions:
+    - cancel
+  tests:
+    - name: no fall damage in the spawn
+      given: {player.world.name: "${spawn_world}", player.location.x: "${spawn_x}", player.location.z: "${spawn_z}", cause: FALL}
+      expect: {cancelled: true}
+    - name: no PvP in the spawn
+      given: {player.world.name: "${spawn_world}", player.location.x: "${spawn_x}", player.location.z: "${spawn_z}", cause: ENTITY_ATTACK, damager.type: PLAYER}
+      expect: {cancelled: true}
+    - name: a zombie still hurts
+      given: {player.world.name: "${spawn_world}", player.location.x: "${spawn_x}", player.location.z: "${spawn_z}", cause: ENTITY_ATTACK, damager.type: ZOMBIE}
+      expect: {fired: false, cancelled: false}
+    - name: outside the spawn everything hurts
+      given: {player.world.name: another_world, player.location.x: "${spawn_x}", player.location.z: "${spawn_z}", cause: FALL}
+      expect: {fired: false}
+
+# Step on a ${launch_pad} to fly forward. In player_move, "to" is where the player is going; player.location is
+# still the block they come from.
+launch_pad:
+  trigger: player_move
+  conditions: "to.block.type == '${launch_pad}'"
+  cooldown: 2s
+  actions:
+    - launch: 2.5
+    - sound: ENTITY_BAT_TAKEOFF;1;1
+  tests:
+    - given: {to.block.type: "${launch_pad}"}
+      expect: {actions: [launch, sound]}
+    - given: {to.block.type: STONE}
+      expect: {fired: false}

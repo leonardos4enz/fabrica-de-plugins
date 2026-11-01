@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
+# Daily rewards (pack examples). ${daily_coins} and ${hourly_coins} come from pack.yml.
+
+# A bonus the first time a player joins each day: limit 1 use, reset every day (ConditionalEvents' one_time is limit: 1).
+daily_login:
+  trigger: player_join
+  limit: 1
+  limit_reset: daily
+  actions:
+    - delay: 3s
+    - set: "pvar.coins = default(pvar.coins, 0) + ${daily_coins}"
+    - message: "<green>Daily login bonus: <yellow>+${daily_coins} coins</yellow> <gray>(you have {pvar.coins})."
+  tests:
+    - given: {pvar.coins: 10}
+      expect:
+        messages: ["Daily login bonus: +${daily_coins} coins"]
+        assert: "pvar.coins == 10 + ${daily_coins}"
+
+# /daily once every 24 hours. Claiming on consecutive days builds a streak (up to 7 days, 7 × the coins).
+# The streak variable expires 48 hours after the last claim, so skipping a day starts it again.
+daily:
+  trigger: command
+  command:
+    name: daily
+    description: Claim your daily reward
+  cooldown: 24h
+  on_cooldown:
+    - message: "<red>You already claimed today. Come back in {floor(var.cooldown_left / 3600)}h {floor(var.cooldown_left % 3600 / 60)}m."
+  actions:
+    - if: "player == null"
+      then:
+        - log: "/daily is for players"
+        - stop
+    - set: "pvar.daily_streak = default(pvar.daily_streak, 0) + 1"
+      expire: 48h
+    - set: "var.reward = ${daily_coins} * min(pvar.daily_streak, 7)"
+    - set: "pvar.coins = default(pvar.coins, 0) + var.reward"
+    - message: "<green>Daily reward: <yellow>+{var.reward} coins</yellow> <gray>(streak: {pvar.daily_streak} days, you have {pvar.coins})."
+    - sound: ENTITY_PLAYER_LEVELUP;1;1.5
+  tests:
+    - name: first claim
+      given: {player.name: Ana}
+      expect:
+        messages: ["Daily reward: +${daily_coins} coins (streak: 1 days"]
+        pvar.daily_streak: 1
+    - name: third day in a row gives three times the coins
+      given: {player.name: Ana, pvar.daily_streak: 2, pvar.coins: 100}
+      expect:
+        pvar.daily_streak: 3
+        assert: "pvar.coins == 100 + 3 * ${daily_coins}"
+
+# Every minute online counts; every full hour pays ${hourly_coins} coins. A timer runs once per online player.
+playtime:
+  trigger: timer
+  every: 1m
+  actions:
+    - set: "pvar.minutes_played = default(pvar.minutes_played, 0) + 1"
+    - if: "pvar.minutes_played % 60 == 0"
+      then:
+        - set: "pvar.coins = default(pvar.coins, 0) + ${hourly_coins}"
+        - message: "<aqua>You have played for {int(pvar.minutes_played / 60)} hours: <yellow>+${hourly_coins} coins</yellow>."
+  tests:
+    - name: the 60th minute pays
+      given: {pvar.minutes_played: 59, pvar.coins: 0}
+      expect: {pvar.minutes_played: 60, messages: ["You have played for 1 hours: +${hourly_coins} coins."], assert: "pvar.coins == ${hourly_coins}"}
+    - name: other minutes only count
+      given: {pvar.minutes_played: 10}
+      expect: {pvar.minutes_played: 11, messages: []}

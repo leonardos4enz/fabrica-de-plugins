@@ -109,6 +109,12 @@ con `--release 21`.
   solo lista acciones con efecto (no `set`, `if` ni `call`). `PaquetesTest` carga los ejemplos con una versión fija: un
   paquete de ejemplo con `requires` más alto la necesita subir. Al insertar texto con `String.replace` en Node, pasar una
   función (`() => texto`): un `` $` `` o `$'` en el texto (regex de la suite) se interpreta y corrompe el archivo.
+- **Spec 019 (ejemplos del jar):** `OmniEvents.EXAMPLES` es la lista fija de lo que el jar copia a `rules/` la primera vez;
+  un archivo de ejemplo que falte ahí no llega a ningún servidor, y la suite y la compuerta 2 no lo ven porque copian del
+  código fuente (el `parkour` de la 018 y `estilo_ce.yml` de la 014 nunca se copiaron: 019 F-01). `EjemplosDelJarTest` lo
+  exige; para probar lo que crea el jar, la compuerta 2 sin `run/plugins/OmniEvents/rules/`. En un paquete, `${param}` se
+  sustituye en los valores pero **no en las claves**: en `tests:` va `region.id: "${vip_region}"` o
+  `assert: "pvar.coins == ${daily_coins}"`, nunca `${x}: 1`.
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

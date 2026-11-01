@@ -1,0 +1,38 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents-pack.schema.json
+# Beginner examples in English (spec 019). This folder is a pack: its rules are called examples:<rule>.
+# It comes TURNED OFF so it changes nothing on your server. To try it:
+#   - set enabled: true below and run /omni reload, or
+#   - run /omni pack enable examples (until the next reload).
+# Then read the files, change what you need and copy the rules you like to your own files.
+#
+#   welcome.yml   join and quit messages, a starter kit and coins on the first join
+#   daily.yml     a daily login bonus, /daily with a streak and a reward for time played
+#   zones.yml     a safe spawn area (no fall damage, no PvP) and launch pads, without any other plugin
+#   common.yml    announcements, a chat filter, hiding /plugins, death coordinates, low health, first diamond
+#   regions.yml   WorldGuard regions: enter and leave messages, a VIP-only area, an effect inside a region and /where
+#                 (without WorldGuard these rules load fine and simply never run)
+#
+# Every rule has tests: (run them with /omni test examples:welcome, or all of them with /omni test).
+# Coins are kept in pvar.coins; with PlaceholderAPI, %omni_var_coins% shows them in a scoreboard.
+name: examples
+version: 1.0.0
+description: Beginner examples in English - welcome, daily rewards, zones, common events and WorldGuard regions
+author: OmniEvents
+enabled: false
+requires:
+  omnievents: ">=1.7.0"                  # region_enter, region_leave and in_region (spec 012)
+# Change these values here: every ${name} in the pack's rules is replaced when the rules load.
+params:
+  daily_coins: 25                        # coins for the daily login bonus and per day of /daily streak
+  hourly_coins: 50                       # coins for every hour played
+  spawn_world: world                     # the safe spawn area: a square around (spawn_x, spawn_z)
+  spawn_x: 0
+  spawn_z: 0
+  spawn_radius: 50
+  launch_pad: CRIMSON_PRESSURE_PLATE     # stepping on this plate launches you (pick one you don't use elsewhere)
+  staff_permission: examples.staff       # can use /plugins and /version (operators always can)
+  spawn_region: spawn                    # WorldGuard region ids used in regions.yml
+  vip_region: vip
+  vip_permission: examples.vip
+  mine_region: mine
+  afk_region: afk

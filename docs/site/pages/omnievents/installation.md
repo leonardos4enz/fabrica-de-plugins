@@ -13,7 +13,9 @@ description: "Install OmniEvents, the optional plugins, and autocomplete for VS 
 2. Start the server. OmniEvents creates `plugins/OmniEvents/` with:
    - `config.yml`: general settings.
    - `messages.yml`: every message of the plugin, in MiniMessage format (in Spanish; translate them freely).
-   - `rules/`: your rules. Example rules are copied to `rules/ejemplos/` the first time.
+   - `rules/`: your rules. The first time, the plugin also copies its examples: an English pack in
+     `rules/examples-en/` (turned off until you enable it; see [Examples](examples.md#the-english-examples-pack)) and
+     Spanish examples in `rules/ejemplos/`.
 3. Add or edit `.yml` files in `rules/` (any name, any subfolder) and run `/omni reload`.
 
 Every top-level key of a rules file is one rule, and rule names must be unique across all files.
@@ -23,14 +25,16 @@ plugins/OmniEvents/
 ├── config.yml
 ├── messages.yml
 ├── rules/
-│   ├── ejemplos/       ← bundled examples (safe to delete)
+│   ├── examples-en/    ← bundled English examples pack, off by default (safe to delete)
+│   ├── ejemplos/       ← bundled Spanish examples (safe to delete)
 │   └── my-server.yml   ← your rules
 └── data/               ← saved variables, cooldowns and uses (do not edit while the server runs)
 ```
 
 ## Optional plugins
 OmniEvents works on its own. These plugins unlock extra features when they are installed; a rule that needs a
-missing one loads with a warning and skips that part.
+missing one loads with a warning and skips that part (a rule that is turned off, or in a pack that is turned off,
+does not warn).
 
 | Plugin | Unlocks |
 |---|---|

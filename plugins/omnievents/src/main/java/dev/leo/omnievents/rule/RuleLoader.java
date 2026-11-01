@@ -583,14 +583,17 @@ public final class RuleLoader {
             problems.warn(name, "'cancel' no tiene efecto: el evento de " + trigger.name() + " no se puede cancelar");
         }
         costChecks(name, s, trigger, isState, cost, !onCostFail.isEmpty(), problems);
-        boolean usesMoney = cost != null && cost.usesMoney() || parser.usedTypes().contains("give_money") || parser.usedTypes().contains("take_money")
-                || collected.stream().anyMatch(e -> e.source().contains("money("));
-        if (usesMoney) needs("Vault", name, "el dinero (cost.money, give_money, take_money o money())", problems);
-        if (trigger.kind() == TriggerType.Kind.REGION || collected.stream().anyMatch(e -> e.source().contains("in_region(") || e.source().contains("regions("))) {
-            needs("WorldGuard", name, "las regiones (" + (trigger.kind() == TriggerType.Kind.REGION ? trigger.name() : "in_region o regions") + ")", problems);
+        // Regresión (spec 019, F-02): una regla apagada (o de un paquete apagado) no avisa de la integración que le falta.
+        if (s.getBoolean("enabled", true) && (pack == null || pack.enabled)) {
+            boolean usesMoney = cost != null && cost.usesMoney() || parser.usedTypes().contains("give_money") || parser.usedTypes().contains("take_money")
+                    || collected.stream().anyMatch(e -> e.source().contains("money("));
+            if (usesMoney) needs("Vault", name, "el dinero (cost.money, give_money, take_money o money())", problems);
+            if (trigger.kind() == TriggerType.Kind.REGION || collected.stream().anyMatch(e -> e.source().contains("in_region(") || e.source().contains("regions("))) {
+                needs("WorldGuard", name, "las regiones (" + (trigger.kind() == TriggerType.Kind.REGION ? trigger.name() : "in_region o regions") + ")", problems);
+            }
+            if (trigger.name().startsWith("npc_")) needs("Citizens", name, "el disparador " + trigger.name(), problems);
+            if (trigger.name().equals("player_receive_chat")) needs("ProtocolLib", name, "el disparador player_receive_chat (lee los paquetes del chat)", problems);
         }
-        if (trigger.name().startsWith("npc_")) needs("Citizens", name, "el disparador " + trigger.name(), problems);
-        if (trigger.name().equals("player_receive_chat")) needs("ProtocolLib", name, "el disparador player_receive_chat (lee los paquetes del chat)", problems);
 
         long cooldown = 0;
         if (s.contains("cooldown")) {
