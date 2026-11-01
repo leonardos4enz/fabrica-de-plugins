@@ -61,7 +61,8 @@ export default {
   puertoBedrock: 19199,
   versionPorDefecto: '1.21.4',
   // Ruido conocido de Paper que no es del plugin.
-  ruidoDelServidor: [/No key layers/],
+  // Spec 019, F-05: Paper avisa al apagar si Citizens sigue bajando la skin de un NPC (tarea asíncrona de Citizens).
+  ruidoDelServidor: [/No key layers/, /Nag author\(s\): '\[fullwall\]' of 'Citizens .*not properly shutting down its async tasks/],
   // Errores del plugin que no son excepciones (una acción que falla en tiempo de ejecución se registra como aviso).
   erroresDelPlugin: [/\[OmniEvents\] Error/],
   preparar: [
@@ -1589,9 +1590,9 @@ export default {
     },
     {
       // Spec 019: el paquete de ejemplos en inglés (rules/examples-en), apagado por defecto; las regiones con WorldGuard.
-      id: '019 H1 CA1 · H2 CA1–CA3 · H3 CA1–CA2',
-      nombre: 'ejemplos en inglés: /daily con racha y enfriamiento, saludo y bono al volver, spawn sin daño de caída, regiones (mina, VIP, /where)',
-      timeoutMs: 90000,
+      id: '019 H1 CA1 · H2 CA1–CA3 · H3 CA1–CA2 · H5 CA1–CA2',
+      nombre: 'ejemplos en inglés: /daily con racha y enfriamiento, saludo y bono al volver, spawn sin daño de caída, regiones (mina, VIP, /where), Vault, menú /shop, Citizens y ProtocolLib',
+      timeoutMs: 120000,
       async fn (ctx) {
         const { srv } = ctx
         let ana = ctx.bots[ANA]
@@ -1686,6 +1687,58 @@ export default {
         }
 
         for (const r of ['mine', 'vip']) await srv.consola(`rg remove -w world ${r}`)
+
+        // integrations.yml: Vault (economía de EssentialsX), el menú /shop, Citizens y ProtocolLib.
+        await prepararJugador(ctx, ANA)
+        await srv.consola(`omni cooldown reset examples:npc_guide ${ANA}`)
+        await srv.consola(`eco set ${ANA} 150`)
+        await srv.consola(`give ${ANA} wheat 20`)
+        await srv.sincronizar() // la consola no espera (002 F-03)
+        await ana.hasta('tener 20 de trigo', () => ana.cantidad('wheat') === 20)
+        m = ana.marca()
+        ana.comando('sellwheat')
+        await ana.esperar('chat', /^Sold 16 wheat for \D*20(\.00)?\. Balance: \D*170(\.00)?\.$/, { desde: m })
+        await ana.hasta('quedar con 4 de trigo', () => ana.cantidad('wheat') === 4)
+        m = ana.marca()
+        ana.comando('sellwheat')
+        await ana.esperar('chat', /^You need 12 × WHEAT\.$/, { desde: m })
+        // /shop: la manzana cuesta 100 y con 170 alcanza una vez; «Close» cierra.
+        ana.comando('shop')
+        const w = () => ana.bot.currentWindow
+        await ana.hasta('ver la tienda', () => w() && /Shop/.test(ana.tituloVentana()) && w().slots[11]?.name === 'golden_apple')
+        await ana.bot.clickWindow(11, 0, 0)
+        await ana.hasta('tener la manzana', () => ana.cantidadEnVentana('golden_apple') === 1)
+        m = ana.marca()
+        await ana.bot.clickWindow(11, 0, 0)
+        await ana.esperar('chat', /^You need /, { desde: m })
+        await ana.bot.clickWindow(15, 0, 0)
+        await ana.hasta('cerrar la tienda', b => !b.currentWindow)
+        if (ana.cantidad('golden_apple') !== 1) throw new Error(`manzanas: ${ana.cantidad('golden_apple')} (se esperaba 1)`)
+        // Citizens: clic derecho al NPC «Guide» (consejos y pan) y un golpe (npc_left_click).
+        await srv.consola('npc remove all')
+        await srv.consola('npc create Guide --at 15:-60:12:world', { espera: /Guide/ })
+        await srv.sincronizar()
+        let npc
+        await ana.hasta('ver al NPC', b => {
+          npc = Object.values(b.entities).find(e => e.type === 'player' && e !== b.entity && cerca(e.position, 15.5, -60, 12.5, 1.5))
+          return npc != null
+        })
+        m = ana.marca()
+        await ana.bot.lookAt(npc.position.offset(0, 1.6, 0))
+        ana.bot.activateEntity(npc)
+        await ana.esperar('chat', /^\[Guide\] Hi Ana_e2e! Try \/daily, \/shop and \/coins\.$/, { desde: m })
+        await ana.hasta('recibir el pan', () => ana.cantidad('bread') === 4)
+        m = ana.marca()
+        ana.bot.attack(npc)
+        await ana.esperar('actionbar', /^Guide says: hey, that hurts!$/, { desde: m })
+        await srv.consola('npc remove all')
+        // ProtocolLib: un mensaje del sistema con «vote for us» no le llega; los demás sí.
+        m = ana.marca()
+        await srv.consola(`minecraft:tellraw ${ANA} {"text":"Please VOTE FOR US today"}`)
+        await srv.consola(`minecraft:tellraw ${ANA} {"text":"e2e 019 visible"}`)
+        await ana.esperar('chat', /^e2e 019 visible$/, { desde: m })
+        await ana.nunca('chat', /vote for us/i, { desde: m, ms: 200 })
+
         await srv.consola('omni pack disable examples', { espera: /examples/ })
         for (const v of ['coins', 'daily_streak', 'minutes_played']) await srv.consola(`omni var del ${ANA} ${v}`)
         await prepararJugador(ctx, ANA)

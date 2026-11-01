@@ -1,0 +1,161 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/omnievents/omnievents.schema.json
+# Optional plugins (pack examples): Vault, Citizens, PlaceholderAPI, Floodgate and ProtocolLib. WorldGuard is in
+# regions.yml. Every one of them is optional: without it, OmniEvents works the same and the rules that need it load
+# with a warning when the pack is on ("... needs Vault, which is not installed") and skip that part.
+# /omni stats shows which ones were detected.
+
+# ------------------------------------------------------------------ Vault (money from your economy plugin)
+
+# /sellwheat sells 16 wheat for ${wheat_price} money. cost is all or nothing: if anything is missing, nothing is taken
+# and on_cost_fail runs (var.cost_missing says what is missing).
+sell_wheat:
+  trigger: command
+  command:
+    name: sellwheat
+    description: Sell 16 wheat
+  cost:
+    items: "WHEAT;16"
+  actions:
+    - give_money: "${wheat_price}"
+    - message: "<green>Sold 16 wheat for {money_format(${wheat_price})}. Balance: {money_format(money())}."
+  on_cost_fail:
+    - message: "<red>You need {var.cost_missing}."
+  tests:
+    - name: enough wheat
+      given: {inventory: {WHEAT: 20}, money: 0}
+      expect: {branch: actions, actions: [give_money], assert: "money() == ${wheat_price}"}
+    - name: not enough wheat
+      given: {inventory: {WHEAT: 3}}
+      expect: {branch: on_cost_fail, messages: ["You need 13 × WHEAT."]}
+
+# A shop menu opened with /shop. Every click is like a rule: here it costs money (Vault) and gives the item.
+# Bedrock players (with Geyser + Floodgate) get the same menu as a native form with one button per item.
+open_shop:
+  trigger: command
+  command:
+    name: shop
+    description: Opens the shop
+  actions:
+    - open_menu: shop
+  tests:
+    - expect: {actions: ["open_menu: shop"]}
+
+shop:
+  menu:
+    title: "<dark_green>Shop · {money_format(money())}"
+    rows: 3
+    fill: GRAY_STAINED_GLASS_PANE
+    bedrock: {content: "Pick something to buy"}
+    items:
+      apple:
+        slot: 11
+        item: "GOLDEN_APPLE;1;<gold>Golden apple;<gray>Costs ${apple_price}"
+        click:
+          cost: {money: "${apple_price}"}
+          actions:
+            - give_item: GOLDEN_APPLE
+            - sound: ENTITY_EXPERIENCE_ORB_PICKUP;1;1
+          on_cost_fail:
+            - message: "<red>You need {var.cost_missing}."
+          tests:
+            - given: {money: 1000}
+              expect: {branch: actions, actions: [give_item, sound], assert: "money() == 1000 - ${apple_price}"}
+            - given: {money: 0}
+              expect: {branch: on_cost_fail}
+      close:
+        slot: 15
+        item: "BARRIER;1;<red>Close"
+        click:
+          close: true
+          actions: []
+
+# ------------------------------------------------------------------ Citizens (NPCs)
+
+# Right-click the NPC named ${guide_npc}: a few tips, and some bread once an hour.
+npc_guide:
+  trigger: npc_click
+  conditions: "npc.name == '${guide_npc}'"
+  cooldown: 1h
+  actions:
+    - message: "<yellow>[${guide_npc}]</yellow> Hi {player.name}! Try <aqua>/daily</aqua>, <aqua>/shop</aqua> and <aqua>/coins</aqua>."
+    - give_item: "BREAD;4"
+  on_cooldown:
+    - message: "<yellow>[${guide_npc}]</yellow> Come back later for more bread."
+  tests:
+    - given: {player.name: Ana, npc.name: "${guide_npc}"}
+      expect: {messages: ["Hi Ana!"], actions: [give_item]}
+    - given: {npc.name: Bob}
+      expect: {fired: false}
+
+# A small quest: bring 10 coal to the NPC named ${quest_npc} and get a diamond.
+npc_quest:
+  trigger: npc_click
+  conditions: "npc.name == '${quest_npc}'"
+  cost:
+    items: "COAL;10"
+  actions:
+    - give_item: DIAMOND
+    - message: "<yellow>[${quest_npc}]</yellow> Thanks! Here is a diamond."
+  on_cost_fail:
+    - message: "<yellow>[${quest_npc}]</yellow> Bring me 10 coal and I'll give you a diamond."
+  tests:
+    - given: {npc.name: "${quest_npc}", inventory: {COAL: 12}}
+      expect: {branch: actions, actions: [give_item]}
+    - given: {npc.name: "${quest_npc}", inventory: {COAL: 2}}
+      expect: {branch: on_cost_fail, messages: ["Bring me 10 coal"]}
+
+# Hitting an NPC (left click) runs npc_left_click.
+npc_punch:
+  trigger: npc_left_click
+  actions:
+    - actionbar: "<gray>{npc.name} says: hey, that hurts!"
+  tests:
+    - given: {npc.name: Bob}
+      expect: {messages: ["Bob says: hey, that hurts!"]}
+
+# ------------------------------------------------------------------ PlaceholderAPI
+
+# %placeholders% work in texts and conditions. This one needs the Player expansion (/papi ecloud download Player).
+# OmniEvents adds its own: %omni_var_coins% shows a player's coins in any scoreboard or tab plugin.
+stats:
+  trigger: command
+  command:
+    name: stats
+    description: Shows your ping and coins
+  actions:
+    - message: "<gray>Ping: <white>%player_ping% ms</white> · coins: <yellow>{default(pvar.coins, 0)}"
+  tests:
+    - given: {"%player_ping%": 42, pvar.coins: 7}
+      expect: {messages: ["Ping: 42 ms · coins: 7"]}
+
+# ------------------------------------------------------------------ Floodgate (Bedrock players through Geyser)
+
+# is_bedrock() is true for players who joined from Bedrock (phone, console, Windows 10/11).
+bedrock_hint:
+  trigger: player_join
+  conditions: "is_bedrock()"
+  actions:
+    - delay: 3s
+    - message: "<aqua>You're on Bedrock: menus like /shop open as a form with buttons."
+  tests:
+    - given: {bedrock: true}
+      expect: {messages: ["You're on Bedrock"]}
+    - given: {bedrock: false}
+      expect: {fired: false}
+
+# ------------------------------------------------------------------ ProtocolLib
+
+# player_receive_chat runs when a player is about to receive a chat or system message (from any plugin);
+# cancel hides it. This hides other plugins' messages that contain "${hidden_text}".
+hide_spam:
+  trigger: player_receive_chat
+  conditions:
+    - "type == 'SYSTEM'"
+    - "lower(message) contains '${hidden_text}'"
+  actions:
+    - cancel
+  tests:
+    - given: {type: SYSTEM, message: "Don't forget to VOTE FOR US every day!"}
+      expect: {cancelled: true}
+    - given: {type: SYSTEM, message: "Welcome to the server"}
+      expect: {fired: false}

@@ -14,6 +14,7 @@ Casi todo es configuración que ya existe: un paquete (011) con `params`, apagad
 | `…/examples-en/zones.yml` | `spawn_zone` (`state`), `safe_spawn` (sin caída ni PvP), `launch_pad` |
 | `…/examples-en/common.yml` | `announcer`, `chat_filter`, `hide_plugins`, `death_coordinates`, `low_health`, `first_diamond` |
 | `…/examples-en/regions.yml` | `region_welcome`, `region_goodbye`, `vip_only`, `mine_haste`, `mine_haste_off`, `afk_reward` (`in_region`), `where` (`regions()`) |
+| `…/examples-en/integrations.yml` | Vault (`sell_wheat`, menú `shop` con `open_shop`), Citizens (`npc_guide`, `npc_quest`, `npc_punch`), PlaceholderAPI (`stats`), Floodgate (`bedrock_hint`), ProtocolLib (`hide_spam`) |
 | `OmniEvents.java` | La lista de ejemplos que se copian del jar (F-01) |
 | `RuleLoader.java` | Sin avisos de integración en una regla apagada (F-02) |
 | `tools/compuerta-servidor.sh`, `tests-e2e/omnievents/suite.mjs` | Copian también `examples-en/` del código fuente |
@@ -26,13 +27,15 @@ Decisiones de diseño:
   `abs(player.location.x - ${spawn_x}) <= ${spawn_radius}` se prueba.
 - **`launch_pad` con `to.block.type`** (lección de la 018: en `player_move`, `player.location` es el origen) y una placa
   poco usada (`CRIMSON_PRESSURE_PLATE`), para que no lance a quien pisa la placa de una puerta.
-- **Nombres de comando** sin chocar con EssentialsX en el servidor de la suite: `/coins`, `/daily`, `/where`.
+- **Nombres de comando** sin chocar con EssentialsX en el servidor de la suite: `/coins`, `/daily`, `/where`, `/sellwheat`,
+  `/shop`, `/stats` (EssentialsX ya tiene `/ping`).
+- **El paquete pide `>=1.11.0`** (`player_receive_chat`): `PaquetesTest` carga los ejemplos como 1.11.0 (lección 018).
 
 ## 2. Contrato de configuración
 ```yaml
 name: examples
 enabled: false
-requires: { omnievents: ">=1.7.0" }
+requires: { omnievents: ">=1.11.0" }   # player_receive_chat
 params:
   daily_coins: 25            # bono diario y por día de racha (/daily, hasta 7 días)
   hourly_coins: 50           # por cada hora jugada
@@ -47,6 +50,11 @@ params:
   vip_permission: examples.vip
   mine_region: mine
   afk_region: afk
+  wheat_price: 20            # Vault
+  apple_price: 100
+  guide_npc: Guide           # Citizens
+  quest_npc: Miner
+  hidden_text: vote for us   # ProtocolLib
 ```
 Variables que deja: `pvar.coins`, `pvar.daily_streak` (caduca a las 48 h), `pvar.minutes_played`,
 `pvar.found_diamond`. Sin claves nuevas de `config.yml`.
@@ -80,9 +88,10 @@ Las `pvar` de siempre en `data/players/<uuid>.yml`; la caducidad de la racha con
 
 ## 7. Pruebas
 - Unitarias: `EjemplosEnInglesTest` (viene apagado, carga sin avisos sin integraciones, cada regla tiene `tests:` y los
-  38 casos pasan; F-02 con un paquete apagado, uno prendido y una regla apagada), `EjemplosDelJarTest` (F-01);
+  53 casos pasan; F-02 con un paquete apagado, uno prendido y una regla apagada), `EjemplosDelJarTest` (F-01);
   `EjemplosPruebasTest`, `RuleLoaderTest`, `SchemaTest` y `PaquetesTest` ya recorren todo `rules/`.
 - Compuerta 2: una instalación nueva **sin WorldGuard** (sin `rules/`: el jar crea los ejemplos, sin avisos del paquete
   apagado, `/where` desde la consola) y la de siempre con las integraciones.
 - Suite (3a), escenario «019»: `/daily` y su enfriamiento, saludo y bono diario al volver, la zona del spawn sin daño de
-  caída, y regiones de WorldGuard (mina con Haste al entrar y sin él al salir, `/where`, VIP para un OP y bloqueada sin OP).
+  caída, regiones de WorldGuard (mina con Haste al entrar y sin él al salir, `/where`, VIP para un OP y bloqueada sin OP),
+  `/sellwheat` con la economía de EssentialsX, el menú `/shop`, el NPC «Guide» de Citizens y un mensaje oculto con ProtocolLib.

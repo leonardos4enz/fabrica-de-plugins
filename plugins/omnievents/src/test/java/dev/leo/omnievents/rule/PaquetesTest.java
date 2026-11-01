@@ -416,8 +416,8 @@ class PaquetesTest {
 
     @Test
     void H5_CA2_el_paquete_de_ejemplo_carga_y_sus_pruebas_pasan() {
-        // La versión más baja que piden los paquetes de ejemplo (parkour, spec 018: >=1.9.0).
-        loader = new RuleLoader(new Actions(null), new Triggers(), "1.9.0");
+        // La versión más baja que piden los paquetes de ejemplo (examples, spec 019: >=1.11.0).
+        loader = new RuleLoader(new Actions(null), new Triggers(), "1.11.0");
         Map<String, Rule> rules = loader.loadFolder(new File("src/main/resources/rules"), p);
         assertEquals(0, p.size(), dump());
         Pack pack = loader.packs().stream().filter(x -> x.name().equals("recompensas")).findFirst().orElseThrow();

@@ -51,7 +51,7 @@ public final class OmniEvents extends JavaPlugin implements Listener {
             "rules/ejemplos/estilo_ce.yml", "rules/ejemplos/recompensas/pack.yml", "rules/ejemplos/recompensas/reglas.yml",
             "rules/ejemplos/parkour/pack.yml", "rules/ejemplos/parkour/reglas.yml",
             "rules/examples-en/pack.yml", "rules/examples-en/welcome.yml", "rules/examples-en/daily.yml", "rules/examples-en/zones.yml",
-            "rules/examples-en/common.yml", "rules/examples-en/regions.yml");
+            "rules/examples-en/common.yml", "rules/examples-en/regions.yml", "rules/examples-en/integrations.yml");
 
     private Settings settings;
     private Messages messages;

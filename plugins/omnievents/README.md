@@ -15,7 +15,7 @@ variables persistentes y herramientas de diagnóstico. Specs: [001](../../docs/s
 [015](../../docs/sdd/specs/015-omnievents-paridad-conditionalevents-2/spec.md) (paridad con ConditionalEvents, segunda parte) y
 [016](../../docs/sdd/specs/016-omnievents-paridad-conditionalevents-3/spec.md) (detalles de ConditionalEvents y el chat recibido con ProtocolLib).
 **[Cómo hacer un minijuego](#cómo-hacer-un-minijuego)**: un parkour completo de ejemplo, solo con reglas ([spec 018](../../docs/sdd/specs/018-omnievents-minijuegos-con-configuracion/spec.md)).
-**[Ejemplos en inglés](#ejemplos-en-inglés-examples-en)**: un paquete para principiantes (bienvenida, recompensa diaria, zonas, eventos comunes y regiones de WorldGuard), apagado hasta activarlo ([spec 019](../../docs/sdd/specs/019-omnievents-ejemplos-en-ingles-y-regiones/spec.md)).
+**[Ejemplos en inglés](#ejemplos-en-inglés-examples-en)**: un paquete para principiantes (bienvenida, recompensa diaria, zonas, eventos comunes, regiones de WorldGuard y un ejemplo de cada plugin opcional), apagado hasta activarlo ([spec 019](../../docs/sdd/specs/019-omnievents-ejemplos-en-ingles-y-regiones/spec.md)).
 
 **[Documentación en inglés](https://leonardos4enz.gitbook.io/leonardos4enz-docs/)** (English docs; [fuente](../../docs/site/pages/omnievents/README.md)): una wiki para GitBook o
 Zensical con instalación, primera regla, disparadores, condiciones, acciones, variables, comandos y cómo migrar desde
@@ -74,7 +74,7 @@ Desde la 1.12.0 ([spec 019](../../docs/sdd/specs/019-omnievents-ejemplos-en-ingl
 descarga el plugin y lee inglés: el paquete `examples` en `rules/examples-en/`, con lo más pedido por principiantes. Viene
 **apagado**: no cambia nada hasta que pones `enabled: true` en su `pack.yml` y `/omni reload` (o `/omni pack enable
 examples` hasta el próximo reload). Sus reglas se llaman `examples:<regla>` y cada una trae un comentario y `tests:`
-(38 casos; `/omni test examples:daily`).
+(53 casos; `/omni test examples:daily`).
 
 | Archivo | Qué muestra |
 |---|---|
@@ -83,12 +83,15 @@ examples` hasta el próximo reload). Sus reglas se llaman `examples:<regla>` y c
 | `zones.yml` | Zona del spawn por coordenadas (`state` al entrar y salir, sin daño de caída ni PvP) y plataformas de salto, sin otro plugin |
 | `common.yml` | Anuncios, filtro de palabras, ocultar `/plugins` a quien no es staff, coordenadas al morir, vida baja, primer diamante |
 | `regions.yml` | WorldGuard: `region_enter`/`region_leave` (saludo, despedida, zona VIP con `cancel`, Haste dentro de la mina), `in_region()` (recompensa en la zona AFK) y `regions()` (`/where`) |
+| `integrations.yml` | Vault (`/sellwheat` cobra 16 trigo y paga con `give_money`; menú `/shop` que cobra dinero), Citizens (NPC «Guide» con consejos y pan cada hora, misión del NPC «Miner»: 10 carbón por un diamante, `npc_left_click`), PlaceholderAPI (`/stats` con `%player_ping%`), Floodgate (aviso con `is_bedrock()`; `/shop` le llega como formulario) y ProtocolLib (oculta los mensajes de otros plugins que dicen «vote for us») |
 
 Lo que un dueño querría cambiar va en `params` de `pack.yml`: `daily_coins`, `hourly_coins`, el mundo, el centro y el
 radio del spawn (`spawn_world`, `spawn_x`, `spawn_z`, `spawn_radius`), la placa de salto, los permisos
-(`staff_permission`, `vip_permission`; los OP los tienen) y los ids de las regiones (`spawn`, `vip`, `mine`, `afk`). Las
-pruebas usan esos mismos parámetros, así que siguen pasando si los cambias. **Sin WorldGuard** el paquete carga igual: las
-reglas de región no corren, `in_region()` da falso y `/where` dice que no estás en ninguna.
+(`staff_permission`, `vip_permission`; los OP los tienen) los ids de las regiones (`spawn`, `vip`, `mine`, `afk`), los precios (`wheat_price`, `apple_price`), los nombres de los NPC
+(`guide_npc`, `quest_npc`) y el texto que se oculta (`hidden_text`). Las
+pruebas usan esos mismos parámetros, así que siguen pasando si los cambias. **Sin WorldGuard** (o sin
+cualquiera de los otros) el paquete carga igual: las reglas de región no corren, `in_region()` da falso y `/where` dice
+que no estás en ninguna; activado, cada regla avisa del plugin que le falta. Pide OmniEvents 1.11.0 o más.
 
 **En un servidor que ya tenía OmniEvents** el paquete no aparece solo: los ejemplos se copian del jar únicamente si
 `rules/` no existe. Copia la carpeta [`examples-en`](src/main/resources/rules/examples-en/) a `plugins/OmniEvents/rules/` y

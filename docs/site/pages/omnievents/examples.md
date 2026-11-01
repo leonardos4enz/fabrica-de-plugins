@@ -22,11 +22,13 @@ nothing on your server until you enable it:
 | `zones.yml` | A safe spawn area by coordinates (enter and leave messages, no fall damage, no PvP) and launch pads, without any other plugin |
 | `common.yml` | Announcements, a chat word filter, hiding `/plugins` from non-staff, death coordinates, a low health warning, the first diamond announced |
 | `regions.yml` | WorldGuard: enter and leave messages, a VIP-only region, Haste inside a mine region, a reward for standing in an AFK region, `/where` |
+| `integrations.yml` | The other optional plugins: Vault (`/sellwheat` and a `/shop` menu that charges money), Citizens (a guide NPC and a small quest NPC), PlaceholderAPI (`/stats` with `%player_ping%`), Floodgate (a hint for Bedrock players, who get `/shop` as a form) and ProtocolLib (hide messages from other plugins) |
 
 The values you would want to change (coins per day, where your spawn is and how big, region ids, permissions) are
 parameters at the top of `pack.yml`. Its rules are called `examples:<name>` (`/omni test examples:daily` runs the tests
 of one of them) and every rule has `tests:`, so you can change a rule and check it still does what it should.
-**Without WorldGuard** the region examples still load: they just never run.
+**Without WorldGuard** (or any of the other optional plugins) the examples still load: the ones that need it just never
+run.
 
 Already had OmniEvents before 1.12.0? The plugin only copies its examples when `rules/` does not exist yet, so the pack
 is not added to an existing server: download the

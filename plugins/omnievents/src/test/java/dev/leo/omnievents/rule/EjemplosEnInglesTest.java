@@ -39,7 +39,7 @@ class EjemplosEnInglesTest {
     }
 
     private static RuleLoader sinIntegraciones() {
-        return new RuleLoader(new Actions(null), new Triggers(), "1.7.0").integrations(Set.of());
+        return new RuleLoader(new Actions(null), new Triggers(), "1.11.0").integrations(Set.of());
     }
 
     @Test
@@ -52,7 +52,8 @@ class EjemplosEnInglesTest {
         assertFalse(pack.enabled());
         assertTrue(rules.values().stream().noneMatch(Rule::enabled), "todo el paquete viene apagado");
         assertTrue(rules.keySet().containsAll(List.of("examples:welcome", "examples:daily_login", "examples:daily", "examples:spawn_zone",
-                "examples:safe_spawn", "examples:chat_filter", "examples:region_welcome", "examples:vip_only", "examples:where")), rules.keySet().toString());
+                "examples:safe_spawn", "examples:chat_filter", "examples:region_welcome", "examples:vip_only", "examples:where", "examples:sell_wheat", "examples:npc_guide",
+                "examples:npc_quest", "examples:stats", "examples:bedrock_hint", "examples:hide_spam")), rules.keySet().toString());
     }
 
     @Test
@@ -61,14 +62,15 @@ class EjemplosEnInglesTest {
         Map<String, Rule> rules = examples(new RuleLoader(new Actions(null), new Triggers()).loadFolder(RULES, p));
         assertEquals(0, p.size(), dump(p));
         assertTrue(rules.size() >= 20, rules.keySet().toString());
+        // Un menú se compila en reglas (apertura, cierre y cada clic); el clic de «Close» solo cierra: no necesitan prueba.
         List<String> sinPruebas = rules.values().stream().filter(r -> r.tests().isEmpty()).map(Rule::name).toList();
-        assertEquals(List.of(), sinPruebas);
+        assertEquals(List.of("examples:shop.menu", "examples:shop.menu.on_close", "examples:shop.menu.items.close.click"), sinPruebas);
         RuleTester.Summary s = new RuleTester(n -> rules.get(n.toLowerCase()), 1000, 16).runAll(rules.values());
         String failed = s.results().stream().filter(r -> !r.ok())
                 .map(r -> r.rule().name() + " «" + r.test().name() + "»: " + r.failures() + "\n  " + String.join("\n  ", r.trace()))
                 .collect(Collectors.joining("\n"));
         assertEquals(0, s.failed(), failed);
-        assertEquals(38, s.results().size(), "casos de tests: del paquete");
+        assertEquals(53, s.results().size(), "casos de tests: del paquete");
     }
 
     @Test

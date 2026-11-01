@@ -114,7 +114,9 @@ con `--release 21`.
   código fuente (el `parkour` de la 018 y `estilo_ce.yml` de la 014 nunca se copiaron: 019 F-01). `EjemplosDelJarTest` lo
   exige; para probar lo que crea el jar, la compuerta 2 sin `run/plugins/OmniEvents/rules/`. En un paquete, `${param}` se
   sustituye en los valores pero **no en las claves**: en `tests:` va `region.id: "${vip_region}"` o
-  `assert: "pvar.coins == ${daily_coins}"`, nunca `${x}: 1`.
+  `assert: "pvar.coins == ${daily_coins}"`, nunca `${x}: 1`. Un NPC de Citizens con nombre de cuenta real («Guide») baja
+  su skin en segundo plano y Paper puede registrar al apagar un «Nag author(s)… Citizens» que el arnés cuenta como error:
+  es ruido de terceros (`ruidoDelServidor`, 019 F-05).
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

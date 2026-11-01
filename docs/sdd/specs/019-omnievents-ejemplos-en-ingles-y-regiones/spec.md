@@ -41,6 +41,16 @@ inglés*, quiero ejemplos listos dentro del jar para copiarlos y adaptarlos.
 - CA3: **Sin WorldGuard** el paquete carga igual: sin errores, las reglas de región no corren y `in_region()` da falso;
   con el paquete apagado tampoco hay avisos en la consola.
 
+**H5 — Los demás plugins soportados** (pedido del dueño al cierre: «pon ejemplos para los plugins soportados también»).
+Como *dueño con alguno de esos plugins*, quiero un ejemplo de cada integración.
+- CA1: `integrations.yml` en el paquete: **Vault** (`/sellwheat` con `cost` de ítems y `give_money`; un menú `/shop`
+  que cobra dinero), **Citizens** (un NPC guía con `npc_click` y enfriamiento, una misión que cobra ítems, `npc_left_click`),
+  **PlaceholderAPI** (`/stats` con un `%placeholder%`, y `%omni_var_coins%` para marcadores), **Floodgate** (`is_bedrock()`
+  al entrar; el menú `/shop` llega como formulario) y **ProtocolLib** (`player_receive_chat` oculta mensajes de otros
+  plugins). Nombres de NPC, precios y el texto oculto son parámetros.
+- CA2: Sin esos plugins el paquete carga igual (apagado, sin avisos); el escenario de la suite prueba en el juego Vault
+  (con la economía de EssentialsX), el menú, Citizens y ProtocolLib.
+
 **H4 — Probado y documentado.**
 - CA1: Un escenario de la suite activa el paquete con WorldGuard y prueba en el juego la bienvenida, `/daily`, la zona
   del spawn y una región (entrar, VIP bloqueada, `/where`).
@@ -60,6 +70,7 @@ inglés*, quiero ejemplos listos dentro del jar para copiarlos y adaptarlos.
 | 1 | ¿Nombre y lugar del paquete? | Carpeta `rules/examples-en/`, paquete `examples` (reglas `examples:welcome`…), apagado como el `parkour` de la 018 (encargo: «desactivado por defecto como el parkour»). |
 | 2 | ¿Las regiones en un paquete aparte? | No: un archivo `regions.yml` dentro del mismo paquete. Sin WorldGuard carga igual (encargo: «que carguen sin WorldGuard sin romper nada»). |
 | 3 | ¿Zonas con `in_area()` o con coordenadas? | Con `player.location.x`/`z` y `abs()`: la misma idea, y se puede probar en `tests:` (`in_area()` mira al jugador real y en `tests:` da falso). |
+| 5 | ¿Ejemplos de las demás integraciones? | Pedido del dueño al revisar el cierre: «pon ejemplos para los plugins soportados tambien». Van en el mismo paquete (`integrations.yml`); el paquete pasa a pedir `>=1.11.0` (`player_receive_chat`). |
 | 4 | ¿Versión? | 1.12.0: contenido nuevo visible para quien descarga el plugin y dos correcciones. |
 
 ## Preguntas abiertas

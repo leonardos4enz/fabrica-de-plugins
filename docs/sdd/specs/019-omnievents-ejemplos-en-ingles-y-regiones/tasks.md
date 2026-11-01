@@ -10,6 +10,8 @@
 - [x] T4 `rules/examples-en/`: `pack.yml` (apagado, parámetros) y `welcome.yml`, `daily.yml`, `zones.yml`,
       `common.yml`, `regions.yml`, cada regla con comentario y `tests:`.
 - [x] T5 F-01: lista de ejemplos del jar completa. F-02: `RuleLoader` no avisa de integraciones en reglas apagadas.
+- [x] T9 Pedido del dueño: `integrations.yml` (Vault, Citizens, PlaceholderAPI, Floodgate, ProtocolLib) con `tests:`, el
+      escenario ampliado y `requires: >=1.11.0`.
 - [x] T6 La compuerta 2 y la suite copian también `examples-en/`. Versión 1.12.0.
 
 ## Cierre

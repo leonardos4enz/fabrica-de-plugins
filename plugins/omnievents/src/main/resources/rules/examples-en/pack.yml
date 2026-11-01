@@ -11,16 +11,19 @@
 #   common.yml    announcements, a chat filter, hiding /plugins, death coordinates, low health, first diamond
 #   regions.yml   WorldGuard regions: enter and leave messages, a VIP-only area, an effect inside a region and /where
 #                 (without WorldGuard these rules load fine and simply never run)
+#   integrations.yml  the other optional plugins: a Vault shop (/sellwheat and a /shop menu that Bedrock players get
+#                 as a form), Citizens NPCs (a guide and a quest), PlaceholderAPI (/stats), Floodgate (Bedrock
+#                 players) and ProtocolLib (hiding messages from other plugins)
 #
 # Every rule has tests: (run them with /omni test examples:welcome, or all of them with /omni test).
 # Coins are kept in pvar.coins; with PlaceholderAPI, %omni_var_coins% shows them in a scoreboard.
 name: examples
 version: 1.0.0
-description: Beginner examples in English - welcome, daily rewards, zones, common events and WorldGuard regions
+description: Beginner examples in English - welcome, daily rewards, zones, common events, WorldGuard regions and the other optional plugins
 author: OmniEvents
 enabled: false
 requires:
-  omnievents: ">=1.7.0"                  # region_enter, region_leave and in_region (spec 012)
+  omnievents: ">=1.11.0"                 # player_receive_chat (1.11.0), menus (1.8.0), regions and costs (1.7.0)
 # Change these values here: every ${name} in the pack's rules is replaced when the rules load.
 params:
   daily_coins: 25                        # coins for the daily login bonus and per day of /daily streak
@@ -36,3 +39,8 @@ params:
   vip_permission: examples.vip
   mine_region: mine
   afk_region: afk
+  wheat_price: 20                        # Vault: money for 16 wheat (/sellwheat)
+  apple_price: 100                       # Vault: a golden apple in the /shop menu
+  guide_npc: Guide                       # Citizens: NPC names used in integrations.yml
+  quest_npc: Miner
+  hidden_text: vote for us               # ProtocolLib: messages from other plugins with this text are hidden
