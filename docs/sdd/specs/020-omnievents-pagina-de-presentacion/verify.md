@@ -33,10 +33,16 @@ No se regeneró la galería ni se hizo una imagen por capacidad. `/omni debug` v
 | F-01 | Baja (texto) | En `modrinth-hangar.md`, una cita de la transcripción («Try /daily, /shop and /coins.») quedó partida por un salto de línea: un buscador o un lector de pantalla no la encontraría entera | `PresentacionTest` la detectó (falló con ese texto); se unió la línea |
 | F-02 | Baja (arnés) | El visor 3D no dibuja jugadores ni aldeanos: el NPC no salía en la captura; y dibuja al comerciante ambulante siempre mirando al sur | NPC `--type WANDERING_TRADER` y la cámara al sur. Lección en `CLAUDE.md` |
 | F-03 | Baja (arnés) | A 4 bloques el clic al NPC no llega (alcance de interacción de 3 bloques), y `activateEntity` gira la cámara: los cuadros del GIF saltaban | NPC a 2,8 bloques y vuelta a la mirada anterior antes de cada foto |
+| F-05 | Baja (texto) | En SpigotMC, cada salto de línea entre las [IMG] dejaba una franja blanca entre las imágenes | Las 7 [IMG] en una sola línea del BBCode |
 | F-04 | Baja (diseño) | Silkscreen y Pixelify Sans se leían mal en los títulos («OHNIEVENTS», «Ɛ») | Press Start 2P |
 
+## Publicación (con el OK del dueño, 2026-11-01)
+- **Modrinth:** versión 1.12.0 (Paper; 1.21.4 y 26.1.2) y descripción nueva. El proyecto sigue «Under review».
+- **Hangar:** versión 1.12.0 (Release, Paper 1.21.4–26.1.2, mismas dependencias opcionales) y página principal nueva.
+- **SpigotMC:** actualización 1.12.0 con su changelog y descripción nueva. SpigotMC pone un <br> por cada salto de línea entre [IMG]: el BBCode lleva las 7 imágenes en una sola línea (F-05). Aun así queda una línea fina entre franjas: es el espaciado de SpigotMC para imágenes en línea.
+- Los íconos de las tres páginas siguen siendo el logo viejo.
+
 ## Pendiente (fuera de alcance)
-- Publicar las descripciones y la 1.12.0 en SpigotMC, Modrinth y Hangar: lo decide el dueño.
 - `docs/omnievents/galeria.md` está atrasada respecto de las reglas de ejemplo (le faltan los `tests:` de `diamantes_contados`):
   cualquier corrida de la galería la reescribe. No es de esta spec.
 
