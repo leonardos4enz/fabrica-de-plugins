@@ -1,16 +1,16 @@
-package dev.leo.blockwright.paper;
+package dev.leo.worldcraft.paper;
 
-import dev.leo.blockwright.Blockwright;
-import dev.leo.blockwright.edit.EditJob;
-import dev.leo.blockwright.edit.RegionSource;
-import dev.leo.blockwright.edit.UndoSource;
-import dev.leo.blockwright.history.HistoryStore;
-import dev.leo.blockwright.history.Journal;
-import dev.leo.blockwright.history.JournalSink;
-import dev.leo.blockwright.pattern.ParseException;
-import dev.leo.blockwright.region.Box;
-import dev.leo.blockwright.region.ChunkOrder;
-import dev.leo.blockwright.region.Shape;
+import dev.leo.worldcraft.Worldcraft;
+import dev.leo.worldcraft.edit.EditJob;
+import dev.leo.worldcraft.edit.RegionSource;
+import dev.leo.worldcraft.edit.UndoSource;
+import dev.leo.worldcraft.history.HistoryStore;
+import dev.leo.worldcraft.history.Journal;
+import dev.leo.worldcraft.history.JournalSink;
+import dev.leo.worldcraft.pattern.ParseException;
+import dev.leo.worldcraft.region.Box;
+import dev.leo.worldcraft.region.ChunkOrder;
+import dev.leo.worldcraft.region.Shape;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
@@ -21,14 +21,14 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * /bwr selftest (H8 CA6, compuerta 2): en una caja de 6×6×6 en el aire sobre el punto de aparición, pone una mezcla
+ * /wc selftest (H8 CA6, compuerta 2): en una caja de 6×6×6 en el aire sobre el punto de aparición, pone una mezcla
  * con diario, la deshace, la rehace y la deshace otra vez, y comprueba cada paso contra el mundo. El terreno queda
  * como estaba.
  */
 public final class SelfTest {
-    private final Blockwright plugin;
+    private final Worldcraft plugin;
 
-    public SelfTest(Blockwright plugin) {
+    public SelfTest(Worldcraft plugin) {
         this.plugin = plugin;
     }
 

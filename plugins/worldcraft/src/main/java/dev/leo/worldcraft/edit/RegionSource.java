@@ -1,10 +1,10 @@
-package dev.leo.blockwright.edit;
+package dev.leo.worldcraft.edit;
 
-import dev.leo.blockwright.pattern.Mask;
-import dev.leo.blockwright.pattern.Pattern;
-import dev.leo.blockwright.region.Box;
-import dev.leo.blockwright.region.ChunkOrder;
-import dev.leo.blockwright.region.Shape;
+import dev.leo.worldcraft.pattern.Mask;
+import dev.leo.worldcraft.pattern.Pattern;
+import dev.leo.worldcraft.region.Box;
+import dev.leo.worldcraft.region.ChunkOrder;
+import dev.leo.worldcraft.region.Shape;
 
 /** set, replace, walls y faces (H3 CA1): el patrón en la forma de la caja, donde la máscara deja. */
 public final class RegionSource implements EditSource {

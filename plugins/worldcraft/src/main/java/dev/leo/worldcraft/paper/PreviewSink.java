@@ -1,6 +1,6 @@
-package dev.leo.blockwright.paper;
+package dev.leo.worldcraft.paper;
 
-import dev.leo.blockwright.edit.EditJob;
+import dev.leo.worldcraft.edit.EditJob;
 import io.papermc.paper.math.Position;
 import org.bukkit.World;
 import org.bukkit.block.data.BlockData;

@@ -1,8 +1,8 @@
-package dev.leo.blockwright.config;
+package dev.leo.worldcraft.config;
 
-import dev.leo.blockwright.pattern.Mask;
-import dev.leo.blockwright.pattern.ParseException;
-import dev.leo.blockwright.pattern.Parser;
+import dev.leo.worldcraft.pattern.Mask;
+import dev.leo.worldcraft.pattern.ParseException;
+import dev.leo.worldcraft.pattern.Parser;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.util.ArrayList;
@@ -16,11 +16,11 @@ import java.util.function.Predicate;
 
 /**
  * Límites por grupo de permisos (H7, sección limits de config.yml). «default» vale para todos; cada otro grupo se da
- * con el permiso blockwright.limit.&lt;grupo&gt;. Con varios grupos gana lo más generoso de cada valor: el mayor número,
+ * con el permiso worldcraft.limit.&lt;grupo&gt;. Con varios grupos gana lo más generoso de cada valor: el mayor número,
  * todos los mundos de todos, y un bloque está prohibido solo si lo prohíben todos.
  */
 public final class Limits {
-    public static final String PERMISSION_PREFIX = "blockwright.limit.";
+    public static final String PERMISSION_PREFIX = "worldcraft.limit.";
     private static final List<String> KEYS = List.of("max_blocks", "max_jobs", "worlds", "blocked_blocks");
 
     /** Un grupo; null en un campo = hereda de default. blocked con la máscara vacía (ANY) no se usa: null = sin prohibidos. */

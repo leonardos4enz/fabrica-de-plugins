@@ -1,14 +1,14 @@
-# Verificación 025 — Blockwright: un editor de mundo que no traba el servidor
+# Verificación 025 — Worldcraft: un editor de mundo que no traba el servidor
 
 **Fecha:** 2026-11-01 · **Resultado:** Verificado en Paper 1.21.4 (compuertas 1, 2 y 3a); 26.1.2 sin verificar; decisiones de CLARIFY pendientes del dueño
 
 | Compuerta | Resultado |
 |---|---|
-| Unitarias | `./gradlew :blockwright:build` en verde: 45 pruebas (motor con mundo en memoria 15, patrones y máscaras 9, historial 5, planificador 5, configuración 4, región 4, comando 4) |
-| Servidor real (compuerta 2) | En un servidor propio, `plugins/blockwright/run/` (Paper 1.21.4 build 232, Java 24; no el de SkinStatues con el mundo del dueño): `bash tools/compuerta-servidor.sh blockwright "bwr validate" "bwr selftest" "bwr pos1 -50 -60 -50" "bwr pos2 49 -51 49" "bwr set 70% stone, 30% glass" "bwr confirm" "bwr jobs" … "bwr history" "bwr limits" "bwr set stnoe" "bwr reload"`: sin errores en los dos arranques; «Configuration OK»; selftest «set 216 blocks, undo, redo and undo; the terrain is as before»; la obra de 100 000 bloques pidió confirmación y terminó en menos de un segundo; `reload` sin avisos. Segundo arranque: el historial siguió (#2, #3) y `bwr undo` devolvió los 100 000 bloques. F-01 y F-02 salieron de aquí |
-| En el juego (3a) | `npm --prefix tests-e2e test -- --plugin blockwright`: **8/8 dos veces seguidas en Paper 1.21.4** (build 232, Java 24, bot 1.21.4), con el jar final, en el servidor propio `plugins/blockwright/run/` (puerto 25599 libre antes de empezar); el log sin errores del plugin. La primera corrida falló entera por F-03 y la segunda 7/8 por una prueba que no esperaba a la consola (lección 002 F-03, corregida en la suite) |
+| Unitarias | `./gradlew :worldcraft:build` en verde: 46 pruebas (motor con mundo en memoria 14, patrones y máscaras 9, historial 5, planificador 5, configuración 5, región 4, comando 4) |
+| Servidor real (compuerta 2) | En un servidor propio, `plugins/worldcraft/run/` (Paper 1.21.4 build 232, Java 24; no el de SkinStatues con el mundo del dueño): `bash tools/compuerta-servidor.sh worldcraft "wc validate" "wc selftest" "wc pos1 -50 -60 -50" "wc pos2 49 -51 49" "wc set 70% stone, 30% glass" "wc confirm" "wc jobs" … "wc history" "wc limits" "wc set stnoe" "wc reload"`: sin errores en los dos arranques; «Configuration OK»; selftest «set 216 blocks, undo, redo and undo; the terrain is as before»; la obra de 100 000 bloques pidió confirmación y terminó en menos de un segundo; `reload` sin avisos. Segundo arranque: el historial siguió (#2, #3) y `wc undo` devolvió los 100 000 bloques. F-01 y F-02 salieron de aquí |
+| En el juego (3a) | `npm --prefix tests-e2e test -- --plugin worldcraft`: **8/8 dos veces seguidas en Paper 1.21.4** (build 232, Java 24, bot 1.21.4), con el jar final, en el servidor propio `plugins/worldcraft/run/` (puerto 25599 libre antes de empezar); el log sin errores del plugin. Repetida tras el cambio de nombre a Worldcraft (`/wc`), `confirm.enabled` y F-04: otra vez 8/8 dos veces La primera corrida falló entera por F-03 y la segunda 7/8 por una prueba que no esperaba a la consola (lección 002 F-03, corregida en la suite) |
 | Revisión exploratoria (3b) | Con la consola del servidor real (compuerta 2) y los bots: tiempos por tick, mensajes, sugerencias; F-01 y F-02 salieron de ahí. Sin una persona jugando: queda para el dueño (ver riesgos) |
-| README (capacidades, Compatibilidad, tabla raíz) | README del plugin nuevo en inglés (ADR 0005) con cada capacidad y su ejemplo y Compatibilidad (1.21.4 verificada; 26.1.2 sin verificar); fila de Blockwright en el README raíz, comandos de las compuertas y estructura; roadmap (diagnóstico de WorldEdit/FAWE y lo pendiente) e índice. Sin capturas (lección 004: se proponen con la página de presentación) |
+| README (capacidades, Compatibilidad, tabla raíz) | README del plugin nuevo en inglés (ADR 0005) con cada capacidad y su ejemplo y Compatibilidad (1.21.4 verificada; 26.1.2 sin verificar); fila de Worldcraft en el README raíz, comandos de las compuertas y estructura; roadmap (diagnóstico de WorldEdit/FAWE y lo pendiente) e índice. Sin capturas (lección 004: se proponen con la página de presentación) |
 
 ## Cobertura
 | Criterio | Prueba |
@@ -18,7 +18,7 @@
 | H1 CA3 | 3a «la varita…» (mensaje con 5×1×3 y 15 bloques; partículas para Ana, ninguna para Beto a 7 bloques) |
 | H1 CA4 | `RegionTest.H1_CA4_agrandar_achicar_y_mover_con_palabras`, `H1_CA4_hacia_donde_mira_el_jugador`; 3a «los errores…» (`left`) |
 | H1 CA5 | `CommandTest.H1_CA5_coordenadas_relativas`; compuerta 2 (`pos1 x y z` desde la consola) |
-| H1 CA6 | 3a «la varita…» (`/bwr sel`); compuerta 2 |
+| H1 CA6 | 3a «la varita…» (`/wc sel`); compuerta 2 |
 | H2 CA1 | `ParserTest.H2_CA1_…` (3), `CommandTest.H2_CA1_opciones_en_cualquier_lugar…`; 3a «set con mezcla…» (entre 35 % y 65 % de piedra) |
 | H2 CA2 | `ParserTest.H2_CA2_mascaras_…`, `H2_CA2_la_mascara_compilada_…`; 3a «set con mezcla…» (`replace glass with oak_planks`) |
 | H2 CA3 | `ParserTest.H2_CA3_errores_claros_con_sugerencia`, `H2_CA3_F02_…`; `CommandTest` (`--previwe`); 3a «los errores dicen qué corregir y no tocan nada»; compuerta 2 (`stnoe`) |
@@ -51,7 +51,7 @@
 | H7 CA3 | `ConfigTest.H7_CA1_…`; 3a (`10% bedrock` rechazado) |
 | H7 CA4 | `ConfigTest.H7_CA1_…` (mundos) |
 | H7 CA5 | Por diseño (`Edits.busy`); sin escenario |
-| H7 CA6 | 3a (`/bwr limits` de Beto); compuerta 2 |
+| H7 CA6 | 3a (`/wc limits` de Beto); compuerta 2 |
 | H8 CA1 | 3a «sin permiso…» (Beto) |
 | H8 CA2 | `ConfigTest.H8_CA2_…` (2); 3a «validate y selftest…» (config roto: 1 error y 1 aviso con «did you mean») |
 | H8 CA3 | `ConfigTest.H8_CA3_los_archivos_que_trae_el_plugin_cargan_sin_avisos`; compuerta 2 («Configuration OK») |
@@ -62,20 +62,22 @@
 ## Hallazgos
 | ID | Severidad | Descripción | Evidencia | Prueba de regresión | Estado |
 |---|---|---|---|---|---|
-| F-01 | Alta | El trabajo miraba el reloj cada 64 bloques: con bloques lentos (código frío, luz) un tick llegaba a 23,5 ms con 8 de presupuesto | Compuerta 2: `bwr jobs` «max 23.5 ms (budget 8 ms)» | `EditTest.H5_CA1_F01_no_se_pasa_del_plazo_aunque_cada_bloque_sea_lento` (verificado: falla con el código anterior, «se pasó hasta 32.0 ms») | Resuelto: el reloj se mira en cada bloque (unos 25 ns). Con el código caliente, el tick más largo fue 5,2 ms |
+| F-01 | Alta | El trabajo miraba el reloj cada 64 bloques: con bloques lentos (código frío, luz) un tick llegaba a 23,5 ms con 8 de presupuesto | Compuerta 2: `wc jobs` «max 23.5 ms (budget 8 ms)» | `EditTest.H5_CA1_F01_no_se_pasa_del_plazo_aunque_cada_bloque_sea_lento` (verificado: falla con el código anterior, «se pasó hasta 32.0 ms») | Resuelto: el reloj se mira en cada bloque (unos 25 ns). Con el código caliente, el tick más largo fue 5,2 ms |
 | F-02 | Baja | `stnoe` sugería `snow` (empate a distancia 2 con `stone` en el registro real) | Compuerta 2: «Unknown block 'stnoe' (did you mean 'snow'?)» | `ParserTest.H2_CA3_F02_letras_cambiadas_de_lugar_sugieren_la_palabra_correcta` (verificado: falla con el código anterior) | Resuelto: dos letras vecinas cambiadas de lugar cuentan 1 (Damerau) |
-| F-03 | Alta | Una edición de `messages.yml` dejó `jobs-line:"…"` sin espacio: el YAML no cargaba y **todos** los mensajes salían «Missing message». La unitaria de mensajes no lo vio porque `YamlConfiguration.loadConfiguration` se traga el error y devuelve un archivo vacío | 3a, primera corrida: 0/8 con «Missing message 'no-permission'»; `e2e.log`: «Cannot load pluginsBlockwrightmessages.yml» | `CommandTest.H8_CA5_…` ahora lee el archivo con `loadFromString` (estricto); verificado: con el archivo roto falla («found character '%' that cannot start any token») | Resuelto |
+| F-03 | Alta | Una edición de `messages.yml` dejó `jobs-line:"…"` sin espacio: el YAML no cargaba y **todos** los mensajes salían «Missing message». La unitaria de mensajes no lo vio porque `YamlConfiguration.loadConfiguration` se traga el error y devuelve un archivo vacío | 3a, primera corrida: 0/8 con «Missing message 'no-permission'»; `e2e.log`: «Cannot load pluginsWorldcraftmessages.yml» | `CommandTest.H8_CA5_…` ahora lee el archivo con `loadFromString` (estricto); verificado: con el archivo roto falla («found character '%' that cannot start any token») | Resuelto |
+| F-04 | Media | La **primera** obra tras arrancar el servidor tenía un tick de 35 a 60 ms: el primer bloque tardaba ~30 ms (código que corre por primera vez: leer, convertir y poner un estado, el cambio de bloque con luz) y el índice del historial se armaba en YAML en el hilo principal al terminar | Compuerta 2 tras el cambio de nombre: «longest tick 59.7 ms»; un registro temporal mostró «block 31847 us at -50 -60 -50 n=1» | Sin unitaria (es código frío del servidor real): compuerta 2 en tres arranques en frío, «longest tick» 10,3 / 10,9 / 12,4 ms | Resuelto en parte: `Edits.warmUp()` al habilitar (lee, pone el mismo estado y, en el techo del mundo sobre el punto de aparición, piedra y aire en el mismo tick) y el YAML del índice se arma en el hilo de E/S. Queda un tick de ~10–12 ms en la primera obra de cada arranque (riesgo residual) |
 
 ## Medidas
 | Obra | Bloques | Resultado |
 |---|---|---|
 | `set 70% stone, 30% glass` (compuerta 2, código caliente) | 100 000 | Menos de 1 s; tick más largo del plugin 4–5 ms |
+| Primera obra tras arrancar (compuerta 2, en frío, con F-04) | ~42 000 cambiados | Tick más largo 10,3 / 10,9 / 12,4 ms en tres arranques (sin F-04: 35–60 ms) |
 | `set 50% dirt, 50% sand` con vista previa (3a) | 36 000 | Tick más largo de la obra: 8,1 y 8,0 ms (presupuesto 8 ms; el escenario acepta hasta 12) |
 
 ## Riesgos residuales
-- **Picos en frío.** El primer tick tras arrancar el servidor puede pasar del presupuesto (en una corrida se midió un
-  máximo de 144 ms en una obra de 27 bloques, sin repetirse): carga de clases, primer guardado YAML, primer MiniMessage o
-  una pausa del recolector dentro de ese tick. `/bwr jobs` muestra el máximo desde el arranque y el tick más largo de la
+- **Picos en frío (F-04).** Con el calentamiento, la primera obra de cada arranque aún tiene un tick de unos 10–12 ms
+  (3 de 8 ms de más, una vez); antes eran 35–60 ms. Una pausa del recolector dentro de un tick también cuenta (una vez se
+  vio 144 ms en el máximo «desde el arranque», sin repetirse). `/wc jobs` muestra el máximo desde el arranque y el tick más largo de la
   última obra.
 - El diario se escribe en el hilo de E/S en el mismo tick en que se ponen los bloques (como la 021): si el servidor se
   cae en ese instante, la última tanda podría no quedar en el diario.

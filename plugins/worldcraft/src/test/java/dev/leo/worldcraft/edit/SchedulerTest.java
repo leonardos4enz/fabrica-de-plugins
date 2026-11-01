@@ -1,6 +1,6 @@
-package dev.leo.blockwright.edit;
+package dev.leo.worldcraft.edit;
 
-import dev.leo.blockwright.region.Box;
+import dev.leo.worldcraft.region.Box;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

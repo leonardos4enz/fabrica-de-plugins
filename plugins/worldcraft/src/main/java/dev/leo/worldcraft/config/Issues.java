@@ -1,4 +1,4 @@
-package dev.leo.blockwright.config;
+package dev.leo.worldcraft.config;
 
 import java.util.ArrayList;
 import java.util.Collection;

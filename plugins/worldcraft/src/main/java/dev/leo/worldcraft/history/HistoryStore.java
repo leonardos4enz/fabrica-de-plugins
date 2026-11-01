@@ -1,6 +1,6 @@
-package dev.leo.blockwright.history;
+package dev.leo.worldcraft.history;
 
-import dev.leo.blockwright.region.Box;
+import dev.leo.worldcraft.region.Box;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -63,7 +63,7 @@ public final class HistoryStore {
     }
 
     public Path journal(UUID owner, int id) {
-        return root.resolve(owner.toString()).resolve(id + ".bwj");
+        return root.resolve(owner.toString()).resolve(id + ".wcj");
     }
 
     /** Lee todos los índices; devuelve cuántas operaciones quedaron a mitad por un apagado (pasan a CANCELLED). */
@@ -220,10 +220,20 @@ public final class HistoryStore {
     private void save(UUID owner) {
         Player p = players.get(owner);
         if (p == null) return;
+        // F-04: el YAML se arma en el hilo de E/S (en frío costaba milisegundos dentro del tick que termina una obra);
+        // aquí solo se copia lo que hay (las entradas son inmutables).
+        String name = p.name;
+        int next = p.next;
+        List<Entry> entries = List.copyOf(p.entries.values());
+        Path file = root.resolve(owner.toString()).resolve("index.yml");
+        io.execute(() -> write(file, render(name, next, entries)));
+    }
+
+    static String render(String name, int next, List<Entry> entries) {
         YamlConfiguration y = new YamlConfiguration();
-        y.set("name", p.name);
-        y.set("next", p.next);
-        for (Entry e : p.entries.values()) {
+        y.set("name", name);
+        y.set("next", next);
+        for (Entry e : entries) {
             String k = "operations." + e.id();
             y.set(k + ".kind", e.kind());
             y.set(k + ".detail", e.detail());
@@ -236,9 +246,7 @@ public final class HistoryStore {
             y.set(k + ".changed", e.changed());
             y.set(k + ".state", e.state().name());
         }
-        String text = y.saveToString();
-        Path file = root.resolve(owner.toString()).resolve("index.yml");
-        io.execute(() -> write(file, text));
+        return y.saveToString();
     }
 
     static void write(Path file, String text) {

@@ -1,7 +1,7 @@
-package dev.leo.blockwright.pattern;
+package dev.leo.worldcraft.pattern;
 
-import dev.leo.blockwright.TestBlocks;
-import dev.leo.blockwright.block.StateTable;
+import dev.leo.worldcraft.TestBlocks;
+import dev.leo.worldcraft.block.StateTable;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -122,9 +122,9 @@ class ParserTest {
     /** F-02: en el servidor real «stnoe» sugería «snow» (empate a distancia 2); dos letras cambiadas de lugar cuentan 1. */
     @Test
     void H2_CA3_F02_letras_cambiadas_de_lugar_sugieren_la_palabra_correcta() {
-        assertEquals("minecraft:stone", dev.leo.blockwright.config.Issues.closest("minecraft:stnoe",
+        assertEquals("minecraft:stone", dev.leo.worldcraft.config.Issues.closest("minecraft:stnoe",
                 List.of("minecraft:snow", "minecraft:stone")));
-        assertEquals("andesite", dev.leo.blockwright.config.Issues.closest("andesiet", List.of("andesite", "andesitf")));
+        assertEquals("andesite", dev.leo.worldcraft.config.Issues.closest("andesiet", List.of("andesite", "andesitf")));
     }
 
     @Test

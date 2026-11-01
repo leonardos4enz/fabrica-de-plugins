@@ -1,4 +1,4 @@
-package dev.leo.blockwright.region;
+package dev.leo.worldcraft.region;
 
 import org.junit.jupiter.api.Test;
 

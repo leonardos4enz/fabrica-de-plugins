@@ -1,7 +1,7 @@
-package dev.leo.blockwright.edit;
+package dev.leo.worldcraft.edit;
 
-import dev.leo.blockwright.region.Box;
-import dev.leo.blockwright.region.ChunkOrder;
+import dev.leo.worldcraft.region.Box;
+import dev.leo.worldcraft.region.ChunkOrder;
 
 import java.util.UUID;
 import java.util.function.LongSupplier;
@@ -95,7 +95,7 @@ public final class EditJob implements Scheduler.Job {
         return nanos;
     }
 
-    /** El tick más largo de este trabajo (H5 CA1: lo muestra /bwr jobs para la última obra). */
+    /** El tick más largo de este trabajo (H5 CA1: lo muestra /wc jobs para la última obra). */
     public long maxStepNanos() {
         return maxStepNanos;
     }

@@ -1,6 +1,6 @@
-package dev.leo.blockwright.edit;
+package dev.leo.worldcraft.edit;
 
-import dev.leo.blockwright.region.Box;
+import dev.leo.worldcraft.region.Box;
 
 import java.util.HashMap;
 import java.util.Map;

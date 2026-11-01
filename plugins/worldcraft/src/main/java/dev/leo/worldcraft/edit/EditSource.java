@@ -1,6 +1,6 @@
-package dev.leo.blockwright.edit;
+package dev.leo.worldcraft.edit;
 
-import dev.leo.blockwright.region.Box;
+import dev.leo.worldcraft.region.Box;
 
 /**
  * Qué cambia una operación, posición por posición (plan 025 §1.4). Las posiciones salen en orden de chunks; para cada

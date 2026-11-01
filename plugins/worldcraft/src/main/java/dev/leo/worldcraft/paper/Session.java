@@ -1,7 +1,7 @@
-package dev.leo.blockwright.paper;
+package dev.leo.worldcraft.paper;
 
-import dev.leo.blockwright.edit.Clipboard;
-import dev.leo.blockwright.region.Box;
+import dev.leo.worldcraft.edit.Clipboard;
+import dev.leo.worldcraft.region.Box;
 
 /** Lo de cada jugador (o la consola) mientras está conectado: selección, portapapeles y la operación por confirmar. */
 public final class Session {

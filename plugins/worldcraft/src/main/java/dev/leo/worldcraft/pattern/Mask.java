@@ -1,6 +1,6 @@
-package dev.leo.blockwright.pattern;
+package dev.leo.worldcraft.pattern;
 
-import dev.leo.blockwright.block.StateTable;
+import dev.leo.worldcraft.block.StateTable;
 
 import java.util.List;
 import java.util.Map;

@@ -1,4 +1,4 @@
-package dev.leo.blockwright.config;
+package dev.leo.worldcraft.config;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;

@@ -1,7 +1,7 @@
-package dev.leo.blockwright.pattern;
+package dev.leo.worldcraft.pattern;
 
-import dev.leo.blockwright.block.BlockRegistry;
-import dev.leo.blockwright.config.Issues;
+import dev.leo.worldcraft.block.BlockRegistry;
+import dev.leo.worldcraft.config.Issues;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -110,7 +110,7 @@ public final class Parser {
             props = lower.substring(b);
             lower = lower.substring(0, b).trim();
         }
-        Map<String, String> wanted = dev.leo.blockwright.block.StateTable.parseProperties("x" + props);
+        Map<String, String> wanted = dev.leo.worldcraft.block.StateTable.parseProperties("x" + props);
         if (lower.startsWith("#")) {
             String tag = lower.substring(1);
             Set<String> ids = registry.tag(tag);

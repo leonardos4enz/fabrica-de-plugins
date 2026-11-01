@@ -1,7 +1,7 @@
-# Plan 025 — Diseño técnico de Blockwright
+# Plan 025 — Diseño técnico de Worldcraft
 
 ## 1. Arquitectura
-Paquete `dev.leo.blockwright`. El núcleo (región, patrones, motor, historial, configuración) es Java puro y se prueba
+Paquete `dev.leo.worldcraft`. El núcleo (región, patrones, motor, historial, configuración) es Java puro y se prueba
 con un mundo en memoria; solo `paper/`, `command/` y la clase principal tocan la API de Paper. **Sin NMS** (constitución
 VI.2): la investigación (§1.9) muestra que los fallos de luz, cofres y bloques fantasma de FAWE vienen de escribir el
 mundo por dentro del servidor.
@@ -15,7 +15,7 @@ mundo por dentro del servidor.
 | `history` | `Journal`, `JournalSink`, `HistoryStore` | Diario por obra e índice por jugador en disco |
 | `config` | `Settings`, `Limits`, `LoadedConfig`, `Issues`, `Messages` | Lectura y validación de `config.yml`, `presets.yml` y `messages.yml` |
 | `paper` | `PaperBlocks`, `PaperWorld`, `PreviewSink`, `Edits`, `Session`, `Wand`, `SelfTest` | El registro real, el mundo con chunks asíncronos, la vista previa, la varita y el contorno, el servicio que une todo |
-| `command` | `BlockwrightCommand`, `Args` | `/bwr`, ayuda con ejemplos y autocompletado |
+| `command` | `WorldcraftCommand`, `Args` | `/wc`, ayuda con ejemplos y autocompletado |
 
 ### 1.1 Recorrido por chunks
 `ChunkOrder` recorre la forma columna de chunks por columna (x, z) y dentro de cada una por (x, z, y). Así cada chunk
@@ -58,7 +58,7 @@ SplitMix64 de (x, y, z, semilla): determinista (H2 CA5). Los errores comparan co
 ### 1.5 Una obra de principio a fin (`Edits`)
 1. El comando arma el `Op` (tipo, detalle, mundo, caja, volumen, fábrica de fuentes, estados que pondrá).
 2. Límites (H7): mundo, `max_blocks`, bloques prohibidos, `max_jobs`. Rechazo antes de tocar nada.
-3. `--preview` → trabajo `PREVIEW` con `PreviewSink` (`sendMultiBlockChange`) y espera; más de `confirm.above_blocks` →
+3. `--preview` → trabajo `PREVIEW` con `PreviewSink` (`sendMultiBlockChange`) y espera; con `confirm.enabled` y más de `confirm.above_blocks` →
    espera. `confirm` devuelve los bloques reales al jugador y corre la obra con una fuente nueva de la misma semilla.
 4. `HistoryStore.begin` (descarta lo rehacible), `JournalSink` y `EditJob` al planificador; al terminar, `finish` con lo
    cambiado, mensaje y estimación aprendida (bloques por ms).
@@ -69,12 +69,12 @@ SplitMix64 de (x, y, z, semilla): determinista (H2 CA5). Los errores comparan co
 devuelve con `update(true, false)`. Tope de 2 MB por bloque en el diario.
 
 ## 2. Contrato de configuración
-`plugins/Blockwright/config.yml` (comentado en inglés, ver `src/main/resources/config.yml`):
+`plugins/Worldcraft/config.yml` (comentado en inglés, ver `src/main/resources/config.yml`):
 ```yaml
 wand: { item: minecraft:golden_axe }
 selection: { show: true, show_every_ticks: 10, max_particles: 400 }
 performance: { max_ms_per_tick: 8, max_blocks_per_tick: 200000 }
-confirm: { above_blocks: 20000, expire_seconds: 120 }
+confirm: { enabled: true, above_blocks: 50000, expire_seconds: 120 }
 preview: { max_blocks: 50000 }
 history: { max_per_player: 30, keep_days: 7 }
 limits:
@@ -97,16 +97,16 @@ Un preset inválido o que nombra a otro preset se informa y se omite.
 `messages.yml`: textos con MiniMessage; `help.<subcomando>.usage|text|example` para la ayuda. Los valores se insertan
 escapados (II.2).
 
-Comando `/blockwright` (alias `/bwr`):
+Comando `/worldcraft` (alias `/wc`):
 | Subcomando | Permiso |
 |---|---|
-| `help`, `wand`, `pos1`, `pos2`, `sel`, `expand`, `contract`, `shift`, `set`, `replace`, `walls`, `faces`, `copy`, `cut`, `paste`, `rotate`, `flip`, `undo`, `redo`, `history`, `confirm`, `cancel`, `jobs`, `limits` | `blockwright.use` |
-| `history <otro>`, `undo/redo --player <otro>`, `jobs` de todos y `jobs cancel <id>` | `blockwright.moderate` |
-| `reload`, `validate`, `selftest` | `blockwright.admin` |
-| Grupo de límites | `blockwright.limit.<grupo>` |
+| `help`, `wand`, `pos1`, `pos2`, `sel`, `expand`, `contract`, `shift`, `set`, `replace`, `walls`, `faces`, `copy`, `cut`, `paste`, `rotate`, `flip`, `undo`, `redo`, `history`, `confirm`, `cancel`, `jobs`, `limits` | `worldcraft.use` |
+| `history <otro>`, `undo/redo --player <otro>`, `jobs` de todos y `jobs cancel <id>` | `worldcraft.moderate` |
+| `reload`, `validate`, `selftest` | `worldcraft.admin` |
+| Grupo de límites | `worldcraft.limit.<grupo>` |
 
 Datos: `history/<uuid>/index.yml` (nombre, siguiente número y por obra: tipo, detalle, mundo, caja, hora, bloques,
-estado `RUNNING|DONE|CANCELLED|UNDONE`) y `history/<uuid>/<n>.bwj` (diario binario de solo agregar: cabecera `BWJ1`,
+estado `RUNNING|DONE|CANCELLED|UNDONE`) y `history/<uuid>/<n>.wcj` (diario binario de solo agregar: cabecera `WCJ1`,
 entradas de diccionario, registros `(x, y, z, antes, después)` y datos de bloque de antes y después).
 
 ## 3. Hilos y rendimiento
@@ -132,7 +132,7 @@ entradas de diccionario, registros `(x, y, z, antes, después)` y datos de bloqu
 ## 5. Amenazas (STRIDE)
 | Amenaza | Escenario | Mitigación |
 |---|---|---|
-| Suplantación | Un jugador usa un hacha de oro común como varita, o deshace a otro diciendo su nombre | Solo el ítem con la marca del plugin (PDC) es varita; `--player` exige `blockwright.moderate` |
+| Suplantación | Un jugador usa un hacha de oro común como varita, o deshace a otro diciendo su nombre | Solo el ítem con la marca del plugin (PDC) es varita; `--player` exige `worldcraft.moderate` |
 | Manipulación | Un jugador pone bloques prohibidos (bloques de comandos, roca madre, portales) | `blocked_blocks` por grupo, revisado en patrones y en lo que se pega |
 | Manipulación | Deshacer borra lo que otro construyó después | Deshacer seguro: solo se devuelve lo que sigue como lo dejó la obra |
 | Manipulación | Un nombre de jugador o un texto en un mensaje se lee como MiniMessage | Todo valor se escapa (II.2); las rutas del historial son UUID, nunca nombres |

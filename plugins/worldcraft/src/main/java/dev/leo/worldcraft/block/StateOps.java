@@ -1,4 +1,4 @@
-package dev.leo.blockwright.block;
+package dev.leo.worldcraft.block;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

@@ -1,14 +1,14 @@
-package dev.leo.blockwright.edit;
+package dev.leo.worldcraft.edit;
 
-import dev.leo.blockwright.TestBlocks;
-import dev.leo.blockwright.TestBlocks.MemoryWorld;
-import dev.leo.blockwright.block.StateTable;
-import dev.leo.blockwright.history.Journal;
-import dev.leo.blockwright.history.JournalSink;
-import dev.leo.blockwright.pattern.ParseException;
-import dev.leo.blockwright.pattern.Parser;
-import dev.leo.blockwright.region.Box;
-import dev.leo.blockwright.region.Shape;
+import dev.leo.worldcraft.TestBlocks;
+import dev.leo.worldcraft.TestBlocks.MemoryWorld;
+import dev.leo.worldcraft.block.StateTable;
+import dev.leo.worldcraft.history.Journal;
+import dev.leo.worldcraft.history.JournalSink;
+import dev.leo.worldcraft.pattern.ParseException;
+import dev.leo.worldcraft.pattern.Parser;
+import dev.leo.worldcraft.region.Box;
+import dev.leo.worldcraft.region.Shape;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -74,7 +74,7 @@ class EditTest {
     @Test
     void H3_CA1_set_llena_la_caja_y_cuenta_lo_cambiado() throws Exception {
         Box box = Box.of(-3, -2, 5, 20, 3, 40); // cruza chunks y el suelo (y < 0 es piedra)
-        EditJob j = apply(region(box, Shape.FILL, null, "stone", 1), dir.resolve("a.bwj"));
+        EditJob j = apply(region(box, Shape.FILL, null, "stone", 1), dir.resolve("a.wcj"));
         assertEquals(box.volume(), j.visited());
         assertEquals(24L * 4 * 36, j.changed(), "lo que ya era piedra no cuenta");
         for (String s : picture(box).values()) assertEquals("minecraft:stone", s);
@@ -86,7 +86,7 @@ class EditTest {
         world.put(0, 5, 0, "minecraft:dirt");
         world.put(1, 5, 0, "minecraft:grass_block");
         world.put(2, 5, 0, "minecraft:sand");
-        apply(region(Box.of(0, 5, 0, 2, 5, 0), Shape.FILL, "dirt, grass_block", "glass", 1), dir.resolve("r.bwj"));
+        apply(region(Box.of(0, 5, 0, 2, 5, 0), Shape.FILL, "dirt, grass_block", "glass", 1), dir.resolve("r.wcj"));
         assertEquals("minecraft:glass", world.at(0, 5, 0));
         assertEquals("minecraft:glass", world.at(1, 5, 0));
         assertEquals("minecraft:sand", world.at(2, 5, 0));
@@ -95,12 +95,12 @@ class EditTest {
     @Test
     void H3_CA1_walls_y_faces_dejan_el_interior() throws Exception {
         Box box = Box.of(0, 10, 0, 9, 14, 6);
-        EditJob w = apply(region(box, Shape.WALLS, null, "stone", 1), dir.resolve("w.bwj"));
+        EditJob w = apply(region(box, Shape.WALLS, null, "stone", 1), dir.resolve("w.wcj"));
         assertEquals(box.count(Shape.WALLS), w.changed());
         assertEquals("minecraft:air", world.at(4, 12, 3), "el interior de walls queda vacío");
         assertEquals("minecraft:air", world.at(4, 14, 3), "walls no pone techo");
         assertEquals("minecraft:stone", world.at(0, 12, 3));
-        EditJob f = apply(region(box, Shape.FACES, null, "glass", 1), dir.resolve("f.bwj"));
+        EditJob f = apply(region(box, Shape.FACES, null, "glass", 1), dir.resolve("f.wcj"));
         assertEquals(box.count(Shape.FACES), f.visited());
         assertEquals("minecraft:glass", world.at(4, 14, 3), "faces pone techo");
         assertEquals("minecraft:glass", world.at(4, 10, 3), "y piso");
@@ -110,9 +110,9 @@ class EditTest {
     @Test
     void H5_CA3_espera_un_chunk_que_no_esta_cargado_sin_saltarse_bloques() throws Exception {
         Box box = Box.of(0, 1, 0, 40, 1, 3);
-        world.slow.add(dev.leo.blockwright.region.ChunkOrder.pack(1, 0));
-        world.slow.add(dev.leo.blockwright.region.ChunkOrder.pack(2, 0));
-        EditJob j = apply(region(box, Shape.FILL, null, "stone", 1), dir.resolve("c.bwj"));
+        world.slow.add(dev.leo.worldcraft.region.ChunkOrder.pack(1, 0));
+        world.slow.add(dev.leo.worldcraft.region.ChunkOrder.pack(2, 0));
+        EditJob j = apply(region(box, Shape.FILL, null, "stone", 1), dir.resolve("c.wcj"));
         assertEquals(box.volume(), j.changed());
         assertTrue(world.releases >= 3);
     }
@@ -156,7 +156,7 @@ class EditTest {
         }, null, Long.MAX_VALUE, System::nanoTime);
         run(p);
         assertEquals(0, world.sets, "la vista previa no toca el mundo");
-        apply(region(box, Shape.FILL, null, "40% stone, 35% andesite, 25% glass", 77), dir.resolve("p.bwj"));
+        apply(region(box, Shape.FILL, null, "40% stone, 35% andesite, 25% glass", 77), dir.resolve("p.wcj"));
         assertEquals(box.volume(), preview.size());
         for (Map.Entry<String, Integer> e : preview.entrySet()) {
             String[] c = e.getKey().split(",");
@@ -185,7 +185,7 @@ class EditTest {
         world.put(5, 4, 5, "minecraft:gold_block");
         Box box = Box.of(0, 3, 0, 20, 6, 20);
         Map<String, String> before = picture(box);
-        Path jn = dir.resolve("u.bwj");
+        Path jn = dir.resolve("u.wcj");
         apply(region(box, Shape.FILL, null, "70% stone, 30% dirt", 5), jn);
         Map<String, String> after = picture(box);
         assertNotEquals(before, after);
@@ -199,7 +199,7 @@ class EditTest {
     @Test
     void H6_CA3_deshacer_no_pisa_lo_que_otro_cambio_despues() throws Exception {
         Box box = Box.of(0, 3, 0, 9, 3, 9);
-        Path jn = dir.resolve("s.bwj");
+        Path jn = dir.resolve("s.wcj");
         apply(region(box, Shape.FILL, null, "stone", 1), jn);
         world.put(4, 3, 4, "minecraft:gold_block"); // otro jugador construye encima
         world.put(5, 3, 5, "minecraft:dirt");
@@ -216,7 +216,7 @@ class EditTest {
         byte[] items = {7, 7, 7};
         world.restoreTile(2, 2, 2, items);
         Box box = Box.of(0, 2, 0, 4, 2, 4);
-        Path jn = dir.resolve("t.bwj");
+        Path jn = dir.resolve("t.wcj");
         apply(region(box, Shape.FILL, null, "stone", 1), jn);
         assertNull(world.tile(2, 2, 2));
         undo(jn, false, box);
@@ -227,7 +227,7 @@ class EditTest {
     @Test
     void H5_CA4_cancelar_deja_lo_hecho_deshacible() throws Exception {
         Box box = Box.of(0, 3, 0, 63, 3, 63);
-        Path jn = dir.resolve("x.bwj");
+        Path jn = dir.resolve("x.wcj");
         JournalSink sink = new JournalSink(jn, table, Runnable::run, e -> fail(e));
         EditJob j = new EditJob(1, ANA, "set", world, region(box, Shape.FILL, null, "stone", 1), EditJob.Mode.APPLY, sink,
                 null, Long.MAX_VALUE, System::nanoTime);
@@ -250,13 +250,13 @@ class EditTest {
         Clipboard clip = copy(box, 10, 4, 10);
         // Donde se pega hay tierra: el aire copiado no la borra.
         world.put(51, 6, 50, "minecraft:dirt");
-        apply(paste(clip, 50, 4, 50, false), dir.resolve("p1.bwj"));
+        apply(paste(clip, 50, 4, 50, false), dir.resolve("p1.wcj"));
         assertEquals("minecraft:stone", world.at(50, 5, 50));
         assertEquals("minecraft:glass", world.at(51, 5, 50));
         assertEquals("minecraft:chest", world.at(50, 6, 50));
         assertArrayEquals(new byte[]{1, 2}, world.tile(50, 6, 50));
         assertEquals("minecraft:dirt", world.at(51, 6, 50));
-        apply(paste(clip, 50, 4, 50, true), dir.resolve("p2.bwj"));
+        apply(paste(clip, 50, 4, 50, true), dir.resolve("p2.wcj"));
         assertEquals("minecraft:air", world.at(51, 6, 50), "con --air sí");
     }
 
@@ -269,13 +269,13 @@ class EditTest {
         Clipboard clip = copy(Box.of(1, 10, 0, 3, 10, 0), 0, 10, 0);
         clip.transform(clip.transform().rotate(90)); // el este pasa al sur
         assertEquals("1×1×3", clip.size());
-        apply(paste(clip, 100, 10, 100, false), dir.resolve("g.bwj"));
+        apply(paste(clip, 100, 10, 100, false), dir.resolve("g.wcj"));
         assertEquals("minecraft:stone", world.at(100, 10, 101));
         assertEquals("minecraft:glass", world.at(100, 10, 102));
         assertEquals("minecraft:oak_stairs[facing=east,half=bottom,shape=straight,waterlogged=false]", world.at(100, 10, 103));
 
         clip.transform(clip.transform().flip('y'));
-        apply(paste(clip, 200, 50, 200, false), dir.resolve("g2.bwj"));
+        apply(paste(clip, 200, 50, 200, false), dir.resolve("g2.wcj"));
         assertEquals("minecraft:oak_stairs[facing=east,half=top,shape=straight,waterlogged=false]", world.at(200, 50, 203),
                 "voltear de arriba abajo pone la escalera al revés");
         // Los cuatro giros vuelven al principio.
@@ -290,13 +290,13 @@ class EditTest {
         world.put(0, 3, 0, "minecraft:gold_block");
         Box box = Box.of(0, 3, 0, 1, 3, 1);
         Clipboard clip = new Clipboard(box, 0, 3, 0);
-        JournalSink sink = new JournalSink(dir.resolve("cut.bwj"), table, Runnable::run, e -> fail(e));
+        JournalSink sink = new JournalSink(dir.resolve("cut.wcj"), table, Runnable::run, e -> fail(e));
         RegionSource air = new RegionSource(box, Shape.FILL, null, parser.pattern("air").compile(table), 1);
         EditJob j = new EditJob(1, ANA, "cut", world, air, EditJob.Mode.APPLY, sink,
                 (x, y, z, s, tile) -> clip.put(box, x, y, z, s, tile), Long.MAX_VALUE, System::nanoTime);
         run(j);
         assertEquals("minecraft:air", world.at(0, 3, 0));
-        apply(paste(clip, 10, 3, 10, false), dir.resolve("cut2.bwj"));
+        apply(paste(clip, 10, 3, 10, false), dir.resolve("cut2.wcj"));
         assertEquals("minecraft:gold_block", world.at(10, 3, 10));
     }
 

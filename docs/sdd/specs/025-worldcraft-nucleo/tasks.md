@@ -26,11 +26,11 @@
 - [x] T9 `paper`: `PaperBlocks`, `PaperWorld` (chunks asíncronos con ticket, contenedores y carteles), `PreviewSink`,
       `Edits` (límites, confirmación, vista previa, historial, barra de acción, vencimiento), `Wand` (varita marcada y
       contorno), `SelfTest`.
-- [x] T10 `command`: `/bwr` con 27 subcomandos, ayuda con ejemplos, autocompletado de bloques, etiquetas y presets.
+- [x] T10 `command`: `/wc` con 27 subcomandos, ayuda con ejemplos, autocompletado de bloques, etiquetas y presets.
 - [x] T11 Recursos en inglés: `config.yml`, `presets.yml`, `messages.yml`, `plugin.yml` (permisos `default: op`).
 
 ## Cierre
-- [x] T12 Compuerta 2 en Paper 1.21.4 (servidor propio `plugins/blockwright/run/`): `validate`, `selftest`, obra de
+- [x] T12 Compuerta 2 en Paper 1.21.4 (servidor propio `plugins/worldcraft/run/`): `validate`, `selftest`, obra de
       100 000 bloques, `jobs`, `history`, `limits`, `reload` ×2, reinicio con historial y `undo` tras el reinicio.
-- [x] T13 Suite en el juego `tests-e2e/blockwright/suite.mjs` (3a): 8 escenarios, 8/8 dos veces en 1.21.4 (F-03).
+- [x] T13 Suite en el juego `tests-e2e/worldcraft/suite.mjs` (3a): 8 escenarios, 8/8 dos veces en 1.21.4 (F-03).
 - [x] T14 `verify.md`, README del plugin y raíz, roadmap e índice, CLAUDE.md (lecciones), commit y push.

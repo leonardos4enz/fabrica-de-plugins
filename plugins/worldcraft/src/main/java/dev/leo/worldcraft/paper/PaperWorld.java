@@ -1,7 +1,7 @@
-package dev.leo.blockwright.paper;
+package dev.leo.worldcraft.paper;
 
-import dev.leo.blockwright.edit.EditWorld;
-import dev.leo.blockwright.region.ChunkOrder;
+import dev.leo.worldcraft.edit.EditWorld;
+import dev.leo.worldcraft.region.ChunkOrder;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import org.bukkit.World;

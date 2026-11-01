@@ -1,6 +1,6 @@
-package dev.leo.blockwright.history;
+package dev.leo.worldcraft.history;
 
-import dev.leo.blockwright.region.Box;
+import dev.leo.worldcraft.region.Box;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -20,7 +20,7 @@ class HistoryTest {
 
     @Test
     void H6_CA2_el_diario_va_y_vuelve_con_los_datos_de_cofres() throws Exception {
-        Path f = dir.resolve("1.bwj");
+        Path f = dir.resolve("1.wcj");
         try (Journal j = Journal.create(f)) {
             j.append(List.of(new Journal.Change(1, -60, 3, "minecraft:chest[facing=north,type=single,waterlogged=false]",
                     "minecraft:stone", new byte[]{1, 2, 3}, null)));
@@ -37,7 +37,7 @@ class HistoryTest {
 
     @Test
     void H6_CA2_una_cola_cortada_se_ignora() throws Exception {
-        Path f = dir.resolve("2.bwj");
+        Path f = dir.resolve("2.wcj");
         try (Journal j = Journal.create(f)) {
             for (int i = 0; i < 10; i++) j.append(List.of(new Journal.Change(i, 0, 0, "minecraft:air", "minecraft:stone", null, null)));
         }
@@ -45,8 +45,8 @@ class HistoryTest {
             raf.setLength(raf.length() - 7); // el último registro, a medias
         }
         assertEquals(9, Journal.read(f).size);
-        Files.write(dir.resolve("x.bwj"), new byte[]{1, 2, 3, 4, 5});
-        assertThrows(java.io.IOException.class, () -> Journal.read(dir.resolve("x.bwj")));
+        Files.write(dir.resolve("x.wcj"), new byte[]{1, 2, 3, 4, 5});
+        assertThrows(java.io.IOException.class, () -> Journal.read(dir.resolve("x.wcj")));
     }
 
     @Test

@@ -1,8 +1,8 @@
-package dev.leo.blockwright.config;
+package dev.leo.worldcraft.config;
 
-import dev.leo.blockwright.block.BlockRegistry;
-import dev.leo.blockwright.pattern.ParseException;
-import dev.leo.blockwright.pattern.Parser;
+import dev.leo.worldcraft.block.BlockRegistry;
+import dev.leo.worldcraft.pattern.ParseException;
+import dev.leo.worldcraft.pattern.Parser;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;

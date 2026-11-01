@@ -1,4 +1,4 @@
-package dev.leo.blockwright.block;
+package dev.leo.worldcraft.block;
 
 import java.util.ArrayList;
 import java.util.HashMap;

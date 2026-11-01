@@ -1,4 +1,4 @@
-package dev.leo.blockwright.history;
+package dev.leo.worldcraft.history;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -23,7 +23,7 @@ import java.util.Map;
  * ignora al leer: lo anterior vale.
  */
 public final class Journal implements Closeable {
-    private static final int MAGIC = 0x42574A31; // "BWJ1"
+    private static final int MAGIC = 0x57434A31; // "WCJ1"
     private static final byte DICT = 1, BLOCK = 2, TILE_BEFORE = 3, TILE_AFTER = 4;
     /** Tope de los datos de un bloque: un cofre lleno de libros escritos cabe de sobra (constitución III.4). */
     public static final int MAX_TILE = 2 * 1024 * 1024;
@@ -116,7 +116,7 @@ public final class Journal implements Closeable {
         if (!Files.exists(file)) return d;
         Map<Integer, Integer> dictIndex = new HashMap<>();
         try (DataInputStream in = new DataInputStream(new BufferedInputStream(Files.newInputStream(file), 1 << 16))) {
-            if (in.readInt() != MAGIC) throw new IOException("not a Blockwright history file: " + file.getFileName());
+            if (in.readInt() != MAGIC) throw new IOException("not a Worldcraft history file: " + file.getFileName());
             while (true) {
                 int type = in.read();
                 if (type < 0) break;

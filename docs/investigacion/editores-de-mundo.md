@@ -256,6 +256,9 @@ lista con porcentajes, `not`), 7 (la puerta única, sin integraciones), 8, 12 y 
 
 ## 5. Ideas de nombre (en inglés)
 
+> **Decisión del dueño (2026-11-01): Worldcraft, comando `/wc`.** Lo de abajo es la búsqueda original, con «Blockwright»
+> como nombre provisional de la IA.
+
 Comprobación: búsqueda en la API de Modrinth (`/v2/search?query=…`), en la API de Hangar y en el buscador web. SpigotMC
 y CurseForge no se pudieron consultar directamente (SpigotMC da 403); se buscó con el buscador web.
 

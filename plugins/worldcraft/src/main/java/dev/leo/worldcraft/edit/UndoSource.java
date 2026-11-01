@@ -1,8 +1,8 @@
-package dev.leo.blockwright.edit;
+package dev.leo.worldcraft.edit;
 
-import dev.leo.blockwright.block.StateTable;
-import dev.leo.blockwright.history.Journal;
-import dev.leo.blockwright.region.Box;
+import dev.leo.worldcraft.block.StateTable;
+import dev.leo.worldcraft.history.Journal;
+import dev.leo.worldcraft.region.Box;
 
 import java.util.concurrent.CompletableFuture;
 

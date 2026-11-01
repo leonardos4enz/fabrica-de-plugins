@@ -1,18 +1,18 @@
-package dev.leo.blockwright.paper;
+package dev.leo.worldcraft.paper;
 
-import dev.leo.blockwright.Blockwright;
-import dev.leo.blockwright.config.Limits;
-import dev.leo.blockwright.config.Settings;
-import dev.leo.blockwright.edit.Clipboard;
-import dev.leo.blockwright.edit.EditJob;
-import dev.leo.blockwright.edit.EditSource;
-import dev.leo.blockwright.edit.Scheduler;
-import dev.leo.blockwright.edit.UndoSource;
-import dev.leo.blockwright.history.HistoryStore;
-import dev.leo.blockwright.history.Journal;
-import dev.leo.blockwright.history.JournalSink;
-import dev.leo.blockwright.region.Box;
-import dev.leo.blockwright.region.ChunkOrder;
+import dev.leo.worldcraft.Worldcraft;
+import dev.leo.worldcraft.config.Limits;
+import dev.leo.worldcraft.config.Settings;
+import dev.leo.worldcraft.edit.Clipboard;
+import dev.leo.worldcraft.edit.EditJob;
+import dev.leo.worldcraft.edit.EditSource;
+import dev.leo.worldcraft.edit.Scheduler;
+import dev.leo.worldcraft.edit.UndoSource;
+import dev.leo.worldcraft.history.HistoryStore;
+import dev.leo.worldcraft.history.Journal;
+import dev.leo.worldcraft.history.JournalSink;
+import dev.leo.worldcraft.region.Box;
+import dev.leo.worldcraft.region.ChunkOrder;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
@@ -52,7 +52,7 @@ public final class Edits {
                      Collection<Integer> placed, Supplier<EditJob.Capture> capture) {
     }
 
-    /** Una operación esperando /bwr confirm, quizá con su vista previa. */
+    /** Una operación esperando /wc confirm, quizá con su vista previa. */
     public static final class Pending {
         final Op op;
         final String ownerName;
@@ -67,7 +67,7 @@ public final class Edits {
         }
     }
 
-    private final Blockwright plugin;
+    private final Worldcraft plugin;
     private final PaperBlocks blocks;
     private final HistoryStore history;
     private final ExecutorService io;
@@ -79,7 +79,7 @@ public final class Edits {
     /** Bloques por milisegundo de hilo principal, medido en las operaciones terminadas (para estimar). */
     private double blocksPerMs = 300;
 
-    public Edits(Blockwright plugin, PaperBlocks blocks, HistoryStore history, ExecutorService io) {
+    public Edits(Worldcraft plugin, PaperBlocks blocks, HistoryStore history, ExecutorService io) {
         this.plugin = plugin;
         this.blocks = blocks;
         this.history = history;
@@ -181,7 +181,8 @@ public final class Edits {
             who.sendMessage(msg.get("preview-start", "kind", op.kind(), "blocks", fmt(op.volume())));
             return;
         }
-        if (op.volume() > settings().confirmAbove()) {
+        // El dueño puede apagar la confirmación (confirm.enabled); --preview sigue esperando su confirm.
+        if (settings().confirmEnabled() && op.volume() > settings().confirmAbove()) {
             ses.pending = new Pending(op, name, expires);
             who.sendMessage(msg.get("confirm-needed", "kind", op.kind(), "blocks", fmt(op.volume()),
                     "time", seconds(estimateSeconds(op.volume())), "seconds", String.valueOf(settings().confirmSeconds())));
@@ -276,7 +277,7 @@ public final class Edits {
     public void copy(CommandSender who, World world, Box box, int ox, int oy, int oz, Runnable done) {
         UUID owner = owner(who);
         Clipboard clip = new Clipboard(box, ox, oy, oz);
-        EditSource src = new dev.leo.blockwright.edit.RegionSource(box, dev.leo.blockwright.region.Shape.FILL, null, null, 0);
+        EditSource src = new dev.leo.worldcraft.edit.RegionSource(box, dev.leo.worldcraft.region.Shape.FILL, null, null, 0);
         PaperWorld w = world(world, src);
         EditJob job = new EditJob(nextJob++, owner, "copy", w, src, EditJob.Mode.READ, new EditJob.Sink() {
             @Override
@@ -363,6 +364,45 @@ public final class Edits {
 
     // ------------------------------------------------------------------ tarea del tick
 
+    /**
+     * F-04: el primer bloque de la primera obra tras arrancar tardaba ~30 ms (código que corre por primera vez: leer,
+     * convertir y poner un estado, ver si guarda datos), todo dentro de un tick. Al habilitar el plugin se pasa una vez
+     * por esos caminos en el bloque de aparición del mundo principal, poniéndole su mismo estado (no cambia nada).
+     * Devuelve los milisegundos que tardó.
+     */
+    public double warmUp() {
+        long t0 = System.nanoTime();
+        World w = Bukkit.getWorlds().isEmpty() ? null : Bukkit.getWorlds().get(0);
+        if (w == null) return 0;
+        var spawn = w.getSpawnLocation();
+        int x = spawn.getBlockX(), y = Math.max(w.getMinHeight(), Math.min(spawn.getBlockY(), w.getMaxHeight() - 1)), z = spawn.getBlockZ();
+        PaperWorld pw = new PaperWorld(plugin, w, blocks, new long[]{ChunkOrder.pack(x >> 4, z >> 4)});
+        try {
+            if (!pw.ready(x >> 4, z >> 4)) return 0; // el chunk no está cargado: se calienta con la primera obra
+            int s = pw.get(x, y, z);
+            pw.tile(x, y, z);
+            pw.set(x, y, z, s);
+            // Poner el mismo estado no llega al código que cambia un bloque (luz, mapas de altura): en el techo del
+            // mundo, si ahí hay aire, se pone piedra y se vuelve a aire en el mismo tick.
+            int top = w.getMaxHeight() - 1;
+            if (blocks.isAir(pw.get(x, top, z))) {
+                int air = pw.get(x, top, z);
+                pw.set(x, top, z, blocks.id(org.bukkit.Material.STONE.createBlockData()));
+                pw.set(x, top, z, air);
+            }
+            blocks.table().state(s);
+            blocks.data(blocks.air());
+            blocks.hasTile(blocks.air());
+            plugin.messages().text("edit-done", "kind", "set", "changed", "0", "time", "0", "id", "0");
+            net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(plugin.messages().text("progress",
+                    "kind", "set", "percent", "0", "done", "0", "total", "0"));
+            new org.bukkit.configuration.file.YamlConfiguration().saveToString();
+        } finally {
+            pw.close();
+        }
+        return (System.nanoTime() - t0) / 1e6;
+    }
+
     /** Un trabajo armado por fuera (selftest), con el mismo planificador. */
     public void submitJob(EditJob job) {
         submit(job);
@@ -412,7 +452,7 @@ public final class Edits {
         }
     }
 
-    /** La última obra terminada (o cortada): su nombre, bloques, ticks y su tick más largo, para /bwr jobs. */
+    /** La última obra terminada (o cortada): su nombre, bloques, ticks y su tick más largo, para /wc jobs. */
     private EditJob lastFinished;
 
     public EditJob lastFinished() {

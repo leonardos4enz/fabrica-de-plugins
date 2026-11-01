@@ -1,7 +1,7 @@
-package dev.leo.blockwright.edit;
+package dev.leo.worldcraft.edit;
 
 /**
- * El mundo tal como lo ve el motor (plan 025 §1.4): estados como números de la {@link dev.leo.blockwright.block.StateTable}.
+ * El mundo tal como lo ve el motor (plan 025 §1.4): estados como números de la {@link dev.leo.worldcraft.block.StateTable}.
  * En Paper lo implementa {@code PaperWorld}; en las unitarias, un mundo en memoria. Solo se usa en el hilo principal.
  */
 public interface EditWorld {

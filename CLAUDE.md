@@ -161,7 +161,7 @@ con `--release 21`.
   la obra, `build.blocks_per_tick` bajo (12). Un `Promise.race` con `dormir(timeout)` deja node vivo hasta el timeout: usar
   `setTimeout` con `clearTimeout`. **Mirar la skin actual de cada cuenta antes de usarla:** la de Quackity era Mickey Mouse
   (personaje de Disney) y se cambió por DanTDM. El servidor de las escenas es `run-capturas/` (puerto 25597), nunca `run/`.
-- **Spec 025 (Blockwright, editor de mundo):** un trabajo con tope de tiempo por tick mira el reloj **en cada bloque**
+- **Spec 025 (Worldcraft, editor de mundo):** un trabajo con tope de tiempo por tick mira el reloj **en cada bloque**
   (`System.nanoTime` cuesta ~25 ns): mirarlo cada 64 dejó un tick de 23,5 ms con 8 de presupuesto (F-01). El máximo
   «desde el arranque» queda marcado por picos en frío (clases, primer YAML o MiniMessage, recolector: 144 ms una vez);
   para verificar el presupuesto se mide el tick más largo de **una obra** ya en caliente. Las sugerencias usan

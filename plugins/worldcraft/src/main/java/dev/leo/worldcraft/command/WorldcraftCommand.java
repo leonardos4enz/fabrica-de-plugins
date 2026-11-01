@@ -1,25 +1,25 @@
-package dev.leo.blockwright.command;
+package dev.leo.worldcraft.command;
 
-import dev.leo.blockwright.Blockwright;
-import dev.leo.blockwright.config.Issues;
-import dev.leo.blockwright.config.Limits;
-import dev.leo.blockwright.config.Messages;
-import dev.leo.blockwright.edit.Clipboard;
-import dev.leo.blockwright.edit.EditJob;
-import dev.leo.blockwright.edit.PasteSource;
-import dev.leo.blockwright.edit.RegionSource;
-import dev.leo.blockwright.history.HistoryStore;
-import dev.leo.blockwright.paper.Edits;
-import dev.leo.blockwright.paper.PaperBlocks;
-import dev.leo.blockwright.paper.SelfTest;
-import dev.leo.blockwright.paper.Session;
-import dev.leo.blockwright.paper.Wand;
-import dev.leo.blockwright.pattern.Mask;
-import dev.leo.blockwright.pattern.ParseException;
-import dev.leo.blockwright.pattern.Pattern;
-import dev.leo.blockwright.region.Box;
-import dev.leo.blockwright.region.Direction;
-import dev.leo.blockwright.region.Shape;
+import dev.leo.worldcraft.Worldcraft;
+import dev.leo.worldcraft.config.Issues;
+import dev.leo.worldcraft.config.Limits;
+import dev.leo.worldcraft.config.Messages;
+import dev.leo.worldcraft.edit.Clipboard;
+import dev.leo.worldcraft.edit.EditJob;
+import dev.leo.worldcraft.edit.PasteSource;
+import dev.leo.worldcraft.edit.RegionSource;
+import dev.leo.worldcraft.history.HistoryStore;
+import dev.leo.worldcraft.paper.Edits;
+import dev.leo.worldcraft.paper.PaperBlocks;
+import dev.leo.worldcraft.paper.SelfTest;
+import dev.leo.worldcraft.paper.Session;
+import dev.leo.worldcraft.paper.Wand;
+import dev.leo.worldcraft.pattern.Mask;
+import dev.leo.worldcraft.pattern.ParseException;
+import dev.leo.worldcraft.pattern.Pattern;
+import dev.leo.worldcraft.region.Box;
+import dev.leo.worldcraft.region.Direction;
+import dev.leo.worldcraft.region.Shape;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -40,9 +40,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
-/** /blockwright (alias /bwr): los subcomandos, su ayuda con ejemplos (H8 CA5) y el autocompletado por permiso (H8 CA4). */
-public final class BlockwrightCommand implements TabExecutor {
-    public static final String USE = "blockwright.use", MODERATE = "blockwright.moderate", ADMIN = "blockwright.admin";
+/** /worldcraft (alias /wc): los subcomandos, su ayuda con ejemplos (H8 CA5) y el autocompletado por permiso (H8 CA4). */
+public final class WorldcraftCommand implements TabExecutor {
+    public static final String USE = "worldcraft.use", MODERATE = "worldcraft.moderate", ADMIN = "worldcraft.admin";
 
     /** Subcomando → permiso, en el orden de la ayuda. */
     private static final Map<String, String> SUBS = new LinkedHashMap<>();
@@ -58,9 +58,9 @@ public final class BlockwrightCommand implements TabExecutor {
 
     private static final Set<String> EDIT_FLAGS = Set.of("preview");
 
-    private final Blockwright plugin;
+    private final Worldcraft plugin;
 
-    public BlockwrightCommand(Blockwright plugin) {
+    public WorldcraftCommand(Worldcraft plugin) {
         this.plugin = plugin;
     }
 

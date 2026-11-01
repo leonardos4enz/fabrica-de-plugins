@@ -1,4 +1,4 @@
-package dev.leo.blockwright.config;
+package dev.leo.worldcraft.config;
 
 import org.bukkit.configuration.ConfigurationSection;
 
@@ -8,18 +8,18 @@ import java.util.Map;
 
 /** config.yml (plan 025 §2) validado: un valor inválido avisa y se usa el de por defecto (constitución I.3). */
 public record Settings(String wandItem, boolean showSelection, int showEveryTicks, int maxParticles,
-                       int maxMsPerTick, int maxBlocksPerTick, long confirmAbove, int confirmSeconds, int previewMaxBlocks,
+                       int maxMsPerTick, int maxBlocksPerTick, boolean confirmEnabled, long confirmAbove, int confirmSeconds, int previewMaxBlocks,
                        int historyMaxPerPlayer, int historyKeepDays) {
 
     public static final Settings DEFAULTS = new Settings("minecraft:golden_axe", true, 10, 400,
-            8, 200_000, 20_000, 120, 50_000, 30, 7);
+            8, 200_000, true, 50_000, 120, 50_000, 30, 7);
 
     private static final Map<String, List<String>> KEYS = Map.of(
             "", List.of("wand", "selection", "performance", "confirm", "preview", "history", "limits"),
             "wand", List.of("item"),
             "selection", List.of("show", "show_every_ticks", "max_particles"),
             "performance", List.of("max_ms_per_tick", "max_blocks_per_tick"),
-            "confirm", List.of("above_blocks", "expire_seconds"),
+            "confirm", List.of("enabled", "above_blocks", "expire_seconds"),
             "preview", List.of("max_blocks"),
             "history", List.of("max_per_player", "keep_days"));
 
@@ -43,6 +43,7 @@ public record Settings(String wandItem, boolean showSelection, int showEveryTick
                 r.integer("selection.max_particles", d.maxParticles, 12, 5000),
                 r.integer("performance.max_ms_per_tick", d.maxMsPerTick, 1, 40),
                 r.integer("performance.max_blocks_per_tick", d.maxBlocksPerTick, 100, 5_000_000),
+                r.bool("confirm.enabled", d.confirmEnabled),
                 r.integer("confirm.above_blocks", (int) d.confirmAbove, 0, Integer.MAX_VALUE),
                 r.integer("confirm.expire_seconds", d.confirmSeconds, 10, 3600),
                 r.integer("preview.max_blocks", d.previewMaxBlocks, 0, 1_000_000),

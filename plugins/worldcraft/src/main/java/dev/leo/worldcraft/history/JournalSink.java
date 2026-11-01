@@ -1,7 +1,7 @@
-package dev.leo.blockwright.history;
+package dev.leo.worldcraft.history;
 
-import dev.leo.blockwright.block.StateTable;
-import dev.leo.blockwright.edit.EditJob;
+import dev.leo.worldcraft.block.StateTable;
+import dev.leo.worldcraft.edit.EditJob;
 
 import java.io.IOException;
 import java.nio.file.Path;

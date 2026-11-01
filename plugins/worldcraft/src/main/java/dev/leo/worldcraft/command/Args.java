@@ -1,4 +1,4 @@
-package dev.leo.blockwright.command;
+package dev.leo.worldcraft.command;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -48,7 +48,7 @@ public final class Args {
     }
 
     private static String hint(String name, Set<String> known) {
-        String c = dev.leo.blockwright.config.Issues.closest(name, known);
+        String c = dev.leo.worldcraft.config.Issues.closest(name, known);
         return c == null ? "" : " (did you mean '--" + c + "'?)";
     }
 

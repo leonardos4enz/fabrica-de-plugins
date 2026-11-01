@@ -1,4 +1,4 @@
-package dev.leo.blockwright.region;
+package dev.leo.worldcraft.region;
 
 /** Qué parte de la caja toca una operación (H3 CA1). */
 public enum Shape {

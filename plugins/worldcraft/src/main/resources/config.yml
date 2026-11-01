@@ -1,8 +1,8 @@
-# Blockwright - fast, safe world editing for Paper.
-# Every value is checked when the plugin loads: /bwr validate lists the problems, /bwr reload applies changes.
+# Worldcraft - fast, safe world editing for Paper.
+# Every value is checked when the plugin loads: /wc validate lists the problems, /wc reload applies changes.
 
 wand:
-  # The item /bwr wand gives. Only that wand selects: an ordinary item of the same type stays an ordinary item.
+  # The item /wc wand gives. Only that wand selects: an ordinary item of the same type stays an ordinary item.
   item: minecraft:golden_axe
 
 selection:
@@ -17,8 +17,10 @@ performance:
   max_blocks_per_tick: 200000
 
 confirm:
-  # Edits bigger than this wait for /bwr confirm (they say how many blocks and how long first). 0 = always ask.
-  above_blocks: 20000
+  # Edits bigger than above_blocks wait for /wc confirm (they say how many blocks and how long first). 0 = always ask.
+  # enabled: false runs every edit right away (--preview still waits for /wc confirm).
+  enabled: true
+  above_blocks: 50000
   expire_seconds: 120     # an edit waiting for confirmation (and its preview) is dropped after this
 
 preview:
@@ -26,12 +28,12 @@ preview:
   max_blocks: 50000
 
 history:
-  # Undo history is saved to disk (plugins/Blockwright/history/): it survives restarts.
+  # Undo history is saved to disk (plugins/Worldcraft/history/): it survives restarts.
   max_per_player: 30
   keep_days: 7            # 0 = keep until max_per_player pushes them out
 
-# Limits per group. "default" applies to everyone with blockwright.use; give another group with the permission
-# blockwright.limit.<group> (for example blockwright.limit.builder). With several groups, the most generous value wins.
+# Limits per group. "default" applies to everyone with worldcraft.use; give another group with the permission
+# worldcraft.limit.<group> (for example worldcraft.limit.builder). With several groups, the most generous value wins.
 #   max_blocks:     the biggest edit (blocks it may change)
 #   max_jobs:       edits running or waiting at the same time
 #   worlds:         where the group may edit ("*" = everywhere)

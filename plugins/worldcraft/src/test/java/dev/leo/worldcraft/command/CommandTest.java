@@ -1,4 +1,4 @@
-package dev.leo.blockwright.command;
+package dev.leo.worldcraft.command;
 
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
@@ -42,9 +42,9 @@ class CommandTest {
 
     @Test
     void H1_CA5_coordenadas_relativas() {
-        assertEquals(12, BlockwrightCommand.coord("~2", 10));
-        assertEquals(10, BlockwrightCommand.coord("~", 10));
-        assertEquals(-64, BlockwrightCommand.coord("-64", 10));
+        assertEquals(12, WorldcraftCommand.coord("~2", 10));
+        assertEquals(10, WorldcraftCommand.coord("~", 10));
+        assertEquals(-64, WorldcraftCommand.coord("-64", 10));
     }
 
     /** H8 CA4 y CA5: cada subcomando tiene su ayuda con ejemplo, y cada mensaje que nombra el código existe. */
@@ -54,7 +54,7 @@ class CommandTest {
         // «jobs-line:"…"» sin espacio dejó todos los mensajes en «Missing message»).
         YamlConfiguration m = new YamlConfiguration();
         m.loadFromString(Files.readString(Path.of("src/main/resources/messages.yml")));
-        String cmd = Files.readString(Path.of("src/main/java/dev/leo/blockwright/command/BlockwrightCommand.java"));
+        String cmd = Files.readString(Path.of("src/main/java/dev/leo/worldcraft/command/WorldcraftCommand.java"));
         Matcher subs = Pattern.compile("\"(help|wand|pos1|pos2|sel|expand|contract|shift|set|replace|walls|faces|copy|cut|paste|rotate|flip|undo|redo|history|confirm|cancel|jobs|limits|reload|validate|selftest)\"").matcher(cmd);
         Set<String> names = new TreeSet<>();
         while (subs.find()) names.add(subs.group(1));
@@ -63,7 +63,7 @@ class CommandTest {
             for (String k : new String[]{"usage", "text", "example"}) {
                 assertNotNull(m.getString("help." + s + "." + k), "falta help." + s + "." + k);
             }
-            assertTrue(m.getString("help." + s + ".example").startsWith("/bwr " + s), s);
+            assertTrue(m.getString("help." + s + ".example").startsWith("/wc " + s), s);
         }
         Set<String> missing = new TreeSet<>();
         try (Stream<Path> files = Files.walk(Path.of("src/main/java"))) {

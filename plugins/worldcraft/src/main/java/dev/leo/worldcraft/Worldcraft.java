@@ -1,13 +1,13 @@
-package dev.leo.blockwright;
+package dev.leo.worldcraft;
 
-import dev.leo.blockwright.command.BlockwrightCommand;
-import dev.leo.blockwright.config.Issues;
-import dev.leo.blockwright.config.LoadedConfig;
-import dev.leo.blockwright.config.Messages;
-import dev.leo.blockwright.history.HistoryStore;
-import dev.leo.blockwright.paper.Edits;
-import dev.leo.blockwright.paper.PaperBlocks;
-import dev.leo.blockwright.paper.Wand;
+import dev.leo.worldcraft.command.WorldcraftCommand;
+import dev.leo.worldcraft.config.Issues;
+import dev.leo.worldcraft.config.LoadedConfig;
+import dev.leo.worldcraft.config.Messages;
+import dev.leo.worldcraft.history.HistoryStore;
+import dev.leo.worldcraft.paper.Edits;
+import dev.leo.worldcraft.paper.PaperBlocks;
+import dev.leo.worldcraft.paper.Wand;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -18,10 +18,10 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Blockwright (spec 025): editar el mundo sin trabar el servidor, con vista previa, deshacer en disco, patrones y
+ * Worldcraft (spec 025): editar el mundo sin trabar el servidor, con vista previa, deshacer en disco, patrones y
  * máscaras legibles y límites por permiso.
  */
-public final class Blockwright extends JavaPlugin {
+public final class Worldcraft extends JavaPlugin {
     /** Archivos que se crean si faltan (H8 CA3). */
     private static final List<String> FILES = List.of("config.yml", "messages.yml", "presets.yml");
 
@@ -31,7 +31,7 @@ public final class Blockwright extends JavaPlugin {
     private ExecutorService io;
     private Edits edits;
     private Wand wand;
-    private BlockwrightCommand command;
+    private WorldcraftCommand command;
 
     @Override
     public void onEnable() {
@@ -40,7 +40,7 @@ public final class Blockwright extends JavaPlugin {
         reload();
         // Un solo hilo de E/S: los diarios y los índices se escriben en orden (y un deshacer lee después de escribir).
         io = Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "Blockwright-IO");
+            Thread t = new Thread(r, "Worldcraft-IO");
             t.setDaemon(true);
             return t;
         });
@@ -55,16 +55,21 @@ public final class Blockwright extends JavaPlugin {
             if (pruned > 0) getLogger().info("Removed " + pruned + " old edit(s) from the undo history");
         } catch (Exception e) {
             // Sin historial no se puede deshacer nada: mejor no arrancar que pisar history/ (II.6).
-            getLogger().severe("Could not read the undo history (" + e.getMessage() + "): Blockwright is disabled to protect your data");
+            getLogger().severe("Could not read the undo history (" + e.getMessage() + "): Worldcraft is disabled to protect your data");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
         edits = new Edits(this, blocks, history, io);
+        try {
+            edits.warmUp(); // F-04: el primer bloque de la primera obra ya no paga el código frío dentro de un tick
+        } catch (RuntimeException e) {
+            getLogger().warning("Warm-up skipped: " + e);
+        }
         wand = new Wand(this);
         getServer().getPluginManager().registerEvents(wand, this);
         wand.startOutline();
-        command = new BlockwrightCommand(this);
-        PluginCommand cmd = getCommand("blockwright");
+        command = new WorldcraftCommand(this);
+        PluginCommand cmd = getCommand("worldcraft");
         if (cmd != null) {
             cmd.setExecutor(command);
             cmd.setTabCompleter(command);
@@ -118,7 +123,7 @@ public final class Blockwright extends JavaPlugin {
         return wand;
     }
 
-    public BlockwrightCommand command() {
+    public WorldcraftCommand command() {
         return command;
     }
 

@@ -1,9 +1,9 @@
-package dev.leo.blockwright;
+package dev.leo.worldcraft;
 
-import dev.leo.blockwright.block.BlockRegistry;
-import dev.leo.blockwright.block.StateOps;
-import dev.leo.blockwright.block.StateTable;
-import dev.leo.blockwright.edit.EditWorld;
+import dev.leo.worldcraft.block.BlockRegistry;
+import dev.leo.worldcraft.block.StateOps;
+import dev.leo.worldcraft.block.StateTable;
+import dev.leo.worldcraft.edit.EditWorld;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -180,7 +180,7 @@ public final class TestBlocks {
 
         @Override
         public boolean ready(int cx, int cz) {
-            long k = dev.leo.blockwright.region.ChunkOrder.pack(cx, cz);
+            long k = dev.leo.worldcraft.region.ChunkOrder.pack(cx, cz);
             if (slow.remove(k)) return false;
             loaded.add(k);
             return true;
@@ -189,7 +189,7 @@ public final class TestBlocks {
         @Override
         public void release(int cx, int cz) {
             releases++;
-            loaded.remove(dev.leo.blockwright.region.ChunkOrder.pack(cx, cz));
+            loaded.remove(dev.leo.worldcraft.region.ChunkOrder.pack(cx, cz));
         }
 
         /** Todo lo puesto, como texto (para comparar mundos). */

@@ -1,8 +1,8 @@
-package dev.leo.blockwright.paper;
+package dev.leo.worldcraft.paper;
 
-import dev.leo.blockwright.Blockwright;
-import dev.leo.blockwright.command.BlockwrightCommand;
-import dev.leo.blockwright.region.Box;
+import dev.leo.worldcraft.Worldcraft;
+import dev.leo.worldcraft.command.WorldcraftCommand;
+import dev.leo.worldcraft.region.Box;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -28,16 +28,16 @@ import org.bukkit.scheduler.BukkitTask;
 import java.util.List;
 
 /**
- * La varita (H1 CA1, CA2) y el contorno de la selección (H1 CA3). Solo es varita el ítem que da /bwr wand (lleva una
+ * La varita (H1 CA1, CA2) y el contorno de la selección (H1 CA3). Solo es varita el ítem que da /wc wand (lleva una
  * marca): un hacha cualquiera sigue cortando madera. El contorno son partículas que ve solo ese jugador, mientras tiene
  * la varita en la mano.
  */
 public final class Wand implements Listener {
-    private final Blockwright plugin;
+    private final Worldcraft plugin;
     private final NamespacedKey key;
     private BukkitTask outline;
 
-    public Wand(Blockwright plugin) {
+    public Wand(Worldcraft plugin) {
         this.plugin = plugin;
         this.key = new NamespacedKey(plugin, "wand");
     }
@@ -47,7 +47,7 @@ public final class Wand implements Listener {
         if (m == null || !m.isItem() || m.isAir()) m = Material.GOLDEN_AXE;
         ItemStack it = new ItemStack(m);
         ItemMeta meta = it.getItemMeta();
-        meta.displayName(Component.text("Blockwright wand", NamedTextColor.GOLD).decoration(TextDecoration.ITALIC, false));
+        meta.displayName(Component.text("Worldcraft wand", NamedTextColor.GOLD).decoration(TextDecoration.ITALIC, false));
         meta.lore(List.of(Component.text("Left click: corner 1", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false),
                 Component.text("Right click: corner 2", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false)));
         meta.getPersistentDataContainer().set(key, PersistentDataType.BYTE, (byte) 1);
@@ -67,7 +67,7 @@ public final class Wand implements Listener {
         if (a != Action.LEFT_CLICK_BLOCK && a != Action.RIGHT_CLICK_BLOCK) return;
         e.setCancelled(true);
         Player p = e.getPlayer();
-        if (!p.hasPermission(BlockwrightCommand.USE)) return;
+        if (!p.hasPermission(WorldcraftCommand.USE)) return;
         Block b = e.getClickedBlock();
         if (b == null) return;
         plugin.command().setCorner(p, p.getUniqueId(), a == Action.LEFT_CLICK_BLOCK ? 1 : 2, b.getWorld(), b.getX(), b.getY(), b.getZ());

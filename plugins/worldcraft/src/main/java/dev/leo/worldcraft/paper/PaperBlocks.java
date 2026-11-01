@@ -1,9 +1,9 @@
-package dev.leo.blockwright.paper;
+package dev.leo.worldcraft.paper;
 
-import dev.leo.blockwright.block.BlockRegistry;
-import dev.leo.blockwright.block.StateOps;
-import dev.leo.blockwright.block.StateTable;
-import dev.leo.blockwright.config.Issues;
+import dev.leo.worldcraft.block.BlockRegistry;
+import dev.leo.worldcraft.block.StateOps;
+import dev.leo.worldcraft.block.StateTable;
+import dev.leo.worldcraft.config.Issues;
 import org.bukkit.Bukkit;
 import org.bukkit.Keyed;
 import org.bukkit.Material;

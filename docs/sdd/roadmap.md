@@ -26,7 +26,7 @@
 | 022 SkinStatues: más poses, poses propias fáciles y coordenadas | Verificado: 0.2.0; 28 poses incorporadas (22 nuevas, ajustadas con la vista previa) que se leen del jar y una copia de referencia (`builtin-poses.yml`), `extends` ángulo por ángulo y `mirror` en `poses.yml`, `/statue build … --at x y z --facing --world` (con `~`; desde la consola), chunks cargados con `getChunkAtAsync` y tickets; 51 unitarias; 14/14 dos veces en Paper 1.21.4 y en 26.1.2; F-01 corregido ([verify](specs/022-skinstatues-poses-y-coordenadas/verify.md)) |
 | 023 SkinStatues: estatuas con el link de una skin | Verificado: 0.3.0; `/statue build <link> <height> …` como SkinsRestorer, solo una skin válida (PNG 64×64 o 64×32 de hasta 1 MB, tamaño leído antes de decodificar), solo `https` a sitios públicos (sin localhost, LAN ni reservadas, también tras redirecciones), `network.urls` apagado por defecto y permiso `skinstatues.build.url`, `allowed_hosts`, modelo detectado con `--slim`/`--classic`, caché por huella, `url:sitio#huella` en `list`/`info` sin guardar el link; la suite sirve las skins con un HTTPS local; 65 unitarias; 18/18 dos veces en Paper 1.21.4 y en 26.1.2 ([verify](specs/023-skinstatues-skin-por-link/verify.md)) |
 | 024 SkinStatues: multimedia y página de presentación | Verificado: logo y póster por capas como el de la 020 (7 franjas de 1280 px y un GIF de 10 cuadros) con escenas en un mundo de terreno normal: dos estatuas de 100 bloques, una fila de 6 poses, la construcción, por nombre y por link y tres paletas, con skins de youtubers elegidos por el dueño (bajadas a la caché, nunca al repo); BBCode, Markdown y `publicar.md` y la publicación en Modrinth (en revisión), Hangar y SpigotMC; `PresentacionTest` ([verify](specs/024-skinstatues-pagina-de-presentacion/verify.md)) |
-| 025 Blockwright: un editor de mundo que no traba el servidor (plugin nuevo, nombre provisional) | Verificado en 1.21.4: 0.1.0, el tercer plugin (nombre provisional, en inglés); [investigación](../investigacion/editores-de-mundo.md) de WorldEdit/FAWE; obras por tandas con 8 ms por tick para todo el plugin y turnos entre jugadores, vista previa con bloques falsos solo para quien edita y `confirm`, contorno con partículas, varita marcada, deshacer en disco y seguro (salta lo cambiado después), patrones y máscaras legibles con «did you mean», presets, límites por grupo con bloques prohibidos, copiar/cortar/pegar/girar/voltear con cofres y carteles; F-01 a F-03 corregidos; 45 unitarias; 8/8 dos veces en Paper 1.21.4; 26.1.2 sin verificar; decisiones de CLARIFY pendientes del dueño ([verify](specs/025-blockwright-nucleo/verify.md)) |
+| 025 Worldcraft: un editor de mundo que no traba el servidor (plugin nuevo) | Verificado en 1.21.4: 0.1.0, el tercer plugin (en inglés); [investigación](../investigacion/editores-de-mundo.md) de WorldEdit/FAWE; obras por tandas con 8 ms por tick para todo el plugin y turnos entre jugadores, vista previa con bloques falsos solo para quien edita y `confirm`, contorno con partículas, varita marcada, deshacer en disco y seguro (salta lo cambiado después), patrones y máscaras legibles con «did you mean», presets, límites por grupo con bloques prohibidos, copiar/cortar/pegar/girar/voltear con cofres y carteles; confirmación desactivable sobre 50 000; F-01 a F-04 corregidos; 46 unitarias; 8/8 dos veces en Paper 1.21.4; 26.1.2 sin verificar; nombre, comando, confirmación y publicación decididos por el dueño ([verify](specs/025-worldcraft-nucleo/verify.md)) |
 
 ## Por qué empezamos con OmniEvents
 OmniEvents es la versión propia de *ConditionalEvents* (Ajneb97): «cuando pase X, si se cumple Y, haz Z». Es el
@@ -63,17 +63,17 @@ los siguientes plugins de la fábrica.
 | La página de presentación entra por los ojos (capturas, tarjetas) | La nuestra también, y además dice qué tiene OmniEvents que ConditionalEvents no, con una comparación honesta y ejemplos grabados en el juego | 020 |
 | — | Importador de configuraciones de ConditionalEvents | 001 |
 
-## Diagnóstico de WorldEdit y FAWE (lo que hace mejor Blockwright)
+## Diagnóstico de WorldEdit y FAWE (lo que hace mejor Worldcraft)
 De la [investigación de editores de mundo](../investigacion/editores-de-mundo.md) (spec 025).
-| Limitación de WorldEdit / FAWE | Respuesta en Blockwright | Spec |
+| Limitación de WorldEdit / FAWE | Respuesta en Worldcraft | Spec |
 |---|---|---|
 | WorldEdit edita en el hilo principal: una obra de un millón de bloques congela o tumba el servidor; FAWE depende de acceso interno al servidor (luz, cofres, bloques fantasma) | Obras por tandas con un tope de ms por tick para todo el plugin, reloj en cada bloque, turnos entre jugadores, chunks asíncronos; solo API de Paper | 025 |
-| Se aplica a ciegas; ver la selección exige un mod (CUI) | `--preview` con bloques falsos que solo ve quien edita y `confirm`; confirmación obligatoria sobre 20 000 bloques; contorno con partículas sin mod | 025 |
+| Se aplica a ciegas; ver la selección exige un mod (CUI) | `--preview` con bloques falsos que solo ve quien edita y `confirm`; confirmación sobre 50 000 bloques (desactivable); contorno con partículas sin mod | 025 |
 | Historial en memoria (15 pasos), se pierde al reiniciar; deshacer pisa lo que otro construyó después | Historial en disco por jugador (sobrevive a reinicios y caídas), deshacer seguro que salta lo cambiado después y lo cuenta; moderadores deshacen a otros | 025 |
 | Sintaxis críptica (`%`, `#`, `^`, `=`), errores que no dicen qué corregir | `70% stone, 30% andesite`, `*_wool, !red_wool`, `not`, `with`; errores antes de tocar nada con «did you mean»; autocompletado en medio de una lista; presets | 025 |
 | Sin topes de fábrica (`maxChangeLimit: -1`) | Grupos por permiso con tope bajo de fábrica, obras a la vez, mundos y bloques prohibidos (bloques de comandos, roca madre, portales) | 025 |
 | Dos obras que se cruzan dejan bloques fantasma (FAWE) | Una obra que se cruza con otra más vieja espera | 025 |
-| Cualquier hacha de madera es varita | Solo la varita marcada que da `/bwr wand` | 025 |
+| Cualquier hacha de madera es varita | Solo la varita marcada que da `/wc wand` | 025 |
 | Esquemas, pinceles, formas, WorldGuard, rollback por zona | Pendiente (abajo) | — |
 
 ## Siguientes specs (propuestas, en orden)
@@ -133,11 +133,11 @@ Otras pendientes:
   | Escala libre | `--scale 2` (bloques por píxel) en vez de alto | Bajo |
   | Otras figuras | Modelos de criaturas (zombie, aldeano) con su textura del resource pack del dueño | Alto |
   | Captura en el juego para el README | La infraestructura de la 004 es de la galería de OmniEvents; hoy el README usa la hoja de la vista previa | Bajo |
-- **Blockwright: lo que dejó fuera la 025** (el dueño elige el orden; costo aproximado bajo/medio/alto):
+- **Worldcraft: lo que dejó fuera la 025** (el dueño elige el orden; costo aproximado bajo/medio/alto):
 
   | Idea | Qué es | Costo |
   |---|---|---|
-  | Esquemas `.schem` | Importar y exportar el formato abierto Sponge v3 (el de WorldEdit), carpeta `schematics/`, `/bwr schem save|load|list`, pegar con vista previa | Medio |
+  | Esquemas `.schem` | Importar y exportar el formato abierto Sponge v3 (el de WorldEdit), carpeta `schematics/`, `/wc schem save|load|list`, pegar con vista previa | Medio |
   | Respetar regiones | WorldGuard (y otros) opcional: la escritura ya pasa por una sola puerta (`EditWorld.set`); sin permiso de construir ahí, se salta y se cuenta | Medio |
   | Formas | `sphere`, `cyl`, `pyramid`, huecas o llenas, con el mismo motor | Bajo–medio |
   | Pinceles | Varita de pincel: esfera, suavizar, pintar, con tamaño y patrón; vista previa siguiendo la mira | Alto |

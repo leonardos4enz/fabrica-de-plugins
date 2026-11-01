@@ -1,4 +1,4 @@
-package dev.leo.blockwright.region;
+package dev.leo.worldcraft.region;
 
 /**
  * Una caja de bloques con los dos extremos incluidos (la selección cuboide, H1). Inmutable; todas las operaciones

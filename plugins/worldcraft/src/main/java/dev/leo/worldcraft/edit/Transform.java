@@ -1,4 +1,4 @@
-package dev.leo.blockwright.edit;
+package dev.leo.worldcraft.edit;
 
 import java.util.ArrayList;
 import java.util.List;

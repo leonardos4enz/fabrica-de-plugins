@@ -1,9 +1,9 @@
-package dev.leo.blockwright.edit;
+package dev.leo.worldcraft.edit;
 
-import dev.leo.blockwright.block.StateOps;
-import dev.leo.blockwright.region.Box;
-import dev.leo.blockwright.region.ChunkOrder;
-import dev.leo.blockwright.region.Shape;
+import dev.leo.worldcraft.block.StateOps;
+import dev.leo.worldcraft.region.Box;
+import dev.leo.worldcraft.region.ChunkOrder;
+import dev.leo.worldcraft.region.Shape;
 
 import java.util.HashMap;
 import java.util.Map;

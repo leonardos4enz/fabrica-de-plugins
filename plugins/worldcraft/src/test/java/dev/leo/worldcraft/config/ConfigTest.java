@@ -1,6 +1,6 @@
-package dev.leo.blockwright.config;
+package dev.leo.worldcraft.config;
 
-import dev.leo.blockwright.TestBlocks;
+import dev.leo.worldcraft.TestBlocks;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -68,6 +68,19 @@ class ConfigTest {
         assertTrue(r.isBlocked("minecraft:bedrock", Map.of()), "lo válido de la lista sigue");
     }
 
+    /** Decisión del dueño: la confirmación se apaga desde config.yml y de fábrica salta sobre 50 000 bloques. */
+    @Test
+    void H4_CA1_confirmacion_desactivable_y_de_fabrica_sobre_50000() throws Exception {
+        assertTrue(Settings.DEFAULTS.confirmEnabled());
+        assertEquals(50_000, Settings.DEFAULTS.confirmAbove());
+        LoadedConfig c = load("confirm:\n  enabled: false\n  above_blocks: 10\n", "");
+        assertFalse(c.settings().confirmEnabled());
+        assertEquals(10, c.settings().confirmAbove());
+        LoadedConfig bad = load("confirm:\n  enabled: maybe\n", "");
+        assertTrue(bad.settings().confirmEnabled());
+        assertTrue(bad.issues().all().toString().contains("confirm.enabled: 'maybe' is not true or false"));
+    }
+
     @Test
     void H8_CA2_un_archivo_roto_conserva_lo_anterior() throws Exception {
         LoadedConfig first = load("performance: { max_ms_per_tick: 4 }\n", "patterns: { a: stone }\n");
@@ -94,7 +107,7 @@ class ConfigTest {
         assertFalse(none.world("creative"));
         assertTrue(none.isBlocked("minecraft:command_block", Map.of()));
 
-        Limits.Resolved both = c.limits().resolve(p -> p.equals("blockwright.limit.builder") || p.equals("blockwright.limit.mod"));
+        Limits.Resolved both = c.limits().resolve(p -> p.equals("worldcraft.limit.builder") || p.equals("worldcraft.limit.mod"));
         assertEquals(5000, both.maxBlocks());
         assertEquals(4, both.maxJobs());
         assertTrue(both.world("creative") && both.world("world"), "mod hereda los mundos de default");
@@ -102,7 +115,7 @@ class ConfigTest {
         assertTrue(both.isBlocked("minecraft:bedrock", Map.of()), "todos prohíben la roca madre");
         assertEquals(java.util.List.of("default", "builder", "mod"), both.groups());
 
-        Limits.Resolved admin = c.limits().resolve(p -> p.equals("blockwright.limit.admin"));
+        Limits.Resolved admin = c.limits().resolve(p -> p.equals("worldcraft.limit.admin"));
         assertFalse(admin.isBlocked("minecraft:bedrock", Map.of()));
         assertEquals(900000, admin.maxBlocks());
     }
