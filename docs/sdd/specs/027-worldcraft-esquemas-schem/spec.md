@@ -102,3 +102,13 @@ Propuesta de la IA (2026-11-01), pendiente del dueño.
 2. ¿Te sirve `/wc schem …` o prefieres que también exista `/wc schematic …` en la ayuda (hoy es un alias)?
 3. ¿Quién debería poder guardar esquemas en tu servidor: los mismos que editan o solo algunos?
 4. Lo siguiente de esquemas: ¿entidades (soportes, marcos), `.litematic`, o pegar uno al azar de una carpeta?
+
+## Respuestas del dueño (2026-11-01)
+Llegaron después del cierre; se dejan en el roadmap para una spec propia (la 028 ya está abierta para la paridad con
+WorldEdit y FAWE).
+1. **Copiar:** sí, que se copien: `/wc schem import` copia los esquemas de WorldEdit y FAWE a la carpeta de Worldcraft
+   sin borrar los originales.
+2. **Los dos:** `/wc schem` y `/wc schematic` (ya funcionan los dos; falta que la ayuda muestre los dos).
+3. **Por permiso:** separar guardar de cargar: `worldcraft.schematic` (listar y cargar), `worldcraft.schematic.save`
+   (guardar) y `worldcraft.schematic.delete` (borrar y `--overwrite`).
+4. Sin decidir: se le explicó la pregunta en palabras simples; queda abierta.

@@ -173,7 +173,7 @@ Otras pendientes:
   | Más datos de bloque | Cabezas con skin, estandartes, generadores, libros de atriles al pegar (hoy se conservan pero no se ponen) | Medio |
   | Biomas | Leer y escribir los biomas del esquema | Bajo–medio |
   | `.schematic` y `.litematic` | MCEdit (ids numéricos de antes de 1.13) y Litematica | Medio |
-  | Copiar la carpeta de WorldEdit | `/wc schem import-worldedit` para quedarse sin WorldEdit del todo (pregunta 1 del CLARIFY) | Bajo |
+  | **Respuestas del dueño a la 027** (decididas, una spec chica) | `/wc schem import` copia los esquemas de WorldEdit y FAWE a la carpeta propia sin borrar los originales; la ayuda muestra `schem` y `schematic`; permiso aparte para guardar (`worldcraft.schematic.save`; `worldcraft.schematic` solo lista y carga) | Bajo |
   | Pegar al azar | Uno al azar de una carpeta (árboles, rocas), como pide WorldEdit #2063 | Bajo |
   | Vista en miniatura | Ver un esquema antes de cargarlo (*block displays*, como TinyBuilds) | Medio |
 - Después: el siguiente plugin de la fábrica, reutilizando el motor de expresiones de OmniEvents como biblioteca
