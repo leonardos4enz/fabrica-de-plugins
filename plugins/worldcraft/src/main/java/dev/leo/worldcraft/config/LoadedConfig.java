@@ -22,7 +22,7 @@ import java.util.Map;
  */
 public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<String, String> patternPresets,
                            Map<String, String> maskPresets, TerrainSettings terrain, Issues issues, ToolSettings tools,
-                           NatureSettings nature) {
+                           NatureSettings nature, FormulaSettings formulas) {
 
     public static LoadedConfig load(File folder, BlockRegistry registry, LoadedConfig previous) {
         Issues issues = new Issues();
@@ -76,7 +76,9 @@ public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<
                 issues.warn("presets.yml", "masks." + k, "has the name of a biome: $" + k + " is this preset, not the biome");
             }
         }
-        Parser parser = new Parser(registry, Map.copyOf(pat), Map.copyOf(msk));
+        // Spec 034: los topes de las fórmulas, antes del analizador (las máscaras y patrones «=…» los usan).
+        FormulaSettings formulas = config == null && previous != null ? previous.formulas : FormulaSettings.load(config, issues);
+        Parser parser = new Parser(registry, Map.copyOf(pat), Map.copyOf(msk)).formulaLimits(formulas.limits());
         Limits limits = config == null && previous != null ? previous.limits
                 : Limits.load(config == null ? null : config.getConfigurationSection("limits"), parser, "config.yml", issues, registry.entityTypes());
         // Spec 026: un terrain.yml ilegible conserva el anterior; una sección terrain mala, sus valores de fábrica.
@@ -86,7 +88,7 @@ public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<
         ToolSettings tools = config == null && previous != null ? previous.tools : ToolSettings.load(config, parser, issues);
         // Spec 033: árboles, plantas y calabazas.
         NatureSettings nature = config == null && previous != null ? previous.nature : NatureSettings.load(config, parser, issues);
-        return new LoadedConfig(settings, limits, parser, Map.copyOf(pat), Map.copyOf(msk), terrain, issues, tools, nature);
+        return new LoadedConfig(settings, limits, parser, Map.copyOf(pat), Map.copyOf(msk), terrain, issues, tools, nature, formulas);
     }
 
     private static Map<String, String> section(YamlConfiguration y, String name) {

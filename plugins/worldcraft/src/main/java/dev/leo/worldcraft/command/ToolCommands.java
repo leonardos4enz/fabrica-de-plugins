@@ -51,6 +51,9 @@ final class ToolCommands {
                 String t = a[i];
                 if (t.startsWith("--") && t.length() > 2) flags.add(t.substring(2).toLowerCase(Locale.ROOT));
                 else if (t.equals("-h") && kind != null) flags.add(kind == ToolKind.GRAVITY ? "height" : "hollow");
+                // Spec 034: en deform, -r y -o son de WorldEdit, y «x=x*2» es parte de la fórmula (solo radius= y mask= son opciones).
+                else if (kind == ToolKind.DEFORM && (t.equals("-r") || t.equals("-o"))) flags.add(t.equals("-r") ? "raw" : "offset");
+                else if (kind == ToolKind.DEFORM && t.matches("[A-Za-z_]+=.*") && !t.matches("(?i)(radius|mask)=.*")) words.add(t);
                 else if (t.matches("[A-Za-z_]+=.*")) {
                     int eq = t.indexOf('=');
                     kv.put(t.substring(0, eq).toLowerCase(Locale.ROOT), t.substring(eq + 1));

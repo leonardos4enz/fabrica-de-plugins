@@ -225,4 +225,29 @@ class ConfigTest {
         assertFalse(admin.isBlocked("minecraft:bedrock", Map.of()));
         assertEquals(900000, admin.maxBlocks());
     }
+
+    @Test
+    void spec034_H8_CA1_seccion_formulas_validada() throws Exception {
+        assertEquals(FormulaSettings.DEFAULTS, load("history: { keep_days: 3 }\n", "").formulas(), "un config.yml de la 0.9.0 usa lo de fábrica");
+        LoadedConfig c = load("""
+                formulas:
+                  timeout_ms: 20000
+                  max_timeout_ms: 5000
+                  max_steps: 5
+                  max_length: 200
+                  megabuf_sise: 10
+                """, "");
+        FormulaSettings f = c.formulas();
+        assertEquals(5000, f.maxTimeoutMs());
+        assertEquals(5000, f.timeoutMs(), "más que el tope: se baja al tope");
+        assertEquals(FormulaSettings.DEFAULTS.maxSteps(), f.maxSteps(), "fuera de rango: el de fábrica");
+        assertEquals(200, f.maxLength());
+        assertEquals(200, c.parser().formulaLimits().maxLength(), "el analizador usa los topes de config.yml");
+        String all = c.issues().all().toString();
+        assertTrue(all.contains("formulas.timeout_ms"), all);
+        assertTrue(all.contains("formulas.max_steps"), all);
+        assertTrue(all.contains("formulas.megabuf_sise") && all.contains("did you mean 'megabuf_size'"), all);
+        String text = "=" + "1+".repeat(150) + "1";
+        assertThrows(dev.leo.worldcraft.pattern.ParseException.class, () -> c.parser().maskNear(text), "más largo que max_length");
+    }
 }

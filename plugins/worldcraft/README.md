@@ -7,7 +7,8 @@ and full control for experienced builders. Specs: [025](../../docs/sdd/specs/025
 [026](../../docs/sdd/specs/026-worldcraft-terreno-facil/spec.md) (terrain), [027](../../docs/sdd/specs/027-worldcraft-esquemas-schem/spec.md) (`.schem` schematics),
 [028](../../docs/sdd/specs/028-worldcraft-paridad-worldedit/spec.md) (the WorldEdit commands builders use most),
 [031](../../docs/sdd/specs/031-worldcraft-entidades/spec.md) (entities), [032](../../docs/sdd/specs/032-worldcraft-pinceles-y-herramientas/spec.md) (building brushes and one-click tools),
-[033](../../docs/sdd/specs/033-worldcraft-biomas-arboles-estructuras/spec.md) (biomes, trees and the game's structures).
+[033](../../docs/sdd/specs/033-worldcraft-biomas-arboles-estructuras/spec.md) (biomes, trees and the game's structures),
+[034](../../docs/sdd/specs/034-worldcraft-formulas/spec.md) (formulas).
 
 ```
 /wc wand                                        left click = corner 1, right click = corner 2
@@ -26,6 +27,8 @@ and full control for experienced builders. Specs: [025](../../docs/sdd/specs/025
 /wc setbiome cherry_grove                       change the biome of your selection (undo works; players see it at once)
 /wc forest birch 10 --preview                   the game's own trees on the grass of your selection, previewed first
 /wc structure load igloo/top                    a structure of the game into your clipboard: then /wc paste --preview
+/wc generate stone x^2+y^2+z^2<1                a shape from a formula, written like in WorldEdit (it never lags the server)
+/wc deform y-=0.2                               bend what you built with a formula
 ```
 
 ## Terrain: easy for beginners, precise for experts
@@ -307,6 +310,44 @@ you look** (up to 200 blocks; a click in the air is fine) and shows a circle of 
 - Not here: the game's *features* (`//feature`: a desert well, a geode) and whole jigsaw structures (a full village): Paper
   has no API for them, only the game's `/place` command.
 
+## Formulas
+```
+/wc generate stone x^2+y^2+z^2<1                 a sphere that fills your selection (x, y, z go from -1 to 1 in it)
+/wc generate --hollow glass x^2+y^2+z^2<1        only its shell (-h works too)
+/wc generate stone (0.75-sqrt(x^2+z^2))^2+y^2<0.25^2     a torus
+/wc generate --raw sandstone y < 70 + 4*sin(x/6) + 4*cos(z/6)   waves, with the world's coordinates (-r)
+/wc deform y-=0.2                                every block takes the one a bit below: the build rises
+/wc deform x*=2                                  stretch it
+/wc generatebiome desert x<0                     half of your selection becomes desert (by 4×4×4 cells)
+/wc replace =y<64 with stone                     a formula as a mask: x, y, z of the world
+/wc gmask =x<100                                 ...or as your global mask
+/wc set =(x+z)%2 -> white_wool, black_wool       a formula as a pattern: its number picks the block (0 the first)
+/wc calc 2^10 + sqrt(16)                         a calculator (calculate, eval)
+/wc timeout 5000                                 how long your formulas may work, in ms (default: the server's)
+/wc brush deform 6 y-=0.2                        a deform brush: right click where you look (-r, -o like WorldEdit)
+```
+- **Written like WorldEdit:** a formula copied from a WorldEdit tutorial works. Numbers, `+ - * / %`, `^` (power), `< <=
+  > >= == != ~=`, `&& || !`, `? :`, `=`, `+=`…, `++`, `--`, `;` between statements, `{ }`, `if`/`else`, `while`, `do …
+  while`, `for (i = 0; i < 5; i++)` and `for (i = 1, 10)`, `break`, `continue`, `return`; `pi`, `e`, `true`, `false`; and the
+  functions `abs acos asin atan atan2 cbrt ceil cos cosh exp floor ln log log10 max min rint round sin sinh sqrt tan tanh`,
+  `random()`, `randint(n)`, `perlin`, `ridgedmulti`, `voronoi`, `megabuf`, `rotate`, `swap`, and `mod(a, b)` (a remainder
+  that is never negative). True is more than 0. Variables you set keep their value from one block to the next.
+- **Coordinates:** `generate`, `deform` and `generatebiome` see x, y and z from -1 to 1 in your selection, 0 in the
+  middle (like WorldEdit). `--raw` (`-r`): the world's coordinates; `--offset` (`-o`): from your feet; `--center` (`-c`):
+  from the middle of the selection, not scaled. Masks and patterns always see the world's coordinates.
+- **It never lags the server:** the formula is worked out away from the server thread, and what it changes is an edit
+  like any other: your group's limits, `gmask`, `--preview`, confirmation, 8 ms per tick, the history and `/wc undo`. A
+  loop stops after `formulas.max_steps` rounds and a command's formula after your `/wc timeout` (the server sets the
+  default and the most). Masks and patterns with a formula are worked out block by block inside the 8 ms per tick.
+- **deform** reads everything first (also what is outside the selection, like WorldEdit), so a block already moved is
+  never moved again; chests keep their items. What it has to read counts for your group's limit.
+- **Mistakes are told before anything changes,** with where and a guess: `Unknown function 'sinn' at 1 (did you mean
+  'sin'?)`. With spaces in a mask, use `with`: `/wc replace =y < 64 with stone`. The pattern of `generate` is one word
+  (use a preset for a mix with spaces).
+- Not here: WorldEdit's `query()` (reading a block from the formula, with old block numbers; use a mask instead),
+  `gmegabuf`, `closest()`, `switch`, and `//generate`'s `type` and `data` variables (the `=… ->` pattern does that). The
+  noise functions are used the same way but give other numbers than WorldEdit's.
+
 ## Coming from WorldEdit
 | WorldEdit | Worldcraft |
 |---|---|
@@ -334,11 +375,13 @@ you look** (up to 200 blocks; a click in the air is fine) and shows a circle of 
 | `/biomelist`, `/biomeinfo -t -p`, `//setbiome -p`, `$desert` (mask), `//copy -b`, `//cut -b`, `//paste -b` | `/wc biomelist`, `/wc biomeinfo --target --here` (`-t`, `-p` too), `/wc setbiome --here`, `$desert`, `/wc copy --biomes`, `/wc cut --biomes`, `/wc paste --biomes` |
 | `//forest`, `/forestgen`, `//flora`, `/pumpkins`, `/tool tree`, `/brush apply … forest` | `/wc forest`, `/wc forestgen`, `/wc flora`, `/wc pumpkins`, `/wc tool tree`, `/wc brush forest` (all with preview and undo) |
 | `//structure` (worldgen), FAWE `//placefeature`, `//feature` | `/wc structure load <template>` + `/wc paste` (templates only; features: not yet) |
+| `//generate -h -r -o -c`, `//generatebiome`, `//deform -r -o -c`, `/brush deform -r -o`, `//calculate`, `//timeout` | `/wc generate --hollow --raw --offset --center` (`-h -r -o -c` too), `/wc generatebiome`, `/wc deform`, `/wc brush deform`, `/wc calc`, `/wc timeout` (the whole calculation of a command, not each block) |
+| `=y<64` (mask), FAWE `=…` (pattern) | `=y<64` (the same), `=formula -> block, block, …` (the formula picks the block) |
 | — | `/wc mountain`, `/wc island`, styles, `/wc confirm`, `/wc history` |
 
 Not yet (see the [command-by-command comparison](../../docs/investigacion/paridad-worldedit-fawe.md), checked
 against the WorldEdit 7.3.19 and FAWE 2.16.2 jars): FAWE's `//sel list`, FAWE's
-line and curve brushes, the game's features and whole jigsaw structures, `//generate` and other formulas, FAWE's caves, ores and images,
+line and curve brushes, the game's features and whole jigsaw structures, `query()` in formulas, FAWE's caves, ores and images,
 `//regen`, snapshots, and an API for other plugins (in that order in the [roadmap](../../docs/sdd/roadmap.md)). **WorldGuard and PlotSquared need WorldEdit itself**: keep it
 installed next to Worldcraft (different command and wand, they work side by side).
 
@@ -452,6 +495,12 @@ nature:                            # /wc forest, forestgen, flora, pumpkins, /wc
   soil: "grass_block, dirt, podzol, coarse_dirt, rooted_dirt, mycelium, moss_block, mud"   # where trees grow
   flora_grass: "80% short_grass, 5% dandelion, 5% poppy, 4% cornflower, 3% oxeye_daisy, 3% azure_bluet"
   flora_sand: "90% dead_bush, 10% cactus"
+formulas:                          # /wc generate, deform, generatebiome, calc, "=..." masks and patterns, /wc brush deform
+  timeout_ms: 2000                 # how long one command's formula may work by default (each player: /wc timeout)
+  max_timeout_ms: 10000            # the most /wc timeout can set (100..60000)
+  max_steps: 100000                # loop rounds (while, for, do) in one evaluation (1000..10000000)
+  max_length: 1000                 # characters in one formula (32..10000)
+  megabuf_size: 65536              # cells of megabuf() (0..10000000)
 ```
 With several groups the most generous value wins: the biggest number, every world of every group, and a block is
 blocked only if every group blocks it. `presets.yml` names patterns and masks; `terrain.yml` has the terrain sizes,
@@ -466,7 +515,8 @@ else changes (the default shape is still the box). Updating from 0.6.0: a `confi
 `/wc butcher` and `/wc remove` need `worldcraft.butcher` and `worldcraft.remove` (op by default). Updating from 0.7.0: a
 `config.yml` without `tools` uses the values above; the super pickaxe needs `worldcraft.superpickaxe` (op by default).
 Updating from 0.8.0: a `config.yml` without `nature` uses the values above; no new permission (all of it is
-`worldcraft.use`). A
+`worldcraft.use`). Updating from 0.9.0: a `config.yml` without `formulas` uses the values above; the formula commands
+need only `worldcraft.use`. A
 `messages.yml` from an older version keeps its old texts (they are yours to change): to see the new `/wc help brush`,
 delete the `brush:` line under `help:` (missing lines come from the plugin). Undo histories written by older versions
 keep working.
@@ -489,14 +539,14 @@ keep working.
 ## Compatibility
 | Server | Status | Evidence |
 |---|---|---|
-| Paper 1.21.4 (build 232, Java 24) | **Verified** (0.9.0) | 0.9.0 (2026-11-02): gate 2 with WorldEdit 7.3.19 and a `config.yml` without `nature` («Configuration OK»; selftest with the real registry: 65 biomes, an oak captured without touching the world, the game template igloo/top and 1201 templates listed; from the console: setbiome on 36 cells, biomeinfo, undo, village houses, a pillager tower, a shipwreck and a ruined portal loaded); in-game suite 33/33 twice (setbiome, biomeinfo, `$desert` in replace, undo and redo, the new biome reaches the player; copy and paste --biomes, a schematic with biomes saved, loaded and pasted by WorldEdit with `//paste -b`; forest with preview, flora, pumpkins, forestgen, tool tree, brush forest and undo; structure list and load, the igloo pasted and undone, a ruined portal chest with its loot table). 0.8.0 (2026-11-02): gate 2 updating from 0.7.0 with WorldEdit 7.3.19 (`config.yml` without `tools`: «Configuration OK»; selftest with the cycler on the real block registry: every facing, half and shape of a stair, the 8 ages of wheat); in-game suite 29/29 twice (a sphere brush on the item in the hand with an empty hand, its circle only for the editor, another blaze rod stays normal, `mask=air`, undo, `none` leaves a plain item, a cylinder on an ordinary blaze rod; gravity with a chest that stays, clipboard, extinguish, butcher with and without `--animals` and undo; repl picks and places a turned log, cycler, info, farwand, floodfill only on the connected blocks, lrbuild, deltree on a floating tree and not on a planted one, navwand; the super pickaxe drops nothing, undo, area, bedrock is never broken, a player without the permission). 0.7.0 (2026-11-02): gate 2 updating from 0.6.0 with WorldEdit 7.3.19 (selftest with real entities: an armor stand with a helmet and a name through a schematic, an item frame turned onto another wall with its apple, a pig with a chicken riding it; from the console: butcher spares a named husk and a cow, `--named` and `--friendly`, undo brings them back, remove cow, copy --entities, paste and paste --remove-entities, undo, a rotated schematic with entities saved, loaded and pasted); in-game suite 25/25 twice (copy --entities, rotate and paste: the frame hangs on the turned wall with its apple, the armor stand keeps its helmet; undo; cut --entities without dropping the frame and undo; --no-entities; move and stack --entities; paste --remove-entities; butcher spares a tamed wolf and a villager, --animals and undo; remove items; a schematic with entities pasted by WorldEdit with `//paste -e` and one from WorldEdit's `//copy -e` pasted by Worldcraft). 0.6.0 (2026-11-02): gate 2 updating from 0.5.0 with WorldEdit 7.3.19 (every shape from the console: sphere, cyl, poly, convex, extend and magic with set, walls, faces, count, outset, a sphere copied and pasted with --air without its corners, stack, move and undo); in-game suite 22/22 twice (a cylinder marked with the wand and its outline only for the editor, walls as a tube, a polygon, a magic selection that grows with a right click, a sphere copied, pasted, stacked and moved, a convex shape). 0.5.0 (2026-11-02): gate 2 updating from 0.4.0 with WorldEdit 7.3.19 (count, distr, masks that look around, `^stone_stairs`, `gmask`, outset/inset/trim/chunk, copy --mask and paste --origin/--select, clearhistory with confirm, schem import, from the console); in-game suite 20/20 twice (hpos at the block you look at, count, `^` keeps the stairs turned, `and !surface`, gmask, paste --select and --origin, clearhistory, import, and a player without `worldcraft.schematic.save` cannot save). 0.4.0 (2026-11-01): gate 2 updating from 0.3.0 (every shape, hollow, center, stack with a chest, move, line, drain and undo, fixwater, fill, removenear, snow, thaw, green, naturalize, overlay, extinguish, removebelow from the console: 31 checks); in-game suite 18/18 twice (a sphere previewed only for the editor, a pyramid and unstuck, stack and move with undo, drain, ascend, descend, thru, up with a glass block for a player who cannot fly). 0.3.0 (2026-11-01): 0.3.0 (2026-11-01): gate 2 updating from 0.2.0 (save, load and paste a rotated chest and sign from the console, damaged files and unsafe names refused); in-game suite 15/15 twice with WorldEdit 7.3.19 on the server (WorldEdit's v3 and v2 files loaded and pasted by Worldcraft, Worldcraft's loaded and pasted by WorldEdit). 0.2.0: gate 2 (2026-11-01): updating from 0.1.0, mountains (up to 811 675 blocks), an island and undo from the console. In-game suite 12/12 twice (2026-11-01), terrain included. 0.1.0: gate 2 with a 100 000-block edit and undo after a restart, suite 8/8 twice |
+| Paper 1.21.4 (build 232, Java 24) | **Verified** (0.10.0) | 0.10.0 (2026-11-02): gate 2 with WorldEdit 7.3.19 (selftest of formulas: a sphere of 485 blocks, the mask =y<0, a loop cut by its rounds and a calculation cut by its time; from the console: generate and generate --hollow, calc, a misspelled function, timeout 30 cutting a slow formula, an endless loop cut, a checkerboard pattern, replace =y<-45, deform --raw, generatebiome on 12 of 36 cells, undo 6 back to nothing; no errors in either start); in-game suite 36/36 twice (generate makes exactly as many blocks as WorldEdit's //generate with the same formula, hollow, calc, timeout and the loop limit; the checkerboard pattern, =y<-59 in replace and =x<43 as gmask; deform reads below the selection; generatebiome on half the cells; brush deform raises the ground; undo for all). 0.9.0 (2026-11-02): gate 2 with WorldEdit 7.3.19 and a `config.yml` without `nature` («Configuration OK»; selftest with the real registry: 65 biomes, an oak captured without touching the world, the game template igloo/top and 1201 templates listed; from the console: setbiome on 36 cells, biomeinfo, undo, village houses, a pillager tower, a shipwreck and a ruined portal loaded); in-game suite 33/33 twice (setbiome, biomeinfo, `$desert` in replace, undo and redo, the new biome reaches the player; copy and paste --biomes, a schematic with biomes saved, loaded and pasted by WorldEdit with `//paste -b`; forest with preview, flora, pumpkins, forestgen, tool tree, brush forest and undo; structure list and load, the igloo pasted and undone, a ruined portal chest with its loot table). 0.8.0 (2026-11-02): gate 2 updating from 0.7.0 with WorldEdit 7.3.19 (`config.yml` without `tools`: «Configuration OK»; selftest with the cycler on the real block registry: every facing, half and shape of a stair, the 8 ages of wheat); in-game suite 29/29 twice (a sphere brush on the item in the hand with an empty hand, its circle only for the editor, another blaze rod stays normal, `mask=air`, undo, `none` leaves a plain item, a cylinder on an ordinary blaze rod; gravity with a chest that stays, clipboard, extinguish, butcher with and without `--animals` and undo; repl picks and places a turned log, cycler, info, farwand, floodfill only on the connected blocks, lrbuild, deltree on a floating tree and not on a planted one, navwand; the super pickaxe drops nothing, undo, area, bedrock is never broken, a player without the permission). 0.7.0 (2026-11-02): gate 2 updating from 0.6.0 with WorldEdit 7.3.19 (selftest with real entities: an armor stand with a helmet and a name through a schematic, an item frame turned onto another wall with its apple, a pig with a chicken riding it; from the console: butcher spares a named husk and a cow, `--named` and `--friendly`, undo brings them back, remove cow, copy --entities, paste and paste --remove-entities, undo, a rotated schematic with entities saved, loaded and pasted); in-game suite 25/25 twice (copy --entities, rotate and paste: the frame hangs on the turned wall with its apple, the armor stand keeps its helmet; undo; cut --entities without dropping the frame and undo; --no-entities; move and stack --entities; paste --remove-entities; butcher spares a tamed wolf and a villager, --animals and undo; remove items; a schematic with entities pasted by WorldEdit with `//paste -e` and one from WorldEdit's `//copy -e` pasted by Worldcraft). 0.6.0 (2026-11-02): gate 2 updating from 0.5.0 with WorldEdit 7.3.19 (every shape from the console: sphere, cyl, poly, convex, extend and magic with set, walls, faces, count, outset, a sphere copied and pasted with --air without its corners, stack, move and undo); in-game suite 22/22 twice (a cylinder marked with the wand and its outline only for the editor, walls as a tube, a polygon, a magic selection that grows with a right click, a sphere copied, pasted, stacked and moved, a convex shape). 0.5.0 (2026-11-02): gate 2 updating from 0.4.0 with WorldEdit 7.3.19 (count, distr, masks that look around, `^stone_stairs`, `gmask`, outset/inset/trim/chunk, copy --mask and paste --origin/--select, clearhistory with confirm, schem import, from the console); in-game suite 20/20 twice (hpos at the block you look at, count, `^` keeps the stairs turned, `and !surface`, gmask, paste --select and --origin, clearhistory, import, and a player without `worldcraft.schematic.save` cannot save). 0.4.0 (2026-11-01): gate 2 updating from 0.3.0 (every shape, hollow, center, stack with a chest, move, line, drain and undo, fixwater, fill, removenear, snow, thaw, green, naturalize, overlay, extinguish, removebelow from the console: 31 checks); in-game suite 18/18 twice (a sphere previewed only for the editor, a pyramid and unstuck, stack and move with undo, drain, ascend, descend, thru, up with a glass block for a player who cannot fly). 0.3.0 (2026-11-01): 0.3.0 (2026-11-01): gate 2 updating from 0.2.0 (save, load and paste a rotated chest and sign from the console, damaged files and unsafe names refused); in-game suite 15/15 twice with WorldEdit 7.3.19 on the server (WorldEdit's v3 and v2 files loaded and pasted by Worldcraft, Worldcraft's loaded and pasted by WorldEdit). 0.2.0: gate 2 (2026-11-01): updating from 0.1.0, mountains (up to 811 675 blocks), an island and undo from the console. In-game suite 12/12 twice (2026-11-01), terrain included. 0.1.0: gate 2 with a 100 000-block edit and undo after a restart, suite 8/8 twice |
 | Paper 26.1.2 and other 1.21.x / 26.x | Not verified | |
 | Spigot, Folia | Not supported | |
 
 - **Java:** 21 or newer.
 - **Optional:** nothing. No network access, no server internals (only the Paper API).
 - **Not yet:** FAWE's `//sel list`, entities and biomes in the preview, the game's features and whole jigsaw structures,
-  formulas, `.schematic` (MCEdit) and `.litematic` files, an API for other plugins, rivers, height maps from images, a
+  `query()` in formulas, `.schematic` (MCEdit) and `.litematic` files, an API for other plugins, rivers, height maps from images, a
   brush menu, WorldGuard regions, rollback by area and time (ideas in the [roadmap](../../docs/sdd/roadmap.md)). Running next to WorldEdit works: different command and wand.
 
 ## Installation

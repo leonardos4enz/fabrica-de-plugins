@@ -1752,6 +1752,142 @@ export default {
           await srv.consola(`fill ${X - 2} -60 ${Z - 2} ${X + 14} -45 ${Z + 16} air`)
         }
       }
+    },
+    {
+      id: '034 H2 CA1 · H2 CA2 · H2 CA3 · H1 CA3 · H1 CA4 · H6 CA1 · H6 CA2',
+      nombre: 'generate hace la misma esfera que //generate de WorldEdit 7.3.19; hueca solo la cáscara; calc; una fórmula mal escrita sugiere; timeout corta un cálculo largo y las vueltas un bucle sin fin',
+      timeoutMs: 150000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        // La esfera que llena 11×11×11 con x, y, z de -1 a 1, contada a mano igual que la cuenta el plugin.
+        let esperados = 0
+        for (let x = 0; x <= 10; x++) for (let y = 0; y <= 10; y++) for (let z = 0; z <= 10; z++) {
+          if (((x - 5) / 5) ** 2 + ((y - 5) / 5) ** 2 + ((z - 5) / 5) ** 2 < 1) esperados++
+        }
+        try {
+          await seleccionar(ana, [X, -60, Z], [X + 10, -50, Z + 10])
+          const m = ana.marca()
+          ana.comando('wc generate stone x^2+y^2+z^2<1')
+          await ana.esperar('chat', /Working out the formula on 1,331 block/, { desde: m })
+          const g = await ana.esperar('chat', /Done: generate changed ([\d,]+) blocks/, { desde: m, timeoutMs: 30000 })
+          const hechos = Number(g.texto.match(/changed ([\d,]+) blocks/)[1].replace(/,/g, ''))
+          if (hechos !== esperados) throw new Error(`generate puso ${hechos}, se esperaban ${esperados}`)
+          await comprobar(srv, `block ${X + 5} -55 ${Z + 5} stone`)
+          await comprobar(srv, `block ${X} -60 ${Z} air`)
+          await pide(ana, 'wc undo', /Undone .*generate/)
+          // WorldEdit, en la misma caja y con la misma fórmula, crea los mismos bloques.
+          await pide(ana, `/pos1 ${X},-60,${Z}`, /First position set/)
+          await pide(ana, `/pos2 ${X + 10},-50,${Z + 10}`, /Second position set/)
+          const we = await pide(ana, '/g stone x^2+y^2+z^2<1', /([\d,]+) blocks? (?:have|has) been created/, 30000)
+          const deWe = Number(we.texto.match(/([\d,]+) blocks?/)[1].replace(/,/g, ''))
+          if (deWe !== esperados) throw new Error(`WorldEdit creó ${deWe}, Worldcraft ${esperados}`)
+          await pide(ana, '/undo', /Undo successful|undid|undone/i)
+          // Hueca: la cáscara, sin el centro.
+          const h = await obra(ana, 'wc generate --hollow glass x^2+y^2+z^2<1')
+          if (!(h.cambiados > 0 && h.cambiados < esperados / 2)) throw new Error(`la cáscara tiene ${h.cambiados} de ${esperados}`)
+          await comprobar(srv, `block ${X + 5} -55 ${Z + 5} air`)
+          await comprobar(srv, `block ${X + 1} -55 ${Z + 5} glass`)
+          await pide(ana, 'wc undo', /Undone .*generate/)
+          await pide(ana, 'wc calc 2^10 + sqrt(16)', /= 1028/)
+          await pide(ana, 'wc generate stone sinn(x)>0', /Unknown function 'sinn' at 1 \(did you mean 'sin'\?\)/)
+          await pide(ana, 'wc timeout 30', /can now work for 30 ms/)
+          await pide(ana, 'wc generate stone for(i=0;i<5000;i++){a=sin(i)};1', /took more than 30 ms \([\d,]+ of 1,331 worked out\)/, 30000)
+          await pide(ana, 'wc timeout default', /can now work for 2000 ms/)
+          await pide(ana, 'wc generate stone while(1){}', /ran more than 100,000 times at/, 30000)
+          await pide(ana, 'wc count stone, glass', /\b0 of [\d,]+ blocks match/)
+        } finally {
+          await srv.consola(`fill ${X} -60 ${Z} ${X + 10} -50 ${Z + 10} air`)
+        }
+      }
+    },
+    {
+      id: '034 H5 CA1 · H5 CA2',
+      nombre: 'el patrón =(x+z)%2 -> … hace un tablero; la máscara =y<-59 en replace y =x<43 en gmask; undo',
+      timeoutMs: 90000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        try {
+          await seleccionar(ana, [X, -60, Z], [X + 5, -58, Z + 5])
+          const t = await obra(ana, 'wc set =(x+z)%2->white_wool,black_wool')
+          if (t.cambiados !== 108) throw new Error(`el tablero cambió ${t.cambiados}`)
+          await comprobar(srv, `block ${X} -60 ${Z} white_wool`)
+          await comprobar(srv, `block ${X + 1} -60 ${Z} black_wool`)
+          await comprobar(srv, `block ${X + 1} -60 ${Z + 1} white_wool`)
+          const r = await obra(ana, 'wc replace =y<-59 with stone')
+          if (r.cambiados !== 36) throw new Error(`replace =y<-59 cambió ${r.cambiados}`)
+          await comprobar(srv, `block ${X} -60 ${Z} stone`)
+          await comprobar(srv, `block ${X} -59 ${Z} white_wool`)
+          await pide(ana, `wc gmask =x<${X + 3}`, /Global mask/)
+          const g = await obra(ana, 'wc set glass')
+          if (g.cambiados !== 54) throw new Error(`con gmask =x<${X + 3} cambió ${g.cambiados}`)
+          await comprobar(srv, `block ${X + 2} -58 ${Z} glass`)
+          await comprobar(srv, `block ${X + 3} -58 ${Z} black_wool`)
+          await pide(ana, 'wc gmask off', /Global mask removed/)
+          await pide(ana, 'wc replace =y<< with stone', /The formula ends too soon/)
+          await pide(ana, 'wc undo 3', /Undone .*set/)
+          await pide(ana, 'wc count !air', /\b0 of [\d,]+ blocks match/)
+        } finally {
+          await pide(ana, 'wc gmask off', /Global mask|no global mask/).catch(() => {})
+          await srv.consola(`fill ${X} -60 ${Z} ${X + 5} -58 ${Z + 5} air`)
+        }
+      }
+    },
+    {
+      id: '034 H3 CA1 · H3 CA2 · H3 CA3 · H4 CA1 · H4 CA2 · H7 CA1',
+      nombre: 'deform --raw y-=1 sube un piso (el pasto de abajo también, leído fuera de la selección) y undo; generatebiome desert x<0 en la mitad de las celdas y undo; brush deform levanta el suelo donde mira',
+      timeoutMs: 150000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        try {
+          // La piedra va en el aire, justo debajo de la selección (sin tapar el pasto: tapado se vuelve tierra, 029).
+          await srv.consola(`fill ${X} -58 ${Z} ${X + 4} -58 ${Z + 4} stone`)
+          await srv.sincronizar()
+          await seleccionar(ana, [X, -57, Z], [X + 4, -53, Z + 4])
+          const d = await obra(ana, 'wc deform --raw y-=1')
+          if (d.cambiados !== 25) throw new Error(`deform cambió ${d.cambiados} (se esperaban 25: la piedra de abajo, leída fuera de la selección, sube un piso)`)
+          await comprobar(srv, `block ${X} -57 ${Z} stone`)
+          await comprobar(srv, `block ${X} -58 ${Z} stone`)
+          await comprobar(srv, `block ${X} -56 ${Z} air`)
+          await pide(ana, 'wc undo', /Undone .*deform/)
+          await comprobar(srv, `block ${X} -57 ${Z} air`)
+          await pide(ana, 'wc deform x = x', /moves no block/)
+          // generatebiome: 6×4×6 celdas, la mitad de x < 0 (las tres primeras columnas de celdas) se vuelve desierto.
+          await seleccionar(ana, [X + 16, -60, Z + 16], [X + 39, -45, Z + 39])
+          let m = ana.marca()
+          ana.comando('wc generatebiome desert x<0')
+          await ana.esperar('chat', /true in 72 of 144 biome cell/, { desde: m, timeoutMs: 20000 })
+          await ana.esperar('chat', /Done: generatebiome changed 72 biome cell/, { desde: m, timeoutMs: 30000 })
+          // El centro de una zona de 3×3×3 celdas (el juego mira la celda vecina cerca del borde: 033).
+          await comprobar(srv, `biome ${X + 22} -51 ${Z + 26} minecraft:desert`)
+          await comprobar(srv, `biome ${X + 34} -51 ${Z + 26} minecraft:plains`)
+          await pide(ana, 'wc undo', /Undone .*generatebiome/)
+          await comprobar(srv, `biome ${X + 22} -51 ${Z + 26} minecraft:plains`)
+          // brush deform: cada bloque de la esfera toma el de abajo: el suelo sube uno donde mira.
+          await mirarSuelo(ctx)
+          await pide(ana, 'wc brush deform 3 y-=0.5', /(?:Here is your brush \(|is now a brush.*)deform · y-=0\.5 · radius 3/)
+          m = ana.marca()
+          ana.bot.activateItem()
+          await ana.esperar('chat', /Done: brush deform changed [\d,]+ blocks/, { desde: m, timeoutMs: 30000 })
+          await comprobar(srv, `block ${X} -60 ${Z + 8} grass_block`)
+          await pide(ana, 'wc undo', /Undone .*brush deform/)
+          await comprobar(srv, `block ${X} -60 ${Z + 8} air`)
+        } finally {
+          await srv.consola(`clear ${ANA}`)
+          await srv.consola(`fillbiome ${X + 12} -64 ${Z + 12} ${X + 44} -40 ${Z + 44} minecraft:plains`)
+          await srv.consola(`fill ${X} -58 ${Z} ${X + 4} -53 ${Z + 4} air`)
+          // El suelo plano como era donde trabajó el pincel (bedrock, tierra, pasto y aire encima).
+          await srv.consola(`fill ${X - 4} -64 ${Z + 4} ${X + 4} -64 ${Z + 12} bedrock`)
+          await srv.consola(`fill ${X - 4} -63 ${Z + 4} ${X + 4} -62 ${Z + 12} dirt`)
+          await srv.consola(`fill ${X - 4} -61 ${Z + 4} ${X + 4} -61 ${Z + 12} grass_block`)
+          await srv.consola(`fill ${X - 4} -60 ${Z + 4} ${X + 4} -57 ${Z + 12} air`)
+        }
+      }
     }
   ]
 }

@@ -119,4 +119,34 @@ class ToolSpecTest {
         assertThrows(IllegalArgumentException.class, () -> brush("forest", "oak", "6", "200"), "densidad de 0 a 100");
         assertThrows(IllegalArgumentException.class, () -> ToolParser.update(f, Map.of("mask", "stone"), CAPS), "el bosque no lleva mask=");
     }
+
+    /** Spec 034 H7: brush deform con radio y fórmula (con «;» y «=», que viajan en el ítem sin romperse). */
+    @Test
+    void spec034_brush_deform() {
+        ToolSpec d = brush("deform", "6", "y-=0.2;", "x*=1.1");
+        assertEquals(ToolKind.DEFORM, d.kind());
+        assertEquals(6, d.radius());
+        assertEquals("y-=0.2; x*=1.1", d.formula());
+        ToolSpec back = ToolSpec.decode(d.encode(), CAPS);
+        assertEquals(d, back, "ida y vuelta por el ítem");
+        assertEquals("y-=0.2; x*=1.1", back.formula());
+        ToolSpec def = brush("deform");
+        assertEquals(5, def.radius(), "de fábrica 5, como WorldEdit");
+        assertEquals("y-=0.2", def.formula());
+        assertEquals("deform · y-=0.2 · radius 5", def.describe());
+        ToolSpec raw = ToolParser.parse(true, "deform", List.of("3", "y-=1"), Set.of("raw"), Map.of(), CAPS);
+        assertTrue(raw.flag("raw"));
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> brush("deform", "4", "sinn(x)"));
+        assertTrue(e.getMessage().contains("did you mean 'sin'"), e.getMessage());
+        assertEquals("stone", ToolParser.update(d, Map.of("mask", "stone"), CAPS).mask(), "deform lleva mask=");
+    }
+
+    /** Spec 034 H7: en deform, «y=y*2» es parte de la fórmula (no una opción) y -r es --raw. */
+    @Test
+    void spec034_las_palabras_de_deform() {
+        var t = dev.leo.worldcraft.command.ToolCommandsAccess.tokens(new String[]{"brush", "deform", "4", "y=y*2", "-r", "mask=stone"}, 2, ToolKind.DEFORM);
+        assertEquals(List.of("4", "y=y*2"), t.get(0));
+        assertEquals(List.of("raw"), t.get(1));
+        assertEquals(List.of("mask=stone"), t.get(2));
+    }
 }

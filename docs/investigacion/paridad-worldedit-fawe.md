@@ -61,16 +61,16 @@ Cantidades del bytecode (§0). «FAWE agrega» es la diferencia con WorldEdit en
 | Área | WE | FAWE agrega | Worldcraft lo tiene (0.4.0) | Lo que le falta a Worldcraft |
 |---|---|---|---|---|
 | Selección | 18 | — (FAWE quita `//pos`; + selectores `fuzzy`/`magic`, `polyhedral`/`hull`, `list`) | 7, mejor contorno y varita | `hpos`, `chunk`, `outset/inset`, `trim`, `count`, `distr`, selecciones no cuboides |
-| Región | 19 | 11 (4 de luz, que no se harán) | 12 con vista previa: `set`, `replace`, `walls`, `faces`, `stack`, `move`, `overlay`, `naturalize`, `smooth`, `hollow`, `center`, `line` | `curve`, `regen`, `deform`, `snowsmooth`, máscara en `stack`/`move` (entidades: hecho en la 031; `forest` y `flora`: en la 033) |
-| Generación | 13 | 5 | formas (7) y montaña e isla (WE no las tiene); desde la 033, árboles del juego (`forest`, `forestgen`, `flora`, `pumpkins`) y plantillas de estructuras | `//generate`, *features* y estructuras completas (sin API en Paper); FAWE: cuevas, minerales, imagen, roca |
+| Región | 19 | 11 (4 de luz, que no se harán) | 12 con vista previa: `set`, `replace`, `walls`, `faces`, `stack`, `move`, `overlay`, `naturalize`, `smooth`, `hollow`, `center`, `line` | `curve`, `regen`, `snowsmooth`, máscara en `stack`/`move` (entidades: hecho en la 031; `forest` y `flora`: en la 033; `deform`: en la 034) |
+| Generación | 13 | 5 | formas (7) y montaña e isla (WE no las tiene); desde la 033, árboles del juego (`forest`, `forestgen`, `flora`, `pumpkins`) y plantillas de estructuras | *features* y estructuras completas (sin API en Paper); FAWE: cuevas, minerales, imagen, roca (`//generate`: en la 034) |
 | Portapapeles y esquemas | 12 | 7 | 10, mejor deshacer y seguridad | pegar con máscara, multi-portapapeles (entidades: hecho en la 031; biomas: en la 033) |
 | Historial | 3 | 8 (`//history`, base de datos) | 3, mejor (en disco, seguro) | `clearhistory`, rollback por zona y tiempo, inspeccionar |
-| Herramientas y pinceles | 49 | 34 | pincel de terreno (6 modos), mejor en terreno; desde la 032, 10 pinceles de construcción, 8 herramientas y el superpico | `snow`, `deform`, los de líneas y curvas de FAWE, guardar pinceles (`tool tree` y `brush forest`: en la 033) |
+| Herramientas y pinceles | 49 | 34 | pincel de terreno (6 modos), mejor en terreno; desde la 032, 10 pinceles de construcción, 8 herramientas y el superpico | `snow`, los de líneas y curvas de FAWE, guardar pinceles (`tool tree` y `brush forest`: en la 033; `deform`: en la 034) |
 | Navegación | 7 | — | 7 (`ascend`, `descend`, `ceil`, `thru`, `jumpto`, `up`, `unstuck`) | `-f`/`-g` en `up` y `ceil`; la varita de navegación |
-| Utilidades | 17 | 4 | 12 (`drain`, `fixwater`, `fill`, `snow`…) + `cancel`, `confirm`, `help`; `butcher` y `remove` (031) | `calculate` |
-| Biomas, chunks, snapshots, scripts | 14 | — | 3 (033: `biomelist`, `biomeinfo`, `setbiome`) | `generatebiome` (034); snapshots (alto); `delchunks` y scripts, no |
+| Utilidades | 17 | 4 | 12 (`drain`, `fixwater`, `fill`, `snow`…) + `cancel`, `confirm`, `help`; `butcher` y `remove` (031); `calc` (034) | — |
+| Biomas, chunks, snapshots, scripts | 14 | — | 4 (033: `biomelist`, `biomeinfo`, `setbiome`; 034: `generatebiome`) | snapshots (alto); `delchunks` y scripts, no |
 | Ajustes generales y administración | 19 | 5 | `reload`, `validate`, `selftest`, `jobs`, `limits` | `gmask`, `//limit` personal, `toggleplace` |
-| Máscaras y patrones | ~20 | ~60 | listas con %, estados, tags, `not`, presets: **mejor legibilidad** | ruido, expresiones, `#clipboard`, ángulo (029: `above/below`, `exposed`, `^tipo`, superficie; 033: `$bioma`) |
+| Máscaras y patrones | ~20 | ~60 | listas con %, estados, tags, `not`, presets: **mejor legibilidad** | ruido, `#clipboard`, ángulo (029: `above/below`, `exposed`, `^tipo`, superficie; 033: `$bioma`; 034: `=fórmula`) |
 | API para otros plugins | sí (WorldGuard, PlotSquared, CoreProtect dependen) | la misma | ninguna | API, eventos y puente de selección |
 
 **Respuesta corta para el dueño:** Worldcraft todavía no tiene todos los comandos. Con la 0.4.0 cubre cerca del
@@ -122,7 +122,7 @@ WorldEdit**, aunque los constructores usen Worldcraft (§3).
 | `//center` (`//middle`) | Bloque(s) del centro | `/wc center` (0.4.0, [028](../sdd/specs/028-worldcraft-paridad-worldedit/spec.md)) | = | — | |
 | `//line`, `//curve` (`-h` solo la cáscara) | Línea o curva entre puntos | `/wc line [grosor]` (0.4.0, [028](../sdd/specs/028-worldcraft-paridad-worldedit/spec.md)) | parcial: falta `curve` (necesita selector de puntos) | M (`curve`) | |
 | `//regen [semilla] [bioma]` (`-b` biomas, FAWE `-r` semilla al azar; **029**) | Volver a generar el terreno original | — | **falta**: la API de Paper no regenera de forma fiable (`regenerateChunk` no está soportado) | A | |
-| `//deform <expresión>` | Deformar con una fórmula | — | **falta** (necesita expresiones; ver 2.10) | A | |
+| `//deform <expresión>` (`-r -o -c`) | Deformar con una fórmula | `/wc deform <fórmula> [--raw\|--offset\|--center] [--preview]` (0.10.0, [034](../sdd/specs/034-worldcraft-formulas/spec.md); lee todo antes, también fuera de la selección, y los cofres viajan con su contenido) | **hecho** | — | |
 | `//forest`, `//flora` | Árboles o plantas en la selección | `/wc forest [árbol] [densidad] [--preview]`, `/wc flora [densidad]` (0.9.0, [033](../sdd/specs/033-worldcraft-biomas-arboles-estructuras/spec.md): los árboles del juego capturados con `generateTree(…, Predicate)` y puestos por el motor, con vista previa y deshacer) | **hecho** | — | |
 | `//update` | Aplicar efectos secundarios (conexiones, física) | — | **falta** | M | |
 | `//revolve` | Girar la selección alrededor del eje vertical (torno) | — | **falta** | M | |
@@ -140,8 +140,8 @@ WorldEdit**, aunque los constructores usen Worldcraft (§3).
 | `//cyl`, `//hcyl` (radio, alto, grosor, `-h`) | Cilindro lleno o hueco | `/wc cyl`, `hcyl` (0.4.0, [028](../sdd/specs/028-worldcraft-paridad-worldedit/spec.md)) | = | — | |
 | `//pyramid`, `//hpyramid` (`-h`) | Pirámide llena o hueca | `/wc pyramid`, `hpyramid` (0.4.0, [028](../sdd/specs/028-worldcraft-paridad-worldedit/spec.md)) | = | — | |
 | `//cone` (`-h`) | Cono | `/wc cone` (0.4.0, [028](../sdd/specs/028-worldcraft-paridad-worldedit/spec.md)) | = | — | |
-| `//generate` (`//gen`, `//g`; `-h` hueca, `-r` coordenadas crudas, `-o` desde la posición, `-c` desde el centro) | Forma desde una fórmula | — | **falta** (expresiones) | A | |
-| `//generatebiome` | Biomas desde una fórmula | — | **falta** | A | |
+| `//generate` (`//gen`, `//g`; `-h` hueca, `-r` coordenadas crudas, `-o` desde la posición, `-c` desde el centro) | Forma desde una fórmula | `/wc generate <patrón> <fórmula>` (alias `gen`; `--hollow --raw --offset --center`, también `-h -r -o -c`; 0.10.0, [034](../sdd/specs/034-worldcraft-formulas/spec.md): la misma cuenta que WorldEdit 7.3.19 en la 3a; se calcula fuera del hilo del servidor) | **mejor** (no traba el servidor, vista previa, deshacer en disco) | — | |
+| `//generatebiome` | Biomas desde una fórmula | `/wc generatebiome <bioma> <fórmula>` (alias `genbiome`; 0.10.0, [034](../sdd/specs/034-worldcraft-formulas/spec.md): por celdas de 4×4×4, en su centro) | **hecho** | — | |
 | `/forestgen`, `/pumpkins` | Bosque o calabazas alrededor | `/wc forestgen [tamaño] [árbol] [densidad]`, `/wc pumpkins [tamaño] [densidad]` (0.9.0, [033](../sdd/specs/033-worldcraft-biomas-arboles-estructuras/spec.md)) | **hecho** | — | |
 | `//feature` (FAWE `//placefeature`), `//structure` | Generar un *feature* o estructura del juego | `/wc structure list\|load` (0.9.0, [033](../sdd/specs/033-worldcraft-biomas-arboles-estructuras/spec.md)): las **plantillas** del juego al portapapeles (`StructureManager`) | parcial: *features* y estructuras completas con piezas unidas no tienen API en Paper (solo el `/place` del juego); decisión del dueño: fuera | M | |
 | — | Montaña natural, isla flotante, con vista previa y estilos | `/wc mountain`, `/wc island`, `reroll` | **mejor** (WE no las tiene) | — | |
@@ -187,7 +187,7 @@ WorldEdit**, aunque los constructores usen Worldcraft (§3).
 | `/brush apply\|paint <forma> <radio> forest\|item\|set` (**029**: `item` faltaba) | Aplicar o pintar con una forma: árboles, usar un ítem (huesos, semillas) o poner un bloque | `forest`: `/wc brush forest [árbol] [radio] [densidad]` (0.9.0, [033](../sdd/specs/033-worldcraft-biomas-arboles-estructuras/spec.md)) | parcial: falta `item`, `set` y las formas | M | |
 | `/brush clipboard`, FAWE `copypaste`, `populateschematic` | Pegar el portapapeles (o esquemas al azar) con el pincel | `/wc brush clipboard [--air] [--origin]` (**032**: el portapapeles del momento del clic, sin entidades) | parcial (falta `-e`, `copypaste`, `populateschematic`) | M | |
 | `/brush splatter`, FAWE `scatter`, `rock`, `shatter` | Dispersar bloques, rocas, grietas | `/wc brush splatter`, `scatter [--overlay]`, `rock` (`blob`) (**032**) | parcial (falta `shatter`) | B | |
-| `/brush gravity` (`-h`), `snow` (`-s`), `snowsmooth` (`-l -m`), `extinguish`, `butcher` (flags de `/butcher`), `biome` (`-c`), `forest`, `feature`, FAWE `structure`, `deform` (`-r -o`), `apply` | Gravedad, nieve, apagar fuego, matar criaturas, biomas, árboles, fórmulas | `gravity [--height]`, `extinguish`, `butcher` con las opciones de `/wc butcher` (**032**, con deshacer) | parcial (falta `snow`, `snowsmooth`, `biome`, `feature`, `structure`, `deform` (034), `apply`; `forest` hecho en la 033) | B–M c/u | |
+| `/brush gravity` (`-h`), `snow` (`-s`), `snowsmooth` (`-l -m`), `extinguish`, `butcher` (flags de `/butcher`), `biome` (`-c`), `forest`, `feature`, FAWE `structure`, `deform` (`-r -o`), `apply` | Gravedad, nieve, apagar fuego, matar criaturas, biomas, árboles, fórmulas | `gravity [--height]`, `extinguish`, `butcher` con las opciones de `/wc butcher` (**032**, con deshacer) | parcial (falta `snow`, `snowsmooth`, `biome`, `feature`, `structure`, `apply`; `forest` hecho en la 033; `deform [radio] [fórmula] [--raw] [--offset]` en la 034) | B–M c/u | |
 | FAWE `/brush pull` (**029**) | Tirar del terreno hacia el jugador | — | **falta** | B | |
 | FAWE `/brush line`, `spline`, `surfacespline`, `catenary`, `sweep`, `circle`, `recursive` | Líneas, curvas, cuerdas colgantes, barrer el portapapeles por una curva | — | **falta** (roadmap 026: ríos y caminos) | M–A | |
 | FAWE `/brush command`, `scattercommand` | Correr comandos donde toca el pincel | — | **no** (escalada de permisos, como `player_command_as_op` en la 014) | — | |
@@ -219,7 +219,7 @@ WorldEdit**, aunque los constructores usen Worldcraft (§3).
 | `/snow` (`-s` apilar), `/thaw`, `/green` (`-f` también la tierra gruesa; **029**) | Nevar, derretir, tierra a pasto | `/wc snow`, `thaw`, `green` (0.4.0, [028](../sdd/specs/028-worldcraft-paridad-worldedit/spec.md)) | = (sin `-s`/`-f`) | B | |
 | `/extinguish` | Apagar el fuego cerca | `/wc extinguish` (0.4.0, [028](../sdd/specs/028-worldcraft-paridad-worldedit/spec.md)) | = | — | |
 | `/butcher [radio]` (`-p` mascotas, `-n` NPC, `-g` gólems, `-a` animales, `-b` ambiente, `-t` con nombre, `-f` todos los amistosos, `-r` soportes de armadura, `-w` acuáticos; **029**), `/remove <tipo> <radio>` (ítems, flechas, botes, carros, cuadros, marcos, soportes, xp…) | Matar criaturas o quitar entidades de un tipo | `/wc butcher [radio] --pets --npcs --golems --animals --ambient --water --named --armorstands --friendly`, `/wc remove <tipo> [radio]` ([031](../sdd/specs/031-worldcraft-entidades/spec.md)) | **mejor**: se deshacen, con tope por grupo y permisos propios; falta `-l` (rayos) | — | ✔ |
-| `//calculate` | Calculadora | — | **falta**; sin uso sin expresiones | — | |
+| `//calculate` (`//calc`, `//eval`) | Calculadora | `/wc calc` (alias `calculate`, `eval`; 0.10.0, [034](../sdd/specs/034-worldcraft-formulas/spec.md)) | **hecho** | — | |
 | `//help` (FAWE `masks` y `transforms` están comentados en el código: **no existen en el jar**, 029) | Ayuda | `/wc help [comando]` con ejemplo | = | — | |
 | FAWE `//cancel`, `//confirm` | Cancelar y confirmar | `/wc cancel`, `/wc confirm` con lo que se va a hacer | **mejor** (dice bloques y tiempo; vista previa) | — | |
 | FAWE `//macro`, `/hmi` | Grabar macros; interfaz web de mapas de alturas | — | **no** (macros = comandos en nombre del jugador; la web es un servicio externo) | — | |
@@ -240,7 +240,7 @@ WorldEdit**, aunque los constructores usen Worldcraft (§3).
 |---|---|---|---|---|---|
 | `/we reload\|version\|help\|report` (`-p`), `trace`, `cui`; FAWE `debugpaste`, `threads` (**029**: `trace` y `cui` faltaban) | Administración; `trace` dice qué extensión cambió cada bloque; `cui` es el saludo del mod WorldEdit CUI | `/wc reload`, `validate`, `selftest`, `jobs`, `limits` | = (`validate` y `jobs`: **mejor**); `cui` no aplica (contorno sin mod) | — | |
 | `//limit [n]` | Tu límite personal de bloques | límites por grupo de permiso (sin límite personal) | parcial | B | |
-| `//timeout` | Tiempo máximo de las expresiones | — | sin expresiones, sin uso | — | |
+| `//timeout` | Tiempo máximo de las expresiones | `/wc timeout [ms\|default]` (0.10.0, [034](../sdd/specs/034-worldcraft-formulas/spec.md)): el de **todo el cálculo** de un comando, fuera del hilo del servidor, con tope `formulas.max_timeout_ms`; cada evaluación además se corta en `formulas.max_steps` vueltas | **mejor** (WorldEdit evalúa en el hilo del servidor) | — | |
 | `//fast`, `//perf`, `//reorder`, `//watchdog` | Ajustes de rendimiento y efectos secundarios | el motor por tandas los decide | **mejor** (nada que ajustar; no se puede tumbar el servidor) | — | |
 | `/gmask`, FAWE `/gsmask`, `/gtransform`, `/gtexture` | Máscara (o transformación) global que se aplica a toda edición | — | **falta** | B | ✔ (`gmask`) |
 | `//world` | Fijar el mundo de las ediciones | `--world` en `pos1/pos2` | parcial | — | |
@@ -262,7 +262,7 @@ WorldEdit**, aunque los constructores usen Worldcraft (§3).
 | `#region` (`#sel`, `#selection`), `#dregion` (`#dsel`) | Dentro de la selección (fija o la que tengas al usarla) | — | **falta** | B | |
 | `$bioma` | Bioma | `$desert` (0.9.0, [033](../sdd/specs/033-worldcraft-biomas-arboles-estructuras/spec.md); el preset del mismo nombre gana y `validate` avisa) | **hecho** | — | |
 | `%50`, `#simplex`, `noise` | Probabilidad o ruido | — | **falta** | B | ✔ (`50% chance`) |
-| `=expresión` | Fórmula | — | **falta** (expresiones) | A | |
+| `=expresión` | Fórmula | `=y<64` (0.10.0, [034](../sdd/specs/034-worldcraft-formulas/spec.md); x, y, z del mundo; también en `gmask`) | **hecho** (sin `query()`: no lee bloques) | — | |
 | `#offset[x][y][z]`, FAWE `/[a][b]` (rango de altura), `#xaxis…` | Desplazamiento, alturas | — | **falta** | B | |
 | FAWE `#angle`, `#roc`, `#extrema`, `#surfaceangle` | Pendiente de la superficie | estilos del terreno con `slope_above` | parcial (solo en terreno) | B–M | |
 | FAWE `#liquid`, `#hotbar`, `#true`/`#false`, `{mín,máx` (radio), `&` (todas a la vez) (**029**) | Líquido, lo de la barra rápida, distancia, conjunción | `,` es «o»; no hay «y» | **falta** | B | |
@@ -280,7 +280,7 @@ WorldEdit**, aunque los constructores usen Worldcraft (§3).
 | FAWE `#linear`, `#linear2d`, `#linear3d`, `#buffer`, `#buffer2d`, `#relative`, `#offset`, `#spread`, `#solidspread`, `#surfacespread`, `#nox`/`#noy`/`#noz`, `#mask`, `&` (**029**: varios faltaban) | Patrones por posición, desplazados, sin repetir, con máscara, encadenados | — | **falta** | B–M | |
 | FAWE `#color`, `#anglecolor`, `#averagecolor`, `#saturate`, `#desaturate`, `#darken`, `#lighten` | Bloques por color (tabla de colores de bloques) | — | **falta** (SkinStatues ya mide el color de 145 bloques) | M | |
 | FAWE `#simplex`, `#perlin`, `#voronoi`, `#ridgedmulti`, `#noise` | Patrones con ruido | ruido en los estilos y el generador | parcial | B | |
-| FAWE `#biome`, `#existing`, `#typeswap` (`#ts`), `#fullcopy`, `#hotbar`, `=expresión` | Otros | — | **falta** | B–A | |
+| FAWE `#biome`, `#existing`, `#typeswap` (`#ts`), `#fullcopy`, `#hotbar`, `=expresión` | Otros | `=fórmula -> a, b, c` (0.10.0, [034](../sdd/specs/034-worldcraft-formulas/spec.md)): el número de la fórmula elige el bloque (FAWE da un número de bloque viejo) | parcial (falta `#biome`, `#existing`, `#typeswap`, `#fullcopy`, `#hotbar`) | B | |
 | FAWE transformaciones `#rotate`, `#scale`, `#spread`, `#offset`, `#linear`, `#pattern` (en pinceles y `//gtransform`) | Transformar al poner | — | **falta** | M | |
 
 ## 3. API para otros plugins
@@ -323,7 +323,7 @@ Costo: **B** horas · **M** una spec normal · **A** más de una spec o con ries
 | ~~031~~ (hecha) | Entidades | `copy`/`cut`/`paste`/`stack`/`move --entities`, entidades en los `.schem` (Sponge v2/v3), `paste --remove-entities`, `butcher` (con sus 9 tipos), `remove <tipo>`; deshacer que devuelve las entidades | M | Paper 1.21.4 copia y recrea entidades sin NMS (`Entity#createSnapshot`, `getAsString`, `EntityFactory`); hay que extender el historial |
 | ~~032~~ (hecha) | Pinceles de construcción y herramientas | `brush sphere`, `cyl`, `set`, `clipboard`, `splatter`/`scatter`, `rock` (`blob`), `gravity`, `extinguish`, `butcher`, `none`; herramientas `floodfill`, `repl`, `cycler`, `info`, `deltree`, `farwand`, `lrbuild`, `navwand`, superpico (`tool tree` pasó a la 033, decisión del dueño) | M | Reusa el pincel de la 026 (mira, círculo, una obra por pasada) |
 | ~~033~~ (hecha) | Biomas, árboles y estructuras | `biomelist`, `biomeinfo`, `setbiome`, máscara `$bioma`, biomas en `copy`/`paste`/`.schem`; `forest`, `flora`, `forestgen`, `pumpkins`, `brush forest`, `tool tree`; `structure` (plantillas del juego) | M | `setBiome` + `refreshChunk`; los árboles con `generateTree(…, Predicate)` pasan por el motor (vista previa y deshacer). Hecha en la 0.9.0: los *features* y las estructuras completas no tienen API en Paper (solo `/place`); el dueño los dejó fuera |
-| 034 | Fórmulas | `generate`, `generatebiome`, `deform`, máscara y patrón `=fórmula`, `calculate`, `brush deform`, `timeout` | A | Un lenguaje de fórmulas propio con tope de tiempo (o el de OmniEvents como biblioteca común, con un ADR) |
+| ~~034~~ (hecha) | Fórmulas | `generate`, `generatebiome`, `deform`, máscara y patrón `=fórmula`, `calculate`, `brush deform`, `timeout` | A | Hecha en la 0.10.0 con un lenguaje propio como el de WorldEdit ([ADR 0006](../adr/0006-formulas-de-worldcraft.md)); queda `query()` (leer bloques desde la fórmula), `gmegabuf`, `closest()` y `switch` (B) |
 | 035 | Lo de FAWE para crear | `caves`, `ore`/`ores`, `img` desde un link (red segura de SkinStatues 023), patrones por color (tabla de colores de SkinStatues) | M–A | Generadores nuevos; la imagen necesita la red segura |
 | 036 | `regen` y snapshots | Volver al terreno original (mundo temporal con la misma semilla, porque `regenerateChunk` no está soportado) y restaurar desde una copia de seguridad (lector de `.mca` con el NBT de la 027) | A | Lo más caro y lo que menos se usa al construir |
 | final | API para otros plugins | API Java, `WorldcraftEditEvent`, CoreProtect, puente con WorldGuard (§3) | M | Decisión del dueño (028): al final |

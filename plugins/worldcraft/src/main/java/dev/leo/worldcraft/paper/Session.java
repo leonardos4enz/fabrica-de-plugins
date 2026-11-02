@@ -18,6 +18,8 @@ public final class Session {
     public boolean terrainBusy;
     /** Spec 029 H4: la máscara global (/wc gmask); solo en memoria, como el portapapeles. null = ninguna. */
     public dev.leo.worldcraft.pattern.Mask gmask;
+    /** Spec 034 H6 CA2: cuánto puede calcular una fórmula (ms, /wc timeout); −1 = el de config.yml. */
+    public int formulaTimeout = -1;
 
     /** La caja seleccionada o null si falta una esquina o la forma no es una caja (spec 030: ver region()). */
     public Box box() {

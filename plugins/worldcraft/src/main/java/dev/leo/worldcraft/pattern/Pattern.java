@@ -16,11 +16,17 @@ import java.util.function.UnaryOperator;
  * @param text    lo que escribió el jugador, para mensajes y el historial
  * @param changes spec 029: por entrada, null (poner el estado) o el cambio sobre el bloque actual («^stone_stairs»,
  *                «^[waterlogged=false]»): del estado canónico actual al nuevo, o null si no se puede (el bloque se deja)
+ * @param pick    spec 034 H5 CA2: la fórmula que elige la entrada por su número («=(x+z)%2 -> a, b»), o null (pesos)
  */
-public record Pattern(List<String> states, List<Double> weights, String text, List<UnaryOperator<String>> changes) {
+public record Pattern(List<String> states, List<Double> weights, String text, List<UnaryOperator<String>> changes,
+                      dev.leo.worldcraft.formula.Formula pick) {
 
     public Pattern(List<String> states, List<Double> weights, String text) {
         this(states, weights, text, Collections.nCopies(states.size(), null));
+    }
+
+    public Pattern(List<String> states, List<Double> weights, String text, List<UnaryOperator<String>> changes) {
+        this(states, weights, text, changes, null);
     }
 
     public Pattern {
@@ -59,7 +65,7 @@ public record Pattern(List<String> states, List<Double> weights, String text, Li
             cumulative[i] = sum;
         }
         for (int i = 0; i < cumulative.length; i++) cumulative[i] /= sum;
-        return new Compiled(ids, cumulative, changes, table);
+        return new Compiled(ids, cumulative, changes, table, pick);
     }
 
     /** El patrón ya con números de estado: se evalúa por bloque sin texto ni asignaciones. */
@@ -70,12 +76,15 @@ public record Pattern(List<String> states, List<Double> weights, String text, Li
         private final StateTable table;
         /** Spec 029: por entrada con cambio, estado actual → estado nuevo + 1 (0 sin decidir; LEAVE = dejarlo). */
         private final int[][] memo;
+        private final dev.leo.worldcraft.formula.Formula pick;
 
-        Compiled(int[] ids, double[] cumulative, List<UnaryOperator<String>> changes, StateTable table) {
+        Compiled(int[] ids, double[] cumulative, List<UnaryOperator<String>> changes, StateTable table,
+                 dev.leo.worldcraft.formula.Formula pick) {
             this.ids = ids;
             this.cumulative = cumulative;
             this.changes = changes;
             this.table = table;
+            this.pick = pick;
             this.memo = new int[ids.length][];
             for (int i = 0; i < ids.length; i++) if (changes.get(i) != null) memo[i] = new int[64];
         }
@@ -88,7 +97,16 @@ public record Pattern(List<String> states, List<Double> weights, String text, Li
         /** El estado nuevo sabiendo el actual; -1 (dejar) si la entrada elegida es un cambio que no aplica. */
         public int apply(int x, int y, int z, int current, long seed) {
             int i = 0;
-            if (ids.length > 1) {
+            if (pick != null) {
+                // Spec 034 H5 CA2: el número de la fórmula, acotado a la lista; cortada por las vueltas, la primera.
+                double v;
+                try {
+                    v = pick.local().eval(x, y, z);
+                } catch (dev.leo.worldcraft.formula.Formula.Stop e) {
+                    v = 0;
+                }
+                i = v >= ids.length - 1 ? ids.length - 1 : v > 0 ? (int) v : 0;
+            } else if (ids.length > 1) {
                 double r = (mix(x, y, z, seed) >>> 11) * 0x1.0p-53;
                 i = ids.length - 1;
                 for (int k = 0; k < cumulative.length - 1; k++) {

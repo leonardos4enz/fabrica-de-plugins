@@ -30,6 +30,8 @@ public final class Parser {
     private final Set<String> blockNames = new HashSet<>();
     /** Spec 033: los biomas del servidor («minecraft:plains»), para «$desert». */
     private final Set<String> biomeNames = new HashSet<>();
+    /** Spec 034: los topes de las fórmulas de config.yml (formulas.*). */
+    private dev.leo.worldcraft.formula.Formula.Limits formulaLimits = dev.leo.worldcraft.formula.Formula.Limits.DEFAULTS;
 
     public Parser(BlockRegistry registry, Map<String, String> patternPresets, Map<String, String> maskPresets) {
         this.registry = registry;
@@ -51,13 +53,35 @@ public final class Parser {
         return hint == null ? "" : " (did you mean '" + hint.replace("minecraft:", "") + "'?)";
     }
 
+    /** Spec 034: los topes de las fórmulas (vueltas, largo, megabuf). */
+    public Parser formulaLimits(dev.leo.worldcraft.formula.Formula.Limits limits) {
+        this.formulaLimits = limits;
+        return this;
+    }
+
+    public dev.leo.worldcraft.formula.Formula.Limits formulaLimits() {
+        return formulaLimits;
+    }
+
+    /** Spec 034: una fórmula con esas entradas («x», «y», «z»), con los topes de config.yml. */
+    public dev.leo.worldcraft.formula.Formula formula(String text, List<String> inputs) throws ParseException {
+        try {
+            return dev.leo.worldcraft.formula.Formula.parse(text, inputs, formulaLimits);
+        } catch (dev.leo.worldcraft.formula.FormulaException e) {
+            throw new ParseException(e.getMessage());
+        }
+    }
+
+    private static final List<String> XYZ = List.of("x", "y", "z");
+
     public Pattern pattern(String input) throws ParseException {
         String text = input.trim();
         if (text.isEmpty()) throw new ParseException("Missing pattern: write a block, like 'stone', or a mix, like '70% stone, 30% andesite'");
         if (text.startsWith("$")) {
             Pattern p = pattern(preset(text, patternPresets, "pattern"));
-            return new Pattern(p.states(), p.weights(), text, p.changes());
+            return new Pattern(p.states(), p.weights(), text, p.changes(), p.pick());
         }
+        if (text.startsWith("=")) return formulaPattern(text);
         List<String> parts = split(text);
         List<String> states = new ArrayList<>();
         List<Double> weights = new ArrayList<>();
@@ -89,6 +113,45 @@ public final class Parser {
             throw new ParseException("Give every block in '" + text + "' a weight (like '70% stone, 30% andesite') or none");
         }
         return new Pattern(states, weights, text, changes);
+    }
+
+    /**
+     * Spec 034 H5 CA2: «=fórmula -> a, b, c»: el número de la fórmula (x, y, z del mundo) elige el bloque de la lista
+     * (0 el primero; acotado a la lista).
+     */
+    private Pattern formulaPattern(String text) throws ParseException {
+        int arrow = topLevel(text, "->");
+        if (arrow < 0) {
+            throw new ParseException("'" + text + "': after the formula write '->' and the blocks it picks from, like '=(x+z)%2 -> white_wool, black_wool'");
+        }
+        String body = text.substring(1, arrow).trim(), list = text.substring(arrow + 2).trim();
+        if (body.isEmpty()) throw new ParseException("'" + text + "': write a formula after '=', like '=(x+z)%2 -> white_wool, black_wool'");
+        if (list.isEmpty()) throw new ParseException("'" + text + "': write the blocks after '->', like 'white_wool, black_wool'");
+        dev.leo.worldcraft.formula.Formula f = formula(body, XYZ);
+        List<String> states = new ArrayList<>();
+        for (String raw : split(list)) {
+            String p = raw.trim();
+            if (p.isEmpty()) throw new ParseException("Empty entry in pattern '" + text + "' (two commas together?)");
+            if (WEIGHT.matcher(p).matches()) throw new ParseException("'" + p + "': with a formula the blocks have no weights (the formula picks one)");
+            if (p.startsWith("^") || p.startsWith("#") || p.startsWith("!") || p.contains("*") || p.startsWith("$") || p.startsWith("=")) {
+                throw new ParseException("'" + p + "': after '->' write blocks, like 'stone' or 'oak_stairs[facing=north]'");
+            }
+            states.add(state(p));
+        }
+        return new Pattern(states, java.util.Collections.nCopies(states.size(), 1.0), text,
+                java.util.Collections.nCopies(states.size(), null), f);
+    }
+
+    /** Dónde está sep fuera de paréntesis y corchetes, o -1. */
+    static int topLevel(String s, String sep) {
+        int depth = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '(' || c == '[' || c == '{') depth++;
+            else if (c == ')' || c == ']' || c == '}') depth = Math.max(0, depth - 1);
+            else if (depth == 0 && s.startsWith(sep, i)) return i;
+        }
+        return -1;
     }
 
     /**
@@ -156,7 +219,7 @@ public final class Parser {
     public Mask mask(String input) throws ParseException {
         Mask m = maskNear(input);
         if (m.positional()) {
-            throw new ParseException("'" + input.trim() + "' looks at the blocks around or picks at random: that works in "
+            throw new ParseException("'" + input.trim() + "' looks at the blocks around, the biome, a formula or picks at random: that works in "
                     + NEAR_COMMANDS + ", not here");
         }
         return m;
@@ -258,6 +321,13 @@ public final class Parser {
      */
     private Mask.Term partTerm(String part, String lower, String raw, List<Mask.Near> near) throws ParseException {
         {
+            if (lower.startsWith("=")) {
+                // Spec 034 H5 CA1: «=y<64», con x, y, z del mundo.
+                String body = part.trim().substring(1).trim();
+                if (body.isEmpty()) throw new ParseException("'" + raw + "': write a formula after '=', like '=y<64'");
+                near.add(new Mask.Near.Formula(formula(body, XYZ)));
+                return null;
+            }
             Matcher ch = CHANCE.matcher(lower);
             if (ch.matches()) {
                 double v = Double.parseDouble(ch.group(1));
@@ -396,14 +466,14 @@ public final class Parser {
         return id.contains(":") ? id : "minecraft:" + id;
     }
 
-    /** Separa por comas fuera de los corchetes de un estado («a[x=1,y=2], b»). */
+    /** Separa por comas fuera de los corchetes de un estado («a[x=1,y=2], b») y, spec 034, de los paréntesis de una fórmula. */
     static List<String> split(String s) {
         List<String> out = new ArrayList<>();
         int depth = 0, start = 0;
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
-            if (c == '[') depth++;
-            else if (c == ']') depth = Math.max(0, depth - 1);
+            if (c == '[' || c == '(' || c == '{') depth++;
+            else if (c == ']' || c == ')' || c == '}') depth = Math.max(0, depth - 1);
             else if (c == ',' && depth == 0) {
                 out.add(s.substring(start, i));
                 start = i + 1;

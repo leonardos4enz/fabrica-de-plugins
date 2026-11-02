@@ -84,7 +84,12 @@ public final class SelfTest {
                                 }
                                 s.sendMessage(plugin.messages().get("selftest-tools-ok"));
                                 String nature = nature(w, box);
-                                if (nature != null) fail(s, nature);
+                                if (nature != null) {
+                                    fail(s, nature);
+                                    return;
+                                }
+                                String formulas = formulas();
+                                if (formulas != null) fail(s, formulas);
                             })));
         });
         edits.submitJob(set);
@@ -260,6 +265,45 @@ public final class SelfTest {
                 + " blocks captured without touching the world; igloo/top is " + size.getBlockX() + "×" + size.getBlockY() + "×"
                 + size.getBlockZ() + "; " + listed + " templates listed");
         return null;
+    }
+
+    /**
+     * Spec 034 (compuerta 2): una esfera desde una fórmula, la máscara «=y&lt;0», un bucle cortado por las vueltas y un
+     * cálculo cortado por el plazo, con los topes de config.yml. Devuelve null si salió bien.
+     */
+    private String formulas() {
+        var parser = plugin.config().parser();
+        try {
+            var f = parser.formula("x^2+y^2+z^2<1", List.of("x", "y", "z"));
+            Box box = new Box(0, 0, 0, 10, 10, 10);
+            var sp = dev.leo.worldcraft.formula.Space.of(dev.leo.worldcraft.formula.Space.Mode.NORMAL, box, new int[3]);
+            long[] pts = dev.leo.worldcraft.formula.Shapes.generate(box, f, sp, false, 1, new dev.leo.worldcraft.formula.Shapes.Work(Long.MAX_VALUE));
+            java.util.Set<Long> in = new java.util.HashSet<>();
+            for (long p : pts) in.add(p);
+            if (!in.contains(dev.leo.worldcraft.edit.PointsSource.pack(5, 5, 5)) || in.contains(dev.leo.worldcraft.edit.PointsSource.pack(0, 0, 0))) {
+                return "formulas: the sphere of x^2+y^2+z^2<1 is wrong";
+            }
+            var mask = parser.maskNear("=y<0").compile(plugin.edits().blocks().table());
+            int stone = plugin.edits().blocks().table().intern("minecraft:stone");
+            if (!mask.test(0, -1, 0, stone, null, 0) || mask.test(0, 1, 0, stone, null, 0)) return "formulas: the mask =y<0 is wrong";
+            try {
+                parser.formula("while (1) { a++ }", List.of()).run(0).eval();
+                return "formulas: an endless loop was not cut";
+            } catch (dev.leo.worldcraft.formula.Formula.TooManySteps expected) {
+                // bien
+            }
+            try {
+                parser.formula("1", List.of()).run(0).deadline(System.nanoTime() - 1).eval();
+                return "formulas: a calculation past its time was not cut";
+            } catch (dev.leo.worldcraft.formula.Formula.TimedOut expected) {
+                // bien
+            }
+            plugin.getLogger().info("Selftest formulas passed: a sphere of " + pts.length + " blocks from x^2+y^2+z^2<1, the mask =y<0, a loop cut at "
+                    + plugin.config().formulas().maxSteps() + " rounds and a calculation cut at its time");
+            return null;
+        } catch (dev.leo.worldcraft.pattern.ParseException e) {
+            return "formulas: " + e.getMessage();
+        }
     }
 
     /** Lo que da fromCopy, en la forma que lee toCopy (Pos como double[], como al leer un archivo). */

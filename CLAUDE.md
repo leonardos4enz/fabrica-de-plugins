@@ -236,6 +236,16 @@ con `--release 21`.
   del servidor (`data/<ns>/structure/**.nbt` por el cargador de clases). El iglú recibe el botín de un marcador de datos
   al generarse (su cofre de plantilla no lo trae): para probar el botín, `ruined_portal/portal_1`. Al guardar un `.schem`
   se arma un portapapeles nuevo: todo lo nuevo del portapapeles (biomas) hay que pasarlo ahí (F-01).
+- **Spec 034 (fórmulas):** un texto que lleva `;` o `=` choca con lo que ya partía los argumentos: `ToolSpec` guarda las
+  opciones separadas por `;` (la fórmula del pincel va en Base64) y `ToolCommands.Tokens` toma `x=x*2` como `clave=valor`
+  (en deform solo `radius=` y `mask=` son opciones). En una máscara con espacios hay que usar `with` (sin él, el primer
+  argumento es la máscara), y `split` de las máscaras tiene que respetar los paréntesis (`=max(x,z)<5, stone`). Con
+  `0.10.0` y `0.9.0` en `dist/`, el orden por nombre pone primero la vieja: la suite y la compuerta eligen por fecha
+  (005 F-01), bien. Una fórmula de WorldEdit se compara contra WorldEdit en la 3a (`//g` dice «N blocks have been
+  created»): la misma cuenta confirma las coordenadas de −1 a 1. `<<` es un operador: `=y<<` da «ends too soon».
+  **Se repitió la 029:** un escenario puso piedra sobre el pasto del mundo plano; tapado, se volvió tierra y la corrida
+  **siguiente** falló en escenarios viejos (H1 espera pasto, la 033 cuenta pasto). Un escenario no tapa el suelo, y el que
+  lo toca lo deja como era en su `finally` (`fill` de bedrock, tierra y pasto; `forceload add` si el chunk no está cargado).
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

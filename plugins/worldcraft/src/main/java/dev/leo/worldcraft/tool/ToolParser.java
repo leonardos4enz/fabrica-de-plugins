@@ -33,6 +33,7 @@ public final class ToolParser {
             case FLOODFILL -> List.of("pattern", "range");
             case LRBUILD -> List.of("left", "right");
             case FOREST -> List.of("type", "radius", "density");
+            case DEFORM -> List.of("radius");
             case TREE -> List.of("type");
             default -> List.<String>of();
         });
@@ -48,6 +49,7 @@ public final class ToolParser {
             case SCATTER -> List.of("overlay");
             case GRAVITY -> List.of("height");
             case BUTCHER -> List.copyOf(new TreeSet<>(ToolSpec.BUTCHER_FLAGS));
+            case DEFORM -> List.of("raw", "offset");
             default -> List.of();
         };
     }
@@ -110,6 +112,19 @@ public final class ToolParser {
                 }
                 o.put("left", l);
                 o.put("right", r);
+            }
+            case DEFORM -> {
+                // Spec 034 H7: «deform [radio] [fórmula]», de fábrica 5 e «y-=0.2» (como WorldEdit); la fórmula se revisa aquí.
+                if (!rest.isEmpty() && rest.get(0).matches("\\d+")) o.put("radius", rest.remove(0));
+                else if (!kv.containsKey("radius")) o.put("radius", "5");
+                String text = rest.isEmpty() ? ToolSpec.DEFAULT_DEFORM : String.join(" ", rest);
+                try {
+                    dev.leo.worldcraft.formula.Formula.parse(text, List.of("x", "y", "z"), dev.leo.worldcraft.formula.Formula.Limits.DEFAULTS);
+                } catch (dev.leo.worldcraft.formula.FormulaException e) {
+                    throw new IllegalArgumentException(e.getMessage());
+                }
+                o.put("formula", ToolSpec.encodeText(text));
+                rest = new ArrayList<>();
             }
             case TREE, FOREST -> {
                 // Spec 033: el tipo de árbol en vez de bloques («forest birch 6 10», «tree cherry»).
@@ -233,6 +248,7 @@ public final class ToolParser {
             case LRBUILD -> "/wc tool lrbuild air stone";
             case NAVWAND -> "/wc tool navwand";
             case FOREST -> "/wc brush forest birch 6 10";
+            case DEFORM -> "/wc brush deform 6 y-=0.2";
             case TREE -> "/wc tool tree cherry";
         };
     }

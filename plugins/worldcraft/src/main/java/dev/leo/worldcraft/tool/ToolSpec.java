@@ -33,6 +33,25 @@ public record ToolSpec(ToolKind kind, Map<String, String> opts) {
         return opts.get(key);
     }
 
+    /** Spec 034: la fórmula de brush deform si no se escribe ninguna (la de WorldEdit). */
+    public static final String DEFAULT_DEFORM = "y-=0.2";
+
+    /** Spec 034: un texto que puede tener «;» (una fórmula) viaja en Base64 en el ítem. */
+    public static String encodeText(String text) {
+        return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    /** La fórmula de brush deform (o la de fábrica si el ítem no la trae o no se lee). */
+    public String formula() {
+        String v = opts.get("formula");
+        if (v == null) return DEFAULT_DEFORM;
+        try {
+            return new String(java.util.Base64.getUrlDecoder().decode(v), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            return DEFAULT_DEFORM;
+        }
+    }
+
     public String pattern() {
         return opts.get("pattern");
     }
@@ -161,6 +180,7 @@ public record ToolSpec(ToolKind kind, Map<String, String> opts) {
                 if (opts.containsKey("property")) sb.append(" · ").append(opts.get("property"));
             }
             case TREE, FOREST -> sb.append(" · ").append(opts.getOrDefault("type", "oak"));
+            case DEFORM -> sb.append(" · ").append(formula());
             default -> {
                 if (pattern() != null) sb.append(" · ").append(pattern());
             }
@@ -177,7 +197,7 @@ public record ToolSpec(ToolKind kind, Map<String, String> opts) {
             default -> {
             }
         }
-        for (String f : new String[]{"hollow", "air", "origin", "overlay", "full"}) {
+        for (String f : new String[]{"hollow", "air", "origin", "overlay", "full", "raw", "offset"}) {
             if (flag(f)) sb.append(" · ").append(f.equals("full") ? "to the top" : f.equals("air") ? "with air" : f);
         }
         if (kind == ToolKind.BUTCHER && !butcherFlags().isEmpty()) sb.append(" · ").append(String.join(", ", butcherFlags()));

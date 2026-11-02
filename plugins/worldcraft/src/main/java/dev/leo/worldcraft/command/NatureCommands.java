@@ -161,12 +161,12 @@ final class NatureCommands {
         });
     }
 
-    private static String short_(String biome) {
+    static String short_(String biome) {
         return biome.startsWith("minecraft:") ? biome.substring(10) : biome;
     }
 
     /** El bioma que escribió alguien, o un error con «did you mean». */
-    private String biome(String name) {
+    String biome(String name) {
         String id = plugin.config().parser().biome(name);
         if (id == null) throw new IllegalArgumentException("Unknown biome '" + name + "'" + plugin.config().parser().biomeHint(name)
                 + ". See /wc biomelist");
@@ -194,22 +194,25 @@ final class NatureCommands {
             w = Bukkit.getWorld(ses.world());
         }
         long[] cells = Cells.of(region);
+        s.sendMessage(msg().get("setbiome-cells", "cells", Edits.fmt(cells.length), "biome", short_(biome)));
+        edits().request(s, biomeOp(s, w, region, cells, biome, "setbiome", short_(biome)), false);
+    }
+
+    /** setbiome y, spec 034, generatebiome: la obra de biomas sobre esas celdas de la región, con la máscara global. */
+    Edits.Op biomeOp(CommandSender s, World w, Region region, long[] cells, String biome, String kind, String detail) {
         Box bounds = region.bounds();
         // H2 CA3: con la máscara global, la celda cambia si su bloque central pasa.
-        Mask gmask = ses.gmask;
+        Mask gmask = edits().session(Edits.owner(s)).gmask;
         Mask.Compiled gm = gmask == null ? null : edits().compile(gmask, w);
         long seed = ThreadLocalRandom.current().nextLong();
         var blocks = edits().blocks();
-        World world = w;
         BiomeStage.Step pick = gm == null ? (i, x, y, z, c) -> biome : (i, x, y, z, c) -> {
             int[] m = Cells.center(x, y, z, bounds);
-            int st = blocks.id(world.getBlockData(m[0], m[1], m[2]));
+            int st = blocks.id(w.getBlockData(m[0], m[1], m[2]));
             return gm.test(m[0], m[1], m[2], st, null, seed) ? biome : null;
         };
-        s.sendMessage(msg().get("setbiome-cells", "cells", Edits.fmt(cells.length), "biome", short_(biome)));
-        Edits.Op op = new Edits.Op("setbiome", short_(biome), w, bounds, region.volume(), () -> new EmptySource(bounds), List.of(), null)
+        return new Edits.Op(kind, detail, w, bounds, region.volume(), () -> new EmptySource(bounds), List.of(), null)
                 .with(new Edits.BiomeWork((bw, sink) -> BiomeStage.apply(bw, cells, pick, sink), ""));
-        edits().request(s, op, false);
     }
 
     private Region readable(CommandSender s, Session ses) {

@@ -65,13 +65,13 @@ public final class PointsSource implements EditSource {
     }
 
     /** Clave que ordena por chunk x, chunk z, x, z, y (22 + 22 + 4 + 4 + 12 bits). */
-    private static long order(int x, int y, int z) {
+    static long order(int x, int y, int z) {
         long cx = (x >> 4) + (1L << 21), cz = (z >> 4) + (1L << 21);
         long key = cx << 42 | cz << 20 | (long) (x & 15) << 16 | (long) (z & 15) << 12 | ((y + 2048) & 0xFFF);
         return key ^ FLIP;
     }
 
-    private static void decode(long key, int[] p) {
+    static void decode(long key, int[] p) {
         key ^= FLIP;
         int cx = (int) ((key >>> 42) - (1L << 21)), cz = (int) (((key >>> 20) & 0x3FFFFF) - (1L << 21));
         p[0] = (cx << 4) | (int) ((key >>> 16) & 15);

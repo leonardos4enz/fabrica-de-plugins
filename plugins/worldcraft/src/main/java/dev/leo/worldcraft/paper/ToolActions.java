@@ -160,6 +160,22 @@ public final class ToolActions {
                     busy.add(id);
                     new Nature(plugin).forest(p, w, region, tk, s.number("density"), kind, s.describe(), false, () -> busy.remove(id));
                 }
+                case DEFORM -> {
+                    // Spec 034 H7: la deformación de /wc deform en la esfera donde mira (de −1 a 1 en la esfera).
+                    var sphere = new dev.leo.worldcraft.region.Ellipsoid(x, y, z, r, r, r, true);
+                    var region = sphere.clampY(w.getMinHeight(), w.getMaxHeight() - 1);
+                    if (region == null) return;
+                    var f = plugin.config().parser().formula(s.formula(), List.of("x", "y", "z"));
+                    var mode = s.flag("raw") ? dev.leo.worldcraft.formula.Space.Mode.RAW
+                            : s.flag("offset") ? dev.leo.worldcraft.formula.Space.Mode.OFFSET : dev.leo.worldcraft.formula.Space.Mode.NORMAL;
+                    var sp = dev.leo.worldcraft.formula.Space.of(mode, sphere.bounds(), new int[]{x, y, z});
+                    UUID id = p.getUniqueId();
+                    busy.add(id);
+                    plugin.formulas().deform(p, w, region, f, sp, kind, prep -> {
+                        busy.remove(id);
+                        request(p, w, kind, s.describe(), prep.source(), prep.bounds(), prep.volume(), prep.placed(), s);
+                    }, () -> busy.remove(id));
+                }
                 case BUTCHER -> {
                     if (!p.hasPermission("worldcraft.butcher")) {
                         p.sendMessage(msg().get("no-permission"));

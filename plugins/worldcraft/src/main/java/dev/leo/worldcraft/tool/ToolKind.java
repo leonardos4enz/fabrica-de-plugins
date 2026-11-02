@@ -6,12 +6,12 @@ import java.util.Locale;
 
 /**
  * Los pinceles de construcción y las herramientas de un clic (spec 032), con los nombres y alias de WorldEdit y FAWE.
- * Spec 033: el pincel de bosque y la herramienta de árbol.
+ * Spec 033: el pincel de bosque y la herramienta de árbol. Spec 034: el pincel de deformar.
  */
 public enum ToolKind {
     SPHERE(true, "sphere"), CYL(true, "cyl", "cylinder"), SET(true, "set"), CLIPBOARD(true, "clipboard"),
     SPLATTER(true, "splatter"), SCATTER(true, "scatter"), ROCK(true, "rock", "blob"), GRAVITY(true, "gravity", "grav"),
-    EXTINGUISH(true, "extinguish", "ex"), BUTCHER(true, "butcher", "kill"), FOREST(true, "forest"),
+    EXTINGUISH(true, "extinguish", "ex"), BUTCHER(true, "butcher", "kill"), FOREST(true, "forest"), DEFORM(true, "deform"),
     REPL(false, "repl"), FLOODFILL(false, "floodfill", "flood"), INFO(false, "info"), CYCLER(false, "cycler"),
     DELTREE(false, "deltree"), FARWAND(false, "farwand"), LRBUILD(false, "lrbuild"), NAVWAND(false, "navwand"), TREE(false, "tree");
 

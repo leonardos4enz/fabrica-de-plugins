@@ -44,6 +44,9 @@ public final class Worldcraft extends JavaPlugin {
     private dev.leo.worldcraft.paper.Structures structures;
     private ExecutorService schematicThread;
     private Schematics schematics;
+    /** Spec 034: las fórmulas se calculan en un hilo propio (una lenta no frena el terreno). */
+    private ExecutorService formulaThread;
+    private dev.leo.worldcraft.paper.Formulas formulas;
 
     @Override
     public void onEnable() {
@@ -105,6 +108,12 @@ public final class Worldcraft extends JavaPlugin {
         });
         schematics = new Schematics(this, schematicThread);
         schematics.start();
+        formulaThread = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "Worldcraft-Formula");
+            t.setDaemon(true);
+            return t;
+        });
+        formulas = new dev.leo.worldcraft.paper.Formulas(this, formulaThread);
         command = new WorldcraftCommand(this);
         PluginCommand cmd = getCommand("worldcraft");
         if (cmd != null) {
@@ -120,6 +129,7 @@ public final class Worldcraft extends JavaPlugin {
             if (brush != null) brush.stop();
             if (tools != null) tools.stop();
             if (terrainThread != null) terrainThread.shutdownNow();
+            if (formulaThread != null) formulaThread.shutdownNow();
             if (schematicThread != null) {
                 // Un esquema a medio escribir va a un temporal: cortar no deja un .schem roto.
                 schematicThread.shutdown();
@@ -192,6 +202,10 @@ public final class Worldcraft extends JavaPlugin {
 
     public Schematics schematics() {
         return schematics;
+    }
+
+    public dev.leo.worldcraft.paper.Formulas formulas() {
+        return formulas;
     }
 
     public WorldcraftCommand command() {

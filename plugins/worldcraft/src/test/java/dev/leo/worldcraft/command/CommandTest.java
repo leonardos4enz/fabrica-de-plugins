@@ -137,4 +137,24 @@ class CommandTest {
         assertEquals(2, NatureCommands.density("0.02"), 1e-9, "0.02 de WorldEdit es 2 %");
         assertThrows(IllegalArgumentException.class, () -> NatureCommands.density("150"));
     }
+
+    /** Spec 034: las fórmulas con su ayuda y ejemplo; los alias de WorldEdit usan la misma ayuda. */
+    @Test
+    void spec034_ayuda_de_las_formulas() throws Exception {
+        YamlConfiguration m = new YamlConfiguration();
+        m.loadFromString(Files.readString(Path.of("src/main/resources/messages.yml")));
+        assertEquals(5, FormulaCommands.SUBS.size());
+        for (String s : FormulaCommands.SUBS) {
+            for (String k : new String[]{"usage", "text", "example"}) assertNotNull(m.getString("help." + s + "." + k), "falta help." + s + "." + k);
+            assertTrue(m.getString("help." + s + ".example").startsWith("/wc " + s), s);
+        }
+        for (String alias : FormulaCommands.ALIASES.keySet()) assertTrue(FormulaCommands.SUBS.contains(FormulaCommands.canonical(alias)), alias);
+        assertTrue(m.getString("help.brush.usage").contains("deform"));
+        assertEquals("1028", FormulaCommands.number(1028));
+        assertEquals("0.3333333333", FormulaCommands.number(1.0 / 3));
+        assertEquals("NaN", FormulaCommands.number(Double.NaN));
+        assertEquals("1E-7", FormulaCommands.number(1e-7));
+        String yml = Files.readString(Path.of("src/main/resources/config.yml"));
+        assertTrue(yml.contains("formulas:") && yml.contains("max_timeout_ms"), "config.yml trae la sección comentada");
+    }
 }

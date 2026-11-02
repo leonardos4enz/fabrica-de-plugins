@@ -67,6 +67,10 @@ public record Mask(List<Term> terms, String text) {
         /** F-01: lo contrario («stone and !surface»). */
         record Not(Near of) implements Near {
         }
+
+        /** Spec 034 H5 CA1: la fórmula es verdadera en x, y, z del mundo («=y&lt;64»). */
+        record Formula(dev.leo.worldcraft.formula.Formula formula) implements Near {
+        }
     }
 
     /** Spec 033: el bioma de una posición («minecraft:plains»); en Paper lee el mundo en el hilo principal. */
@@ -112,7 +116,7 @@ public record Mask(List<Term> terms, String text) {
         for (Term t : terms) {
             for (Near n : t.near) {
                 Near in = n instanceof Near.Not no ? no.of() : n;
-                if (!(in instanceof Near.Chance) && !(in instanceof Near.Biome)) return true;
+                if (!(in instanceof Near.Chance) && !(in instanceof Near.Biome) && !(in instanceof Near.Formula)) return true;
             }
         }
         return false;
@@ -223,11 +227,21 @@ public record Mask(List<Term> terms, String text) {
                             || isAir(near.at(x, y + 1, z)) || isAir(near.at(x, y - 1, z))
                             || isAir(near.at(x, y, z + 1)) || isAir(near.at(x, y, z - 1)));
                     case Near.Biome b -> biomes != null && b.biomes().contains(biomes.at(x, y, z));
+                    case Near.Formula f -> formula(f.formula(), x, y, z);
                     case Near.Not no -> throw new IllegalStateException("not inside not");
                 };
                 if (ok == flip) return false;
             }
             return true;
+        }
+
+        /** Spec 034: una evaluación cortada por las vueltas (plan §1.2) cuenta como falsa. */
+        static boolean formula(dev.leo.worldcraft.formula.Formula f, int x, int y, int z) {
+            try {
+                return f.local().eval(x, y, z) > 0;
+            } catch (dev.leo.worldcraft.formula.Formula.Stop e) {
+                return false;
+            }
         }
 
         private boolean isAir(int id) {

@@ -124,3 +124,12 @@ nature:
   # What /wc flora plants (pattern syntax): on grass and dirt, and on sand.
   flora_grass: "80% short_grass, 5% dandelion, 5% poppy, 4% cornflower, 3% oxeye_daisy, 3% azure_bluet"
   flora_sand: "90% dead_bush, 10% cactus"
+
+# Formulas (/wc generate, deform, generatebiome, calc, "=formula" masks and patterns, /wc brush deform).
+# A formula is worked out away from the server thread and cut when it takes too long; what it changes goes through the editor.
+formulas:
+  timeout_ms: 2000        # how long one command's formula may work, by default (each player: /wc timeout) (1..max_timeout_ms)
+  max_timeout_ms: 10000   # the most /wc timeout can set (100..60000)
+  max_steps: 100000       # loop rounds (while, for, do) in one evaluation (1000..10000000)
+  max_length: 1000        # characters in one formula (32..10000)
+  megabuf_size: 65536     # cells of megabuf() (0..10000000)
