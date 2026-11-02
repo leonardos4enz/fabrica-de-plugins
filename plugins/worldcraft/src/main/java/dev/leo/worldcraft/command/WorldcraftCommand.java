@@ -77,6 +77,9 @@ public final class WorldcraftCommand implements TabExecutor {
         // Spec 034: fórmulas (como cualquier edición), con los alias de WorldEdit.
         for (String s : FormulaCommands.SUBS) SUBS.put(s, USE);
         for (String s : FormulaCommands.ALIASES.keySet()) SUBS.put(s, USE);
+        // Spec 035: lo de FAWE para crear (como cualquier edición; el link de image pide además worldcraft.image.link).
+        for (String s : CreateCommands.SUBS) SUBS.put(s, USE);
+        for (String s : CreateCommands.ALIASES.keySet()) SUBS.put(s, USE);
         // Spec 032: el superpico, con su propio permiso (los pinceles y herramientas van con worldcraft.use).
         SUBS.put("superpickaxe", dev.leo.worldcraft.paper.Tools.SUPERPICKAXE);
         SUBS.put("sp", dev.leo.worldcraft.paper.Tools.SUPERPICKAXE);
@@ -95,6 +98,7 @@ public final class WorldcraftCommand implements TabExecutor {
     private final ToolCommands tool;
     private final NatureCommands nature;
     private final FormulaCommands formulas;
+    private final CreateCommands create;
 
     public WorldcraftCommand(Worldcraft plugin) {
         this.plugin = plugin;
@@ -104,6 +108,7 @@ public final class WorldcraftCommand implements TabExecutor {
         this.tool = new ToolCommands(plugin);
         this.nature = new NatureCommands(plugin, this);
         this.formulas = new FormulaCommands(plugin, this, nature);
+        this.create = new CreateCommands(plugin, this);
     }
 
     /** Spec 032 H4 CA3: el pincel butcher (la obra de /wc butcher en otro punto). */
@@ -174,6 +179,7 @@ public final class WorldcraftCommand implements TabExecutor {
                     else if (SelectionCommands.SUBS.contains(sub)) selection.run(s, sub, a);
                     else if (NatureCommands.SUBS.contains(sub)) nature.run(s, sub, a);
                     else if (FormulaCommands.handles(sub)) formulas.run(s, sub, a);
+                    else if (CreateCommands.handles(sub)) create.run(s, sub, a);
                     else if (BuildCommands.SHAPES.contains(sub) || BuildCommands.REGION.contains(sub)
                             || BuildCommands.UTILITIES.contains(sub) || BuildCommands.ENTITIES.contains(sub)) build.run(s, sub, a);
                     else help(s, a);
@@ -195,6 +201,7 @@ public final class WorldcraftCommand implements TabExecutor {
     /** floating_island usa la ayuda de island. */
     private static String helpKey(String sub) {
         if (FormulaCommands.ALIASES.containsKey(sub)) return FormulaCommands.canonical(sub);
+        if (CreateCommands.ALIASES.containsKey(sub)) return CreateCommands.canonical(sub);
         return sub.equals("floating_island") ? "island" : sub.equals("schematic") ? "schem" : sub.equals("sp") ? "superpickaxe" : sub;
     }
 
@@ -224,7 +231,7 @@ public final class WorldcraftCommand implements TabExecutor {
         }
         s.sendMessage(msg().get("help-header"));
         for (String sub : visible(s)) {
-            if (sub.equals("floating_island") || sub.equals("schematic") || sub.equals("sp") || FormulaCommands.ALIASES.containsKey(sub)) continue;
+            if (sub.equals("floating_island") || sub.equals("schematic") || sub.equals("sp") || FormulaCommands.ALIASES.containsKey(sub) || CreateCommands.ALIASES.containsKey(sub)) continue;
             s.sendMessage(msg().get("help-line", "usage", msg().raw("help." + sub + ".usage"), "text", msg().raw("help." + sub + ".text")));
         }
         s.sendMessage(msg().get("help-footer"));
@@ -1224,6 +1231,11 @@ public final class WorldcraftCommand implements TabExecutor {
                 case "setbiome" -> Set.of("--here");
                 case "forest", "forestgen", "flora", "pumpkins" -> Set.of("--preview");
                 case "structure" -> Set.of("--palette");
+                case "caves", "ore", "ores", "image", "img" -> {
+                    Set<String> f = new HashSet<>();
+                    for (String o : CreateCommands.flags(sub)) f.add("--" + o);
+                    yield f;
+                }
                 case "generate", "gen", "generatebiome", "genbiome", "deform" -> {
                     Set<String> f = new HashSet<>();
                     for (String o : FormulaCommands.flags(sub)) f.add("--" + o);
@@ -1239,7 +1251,7 @@ public final class WorldcraftCommand implements TabExecutor {
                         ? Set.of("--overwrite") : Set.of();
                 default -> {
                     Set<String> f = new HashSet<>();
-                    if (!NavigationCommands.SUBS.contains(sub) && !SelectionCommands.SUBS.contains(sub) && !NatureCommands.SUBS.contains(sub) && !FormulaCommands.handles(sub)) for (String o : BuildCommands.flags(sub)) f.add("--" + o);
+                    if (!NavigationCommands.SUBS.contains(sub) && !SelectionCommands.SUBS.contains(sub) && !NatureCommands.SUBS.contains(sub) && !FormulaCommands.handles(sub) && !CreateCommands.handles(sub)) for (String o : BuildCommands.flags(sub)) f.add("--" + o);
                     yield f;
                 }
             };
@@ -1270,6 +1282,7 @@ public final class WorldcraftCommand implements TabExecutor {
             case "outset", "inset" -> a.length == 2 ? filter(List.of("1", "5", "10"), last) : List.of();
             case "biomelist", "biomeinfo", "setbiome", "forest", "forestgen", "flora", "pumpkins", "structure" -> nature.complete(sub, a, last);
             case "generate", "gen", "generatebiome", "genbiome", "timeout" -> formulas.complete(sub, a, last);
+            case "caves", "ore", "ores", "image", "img" -> create.complete(sub, a, last);
             default -> buildSuggestions(sub, a, last);
         };
     }
@@ -1348,6 +1361,14 @@ public final class WorldcraftCommand implements TabExecutor {
             for (String t : edits().blocks().tags()) {
                 String n = "#" + t.replace("minecraft:", "");
                 if (n.startsWith(q) && out.size() < 60) out.add(head + neg + n);
+            }
+            return out;
+        }
+        // Spec 035: los patrones por color.
+        if (!mask && q.startsWith("#")) {
+            for (String w : dev.leo.worldcraft.pattern.Parser.COLOR_WORDS) {
+                String n = "#" + w + (w.equals("darken") || w.equals("lighten") ? "" : "[");
+                if (n.startsWith(q)) out.add(head + n);
             }
             return out;
         }

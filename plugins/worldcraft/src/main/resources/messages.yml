@@ -11,7 +11,7 @@ unknown-direction: "{prefix}<red>'{input}' is not a direction{hint}: up, down, n
 
 help-header: "<gold>Worldcraft</gold> <gray>- /wc help <command> shows an example"
 help-line: " <yellow>{usage}</yellow> <dark_gray>-</dark_gray> <gray>{text}"
-help-footer: "<gray>Patterns: <white>stone</white>, <white>70% stone, 30% andesite</white>, <white>oak_stairs[facing=north]</white>, <white>$preset</white>. Masks: <white>dirt, grass_block</white>, <white>*_wool</white>, <white>#logs</white>, <white>!air</white>. Formulas: mask <white>=y>=64</white>, pattern <white>=(x+z)%2 -> white_wool, black_wool</white>."
+help-footer: "<gray>Patterns: <white>stone</white>, <white>70% stone, 30% andesite</white>, <white>oak_stairs[facing=north]</white>, <white>$preset</white>. Masks: <white>dirt, grass_block</white>, <white>*_wool</white>, <white>#logs</white>, <white>!air</white>. Formulas: mask <white>=y>=64</white>, pattern <white>=(x+z)%2 -> white_wool, black_wool</white>. Colors: <white>#color[red]</white>, <white>#darken</white>, <white>#lighten</white>."
 help-detail: "<yellow>{usage}</yellow>\n<gray>{text}\n<gray>Example: <white>{example}"
 
 help:
@@ -112,7 +112,11 @@ help:
   generatebiome: { usage: "/wc generatebiome <biome> <formula> [--hollow] [--raw|--offset|--center]", text: "Change the biome of the 4×4×4 cells of your selection where the formula is true in the middle of the cell (alias genbiome); x, y, z like /wc generate. Undo brings the old biomes back.", example: "/wc generatebiome desert x<0" }
   deform: { usage: "/wc deform <formula> [--raw|--offset|--center] [--preview]", text: "Like WorldEdit's //deform: for every block of your selection the formula changes x, y and z, and the block takes what was there (y-=0.2 lifts what is below; x*=2 stretches it). x, y, z like /wc generate. Everything is read first; chests keep their items.", example: "/wc deform y-=0.2" }
   calc: { usage: "/wc calc <formula>", text: "Work out a formula (aliases calculate, eval): numbers, + - * / % ^, sqrt, sin, min, max, pi... and your own variables (a=3; a*2).", example: "/wc calc 2^10 + sqrt(16)" }
-  timeout: { usage: "/wc timeout [milliseconds | default]", text: "How long a formula may calculate in one of your commands (generate, deform, generatebiome, calc). Without a number it says the current one.", example: "/wc timeout 5000" }
+  timeout: { usage: "/wc timeout [milliseconds | default]", text: "How long a formula, /wc caves or /wc ore may calculate in one of your commands (generate, deform, generatebiome, calc, caves, ore, ores). Without a number it says the current one.", example: "/wc timeout 5000" }
+  caves: { usage: "/wc caves [size] [frequency] [--rooms] [--preview]", text: "Cut a network of tunnels through your selection, like the game's caves since 1.18 (FAWE's //caves): size is how wide (1-10, default 3), frequency how many (1-100, default 40); --rooms adds big rooms. Only rock, dirt and gravel are cut (caves.mask); below caves.lava_y they fill with lava. Different every time.", example: "/wc caves 4 60 --rooms" }
+  ore: { usage: "/wc ore <mask> <pattern> [size] [frequency] [rarity] [min y] [max y] [--preview]", text: "Spread veins of the pattern in your selection where the mask is, like FAWE's //ore: frequency tries per chunk (16×16), each with rarity % to come out, of about size blocks, between the two heights (default: 8 blocks, 10 tries, 100%, the whole selection).", example: "/wc ore stone gold_ore 9 4 100 -64 32" }
+  ores: { usage: "/wc ores [mask] [--preview]", text: "Spread the game's ores in your selection (coal, iron, copper, gold, redstone, lapis, diamond, emerald) with their sizes, amounts and heights (the ores list in config.yml), in the rock of the mask (default: stone, deepslate, andesite, diorite, granite, tuff). In deepslate and tuff the deepslate version goes.", example: "/wc ores" }
+  image: { usage: "/wc image <file | link | list> [size] [--floor|--wall] [--preview]", text: "Build a picture with blocks (alias img), each pixel the block of the closest color; transparent pixels are left as they are. Looking down it lies on the ground ahead of you; otherwise it stands like a wall 2 blocks in front of you. size is the long side in blocks. Files go in plugins/Worldcraft/images; links only if the server turns them on (images.links).", example: "/wc image logo.png 64" }
 
 wand-given: "{prefix}<green>Here is your wand: <white>left click</white> a block for corner 1, <white>right click</white> for corner 2."
 corner-set: "{prefix}Corner {which} at <white>{pos}</white>."
@@ -373,3 +377,26 @@ generatebiome-cells: "{prefix}<gray>The formula is true in {cells} of {total} bi
 calc-result: "{prefix}<white>{formula}</white> <gray>=</gray> <green>{value}"
 timeout-current: "{prefix}A formula can work for <white>{ms} ms</white> in one of your commands (server default {default} ms, at most {max} ms)."
 timeout-set: "{prefix}<green>A formula can now work for {ms} ms in one of your commands."
+
+# Spec 035: FAWE-style creation (caves, ores, images, colors)
+compute-timeout: "{prefix}<red>Working out the {what} took more than {ms} ms ({done} of {total} worked out): select less, or raise /wc timeout (at most {max} ms)."
+caves-calculating: "{prefix}<gray>Working out the caves in {blocks} block(s)..."
+caves-nothing: "{prefix}<yellow>No cave goes through your selection this time: try again (another seed), a bigger --size or a higher frequency."
+caves-planned: "{prefix}<gray>The caves cross {blocks} block(s) of your selection; only what matches <white>{mask}</white> is cut."
+ore-planned: "{prefix}<gray>{veins} vein(s), {blocks} block(s) at most, where <white>{mask}</white> is."
+ore-nothing: "{prefix}<yellow>No vein came out in your selection (heights {min} to {max}, rarity {rarity}%): nothing to change."
+ores-planned: "{prefix}<gray>{veins} vein(s) of {kinds}, {blocks} block(s) at most, where <white>{mask}</white> is (deepslate versions in {deepslate})."
+ores-nothing: "{prefix}<yellow>No ore of the list fits the heights of your selection ({min} to {max}): nothing to change."
+image-loading: "{prefix}<gray>Reading {name}..."
+image-planned: "{prefix}<gray>{name} ({source} pixels) as {size} blocks, {where}: {blocks} block(s)."
+image-list: "{prefix}Images in {folder}: <white>{names}"
+image-list-empty: "{prefix}<yellow>There are no images in {folder}: put PNG, JPG or GIF files there."
+image-bad-name: "{prefix}<red>'{name}' is not an image file name: use the name of a PNG, JPG or GIF in the images folder (no paths), or a https:// link."
+image-not-found: "{prefix}<red>There is no image '{name}' in {folder}{hint}. See /wc image list"
+image-invalid: "{prefix}<red>{name} can't be used: {reason}."
+image-in-game: "{prefix}<red>/wc image builds in front of you: use it in the game."
+image-too-big: "{prefix}<red>That is {size} blocks on the long side; at most {max} (images.max_size)."
+links-off: "{prefix}<red>Images from links are off on this server (images.links in config.yml). Put the file in {folder} and use its name."
+invalid-link: "{prefix}<red>That link can't be used: {reason}."
+link-error: "{prefix}<red>Could not get the image from {host}: {reason}."
+host-not-allowed: "{prefix}<red>Links from {host} are not allowed. Allowed sites: <white>{hosts}</white> (images.allowed_hosts in config.yml)."

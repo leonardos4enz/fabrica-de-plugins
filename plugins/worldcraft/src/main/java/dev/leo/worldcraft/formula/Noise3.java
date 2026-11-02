@@ -4,11 +4,11 @@ package dev.leo.worldcraft.formula;
  * Ruido 3D para las fórmulas (spec 034 H1 CA2): Perlin mejorado con la permutación de la semilla, sus octavas
  * (perlin), crestas (ridgedmulti) y celdas (voronoi). Se usa como el de WorldEdit; los números son otros.
  */
-final class Noise3 {
+public final class Noise3 {
     private final int[] p = new int[512];
     private final long seed;
 
-    Noise3(long seed) {
+    public Noise3(long seed) {
         this.seed = seed;
         int[] perm = new int[256];
         for (int i = 0; i < 256; i++) perm[i] = i;
@@ -30,7 +30,7 @@ final class Noise3 {
     }
 
     /** Un valor de −1 a 1 (aprox.). */
-    double at(double x, double y, double z) {
+    public double at(double x, double y, double z) {
         int X = (int) Math.floor(x) & 255, Y = (int) Math.floor(y) & 255, Z = (int) Math.floor(z) & 255;
         x -= Math.floor(x);
         y -= Math.floor(y);

@@ -17,9 +17,10 @@ import java.util.function.UnaryOperator;
  * @param changes spec 029: por entrada, null (poner el estado) o el cambio sobre el bloque actual («^stone_stairs»,
  *                «^[waterlogged=false]»): del estado canónico actual al nuevo, o null si no se puede (el bloque se deja)
  * @param pick    spec 034 H5 CA2: la fórmula que elige la entrada por su número («=(x+z)%2 -> a, b»), o null (pesos)
+ * @param also    spec 035: los estados que pueden poner los cambios por color (#darken… eligen de la tabla de colores)
  */
 public record Pattern(List<String> states, List<Double> weights, String text, List<UnaryOperator<String>> changes,
-                      dev.leo.worldcraft.formula.Formula pick) {
+                      dev.leo.worldcraft.formula.Formula pick, List<String> also) {
 
     public Pattern(List<String> states, List<Double> weights, String text) {
         this(states, weights, text, Collections.nCopies(states.size(), null));
@@ -29,6 +30,11 @@ public record Pattern(List<String> states, List<Double> weights, String text, Li
         this(states, weights, text, changes, null);
     }
 
+    public Pattern(List<String> states, List<Double> weights, String text, List<UnaryOperator<String>> changes,
+                   dev.leo.worldcraft.formula.Formula pick) {
+        this(states, weights, text, changes, pick, List.of());
+    }
+
     public Pattern {
         if (states.isEmpty() || states.size() != weights.size() || states.size() != changes.size()) {
             throw new IllegalArgumentException("empty pattern");
@@ -36,6 +42,7 @@ public record Pattern(List<String> states, List<Double> weights, String text, Li
         states = Collections.unmodifiableList(new ArrayList<>(states));
         weights = List.copyOf(weights);
         changes = Collections.unmodifiableList(new ArrayList<>(changes));
+        also = List.copyOf(also);
     }
 
     public static Pattern of(String state) {
@@ -46,6 +53,7 @@ public record Pattern(List<String> states, List<Double> weights, String text, Li
     public List<String> placedStates() {
         List<String> out = new ArrayList<>();
         for (String s : states) if (s != null) out.add(s);
+        for (String s : also) if (!out.contains(s)) out.add(s);
         return out;
     }
 

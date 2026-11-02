@@ -246,6 +246,12 @@ con `--release 21`.
   **Se repitió la 029:** un escenario puso piedra sobre el pasto del mundo plano; tapado, se volvió tierra y la corrida
   **siguiente** falló en escenarios viejos (H1 espera pasto, la 033 cuenta pasto). Un escenario no tapa el suelo, y el que
   lo toca lo deja como era en su `finally` (`fill` de bedrock, tierra y pasto; `forceload add` si el chunk no está cargado).
+- **Spec 035 (cuevas, minerales, imágenes, colores):** **se repitió por tercera vez la 034 F-01:** un mural de imagen «de
+  pie desde los pies de Ana» (y = -60) tapaba el pasto unos segundos y la corrida siguiente falló en la 033. Todo lo que
+  se construye **a la altura de los pies** en el mundo plano se apoya en el pasto: los escenarios nuevos trabajan sobre
+  un vidrio en el aire (y = -51). La red de SkinStatues se copió a Worldcraft (ADR 0007): un arreglo en una va en la otra.
+  La suite de Worldcraft ya arranca el HTTPS local de la 023 (`antesDeArrancar`; `-Dworldcraft.test.localLinks=true`).
+  Las formas con ruido (cuevas) se calibran mirando cortes con `jshell --class-path build/classes/java/main` (rápido, sin servidor).
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

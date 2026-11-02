@@ -28,7 +28,7 @@ public final class Shapes {
             this.deadline = deadline;
         }
 
-        void at(int px, int py, int pz) {
+        public void at(int px, int py, int pz) {
             x = px;
             y = py;
             z = pz;
@@ -153,16 +153,16 @@ public final class Shapes {
     }
 
     /** Una lista de long que crece. */
-    static final class Longs {
-        long[] a = new long[64];
-        int n;
+    public static final class Longs {
+        public long[] a = new long[64];
+        public int n;
 
-        void add(long v) {
+        public void add(long v) {
             if (n == a.length) a = Arrays.copyOf(a, n * 2);
             a[n++] = v;
         }
 
-        long[] toArray() {
+        public long[] toArray() {
             return Arrays.copyOf(a, n);
         }
     }

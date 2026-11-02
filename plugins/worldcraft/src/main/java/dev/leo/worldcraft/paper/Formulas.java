@@ -59,6 +59,11 @@ public final class Formulas {
      * y corre failed; total es lo que se iba a evaluar.
      */
     public <T> void compute(CommandSender s, Shapes.Work work, long total, Supplier<T> job, Consumer<T> then, Runnable failed) {
+        compute(s, work, total, job, then, failed, null);
+    }
+
+    /** Spec 035: what = lo que se calcula («caves», «ores») para el mensaje del plazo; null = una fórmula. */
+    public <T> void compute(CommandSender s, Shapes.Work work, long total, Supplier<T> job, Consumer<T> then, Runnable failed, String what) {
         CompletableFuture.supplyAsync(job, thread).whenComplete((v, err) -> Bukkit.getScheduler().runTask(plugin, () -> {
             if (err == null) {
                 then.accept(v);
@@ -66,7 +71,10 @@ public final class Formulas {
             }
             Throwable e = err instanceof CompletionException && err.getCause() != null ? err.getCause() : err;
             var msg = plugin.messages();
-            if (e instanceof Formula.TimedOut) {
+            if (e instanceof Formula.TimedOut && what != null) {
+                s.sendMessage(msg.get("compute-timeout", "what", what, "ms", String.valueOf(timeoutMs(s)), "done", Edits.fmt(work.evaluated),
+                        "total", Edits.fmt(total), "max", String.valueOf(settings().maxTimeoutMs())));
+            } else if (e instanceof Formula.TimedOut) {
                 s.sendMessage(msg.get("formula-timeout", "ms", String.valueOf(timeoutMs(s)), "done", Edits.fmt(work.evaluated),
                         "total", Edits.fmt(total), "max", String.valueOf(settings().maxTimeoutMs())));
             } else if (e instanceof Formula.TooManySteps) {

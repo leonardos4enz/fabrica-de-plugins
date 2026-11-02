@@ -37,6 +37,9 @@ permissions:
   worldcraft.navigate:
     description: Move around while building (/wc ascend, descend, ceil, thru, jumpto, unstuck, up).
     default: op
+  worldcraft.image.link:
+    description: Build a picture from a link (/wc image https://...), when images.links is on. The server downloads it.
+    default: op
   worldcraft.superpickaxe:
     description: Break blocks instantly with any pickaxe (/wc superpickaxe, /wc sp); nothing is dropped and undo brings them back.
     default: op

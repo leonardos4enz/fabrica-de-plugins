@@ -89,7 +89,12 @@ public final class SelfTest {
                                     return;
                                 }
                                 String formulas = formulas();
-                                if (formulas != null) fail(s, formulas);
+                                if (formulas != null) {
+                                    fail(s, formulas);
+                                    return;
+                                }
+                                String create = create();
+                                if (create != null) fail(s, create);
                             })));
         });
         edits.submitJob(set);
@@ -303,6 +308,42 @@ public final class SelfTest {
             return null;
         } catch (dev.leo.worldcraft.pattern.ParseException e) {
             return "formulas: " + e.getMessage();
+        }
+    }
+
+    /**
+     * Spec 035: la tabla de colores con los bloques del servidor (#color y #darken con el registro real), una veta, una
+     * cueva y una imagen de 2×2 en memoria (ImageIO del servidor), sin tocar el mundo.
+     */
+    private String create() {
+        try {
+            var parser = plugin.config().parser();
+            var colors = parser.colors();
+            var table = plugin.edits().blocks().table();
+            int red = table.intern(parser.pattern("#color[red]").placedStates().get(0));
+            if (!table.material(red).equals("minecraft:red_wool")) return "colors: #color[red] is " + table.material(red);
+            int light = table.intern(parser.pattern("light_gray_wool").placedStates().get(0));
+            int dark = parser.pattern("#darken").compile(table).apply(0, 0, 0, light, 0);
+            if (dark < 0) return "colors: #darken left light_gray_wool as it was";
+            var box = new Box(0, 0, 0, 31, 31, 31);
+            var free = new dev.leo.worldcraft.formula.Shapes.Work(Long.MAX_VALUE);
+            var ores = dev.leo.worldcraft.create.Ores.place(box, new dev.leo.worldcraft.create.Ores.Spec(8, 10, 100, 0, 31), 1, free);
+            if (ores.veins() != 40) return "ores: " + ores.veins() + " veins instead of 40";
+            long[] caves = dev.leo.worldcraft.create.Caves.carve(new Box(0, 0, 0, 63, 31, 63), 3, 40, false, 1, free);
+            if (caves.length == 0) return "caves: nothing was cut in 64×32×64";
+            java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(2, 2, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+            img.setRGB(0, 0, 0xFF000000 | colors.colorOf("minecraft:red_wool"));
+            java.io.ByteArrayOutputStream png = new java.io.ByteArrayOutputStream();
+            javax.imageio.ImageIO.write(img, "png", png);
+            var px = dev.leo.worldcraft.create.ImageBlocks.read(png.toByteArray());
+            int[] b = dev.leo.worldcraft.create.ImageBlocks.blocks(px, colors);
+            if (b[1] != -1 || !colors.entries().get(b[0]).id().equals("minecraft:red_wool")) return "image: a 2×2 picture gave the wrong blocks";
+            plugin.getLogger().info("Selftest creation passed: " + colors.size() + " block colors (#color[red] = red_wool, #darken of light_gray_wool = "
+                    + table.material(dark).replace("minecraft:", "") + "), " + ores.veins() + " ore veins, a cave of " + caves.length
+                    + " blocks and a 2×2 picture");
+            return null;
+        } catch (dev.leo.worldcraft.pattern.ParseException | java.io.IOException | IllegalArgumentException e) {
+            return "creation: " + e.getMessage();
         }
     }
 

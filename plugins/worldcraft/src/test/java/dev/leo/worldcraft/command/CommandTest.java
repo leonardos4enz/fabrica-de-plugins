@@ -157,4 +157,25 @@ class CommandTest {
         String yml = Files.readString(Path.of("src/main/resources/config.yml"));
         assertTrue(yml.contains("formulas:") && yml.contains("max_timeout_ms"), "config.yml trae la sección comentada");
     }
+
+    @Test
+    void spec035_ayuda_y_mensajes_de_crear() throws Exception {
+        YamlConfiguration m = new YamlConfiguration();
+        m.loadFromString(Files.readString(Path.of("src/main/resources/messages.yml")));
+        assertEquals(4, CreateCommands.SUBS.size());
+        for (String s : CreateCommands.SUBS) {
+            for (String k : new String[]{"usage", "text", "example"}) assertNotNull(m.getString("help." + s + "." + k), "falta help." + s + "." + k);
+            assertTrue(m.getString("help." + s + ".example").startsWith("/wc " + s), s);
+        }
+        assertEquals("image", CreateCommands.canonical("img"));
+        // Las claves que llegan por Images.Problem y LinkException (no pasan por msg().get("…") con el texto escrito).
+        for (String k : new String[]{"image-bad-name", "image-not-found", "image-invalid", "invalid-link", "link-error", "host-not-allowed"}) {
+            assertNotNull(m.getString(k), k);
+        }
+        String plugin = Files.readString(Path.of("src/main/resources/plugin.yml"));
+        assertTrue(plugin.contains(CreateCommands.PERM_LINK + ":"), "el permiso del link está en plugin.yml");
+        String yml = Files.readString(Path.of("src/main/resources/config.yml"));
+        for (String sec : new String[]{"colors:", "ores:", "caves:", "images:"}) assertTrue(yml.contains("\n" + sec), sec);
+        assertTrue(yml.contains("links: false"), "apagado de fábrica");
+    }
 }

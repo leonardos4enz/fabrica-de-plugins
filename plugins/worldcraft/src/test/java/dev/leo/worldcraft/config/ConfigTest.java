@@ -250,4 +250,60 @@ class ConfigTest {
         String text = "=" + "1+".repeat(150) + "1";
         assertThrows(dev.leo.worldcraft.pattern.ParseException.class, () -> c.parser().maskNear(text), "más largo que max_length");
     }
+
+    @Test
+    void spec035_H5_CA1_colores_minerales_cuevas_e_imagenes() throws Exception {
+        LoadedConfig old = load("history: { keep_days: 3 }\n", "");
+        assertEquals("[]", old.issues().all().stream().filter(i -> i.file().equals("config.yml")).toList().toString(), "un config.yml de la 0.10.0 carga sin avisos");
+        CreateSettings d = old.create();
+        assertEquals(8, d.ores().size());
+        assertFalse(d.links(), "los links vienen apagados");
+        assertEquals("minecraft:deepslate_coal_ore", d.ores().get(0).deepslate());
+        assertEquals(-55, d.lavaY());
+        LoadedConfig c = load("""
+                colors:
+                  remove: [red_wool, yelow_wool]
+                  add: { stone: "#FF0000", stnoe: "#00FF00", glass: "verde" }
+                ores:
+                  mask: "stone, nada_de_esto"
+                  max_size: 999
+                  list:
+                    gold: { block: gold_ore, size: 9, per_chunk: 4, min_y: -64, max_y: 32 }
+                    bad: { block: gold_ore, min_y: 10, max_y: 0 }
+                    worse: { block: oro, per_chunk: 3 }
+                    nope: { size: 3 }
+                caves:
+                  lava_y: -60
+                  maks: x
+                images:
+                  folder: "../afuera"
+                  links: true
+                  allowed_hosts: ["*.imgur.com", "no es un sitio"]
+                """, "");
+        CreateSettings s = c.create();
+        var colors = c.parser().colors();
+        assertEquals(-1, colors.colorOf("minecraft:red_wool"), "quitado");
+        assertEquals(0xFF0000, colors.colorOf("minecraft:stone"), "color cambiado");
+        assertEquals("minecraft:stone", colors.nearestId(0xFF0000));
+        assertEquals(1, s.ores().size(), "solo el oro es válido");
+        assertEquals("minecraft:gold_ore", s.ores().get(0).deepslate(), "sin deepslate, el mismo bloque");
+        assertEquals(CreateSettings.ORES_MASK, s.oresMask());
+        assertEquals(64, s.maxVein());
+        assertEquals(-60, s.lavaY());
+        assertEquals("images", s.imagesFolder(), "una carpeta con .. no sale");
+        assertTrue(s.links());
+        assertEquals(java.util.List.of("*.imgur.com"), s.allowedHosts());
+        String all = c.issues().all().toString();
+        for (String path : new String[]{"colors.remove", "colors.add.stnoe", "colors.add.glass", "ores.mask", "ores.max_size",
+                "ores.list.bad", "ores.list.worse.block", "ores.list.nope.block", "caves.maks", "images.folder", "images.allowed_hosts"}) {
+            assertTrue(all.contains(path), path + " en " + all);
+        }
+        assertTrue(all.contains("did you mean 'yellow_wool'"), all);
+        assertTrue(all.contains("did you mean 'stone'"), all);
+        assertTrue(all.contains("did you mean 'mask'"), all);
+        // Un preset puede ser un patrón por color (la tabla va antes que los presets).
+        LoadedConfig p = load("", "patterns:\n  shade: \"#darken\"\n");
+        assertEquals("[]", p.issues().all().stream().filter(i -> !i.file().equals("terrain.yml")).toList().toString());
+        assertEquals("$shade", p.parser().pattern("$shade").text());
+    }
 }

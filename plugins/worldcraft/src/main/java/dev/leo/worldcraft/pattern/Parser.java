@@ -79,7 +79,7 @@ public final class Parser {
         if (text.isEmpty()) throw new ParseException("Missing pattern: write a block, like 'stone', or a mix, like '70% stone, 30% andesite'");
         if (text.startsWith("$")) {
             Pattern p = pattern(preset(text, patternPresets, "pattern"));
-            return new Pattern(p.states(), p.weights(), text, p.changes(), p.pick());
+            return new Pattern(p.states(), p.weights(), text, p.changes(), p.pick(), p.also());
         }
         if (text.startsWith("=")) return formulaPattern(text);
         List<String> parts = split(text);
@@ -87,6 +87,7 @@ public final class Parser {
         List<Double> weights = new ArrayList<>();
         List<java.util.function.UnaryOperator<String>> changes = new ArrayList<>();
         int weighted = 0;
+        boolean also = false;
         for (String raw : parts) {
             String p = raw.trim();
             if (p.isEmpty()) throw new ParseException("Empty entry in pattern '" + text + "' (two commas together?)");
@@ -98,10 +99,14 @@ public final class Parser {
                 p = m.group(2).trim();
                 weighted++;
             }
-            if (p.startsWith("#")) throw new ParseException("'" + p + "' is a tag: tags work in masks (what to replace), a pattern needs blocks");
-            if (p.startsWith("!")) throw new ParseException("'" + p + "': '!' works in masks (what to replace), not in a pattern");
-            if (p.contains("*")) throw new ParseException("'" + p + "': '*' works in masks (what to replace), a pattern needs exact blocks");
-            if (p.startsWith("^")) {
+            if (p.startsWith("#")) {
+                colorEntry(p, states, changes);
+                if (states.get(states.size() - 1) == null) also = true;
+            } else if (p.startsWith("!")) {
+                throw new ParseException("'" + p + "': '!' works in masks (what to replace), not in a pattern");
+            } else if (p.contains("*")) {
+                throw new ParseException("'" + p + "': '*' works in masks (what to replace), a pattern needs exact blocks");
+            } else if (p.startsWith("^")) {
                 change(p, states, changes);
             } else {
                 states.add(state(p));
@@ -112,7 +117,116 @@ public final class Parser {
         if (weighted != 0 && weighted != parts.size()) {
             throw new ParseException("Give every block in '" + text + "' a weight (like '70% stone, 30% andesite') or none");
         }
-        return new Pattern(states, weights, text, changes);
+        return new Pattern(states, weights, text, changes, null, also ? colorStates() : List.of());
+    }
+
+    // ------------------------------------------------------------------ spec 035: patrones por color
+
+    /** Los patrones por color de FAWE (H1): #color[c] es un bloque; los demás cambian el bloque que ya está. */
+    public static final List<String> COLOR_WORDS = List.of("color", "darken", "lighten", "saturate", "desaturate", "averagecolor");
+
+    private dev.leo.worldcraft.color.BlockColors colors;
+    /** El estado canónico de cada bloque de la tabla (los que puede poner un cambio por color). */
+    private Map<String, String> colorCanonical;
+
+    /** Spec 035: la tabla de colores (config.yml, sección colors); sin ella, la del jar con los bloques del servidor. */
+    public Parser colors(dev.leo.worldcraft.color.BlockColors colors) {
+        this.colors = colors;
+        this.colorCanonical = null;
+        return this;
+    }
+
+    public dev.leo.worldcraft.color.BlockColors colors() {
+        if (colors == null) {
+            Map<String, Integer> t = new java.util.LinkedHashMap<>(dev.leo.worldcraft.color.BlockColors.builtin());
+            t.keySet().retainAll(blockNames);
+            colors = new dev.leo.worldcraft.color.BlockColors(t);
+        }
+        return colors;
+    }
+
+    private Map<String, String> colorCanonical() {
+        if (colorCanonical == null) {
+            Map<String, String> m = new java.util.LinkedHashMap<>();
+            for (String id : colors().ids()) {
+                String c = canonicalOrNull(id, Map.of());
+                if (c != null) m.put(id, c);
+            }
+            colorCanonical = m;
+        }
+        return colorCanonical;
+    }
+
+    private List<String> colorStates() {
+        return List.copyOf(colorCanonical().values());
+    }
+
+    /** Spec 035 (imagen): el estado canónico de un bloque de la tabla («minecraft:oak_log» → «…[axis=y]»), o null. */
+    public String colorState(String id) {
+        return colorCanonical().get(id);
+    }
+
+    private void colorEntry(String p, List<String> states, List<java.util.function.UnaryOperator<String>> changes) throws ParseException {
+        String body = p.substring(1).trim().toLowerCase(Locale.ROOT);
+        String word = body, arg = null;
+        int open = body.indexOf('[');
+        if (open >= 0) {
+            if (!body.endsWith("]")) throw new ParseException("'" + p + "': missing ']' at the end");
+            word = body.substring(0, open).trim();
+            arg = body.substring(open + 1, body.length() - 1).trim();
+        }
+        if (!COLOR_WORDS.contains(word)) {
+            String hint = Issues.closest(word, COLOR_WORDS);
+            if (hint != null) throw new ParseException("Unknown color pattern '#" + word + "' (did you mean '#" + hint + "'?)");
+            throw new ParseException("'" + p + "' is a tag: tags work in masks (what to replace); a pattern needs blocks, or a color like '#color[red]' or '#darken'");
+        }
+        dev.leo.worldcraft.color.BlockColors table = colors();
+        Map<String, String> canon = colorCanonical();
+        boolean needsArg = !word.equals("darken") && !word.equals("lighten") && !word.equals("desaturate");
+        if (needsArg && (arg == null || arg.isEmpty())) {
+            throw new ParseException("'#" + word + "' needs a color, like '#" + word + "[red]' or '#" + word + "[#3a7bd5]'");
+        }
+        if (!needsArg && arg != null && !word.equals("desaturate")) throw new ParseException("'#" + word + "' takes nothing in [ ]");
+        int color = 0;
+        double percent = 100;
+        try {
+            if (word.equals("desaturate")) {
+                if (arg != null && !arg.isEmpty()) {
+                    percent = Double.parseDouble(arg.endsWith("%") ? arg.substring(0, arg.length() - 1) : arg);
+                    if (percent < 0 || percent > 100) throw new NumberFormatException();
+                }
+            } else if (arg != null) {
+                color = dev.leo.worldcraft.color.BlockColors.parse(arg);
+            }
+        } catch (NumberFormatException e) {
+            throw new ParseException("'" + p + "': the percent goes from 0 to 100, like '#desaturate[50]'");
+        } catch (IllegalArgumentException e) {
+            throw new ParseException(e.getMessage());
+        }
+        if (word.equals("color")) {
+            String id = canon.get(table.nearestId(color));
+            if (id == null) throw new ParseException("'" + p + "': no block of the color table can be placed");
+            states.add(id);
+            changes.add(null);
+            return;
+        }
+        final int c = color;
+        final double pct = percent;
+        final String w = word;
+        states.add(null);
+        changes.add(current -> {
+            String mat = material(current);
+            int rgb = table.colorOf(mat);
+            if (rgb < 0) return null; // no está en la tabla: se deja
+            String id = switch (w) {
+                case "darken" -> table.darker(mat);
+                case "lighten" -> table.lighter(mat);
+                case "saturate" -> table.nearestId(dev.leo.worldcraft.color.BlockColors.multiply(rgb, c));
+                case "averagecolor" -> table.nearestId(dev.leo.worldcraft.color.BlockColors.average(rgb, c));
+                default -> table.nearestId(dev.leo.worldcraft.color.BlockColors.desaturate(rgb, pct));
+            };
+            return id == null || id.equals(mat) ? null : canon.get(id);
+        });
     }
 
     /**

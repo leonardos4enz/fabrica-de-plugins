@@ -133,3 +133,39 @@ formulas:
   max_steps: 100000       # loop rounds (while, for, do) in one evaluation (1000..10000000)
   max_length: 1000        # characters in one formula (32..10000)
   megabuf_size: 65536     # cells of megabuf() (0..10000000)
+
+# Block colors for /wc image and the color patterns (#color[red], #darken, #lighten, #saturate[#ff0000]...).
+# The built-in table has 145 blocks measured in Minecraft 1.21.4 (wool, concrete, terracotta, wood, stone...).
+colors:
+  remove: []              # blocks never to use, like [gold_block, diamond_block]
+  add: {}                 # block: "#RRGGBB" - a new block, or another color for one in the table
+
+# /wc ore and /wc ores: veins like the game's, only in your selection.
+ores:
+  mask: "stone, deepslate, andesite, diorite, granite, tuff"   # where /wc ores puts ores (when no mask is given)
+  deepslate_in: "deepslate, tuff"                               # where the deepslate version goes instead
+  max_size: 64            # the biggest vein /wc ore makes (1..256)
+  list:                   # name: block, deepslate version, blocks per vein, tries per chunk (16×16), heights
+    coal:     { block: coal_ore,     deepslate: deepslate_coal_ore,     size: 17, per_chunk: 20, min_y: 0,   max_y: 192 }
+    iron:     { block: iron_ore,     deepslate: deepslate_iron_ore,     size: 9,  per_chunk: 10, min_y: -24, max_y: 56 }
+    copper:   { block: copper_ore,   deepslate: deepslate_copper_ore,   size: 10, per_chunk: 16, min_y: -16, max_y: 112 }
+    gold:     { block: gold_ore,     deepslate: deepslate_gold_ore,     size: 9,  per_chunk: 4,  min_y: -64, max_y: 32 }
+    redstone: { block: redstone_ore, deepslate: deepslate_redstone_ore, size: 8,  per_chunk: 4,  min_y: -64, max_y: 15 }
+    lapis:    { block: lapis_ore,    deepslate: deepslate_lapis_ore,    size: 7,  per_chunk: 2,  min_y: -64, max_y: 64 }
+    diamond:  { block: diamond_ore,  deepslate: deepslate_diamond_ore,  size: 8,  per_chunk: 7,  min_y: -64, max_y: 16 }
+    emerald:  { block: emerald_ore,  deepslate: deepslate_emerald_ore,  size: 3,  per_chunk: 3,  min_y: -16, max_y: 320 }
+
+# /wc caves: tunnels (and rooms with --rooms) cut through your selection.
+caves:
+  mask: "#base_stone_overworld, #dirt, gravel, sand, sandstone, calcite, *_ore"   # what caves may cut through
+  lava_y: -55             # at this height and below a cave fills with lava, like the game (-2048 = never)
+
+# /wc image: a picture built with blocks, from the images folder or (if you turn it on) from a link.
+images:
+  folder: images          # under plugins/Worldcraft/ (put PNG, JPG or GIF files there)
+  max_size: 256           # most blocks on the long side (1..1024)
+  max_file_kb: 2048       # biggest file, from the folder or a link (1..20480)
+  # /wc image https://... - OFF by default: the server downloads from the internet. Only public sites (never your own
+  # network), and only for players with worldcraft.image.link (op by default).
+  links: false
+  allowed_hosts: []       # sites allowed for links; empty = any public site; "*.imgur.com" also allows i.imgur.com

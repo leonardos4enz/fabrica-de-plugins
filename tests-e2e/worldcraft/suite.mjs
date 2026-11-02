@@ -4,6 +4,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { httpsLocal, png } from '../lib/https-local.mjs'
 
 const RECURSOS = fileURLToPath(new URL('../../plugins/worldcraft/src/main/resources', import.meta.url))
 
@@ -156,6 +157,22 @@ function picar (jugador, x, y, z) {
   jugador.bot.dig(b, true).catch(() => {})
 }
 
+// ---------------------------------------------------------------- spec 035: imagen (carpeta y link)
+/** Colores de la tabla (medidos por SkinStatues): cada píxel es exactamente un bloque. */
+const LANA = { roja: [0xA0, 0x27, 0x22, 255], azul: [0x35, 0x39, 0x9D, 255], blanca: [0xE9, 0xEC, 0xEC, 255],
+  negra: [0x14, 0x15, 0x19, 255], amarilla: [0xF8, 0xC5, 0x27, 255], nada: [0, 0, 0, 0] }
+/** 4×3: arriba roja, roja, azul, azul; en medio blanca, (transparente), (transparente), blanca; abajo negra, negra, amarilla, amarilla. */
+const FOTO = [['roja', 'roja', 'azul', 'azul'], ['blanca', 'nada', 'nada', 'blanca'], ['negra', 'negra', 'amarilla', 'amarilla']]
+const fotoPng = () => png(4, 3, (x, y) => LANA[FOTO[y][x]])
+/** El servidor HTTPS local de la corrida (spec 023): se arranca antes que Paper, que confía en su certificado. */
+let web = null
+const RUTAS = {
+  '/e2e/foto.png': (req, res) => {
+    res.writeHead(200, { 'Content-Type': 'image/png' })
+    res.end(fotoPng())
+  }
+}
+
 export default {
   jar: /^Worldcraft-.*\.jar$/,
   // La configuración tal como está en el código fuente; el historial de corridas anteriores se borra (cada corrida
@@ -180,6 +197,16 @@ export default {
     `setworldspawn ${X} -60 ${Z}`, 'time set noon', 'weather clear', 'kill @e[type=!player]'
   ],
   limpiar: [`deop ${ANA}`, `deop ${BETO}`],
+
+  // Spec 035: el link de /wc image baja del HTTPS local (worldcraft.test.localLinks solo por la línea de comandos).
+  async antesDeArrancar ({ run, java }) {
+    web = await httpsLocal({ carpeta: path.join(run, 'e2e-https'), java, rutas: RUTAS })
+    return { jvm: [...web.jvm, '-Dworldcraft.test.localLinks=true'] }
+  },
+  async alTerminar () {
+    await web?.cerrar()
+    web = null
+  },
 
   async antes (ctx) {
     await ctx.entrar(BETO)
@@ -1886,6 +1913,168 @@ export default {
           await srv.consola(`fill ${X - 4} -63 ${Z + 4} ${X + 4} -62 ${Z + 12} dirt`)
           await srv.consola(`fill ${X - 4} -61 ${Z + 4} ${X + 4} -61 ${Z + 12} grass_block`)
           await srv.consola(`fill ${X - 4} -60 ${Z + 4} ${X + 4} -57 ${Z + 12} air`)
+        }
+      }
+    },
+    {
+      id: '035 H1 CA1 · H1 CA2 · H1 CA3 · H2 CA1 · H2 CA2 · H2 CA3',
+      nombre: 'ores pone los minerales del juego en la roca (deepslate en el deepslate), ore solo donde pasa la máscara; #color, #lighten y un color mal escrito; undo',
+      timeoutMs: 120000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        try {
+          // La roca va en el aire (034 F-01: no se tapa el pasto): deepslate de -55 a -52 y piedra encima hasta -45.
+          await srv.consola(`fill ${X} -55 ${Z} ${X + 15} -52 ${Z + 15} deepslate`)
+          await srv.consola(`fill ${X} -51 ${Z} ${X + 15} -45 ${Z + 15} stone`)
+          await srv.sincronizar()
+          await seleccionar(ana, [X, -55, Z], [X + 15, -45, Z + 15])
+          const m = ana.marca()
+          ana.comando('wc ores')
+          await ana.esperar('chat', /vein\(s\) of gold, redstone, lapis, diamond, [\d,]+ block\(s\) at most/, { desde: m, timeoutMs: 20000 })
+          const o = await ana.esperar('chat', /Done: ores changed ([\d,]+) blocks/, { desde: m, timeoutMs: 30000 })
+          const puestos = Number(o.texto.match(/changed ([\d,]+) blocks/)[1].replace(/,/g, ''))
+          if (puestos < 5) throw new Error(`ores puso ${puestos} minerales`)
+          await pide(ana, 'wc count *_ore', new RegExp(`\\b${puestos.toLocaleString('en-US')} of [\\d,]+ blocks match`))
+          // En el deepslate, solo la versión deepslate; en la piedra, solo la común.
+          await seleccionar(ana, [X, -55, Z], [X + 15, -52, Z + 15])
+          await pide(ana, 'wc count gold_ore, redstone_ore, lapis_ore, diamond_ore', /\b0 of [\d,]+ blocks match/)
+          const hondo = await pide(ana, 'wc count deepslate_gold_ore, deepslate_redstone_ore, deepslate_lapis_ore, deepslate_diamond_ore', /\b([\d,]+) of [\d,]+ blocks match/)
+          if (Number(hondo.texto.match(/\b([\d,]+) of/)[1].replace(/,/g, '')) === 0) throw new Error('ningún mineral deepslate en el deepslate')
+          await seleccionar(ana, [X, -51, Z], [X + 15, -45, Z + 15])
+          await pide(ana, 'wc count deepslate_gold_ore, deepslate_redstone_ore, deepslate_lapis_ore, deepslate_diamond_ore', /\b0 of [\d,]+ blocks match/)
+          // ore: oro solo donde hay piedra (el deepslate queda igual).
+          await seleccionar(ana, [X, -55, Z], [X + 15, -45, Z + 15])
+          const g = await obra(ana, 'wc ore stone gold_block 8 10 100')
+          if (g.cambiados < 5) throw new Error(`ore puso ${g.cambiados}`)
+          await seleccionar(ana, [X, -55, Z], [X + 15, -52, Z + 15])
+          await pide(ana, 'wc count gold_block', /\b0 of [\d,]+ blocks match/)
+          await seleccionar(ana, [X, -55, Z], [X + 15, -45, Z + 15])
+          await pide(ana, 'wc undo 2', /Undone .*ores/)
+          await pide(ana, 'wc count *_ore, gold_block', /\b0 of [\d,]+ blocks match/)
+          // Colores: el bloque de la tabla más parecido; #lighten aclara el que ya está.
+          await seleccionar(ana, [X, -45, Z], [X + 2, -45, Z + 2])
+          await obra(ana, 'wc set #color[red]')
+          await comprobar(srv, `block ${X + 1} -45 ${Z + 1} red_wool`)
+          const l = await obra(ana, 'wc replace red_wool with #lighten')
+          if (l.cambiados !== 9) throw new Error(`#lighten cambió ${l.cambiados}`)
+          await pide(ana, 'wc count red_wool', /\b0 of 9 blocks match/)
+          await pide(ana, 'wc set #color[rde]', /is not a color.*did you mean 'red'/)
+          await pide(ana, 'wc set #colr[red]', /Unknown color pattern '#colr' \(did you mean '#color'\?\)/)
+          await pide(ana, 'wc undo 2', /Undone .*set #color\[red\]/)
+          await comprobar(srv, `block ${X + 1} -45 ${Z + 1} stone`)
+        } finally {
+          await srv.consola(`fill ${X} -55 ${Z} ${X + 15} -45 ${Z + 15} air`)
+        }
+      }
+    },
+    {
+      id: '035 H3 CA1 · H3 CA2 · H3 CA3',
+      nombre: 'caves talla túneles y salas en la piedra y no el vidrio; bajo caves.lava_y queda lava; undo',
+      timeoutMs: 120000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        try {
+          // Una caja de piedra en el aire (sin tapar el pasto) con un piso y un anillo que no se seleccionan (la lava no
+          // sale), y una columna de vidrio adentro (fuera de caves.mask: no se corta).
+          await srv.consola(`fill ${X} -56 ${Z} ${X + 31} -44 ${Z + 31} stone`)
+          await srv.consola(`fill ${X + 16} -55 ${Z + 16} ${X + 16} -45 ${Z + 16} glass`)
+          await srv.sincronizar()
+          await seleccionar(ana, [X + 1, -55, Z + 1], [X + 30, -45, Z + 30])
+          const m = ana.marca()
+          ana.comando('wc caves 8 100 --rooms')
+          await ana.esperar('chat', /The caves cross [\d,]+ block\(s\) of your selection; only what matches/, { desde: m, timeoutMs: 20000 })
+          const c = await ana.esperar('chat', /Done: caves changed ([\d,]+) blocks/, { desde: m, timeoutMs: 30000 })
+          const tallados = Number(c.texto.match(/changed ([\d,]+) blocks/)[1].replace(/,/g, ''))
+          if (tallados < 100) throw new Error(`las cuevas tallaron ${tallados}`)
+          await pide(ana, 'wc count glass', /\b11 of [\d,]+ blocks match/)
+          // y = -55 es caves.lava_y: ahí lo tallado es lava; arriba, aire.
+          await seleccionar(ana, [X + 1, -55, Z + 1], [X + 30, -55, Z + 30])
+          const lava = await pide(ana, 'wc count lava', /\b([\d,]+) of [\d,]+ blocks match/)
+          const nLava = Number(lava.texto.match(/\b([\d,]+) of/)[1].replace(/,/g, ''))
+          await seleccionar(ana, [X + 1, -54, Z + 1], [X + 30, -45, Z + 30])
+          await pide(ana, 'wc count lava', /\b0 of [\d,]+ blocks match/)
+          const aire = await pide(ana, 'wc count air', /\b([\d,]+) of [\d,]+ blocks match/)
+          const nAire = Number(aire.texto.match(/\b([\d,]+) of/)[1].replace(/,/g, ''))
+          if (nAire + nLava !== tallados || nLava === 0) throw new Error(`aire ${nAire} + lava ${nLava} ≠ ${tallados} tallados`)
+          await pide(ana, 'wc undo', /Undone .*caves/)
+          await seleccionar(ana, [X + 1, -55, Z + 1], [X + 30, -45, Z + 30])
+          await pide(ana, 'wc count air, lava', /\b0 of [\d,]+ blocks match/)
+          await pide(ana, 'wc caves 30', /The size goes from 1 to 10/)
+        } finally {
+          await srv.consola(`fill ${X} -56 ${Z} ${X + 31} -44 ${Z + 31} air`)
+        }
+      }
+    },
+    {
+      id: '035 H4 CA1 · H4 CA2 · H4 CA3 · H4 CA4 · H4 CA5',
+      nombre: 'image de la carpeta: de pie frente a Ana sin espejar, acostada mirando abajo; transparente se deja; nombres malos; el link apagado, y encendido baja del HTTPS local; undo',
+      timeoutMs: 150000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        const carpeta = path.join(srv.run, 'plugins', 'Worldcraft', 'images')
+        const config = path.join(srv.run, 'plugins', 'Worldcraft', 'config.yml')
+        const antes = fs.readFileSync(config, 'utf8')
+        fs.mkdirSync(carpeta, { recursive: true })
+        fs.writeFileSync(path.join(carpeta, 'e2e.png'), fotoPng())
+        try {
+          await pide(ana, 'wc image list', /Images in Worldcraft\/images: e2e\.png/)
+          // Todo sobre un vidrio en el aire: la fila de abajo del mural tapaba el pasto del mundo plano, que se volvía
+          // tierra y la corrida siguiente fallaba en la 033 (035 F-01, como la 034 F-01).
+          await srv.consola(`fill ${X - 3} -51 ${Z - 1} ${X + 3} -51 ${Z + 5} glass`)
+          await srv.consola(`tp ${ANA} ${X + 0.5} -50 ${Z + 0.5} 0 0`)
+          await srv.sincronizar()
+          await ana.hasta('estar sobre el vidrio', b => Math.abs(b.entity.position.y + 50) < 0.1 && b.entity.onGround)
+          // De pie: Ana mirando al sur; a 2 bloques, centrada; la izquierda de la foto al este (su izquierda).
+          let r = await obra(ana, 'wc image e2e.png')
+          if (r.cambiados !== 10) throw new Error(`la foto puso ${r.cambiados} (10 opacos)`)
+          for (const [dx, y, b] of [[1, -48, 'red_wool'], [0, -48, 'red_wool'], [-1, -48, 'blue_wool'], [-2, -48, 'blue_wool'],
+            [1, -49, 'white_wool'], [0, -49, 'air'], [-1, -49, 'air'], [-2, -49, 'white_wool'],
+            [1, -50, 'black_wool'], [0, -50, 'black_wool'], [-1, -50, 'yellow_wool'], [-2, -50, 'yellow_wool']]) {
+            await comprobar(srv, `block ${X + dx} ${y} ${Z + 2} ${b}`)
+          }
+          await pide(ana, 'wc undo', /Undone .*image e2e\.png 4×3 --wall/)
+          await comprobar(srv, `block ${X + 1} -48 ${Z + 2} air`)
+          // Acostada: mirando abajo; arriba de la foto lo más lejos.
+          await srv.consola(`tp ${ANA} ${X + 0.5} -50 ${Z + 0.5} 0 90`)
+          await srv.sincronizar()
+          await ana.hasta('mirar abajo', b => Math.abs(b.entity.pitch) > 1.4)
+          r = await obra(ana, 'wc image e2e.png')
+          if (r.cambiados !== 10) throw new Error(`acostada puso ${r.cambiados}`)
+          for (const [dx, dz, b] of [[1, 3, 'red_wool'], [-2, 3, 'blue_wool'], [1, 2, 'white_wool'], [0, 2, 'air'], [1, 1, 'black_wool'], [-2, 1, 'yellow_wool']]) {
+            await comprobar(srv, `block ${X + dx} -50 ${Z + dz} ${b}`)
+          }
+          await pide(ana, 'wc undo', /Undone .*image e2e\.png 4×3 --floor/)
+          await comprobar(srv, `block ${X + 1} -50 ${Z + 3} air`)
+          await srv.consola(`tp ${ANA} ${X + 0.5} -50 ${Z + 0.5} 0 0`)
+          await srv.sincronizar()
+          // Nombres malos: con sugerencia, y nada fuera de la carpeta.
+          await pide(ana, 'wc image e2f.png', /There is no image 'e2f\.png' in Worldcraft\/images \(did you mean 'e2e\.png'\?\)/)
+          await pide(ana, 'wc image ../config.yml', /is not an image file name/)
+          // El link: apagado de fábrica; encendido, baja del HTTPS local (la etiqueta del historial no lleva el link).
+          const link = `${web.base}/e2e/foto.png`
+          await pide(ana, `wc image ${link}`, /Images from links are off on this server/)
+          fs.writeFileSync(config, antes.replace('  links: false', '  links: true'))
+          await srv.consola('wc reload', { espera: /Reloaded: 0 error\(s\)/ })
+          const m = ana.marca()
+          ana.comando(`wc image ${link}`)
+          await ana.esperar('chat', /url:127\.0\.0\.1#[0-9a-f]{8} \(4×3 pixels\) as 4×3 blocks, standing in front of you: 10 block/, { desde: m, timeoutMs: 20000 })
+          await ana.esperar('chat', /Done: image changed 10 blocks/, { desde: m, timeoutMs: 30000 })
+          if (!(web.pedidos['/e2e/foto.png'] >= 1)) throw new Error('el servidor local no recibió el pedido')
+          await comprobar(srv, `block ${X + 1} -48 ${Z + 2} red_wool`)
+          await pide(ana, 'wc undo', /Undone .*image url:127\.0\.0\.1#/)
+          await pide(ana, `wc image ${web.base}/e2e/nada.png`, /Could not get the image from 127\.0\.0\.1: HTTP 404/)
+        } finally {
+          fs.writeFileSync(config, antes)
+          await srv.consola('wc reload')
+          fs.rmSync(path.join(carpeta, 'e2e.png'), { force: true })
+          await srv.consola(`fill ${X - 3} -51 ${Z - 1} ${X + 3} -47 ${Z + 5} air`)
+          await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 0.5} 0 0`)
         }
       }
     }

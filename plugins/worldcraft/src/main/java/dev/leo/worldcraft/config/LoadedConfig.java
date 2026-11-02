@@ -22,7 +22,7 @@ import java.util.Map;
  */
 public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<String, String> patternPresets,
                            Map<String, String> maskPresets, TerrainSettings terrain, Issues issues, ToolSettings tools,
-                           NatureSettings nature, FormulaSettings formulas) {
+                           NatureSettings nature, FormulaSettings formulas, CreateSettings create) {
 
     public static LoadedConfig load(File folder, BlockRegistry registry, LoadedConfig previous) {
         Issues issues = new Issues();
@@ -35,6 +35,9 @@ public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<
         Settings settings = config == null ? (previous != null ? previous.settings : Settings.DEFAULTS)
                 : Settings.load(config, "config.yml", issues);
 
+        // Spec 035: la tabla de colores va antes que los presets (un preset puede ser «#darken»).
+        dev.leo.worldcraft.color.BlockColors colors = config == null && previous != null ? previous.parser.colors()
+                : CreateSettings.colors(config, registry, issues);
         Map<String, String> pat, msk;
         if (presets == null && previous != null) {
             pat = previous.patternPresets;
@@ -50,7 +53,7 @@ public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<
                 }
             }
             // Cada preset se comprueba con el analizador (sin presets: uno no puede nombrar a otro).
-            Parser plain = new Parser(registry, Map.of(), Map.of());
+            Parser plain = new Parser(registry, Map.of(), Map.of()).colors(colors);
             pat.entrySet().removeIf(e -> {
                 try {
                     plain.pattern(e.getValue());
@@ -78,7 +81,7 @@ public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<
         }
         // Spec 034: los topes de las fórmulas, antes del analizador (las máscaras y patrones «=…» los usan).
         FormulaSettings formulas = config == null && previous != null ? previous.formulas : FormulaSettings.load(config, issues);
-        Parser parser = new Parser(registry, Map.copyOf(pat), Map.copyOf(msk)).formulaLimits(formulas.limits());
+        Parser parser = new Parser(registry, Map.copyOf(pat), Map.copyOf(msk)).formulaLimits(formulas.limits()).colors(colors);
         Limits limits = config == null && previous != null ? previous.limits
                 : Limits.load(config == null ? null : config.getConfigurationSection("limits"), parser, "config.yml", issues, registry.entityTypes());
         // Spec 026: un terrain.yml ilegible conserva el anterior; una sección terrain mala, sus valores de fábrica.
@@ -88,7 +91,9 @@ public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<
         ToolSettings tools = config == null && previous != null ? previous.tools : ToolSettings.load(config, parser, issues);
         // Spec 033: árboles, plantas y calabazas.
         NatureSettings nature = config == null && previous != null ? previous.nature : NatureSettings.load(config, parser, issues);
-        return new LoadedConfig(settings, limits, parser, Map.copyOf(pat), Map.copyOf(msk), terrain, issues, tools, nature, formulas);
+        // Spec 035: minerales, cuevas e imágenes.
+        CreateSettings create = config == null && previous != null ? previous.create : CreateSettings.load(config, parser, issues);
+        return new LoadedConfig(settings, limits, parser, Map.copyOf(pat), Map.copyOf(msk), terrain, issues, tools, nature, formulas, create);
     }
 
     private static Map<String, String> section(YamlConfiguration y, String name) {

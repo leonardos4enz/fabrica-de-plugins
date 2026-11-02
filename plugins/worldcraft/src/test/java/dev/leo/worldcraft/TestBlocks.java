@@ -40,7 +40,11 @@ public final class TestBlocks {
                 // spec 032: deltree, extinguish, splatter
                 "vine", "cocoa", "bee_nest", "mangrove_roots", "fire", "soul_fire", "moss_block",
                 // spec 033: plantas, calabazas y suelos
-                "cactus", "dead_bush", "cornflower", "oxeye_daisy", "azure_bluet", "rooted_dirt", "mycelium", "pumpkin")) {
+                "cactus", "dead_bush", "cornflower", "oxeye_daisy", "azure_bluet", "rooted_dirt", "mycelium", "pumpkin",
+                // spec 035: minerales en deepslate y lanas para los colores
+                "deepslate_coal_ore", "deepslate_iron_ore", "deepslate_copper_ore", "deepslate_gold_ore", "deepslate_redstone_ore",
+                "deepslate_lapis_ore", "deepslate_diamond_ore", "deepslate_emerald_ore", "black_wool", "gray_wool", "light_gray_wool",
+                "yellow_wool", "diamond_block")) {
             BLOCKS.put("minecraft:" + b, Map.of());
         }
         Map<String, List<String>> stairs = new LinkedHashMap<>();
