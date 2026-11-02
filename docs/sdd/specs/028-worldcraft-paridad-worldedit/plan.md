@@ -14,13 +14,13 @@ tandas dentro de los 8 ms por tick (spec 025). Lo que cambia es la forma:
 | **Suelo leído** (`ColumnScan` de la 026) | `overlay`, `snow`, `smooth` | La lectura del suelo ya existe: `overlay` y `snow` ponen encima de la cima de cada columna; `smooth` usa el suavizado del pincel sobre toda la selección (no derrite árboles ni casas) |
 | **Sin obra** | `ascend`, `descend`, `ceil`, `thru`, `jumpto`, `unstuck`, `up` | Teletransporte en el hilo principal (`paper.Navigation`); `up` y `ceil` sin vuelo ponen un vidrio como obra de un bloque (§1.4) |
 
-Los comandos nuevos van en clases propias del paquete `command` (`ShapeCommands`, `RegionCommands`, `UtilityCommands`,
+Los comandos nuevos van en dos clases propias del paquete `command` (`BuildCommands` para formas, región y utilidades;
 `NavigationCommands`) para no engordar `WorldcraftCommand`, que solo los despacha, arma la ayuda y el autocompletado.
 
 ### 1.1 Formas (geometría propia)
 - **Esfera / elipsoide** de radios (a, b, c) con centro en un bloque: una columna a distancia (dx, dz) ocupa
-  `|dy| ≤ ⌊(b + ½)·√(1 − (dx/(a+½))² − (dz/(c+½))²)⌋`. El medio bloque hace que el radio 1 sea una cruz de 7 bloques
-  (como el de WorldEdit) y que la forma sea simétrica.
+  `|dy| ≤ ⌊(b + ½)·√(1 − (dx/(a+½))² − (dz/(c+½))²)⌋`. El medio bloque hace que el radio 1 tenga 19 bloques (como el de
+  WorldEdit) y que la forma sea simétrica.
 - **Cilindro** de radios (a, c) y alto h: las columnas dentro de la elipse, de y a y + h − 1 (h < 0: hacia abajo).
 - **Pirámide** de tamaño s: la columna a distancia de Chebyshev d ≤ s − 1 ocupa de y a y + (s − 1 − d).
 - **Cono** de radio r y alto h: la columna a distancia d ≤ r + ½ ocupa de y a y + ⌊h·(1 − d/(r + ½))⌋ − 1 (al menos el
@@ -51,7 +51,7 @@ Los comandos nuevos van en clases propias del paquete `command` (`ShapeCommands`
   - `drain`: agua o lava (lo que haya más cerca) → aire; `--waterlogged` también le saca el agua a escaleras y losas.
   - `fixwater`/`fixlava`: el líquido corriente conectado, a la altura del punto de partida o debajo, pasa a fuente.
   - `fill`: el aire conectado desde los pies, a la altura de los pies o debajo, hasta `prof` (de fábrica, el radio);
-    `--recursive` sin la profundidad.
+    sin `--recursive`: de fábrica ya llega tan hondo como el radio (como `fillr`).
 
 ### 1.3 Columna de arriba abajo
 `ColumnSource` recorre cada columna completa de arriba abajo antes de pasar a la siguiente, así una variable por columna
@@ -87,9 +87,12 @@ desde 0.3.0 no tiene que tocar nada). Permiso nuevo `worldcraft.navigate` (`defa
 
 ## 3. Hilos y rendimiento
 - Todo lo que pone bloques va por el motor (8 ms por tick, turnos entre jugadores). Las lecturas también.
-- La inundación, las distancias de `hollow` y los intervalos de las formas se calculan en el hilo de cálculo (el del
-  terreno), nunca en el principal. Las formas: O(columnas · grosor).
-- La memoria de una foto es 4 bytes por bloque; la caja de la foto no pasa del tope del grupo (se revisa antes de leer).
+- La inundación y las distancias de `hollow` se calculan en el hilo de cálculo (el del terreno), nunca en el principal.
+  Los intervalos de las formas son O(columnas · grosor) (una esfera de radio 200 son 160 000 columnas): se arman en el
+  principal al pedirla.
+- La memoria de una foto es 4 bytes por bloque. La de `stack`, `move` y `hollow` es la selección, que no pasa del tope
+  del grupo (se revisa antes de leer); la de `drain`, `fixwater` y `fill` es la caja del radio, acotada por
+  `utilities.max_radius` (64: ~2 M de bloques, 8 MB).
 
 ## 4. Persistencia
 Nada nuevo: lo que se pone queda en el historial en disco de la 025.

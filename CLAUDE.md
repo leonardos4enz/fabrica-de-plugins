@@ -187,6 +187,12 @@ con `--release 21`.
   pagaba ~15 ms de código frío al serializar los ítems (F-01, como la 025 F-04): `warmUp` ya hace esa ida y vuelta. Se repitió
   la lección de la 026 (`node -e` con comillas invertidas en Git Bash corrompió el README): los scripts van a un archivo
   en el scratchpad con la herramienta de escritura.
+- **Spec 028 (paridad con WorldEdit):** el inventario de WorldEdit y FAWE salió de sus anotaciones `@Command` en el código
+  fuente (con permiso del dueño, solo como dato; Worldcraft se escribe desde cero). Lo que sigue a una lectura por tandas
+  (`Edits.read`) corre en el tick siguiente: si no, la obra decía «waiting for your previous edit» por la lectura ya
+  terminada (F-02). Lo que busca la cima de una columna no se acota a ±radio de los pies: volando o en una ladera la cima
+  queda fuera (F-01). Una esfera de radio r usa r + ½ (radio 1 = 19 bloques, como WorldEdit): al armar un escenario,
+  la esquina de un cuadrado de lado r queda fuera.
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

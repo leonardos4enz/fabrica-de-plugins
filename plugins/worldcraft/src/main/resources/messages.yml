@@ -48,6 +48,41 @@ help:
   reload: { usage: "/wc reload", text: "Reload config.yml, messages.yml, presets.yml and terrain.yml.", example: "/wc reload" }
   validate: { usage: "/wc validate", text: "List the problems in the configuration.", example: "/wc validate" }
   selftest: { usage: "/wc selftest", text: "Edit, undo, redo and undo a small box near spawn and check every step.", example: "/wc selftest" }
+  # Spec 028: shapes, region operations, utilities and navigation (the names WorldEdit users know, without slashes).
+  sphere: { usage: "/wc sphere <pattern> <radius>[,<y>,<z>] [--raised] [--preview]", text: "A sphere (or an ellipsoid) centered on your feet; --raised puts it on the ground.", example: "/wc sphere glass 8 --preview" }
+  hsphere: { usage: "/wc hsphere <pattern> <radius>[,<y>,<z>] [--thickness <n>] [--raised] [--preview]", text: "A hollow sphere, one block thick unless --thickness.", example: "/wc hsphere stone 12 --raised" }
+  cyl: { usage: "/wc cyl <pattern> <radius>[,<z>] [height] [--preview]", text: "A cylinder from your feet up (a negative height goes down).", example: "/wc cyl stone_bricks 5 10" }
+  hcyl: { usage: "/wc hcyl <pattern> <radius>[,<z>] [height] [--thickness <n>] [--preview]", text: "A hollow cylinder: only the round wall, like WorldEdit's.", example: "/wc hcyl stone_bricks 6 12" }
+  pyramid: { usage: "/wc pyramid <pattern> <size> [--preview]", text: "A pyramid on your feet: size blocks tall, 2×size−1 wide.", example: "/wc pyramid sandstone 10" }
+  hpyramid: { usage: "/wc hpyramid <pattern> <size> [--thickness <n>] [--preview]", text: "A hollow pyramid.", example: "/wc hpyramid sandstone 12" }
+  cone: { usage: "/wc cone <pattern> <radius> <height> [--preview]", text: "A cone on your feet (a negative height points down).", example: "/wc cone 70% stone, 30% andesite 6 14" }
+  stack: { usage: "/wc stack [copies] [direction] [--air] [--select] [--preview]", text: "Repeat the selection where you look (or up, north...). Copied air is skipped unless --air; --select selects the last copy.", example: "/wc stack 5 up" }
+  move: { usage: "/wc move [blocks] [direction] [pattern] [--select] [--preview]", text: "Move what is in the selection; what is left behind becomes air (or the pattern).", example: "/wc move 10 east" }
+  overlay: { usage: "/wc overlay <pattern> [--preview]", text: "A layer on top of the ground in the selection (not on trees).", example: "/wc overlay snow" }
+  naturalize: { usage: "/wc naturalize [--preview]", text: "Grass on top, 3 dirt below and stone under that, only on grass, dirt and stone.", example: "/wc naturalize" }
+  smooth: { usage: "/wc smooth [passes] [--preview]", text: "Smooth the natural ground of the selection; trees and builds are left alone.", example: "/wc smooth 3 --preview" }
+  hollow: { usage: "/wc hollow [thickness] [pattern] [--preview]", text: "Empty the inside of closed things in the selection, keeping a shell.", example: "/wc hollow 2" }
+  center: { usage: "/wc center <pattern> [--preview]", text: "The middle block(s) of the selection.", example: "/wc center gold_block" }
+  line: { usage: "/wc line <pattern> [thickness] [--preview]", text: "A line from corner 1 to corner 2.", example: "/wc line oak_planks 1" }
+  drain: { usage: "/wc drain <radius> [--waterlogged] [--preview]", text: "Remove the water or lava nearest to you and what is connected to it; --waterlogged also dries stairs and slabs.", example: "/wc drain 20" }
+  fixwater: { usage: "/wc fixwater <radius> [--preview]", text: "Turn the flowing water connected to the nearest water into still water.", example: "/wc fixwater 15" }
+  fixlava: { usage: "/wc fixlava <radius> [--preview]", text: "Turn the flowing lava connected to the nearest lava into still lava.", example: "/wc fixlava 15" }
+  fill: { usage: "/wc fill <pattern> <radius> [depth] [--preview]", text: "Fill the hole you stand in, from your feet down.", example: "/wc fill dirt 8" }
+  removenear: { usage: "/wc removenear <mask> [radius] [--preview]", text: "Remove the matching blocks around you.", example: "/wc removenear #leaves 10" }
+  replacenear: { usage: "/wc replacenear <radius> <mask> with <pattern> [--preview]", text: "Replace the matching blocks around you.", example: "/wc replacenear 10 dirt with grass_block" }
+  removeabove: { usage: "/wc removeabove [size] [height] [--preview]", text: "Remove everything from your feet up (size 1 = your column).", example: "/wc removeabove 3 20" }
+  removebelow: { usage: "/wc removebelow [size] [height] [--preview]", text: "Remove everything under your feet.", example: "/wc removebelow 1 5" }
+  extinguish: { usage: "/wc extinguish [radius] [--preview]", text: "Put out the fire around you.", example: "/wc extinguish 20" }
+  snow: { usage: "/wc snow [radius] [--preview]", text: "Snow on the ground around you; still water freezes.", example: "/wc snow 15" }
+  thaw: { usage: "/wc thaw [radius] [--preview]", text: "Melt the snow and ice on top around you.", example: "/wc thaw 15" }
+  green: { usage: "/wc green [radius] [--preview]", text: "Turn the dirt on top into grass around you.", example: "/wc green 10" }
+  unstuck: { usage: "/wc unstuck", text: "Get out of the block you are stuck in.", example: "/wc unstuck" }
+  ascend: { usage: "/wc ascend [floors]", text: "Go up to the next floor.", example: "/wc ascend" }
+  descend: { usage: "/wc descend [floors]", text: "Go down to the next floor.", example: "/wc descend 2" }
+  ceil: { usage: "/wc ceil [space]", text: "Go up right under the ceiling.", example: "/wc ceil" }
+  thru: { usage: "/wc thru", text: "Go through the wall (or floor, or ceiling) you look at.", example: "/wc thru" }
+  jumpto: { usage: "/wc jumpto", text: "Go to the block you look at.", example: "/wc jumpto" }
+  up: { usage: "/wc up <blocks>", text: "Go straight up; if you cannot fly, a glass block is put under your feet (/wc undo removes it).", example: "/wc up 10" }
 
 wand-given: "{prefix}<green>Here is your wand: <white>left click</white> a block for corner 1, <white>right click</white> for corner 2."
 corner-set: "{prefix}Corner {which} at <white>{pos}</white>."
@@ -168,3 +203,19 @@ schem-list-line: " <click:suggest_command:'/wc schem load {name}'><hover:show_te
 schem-list-more: " <gray>/wc schem list {next} for more"
 schem-deleted: "{prefix}Deleted {name}. <gray>It waits {days} day(s) in schematics/.trash/ in case you want it back."
 schem-read-only: "{prefix}<red>{name} is in the {folder} folder: Worldcraft only reads there, never deletes."
+
+# Spec 028: shapes, region operations, utilities and navigation.
+read-cancelled: "{prefix}<yellow>Reading the blocks for {kind} stopped before the end: nothing changed."
+needs-place: "{prefix}<red>From the console, say where: --at <x,y,z> [--world <w>]."
+radius-too-big: "{prefix}<red>{radius} is too big: the biggest is {max} (shapes.max_radius / utilities.max_radius in config.yml)."
+compute-error: "{prefix}<red>Something went wrong calculating that (see the server log)."
+nothing-found: "{prefix}<yellow>Nothing to do for {kind} there."
+smooth-nothing: "{prefix}<yellow>The ground in the selection is already smooth (or there is no natural ground)."
+nav-moved: "{prefix}Whoosh! <gray>{pos}"
+nav-no-floor-above: "{prefix}<red>There is no free floor above you."
+nav-no-floor-below: "{prefix}<red>There is no free floor below you."
+nav-no-spot: "{prefix}<red>There is no free spot there."
+nav-no-ceiling: "{prefix}<red>There is no ceiling above you."
+nav-blocked: "{prefix}<red>Something is in the way up there."
+nav-no-wall: "{prefix}<red>There is no wall to go through where you look (up to 32 blocks)."
+nav-no-target: "{prefix}<red>Look at a block (up to {reach} blocks away)."

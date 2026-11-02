@@ -59,15 +59,24 @@ public final class WorldcraftCommand implements TabExecutor {
         // Spec 027: esquemas, con su propio permiso (un ayudante puede pegar sin poder llenar el disco).
         SUBS.put("schem", Schematics.PERM);
         SUBS.put("schematic", Schematics.PERM);
+        // Spec 028: formas, región y utilidades (como cualquier edición) y navegación (permiso propio).
+        for (String s : BuildCommands.SHAPES) SUBS.put(s, USE);
+        for (String s : BuildCommands.REGION) SUBS.put(s, USE);
+        for (String s : BuildCommands.UTILITIES) SUBS.put(s, USE);
+        for (String s : NavigationCommands.SUBS) SUBS.put(s, NavigationCommands.PERM);
         for (String s : List.of("reload", "validate", "selftest")) SUBS.put(s, ADMIN);
     }
 
     private static final Set<String> EDIT_FLAGS = Set.of("preview");
 
     private final Worldcraft plugin;
+    private final BuildCommands build;
+    private final NavigationCommands navigation;
 
     public WorldcraftCommand(Worldcraft plugin) {
         this.plugin = plugin;
+        this.build = new BuildCommands(plugin, this);
+        this.navigation = new NavigationCommands(plugin);
     }
 
     private Messages msg() {
@@ -121,7 +130,12 @@ public final class WorldcraftCommand implements TabExecutor {
                 case "brush" -> brush(s, a);
                 case "styles" -> styles(s);
                 case "schem", "schematic" -> schem(s, a);
-                default -> help(s, a);
+                default -> {
+                    if (NavigationCommands.SUBS.contains(sub)) navigation.run(s, sub, a);
+                    else if (BuildCommands.SHAPES.contains(sub) || BuildCommands.REGION.contains(sub)
+                            || BuildCommands.UTILITIES.contains(sub)) build.run(s, sub, a);
+                    else help(s, a);
+                }
             }
         } catch (Usage u) {
             s.sendMessage(msg().get("usage", "usage", msg().raw("help." + helpKey(sub) + ".usage")));
@@ -130,7 +144,7 @@ public final class WorldcraftCommand implements TabExecutor {
     }
 
     /** El subcomando se usó mal: se muestra su forma. */
-    private static final class Usage extends RuntimeException {
+    static final class Usage extends RuntimeException {
         Usage() {
             super(null, null, false, false);
         }
@@ -323,7 +337,7 @@ public final class WorldcraftCommand implements TabExecutor {
     // ------------------------------------------------------------------ operaciones
 
     /** La selección dentro del mundo, o null (y lo dice). */
-    private Box selection(CommandSender s, Session ses) {
+    Box selection(CommandSender s, Session ses) {
         Box b = ses.box();
         if (b == null) {
             s.sendMessage(msg().get("no-selection"));
@@ -861,7 +875,11 @@ public final class WorldcraftCommand implements TabExecutor {
                 case "mountain", "island", "floating_island" -> Set.of("--now");
                 case "schem", "schematic" -> a.length > 1 && a[1].equalsIgnoreCase("save") && s.hasPermission(Schematics.PERM_DELETE)
                         ? Set.of("--overwrite") : Set.of();
-                default -> Set.of();
+                default -> {
+                    Set<String> f = new HashSet<>();
+                    if (!NavigationCommands.SUBS.contains(sub)) for (String o : BuildCommands.flags(sub)) f.add("--" + o);
+                    yield f;
+                }
             };
             return filter(new ArrayList<>(opts), last);
         }
@@ -880,6 +898,28 @@ public final class WorldcraftCommand implements TabExecutor {
             case "island", "floating_island" -> terrainSuggestions(Options.Tool.ISLAND, last);
             case "brush" -> brushSuggestions(a, last);
             case "schem", "schematic" -> schemSuggestions(s, a, last);
+            default -> buildSuggestions(sub, a, last);
+        };
+    }
+
+    private static final List<String> RADII = List.of("3", "5", "10", "20");
+
+    /** Spec 028: números, direcciones, bloques y máscaras donde va cada uno. */
+    private List<String> buildSuggestions(String sub, String[] a, String last) {
+        boolean number = last.isEmpty() || Character.isDigit(last.charAt(0)) || last.startsWith("-");
+        if (BuildCommands.SHAPES.contains(sub)) return a.length > 2 && number ? filter(RADII, last) : blockSuggestions(last, false);
+        return switch (sub) {
+            case "stack" -> a.length == 2 ? filter(List.of("1", "2", "5", "10"), last) : a.length == 3 ? filter(Direction.NAMES, last) : List.of();
+            case "move" -> a.length == 2 ? filter(List.of("1", "5", "10"), last) : a.length == 3 ? filter(Direction.NAMES, last) : blockSuggestions(last, false);
+            case "overlay", "center", "line" -> blockSuggestions(last, false);
+            case "hollow" -> a.length == 2 ? filter(List.of("1", "2", "3"), last) : blockSuggestions(last, false);
+            case "smooth" -> a.length == 2 ? filter(List.of("1", "2", "3", "5"), last) : List.of();
+            case "fill" -> a.length > 2 && number ? filter(RADII, last) : blockSuggestions(last, false);
+            case "removenear" -> a.length > 2 && number ? filter(RADII, last) : blockSuggestions(last, true);
+            case "replacenear" -> a.length == 2 ? filter(RADII, last) : blockSuggestions(last, !hasWith(a));
+            case "removeabove", "removebelow" -> a.length <= 3 ? filter(List.of("1", "3", "5"), last) : List.of();
+            case "drain", "fixwater", "fixlava", "extinguish", "snow", "thaw", "green" -> a.length == 2 ? filter(RADII, last) : List.of();
+            case "ascend", "descend", "up", "ceil" -> a.length == 2 ? filter(List.of("1", "2", "5", "10"), last) : List.of();
             default -> List.of();
         };
     }

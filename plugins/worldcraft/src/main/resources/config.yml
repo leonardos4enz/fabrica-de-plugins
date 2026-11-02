@@ -79,3 +79,10 @@ schematics:
   # Read-only folders (relative to the server folder): WorldEdit's and FAWE's schematics are loaded from where they are.
   # Worldcraft never writes or deletes there.
   extra_folders: [plugins/WorldEdit/schematics, plugins/FastAsyncWorldEdit/schematics]
+
+# Shapes (/wc sphere, cyl, pyramid, cone...): the biggest radius. Your group's block limit still applies.
+shapes:
+  max_radius: 200
+# Around the player (/wc drain, fixwater, fill, removenear, snow...): the biggest radius.
+utilities:
+  max_radius: 64

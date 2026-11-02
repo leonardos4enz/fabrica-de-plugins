@@ -714,6 +714,110 @@ export default {
         fs.rmSync(path.join(propia, 'e2e_roto.schem'), { force: true })
         fs.rmSync(path.join(carpetaWE(srv), 'e2e_ajeno.schem'), { force: true })
       }
+    },
+
+    // ---------------------------------------------------------------- spec 028: paridad con WorldEdit
+    {
+      id: '028 H1 CA1 · H1 CA4 · H4 CA1',
+      nombre: 'una esfera con vista previa que solo ve Ana, confirm y undo; una pirámide encima de Ana y unstuck la saca',
+      timeoutMs: 90000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        const beto = bots[BETO]
+        const subs = (await ana.bot.tabComplete('/wc s')).map(x => x.match ?? x)
+        for (const s of ['sphere', 'stack', 'smooth', 'snow']) if (!subs.includes(s)) throw new Error(`no sugiere ${s}: ${subs}`)
+        await pide(ana, 'wc help sphere', /Example: \/wc sphere glass 8 --preview/)
+        // Esfera de radio 4 apoyada en los pies (centro en y = -56): la cima en -52.
+        await pide(ana, 'wc sphere glass 4 --raised --preview', /Preview ready/)
+        await ana.hasta('ver la cima de la esfera (falsa)', b => bloque(b, X, -52, Z) === 'glass')
+        if (bloque(beto.bot, X, -52, Z) !== 'air') throw new Error('Beto ve la vista previa')
+        const esfera = await obra(ana, 'wc confirm')
+        const r = 4.5
+        let esperado = 0
+        for (let dx = -4; dx <= 4; dx++) for (let dy = -4; dy <= 4; dy++) for (let dz = -4; dz <= 4; dz++) if (dx * dx + dy * dy + dz * dz <= r * r) esperado++
+        if (esfera.cambiados !== esperado) throw new Error(`la esfera cambió ${esfera.cambiados}, se esperaban ${esperado}`)
+        await beto.hasta('ver la esfera real', b => bloque(b, X, -52, Z) === 'glass' && bloque(b, X + 4, -56, Z) === 'glass')
+        await pide(ana, 'wc undo', new RegExp(`Undone #${esfera.id} \\(sphere glass 4\\)`))
+        await beto.hasta('ver que se fue', b => bloque(b, X, -52, Z) === 'air')
+        // Pirámide de 4 sobre los pies de Ana: queda adentro; unstuck la deja encima de la punta (y = -56).
+        const pir = await obra(ana, 'wc pyramid sandstone 4')
+        if (pir.cambiados !== 7 * 7 + 5 * 5 + 3 * 3 + 1) throw new Error(`la pirámide cambió ${pir.cambiados}`)
+        await pide(ana, 'wc unstuck', /Whoosh!/)
+        await ana.hasta('estar sobre la punta', b => Math.floor(b.entity.position.y) === -56)
+        await pide(ana, 'wc undo', /Undone .*pyramid/)
+      }
+    },
+    {
+      id: '028 H2 CA1 · H2 CA2 · H2 CA7',
+      nombre: 'stack repite una columna con su cofre hacia el este, move la sube con --select y undo deshace las dos',
+      timeoutMs: 90000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        await srv.consola(`setblock ${X + 2} -60 ${Z + 2} gold_block`)
+        await srv.consola(`setblock ${X + 2} -59 ${Z + 2} chest{Items:[{Slot:0b,id:"minecraft:diamond",count:3}]}`)
+        await srv.sincronizar()
+        await seleccionar(ana, [X + 2, -60, Z + 2], [X + 2, -59, Z + 2])
+        const st = await obra(ana, 'wc stack 3 east')
+        if (st.cambiados !== 6) throw new Error(`stack cambió ${st.cambiados}`)
+        await ana.hasta('ver las tres copias', b => [3, 4, 5].every(k => bloque(b, X + k, -60, Z + 2) === 'gold_block' && bloque(b, X + k, -59, Z + 2) === 'chest'))
+        await srv.consola(`data get block ${X + 5} -59 ${Z + 2} Items`, { espera: /count: 3.*diamond|diamond.*count: 3/ })
+        await pide(ana, 'wc sel', /1×2×1/)
+        const mv = await obra(ana, 'wc move 4 up --select')
+        if (mv.cambiados !== 4) throw new Error(`move cambió ${mv.cambiados}`)
+        await ana.hasta('ver la columna arriba y vacío abajo', b => bloque(b, X + 2, -56, Z + 2) === 'gold_block' && bloque(b, X + 2, -60, Z + 2) === 'air')
+        await pide(ana, 'wc sel', new RegExp(`${X + 2} -56 ${Z + 2}|1×2×1`))
+        await pide(ana, 'wc undo 2', /Undone/)
+        await ana.hasta('ver solo la columna original', b => bloque(b, X + 2, -60, Z + 2) === 'gold_block' && bloque(b, X + 3, -60, Z + 2) === 'air' && bloque(b, X + 2, -56, Z + 2) === 'air')
+        await srv.consola(`fill ${X + 2} -60 ${Z + 2} ${X + 2} -59 ${Z + 2} air`)
+      }
+    },
+    {
+      id: '028 H3 CA1 · H3 CA5 · H4 CA1 · H4 CA2 · H4 CA3',
+      nombre: 'drain vacía el estanque y undo lo devuelve; ascend, descend y thru; up sin vuelo pone un vidrio que undo quita; Beto no navega',
+      timeoutMs: 120000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        const beto = bots[BETO]
+        await pide(beto, 'wc ascend', /You don't have permission/)
+        // Un estanque de 3×3 en el pasto.
+        await srv.consola(`fill ${X + 4} -61 ${Z + 4} ${X + 6} -61 ${Z + 6} water`)
+        await srv.sincronizar()
+        const dr = await obra(ana, 'wc drain 10') // la esquina lejana está a √73: con radio 8 queda fuera de la esfera
+        if (dr.cambiados !== 9) throw new Error(`drain cambió ${dr.cambiados}`)
+        await ana.hasta('ver el estanque vacío', b => bloque(b, X + 5, -61, Z + 5) === 'air')
+        await pide(ana, 'wc undo', /Undone .*drain/)
+        await ana.hasta('ver el agua de vuelta', b => bloque(b, X + 5, -61, Z + 5) === 'water')
+        await srv.consola(`fill ${X + 4} -61 ${Z + 4} ${X + 6} -61 ${Z + 6} grass_block`)
+        // Un techo en y = -57 y una pared al sur.
+        await srv.consola(`fill ${X - 2} -57 ${Z - 2} ${X + 2} -57 ${Z + 1} stone`)
+        await srv.consola(`fill ${X - 1} -60 ${Z + 2} ${X + 1} -58 ${Z + 2} stone`)
+        await srv.sincronizar()
+        await pide(ana, 'wc ascend', /Whoosh!/)
+        await ana.hasta('estar sobre el techo', b => Math.floor(b.entity.position.y) === -56)
+        await pide(ana, 'wc descend', /Whoosh!/)
+        await ana.hasta('estar abajo otra vez', b => Math.floor(b.entity.position.y) === -60)
+        await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 0.5} 0 0`)
+        await srv.sincronizar()
+        await pide(ana, 'wc thru', /Whoosh!/)
+        await ana.hasta('estar del otro lado de la pared', b => Math.floor(b.entity.position.z) === Z + 3)
+        // Sin poder volar: up pone un vidrio bajo los pies (una obra) y undo lo quita.
+        await srv.consola(`gamemode survival ${ANA}`)
+        await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 5.5} 0 0`)
+        await srv.sincronizar()
+        const up = await obra(ana, 'wc up 6')
+        if (up.cambiados !== 1) throw new Error(`up cambió ${up.cambiados}`)
+        await ana.hasta('estar sobre el vidrio', b => Math.floor(b.entity.position.y) === -54 && bloque(b, X, -55, Z + 5) === 'glass')
+        await srv.consola(`gamemode creative ${ANA}`)
+        await pide(ana, 'wc undo', /Undone .*up/)
+        await ana.hasta('ver el vidrio quitado', b => bloque(b, X, -55, Z + 5) === 'air')
+        await srv.consola(`fill ${X - 2} -60 ${Z - 2} ${X + 2} -57 ${Z + 2} air`)
+      }
     }
   ]
 }

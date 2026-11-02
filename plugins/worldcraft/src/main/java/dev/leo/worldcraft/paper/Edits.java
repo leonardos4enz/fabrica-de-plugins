@@ -50,13 +50,25 @@ public final class Edits {
      * @param preview    la fuente de la vista previa (spec 026: la piel del terreno); null = la misma que la obra
      * @param note       lo que se agrega al mensaje de la vista previa (semilla, medidas); vacío si nada
      * @param rerollable la vista previa ofrece [Another] (/wc reroll)
+     * @param after      spec 028: lo que se hace cuando la obra termina bien (stack --select, el vidrio de up); o null
      */
     public record Op(String kind, String detail, World world, Box bounds, long volume, Supplier<EditSource> source,
                      Collection<Integer> placed, Supplier<EditJob.Capture> capture, Supplier<EditSource> preview,
-                     String note, boolean rerollable) {
+                     String note, boolean rerollable, Runnable after) {
+        public Op(String kind, String detail, World world, Box bounds, long volume, Supplier<EditSource> source,
+                  Collection<Integer> placed, Supplier<EditJob.Capture> capture, Supplier<EditSource> preview,
+                  String note, boolean rerollable) {
+            this(kind, detail, world, bounds, volume, source, placed, capture, preview, note, rerollable, null);
+        }
+
         public Op(String kind, String detail, World world, Box bounds, long volume, Supplier<EditSource> source,
                   Collection<Integer> placed, Supplier<EditJob.Capture> capture) {
-            this(kind, detail, world, bounds, volume, source, placed, capture, null, "", false);
+            this(kind, detail, world, bounds, volume, source, placed, capture, null, "", false, null);
+        }
+
+        /** La misma operación con algo que hacer al terminar. */
+        public Op then(Runnable r) {
+            return new Op(kind, detail, world, bounds, volume, source, placed, capture, preview, note, rerollable, r);
         }
     }
 
@@ -281,6 +293,7 @@ public final class Edits {
             if (owner.equals(CONSOLE) || owner.equals(SELFTEST)) {
                 plugin.getLogger().info(net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(m));
             }
+            if (ok && op.after() != null) op.after().run();
         });
         jobs.put(job.id(), job);
         submit(job);
@@ -293,22 +306,37 @@ public final class Edits {
     public void copy(CommandSender who, World world, Box box, int ox, int oy, int oz, Runnable done) {
         UUID owner = owner(who);
         Clipboard clip = new Clipboard(box, ox, oy, oz);
+        read(who, world, box, "copy", (x, y, z, s, tile) -> clip.put(box, x, y, z, s, tile), () -> {
+            session(owner).clipboard(clip, world.getName());
+            done.run();
+        });
+    }
+
+    /**
+     * Lee una caja por tandas (spec 028 §1.2: la foto de stack, move, hollow, drain…), sin historial. done corre en el
+     * hilo principal si terminó; si se canceló, se avisa.
+     */
+    public void read(CommandSender who, World world, Box box, String label, EditJob.Capture into, Runnable done) {
         EditSource src = new dev.leo.worldcraft.edit.RegionSource(box, dev.leo.worldcraft.region.Shape.FILL, null, null, 0);
+        readWith(who, world, src, label, into, done);
+    }
+
+    /** Lo mismo con una fuente de lectura propia (spec 028: la cima de cada columna). */
+    public void readWith(CommandSender who, World world, EditSource src, String label, EditJob.Capture into, Runnable done) {
+        UUID owner = owner(who);
         PaperWorld w = world(world, src);
-        EditJob job = new EditJob(nextJob++, owner, "copy", w, src, EditJob.Mode.READ, new EditJob.Sink() {
+        EditJob job = new EditJob(nextJob++, owner, label, w, src, EditJob.Mode.READ, new EditJob.Sink() {
             @Override
             public void changed(int x, int y, int z, int b, int a, byte[] tb, byte[] ta) {
             }
-        }, (x, y, z, s, tile) -> clip.put(box, x, y, z, s, tile), Long.MAX_VALUE, System::nanoTime);
+        }, into, Long.MAX_VALUE, System::nanoTime);
         job.onEnd(() -> {
             w.close();
             jobs.remove(job.id());
-            if (job.state() == EditJob.State.DONE) {
-                session(owner).clipboard(clip, world.getName());
-                done.run();
-            } else {
-                tell(owner, who, plugin.messages().get("copy-cancelled"));
-            }
+            // Spec 028: lo que sigue (pedir la obra) corre en el tick siguiente, cuando la lectura ya salió del planificador;
+            // si no, la obra decía «waiting for your previous edit» por la lectura que ya había terminado.
+            if (job.state() == EditJob.State.DONE) Bukkit.getScheduler().runTask(plugin, done);
+            else tell(owner, who, plugin.messages().get(label.equals("copy") ? "copy-cancelled" : "read-cancelled", "kind", label));
         });
         jobs.put(job.id(), job);
         submit(job);
@@ -551,7 +579,7 @@ public final class Edits {
     // ------------------------------------------------------------------ utilidades
 
     private PaperWorld world(World world, EditSource src) {
-        return new PaperWorld(plugin, world, blocks, ChunkOrder.chunks(src.bounds()));
+        return new PaperWorld(plugin, world, blocks, src.chunks());
     }
 
     private void tell(UUID owner, CommandSender fallback, Component m) {

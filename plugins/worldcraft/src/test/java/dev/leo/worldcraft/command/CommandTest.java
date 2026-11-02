@@ -76,4 +76,31 @@ class CommandTest {
         }
         assertEquals(Set.of(), missing);
     }
+
+    /**
+     * Spec 028 F-01 (compuerta 2): green no hizo nada con la tierra 2 bloques bajo los pies y radio 1, porque la cima se
+     * buscaba solo entre ±radio. Volando o en una ladera la cima queda más abajo: se busca hasta el fondo del mundo.
+     */
+    @Test
+    void spec028_F01_la_cima_se_busca_por_debajo_del_radio() {
+        var b = BuildCommands.surfaceBox(5141, 172, 5141, 1, -64, 319);
+        assertTrue(b.contains(5141, 170, 5141), b.toString());
+        assertTrue(BuildCommands.surfaceBox(0, 70, 0, 3, -64, 319).contains(0, 64, 0), "volando 6 bloques sobre el suelo");
+        assertEquals(73, BuildCommands.surfaceBox(0, 70, 0, 3, -64, 319).maxY(), "por encima, el radio");
+        assertEquals(-64, BuildCommands.surfaceBox(0, 70, 0, 3, -64, 319).minY());
+    }
+
+    @Test
+    void spec028_numeros_al_final_y_el_patron_con_espacios() {
+        var pos = new java.util.ArrayList<>(java.util.List.of("70%", "stone,", "30%", "andesite", "6", "14"));
+        var nums = BuildCommands.trailingNumbers(pos, 2);
+        assertEquals(2, nums.size());
+        assertArrayEquals(new int[]{6}, nums.get(0));
+        assertArrayEquals(new int[]{14}, nums.get(1));
+        assertEquals(java.util.List.of("70%", "stone,", "30%", "andesite"), pos);
+        var ell = new java.util.ArrayList<>(java.util.List.of("glass", "6,2,3"));
+        assertArrayEquals(new int[]{6, 2, 3}, BuildCommands.trailingNumbers(ell, 1).get(0));
+        var neg = new java.util.ArrayList<>(java.util.List.of("stone", "4", "-6"));
+        assertArrayEquals(new int[]{-6}, BuildCommands.trailingNumbers(neg, 2).get(1));
+    }
 }

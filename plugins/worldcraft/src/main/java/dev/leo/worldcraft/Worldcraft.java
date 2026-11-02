@@ -180,4 +180,9 @@ public final class Worldcraft extends JavaPlugin {
     public ExecutorService io() {
         return io;
     }
+
+    /** El hilo de cálculo (terreno; spec 028: inundaciones e interiores). */
+    public ExecutorService compute() {
+        return terrainThread;
+    }
 }

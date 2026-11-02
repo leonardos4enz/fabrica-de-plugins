@@ -167,6 +167,11 @@ public final class TestBlocks {
             return ((long) x & 0x3FFFFFF) << 38 | ((long) z & 0x3FFFFFF) << 12 | (y & 0xFFF);
         }
 
+        /** La clave de una posición en blocks y tiles (spec 028: las pruebas miran los datos de bloque). */
+        public static long pos(int x, int y, int z) {
+            return key(x, y, z);
+        }
+
         @Override
         public String name() {
             return "world";

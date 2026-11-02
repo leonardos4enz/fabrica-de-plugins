@@ -1,5 +1,7 @@
 package dev.leo.worldcraft.terrain;
 
+import dev.leo.worldcraft.region.Box;
+
 import java.util.function.IntPredicate;
 
 /**
@@ -84,6 +86,46 @@ public final class Brush {
         }
         if (lo > hi) lo = hi = centerY;
         return new Result(out, lo, Math.max(1, hi - lo));
+    }
+
+    /**
+     * /wc smooth sobre la selección (spec 028 H2 CA5): pasadas de una media 3×3 (1-2-1) del suelo natural; solo cambian
+     * las columnas de inner con suelo y sin obstáculos. Las alturas nuevas, NONE donde no cambia.
+     */
+    public static int[] smoothArea(HeightField f, Box inner, int passes) {
+        int n = f.size();
+        double[] h = new double[n];
+        for (int i = 0; i < n; i++) h[i] = f.ground(i);
+        int[] k = {1, 2, 1};
+        for (int p = 0; p < passes; p++) {
+            double[] next = h.clone();
+            for (int i = 0; i < n; i++) {
+                if (!usable(f, i)) continue;
+                int x = i % f.width, z = i / f.width;
+                double sum = 0, ws = 0;
+                for (int dz = -1; dz <= 1; dz++) {
+                    for (int dx = -1; dx <= 1; dx++) {
+                        int xx = x + dx, zz = z + dz;
+                        if (xx < 0 || zz < 0 || xx >= f.width || zz >= f.depth) continue;
+                        int j = xx + zz * f.width;
+                        if (!usable(f, j)) continue;
+                        double w = k[dx + 1] * k[dz + 1];
+                        sum += w * h[j];
+                        ws += w;
+                    }
+                }
+                next[i] = sum / ws;
+            }
+            h = next;
+        }
+        int[] out = new int[n];
+        for (int i = 0; i < n; i++) {
+            out[i] = HeightField.NONE;
+            if (!usable(f, i) || !inner.contains(f.x(i), inner.minY(), f.z(i))) continue;
+            int t = Math.max(f.bottom + 1, Math.min(f.top, (int) Math.round(h[i])));
+            if (t != f.ground(i)) out[i] = t;
+        }
+        return out;
     }
 
     /** Media gaussiana del suelo (las columnas sin suelo u ocupadas no cuentan). */

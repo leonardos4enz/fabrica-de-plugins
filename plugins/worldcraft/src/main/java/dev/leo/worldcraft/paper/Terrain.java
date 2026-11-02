@@ -64,6 +64,11 @@ public final class Terrain {
         return edits().blocks().table();
     }
 
+    /** Spec 028: las mismas máscaras para overlay y snow. */
+    public Masks masksForCommands() {
+        return masks();
+    }
+
     Masks masks() {
         PaperBlocks b = edits().blocks();
         return new Masks(cfg().ground().compile(b.table()), cfg().cover().compile(b.table()), cfg().buryable().compile(b.table()), b::isAir);
@@ -351,6 +356,40 @@ public final class Terrain {
                 }
                 edits().request(p, new Edits.Op("brush " + use.mode().id(), use.describe(), w, probe.bounds(),
                         probe.volume(), src, placed, null), false);
+            });
+        }, () -> ses.terrainBusy = false);
+    }
+
+    /**
+     * /wc smooth sobre la selección (spec 028 H2 CA5): el suavizado del pincel en todo el rectángulo, solo sobre el
+     * suelo natural (no derrite árboles ni casas). Lee un borde de 2 alrededor para que el borde empalme.
+     */
+    public void smooth(CommandSender s, World w, Box box, int passes, boolean preview) {
+        Session ses = edits().session(Edits.owner(s));
+        if (busy(s, ses)) return;
+        Box rect = new Box(box.minX() - 2, 0, box.minZ() - 2, box.maxX() + 2, 0, box.maxZ() + 2);
+        Masks m = masks();
+        ColumnScan scan = new ColumnScan(rect, box.maxY(), box.minY(), m.ground(), m.cover(), m.buryable(), m.air());
+        ses.terrainBusy = true;
+        edits().scan(s, w, scan, () -> {
+            HeightField f = scan.field();
+            run(s, ses, () -> Brush.smoothArea(f, box, passes), newTop -> {
+                int air = edits().blocks().air();
+                float[] slope = HeightField.slopes(groundOf(f), f.width, f.depth);
+                Supplier<EditSource> src = () -> new HeightSource(f, newTop, HeightSource.Mode.PRESERVE, null, slope,
+                        box.minY(), Math.max(1, box.height()), m, 1, air, false);
+                EditSource probe = src.get();
+                if (probe.volume() == 0) {
+                    s.sendMessage(plugin.messages().get("smooth-nothing"));
+                    return;
+                }
+                Set<Integer> placed = new LinkedHashSet<>();
+                for (int i = 0; i < f.size(); i++) if (newTop[i] != HeightField.NONE) {
+                    placed.add(f.surface(i));
+                    placed.add(f.under(i));
+                }
+                edits().request(s, new Edits.Op("smooth", passes + (passes == 1 ? " pass" : " passes"), w, probe.bounds(),
+                        probe.volume(), src, placed, null), preview);
             });
         }, () -> ses.terrainBusy = false);
     }

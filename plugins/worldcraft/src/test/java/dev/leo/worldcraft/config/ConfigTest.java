@@ -97,6 +97,20 @@ class ConfigTest {
         assertTrue(all.contains("schematics.trash_dayz: unknown setting (did you mean 'trash_days'?)"), all);
     }
 
+    /** Spec 028 plan §2: shapes y utilities con rangos; un config.yml de la 0.3.0 sin ellas usa 200 y 64. */
+    @Test
+    void spec028_secciones_shapes_y_utilities() throws Exception {
+        Settings old = load("history: { keep_days: 3 }\n", "").settings();
+        assertEquals(200, old.shapesMaxRadius());
+        assertEquals(64, old.utilitiesMaxRadius());
+        LoadedConfig c = load("shapes:\n  max_radius: 5000\nutilities:\n  max_radius: 32\n  max_radios: 3\n", "");
+        assertEquals(200, c.settings().shapesMaxRadius());
+        assertEquals(32, c.settings().utilitiesMaxRadius());
+        String all = c.issues().all().toString();
+        assertTrue(all.contains("shapes.max_radius: 5000 is out of range"), all);
+        assertTrue(all.contains("utilities.max_radios: unknown setting (did you mean 'max_radius'?)"), all);
+    }
+
     @Test
     void H8_CA2_un_archivo_roto_conserva_lo_anterior() throws Exception {
         LoadedConfig first = load("performance: { max_ms_per_tick: 4 }\n", "patterns: { a: stone }\n");

@@ -25,3 +25,6 @@ permissions:
   worldcraft.schematic.delete:
     description: Delete schematics and replace them with save --overwrite.
     default: op
+  worldcraft.navigate:
+    description: Move around while building (/wc ascend, descend, ceil, thru, jumpto, unstuck, up).
+    default: op

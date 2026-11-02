@@ -1,6 +1,6 @@
 # Spec 028 — Worldcraft: paridad con WorldEdit y FAWE (formas, región, utilidades y navegación)
 
-**Estado:** CLARIFY respondido por el dueño (alcance: A + B + C + E) · PLAN · **Plugin:** Worldcraft ·
+**Estado:** Implementado y verificado en Paper 1.21.4 (compuertas 1, 2 y 3a, 18/18 dos veces) (ver [verify](verify.md)) · CLARIFY respondido por el dueño (alcance: A + B + C + E) · **Plugin:** Worldcraft ·
 **Depende de:** [025](../025-worldcraft-nucleo/spec.md) (motor por tandas, vista previa, deshacer, límites, patrones y
 máscaras), [026](../026-worldcraft-terreno-facil/spec.md) (suelo natural, pincel), [027](../027-worldcraft-esquemas-schem/spec.md) ·
 **Origen:** pregunta del dueño (2026-11-01): «¿Worldcraft ya tiene todos los comandos de WorldEdit y FAWE, o en qué siguen
@@ -67,7 +67,8 @@ sesión (lección 004).
 **H3 — Utilidades alrededor (grupo C).** Como *constructor*, quiero arreglar lo que hay cerca sin seleccionar.
 - CA1: `/wc drain <radio>` quita el agua y la lava conectadas al líquido más cercano (`--waterlogged` también saca el
   agua de escaleras y losas); `fixwater`/`fixlava <radio>` dejan quieto el líquido que corre.
-- CA2: `/wc fill <patrón> <radio> [profundidad]` rellena el pozo donde estoy hacia abajo; `--recursive` como `fillr`.
+- CA2: `/wc fill <patrón> <radio> [profundidad]` rellena el pozo donde estoy, sin subir de mis pies; de fábrica llega tan
+  hondo como el radio (como `fillr`).
 - CA3: `/wc removenear <máscara> [radio]`, `/wc replacenear <radio> <máscara> with <patrón>`, `/wc removeabove [tamaño]
   [alto]`, `/wc removebelow`.
 - CA4: `/wc extinguish [radio]`, `/wc snow [radio]`, `/wc thaw [radio]`, `/wc green [radio]`.

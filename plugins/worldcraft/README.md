@@ -4,7 +4,8 @@ World editing for Paper that never lags the server: select with a wand and see t
 happens, undo even after a restart (without erasing what others built since), and write patterns and masks the way
 you would say them. And terrain that is easy to make: a mountain or a floating island with one word, a terrain brush,
 and full control for experienced builders. Specs: [025](../../docs/sdd/specs/025-worldcraft-nucleo/spec.md) (core),
-[026](../../docs/sdd/specs/026-worldcraft-terreno-facil/spec.md) (terrain), [027](../../docs/sdd/specs/027-worldcraft-esquemas-schem/spec.md) (`.schem` schematics).
+[026](../../docs/sdd/specs/026-worldcraft-terreno-facil/spec.md) (terrain), [027](../../docs/sdd/specs/027-worldcraft-esquemas-schem/spec.md) (`.schem` schematics),
+[028](../../docs/sdd/specs/028-worldcraft-paridad-worldedit/spec.md) (the WorldEdit commands builders use most).
 
 ```
 /wc wand                                        left click = corner 1, right click = corner 2
@@ -15,6 +16,7 @@ and full control for experienced builders. Specs: [025](../../docs/sdd/specs/025
 /wc island                                      a floating island in front of you
 /wc brush smooth                                a terrain brush: right click to use it, left click for the next mode
 /wc schem load castles/tower                     a WorldEdit .schem into your clipboard: then /wc paste --preview
+/wc sphere glass 8 --preview                    shapes, stack, move, smooth, drain, ascend... with WorldEdit's names
 ```
 
 ## Terrain: easy for beginners, precise for experts
@@ -126,6 +128,52 @@ anything.
 | `/wc limits` | Your limits |
 | `/wc help [command]` | Every command you can use; with a command, an example |
 
+## Shapes, region tools, fixes around you and moving around
+The commands builders use every day in WorldEdit, with the same names (without the slashes) and everything Worldcraft
+adds: `--preview`, the group limits, undo after a restart, no lag.
+
+| Command | What it does |
+|---|---|
+| `/wc sphere <pattern> <radius>[,y,z] [--raised]`, `/wc hsphere …` | A sphere or ellipsoid centered on your feet (`--raised`: sitting on the ground); `h…` = hollow |
+| `/wc cyl <pattern> <radius>[,z] [height]`, `/wc hcyl …` | A cylinder from your feet up (negative height: down); the hollow one is only the round wall, like WorldEdit's |
+| `/wc pyramid <pattern> <size>`, `/wc hpyramid …`, `/wc cone <pattern> <radius> <height>` | A pyramid or a cone on your feet |
+| `--thickness <n>` | How thick a hollow shape is (1 by default) |
+| `/wc stack [copies] [direction] [--air] [--select]` | Repeat the selection where you look; copied air is skipped unless `--air`; chests keep their items |
+| `/wc move [blocks] [direction] [pattern] [--select]` | Move the selection's contents (far moves only touch the two places); what is left behind becomes air or the pattern |
+| `/wc overlay <pattern>` | A layer on top of the ground (never on a tree trunk; flowers are covered) |
+| `/wc naturalize` | Grass, 3 dirt, then stone, only on grass, dirt and stone |
+| `/wc smooth [passes]` | Smooth the natural ground of the selection; trees and builds are left alone (WorldEdit's melts them) |
+| `/wc hollow [thickness] [pattern]`, `/wc center <pattern>`, `/wc line <pattern> [thickness]` | Empty closed things keeping a shell; the middle block(s); a line from corner 1 to corner 2 |
+| `/wc drain <radius> [--waterlogged]` | Remove the water or lava nearest to you and what is connected (`--waterlogged` dries stairs and slabs too) |
+| `/wc fixwater <radius>`, `/wc fixlava <radius>` | Make the connected flowing water or lava still |
+| `/wc fill <pattern> <radius> [depth]` | Fill the hole you stand in, never above your feet |
+| `/wc removenear <mask> [radius]`, `/wc replacenear <radius> <mask> with <pattern>` | Remove or replace around you, without selecting |
+| `/wc removeabove [size] [height]`, `/wc removebelow …`, `/wc extinguish [radius]` | Clear above or below you; put out fire |
+| `/wc snow [radius]`, `/wc thaw [radius]`, `/wc green [radius]` | Snow on the ground (water freezes), melt it, dirt to grass; the top of every column is found even if you fly |
+| `/wc ascend`, `/wc descend [floors]`, `/wc ceil`, `/wc thru`, `/wc jumpto`, `/wc unstuck`, `/wc up <blocks>` | Move around while building (permission `worldcraft.navigate`). `up` and `ceil`: if you can fly you fly; if not, a glass block goes under your feet as a normal edit, so `/wc undo` removes it |
+
+From the console, shapes and the commands around you take `--at x,y,z [--world <w>]`. The biggest radius is
+`shapes.max_radius` (200) and `utilities.max_radius` (64); your group's block limit always applies too.
+
+## Coming from WorldEdit
+| WorldEdit | Worldcraft |
+|---|---|
+| `//wand`, `//pos1`, `//pos2`, `//expand`, `//contract`, `//shift`, `//size` | `/wc wand`, `/wc pos1`, `/wc pos2`, `/wc expand`, `/wc contract`, `/wc shift`, `/wc sel` |
+| `//set`, `//replace`, `//walls`, `//faces` | `/wc set`, `/wc replace <mask> with <pattern>`, `/wc walls`, `/wc faces` (all with `--preview`) |
+| `//copy`, `//cut`, `//paste`, `//rotate`, `//flip`, `//schem` | `/wc copy`, `/wc cut`, `/wc paste`, `/wc rotate`, `/wc flip`, `/wc schem` |
+| `//undo`, `//redo` | `/wc undo`, `/wc redo` (on disk: they survive a restart) |
+| `//sphere`, `//hsphere`, `//cyl`, `//hcyl`, `//pyramid`, `//hpyramid`, `//cone` | `/wc sphere`, `/wc hsphere`, … (same arguments) |
+| `//stack`, `//move`, `//overlay`, `//naturalize`, `//smooth`, `//hollow`, `//center`, `//line` | `/wc stack`, `/wc move`, … (`-s` is `--select`, `-a` is `--air`) |
+| `//drain`, `/fixwater`, `/fixlava`, `//fill`, `/removenear`, `/replacenear`, `/removeabove`, `/removebelow`, `/ex`, `/snow`, `/thaw`, `/green` | `/wc drain`, `/wc fixwater`, … |
+| `/ascend`, `/descend`, `/ceil`, `/thru`, `/jumpto`, `/unstuck`, `/up` | `/wc ascend`, `/wc descend`, … |
+| `//brush smooth`, `//brush raise` | `/wc brush smooth`, `/wc brush raise` (only natural ground) |
+| — | `/wc mountain`, `/wc island`, styles, `/wc confirm`, `/wc history` |
+
+Not yet (see the [command-by-command comparison](../../docs/investigacion/paridad-worldedit-fawe.md)): selections
+that are not boxes, entities, biomes, building brushes (sphere, clipboard, scatter), `//generate` and other formulas,
+`//regen`, snapshots, and an API for other plugins. **WorldGuard and PlotSquared need WorldEdit itself**: keep it
+installed next to Worldcraft (different command and wand, they work side by side).
+
 ### Patterns (what to place)
 ```
 stone                                  one block (minecraft: is optional)
@@ -198,12 +246,15 @@ schematics:
   max_blocks: 5000000    # the biggest schematic that is loaded (pasting still uses your limits)
   trash_days: 7          # deleted schematics wait this long in schematics/.trash/
   extra_folders: [plugins/WorldEdit/schematics, plugins/FastAsyncWorldEdit/schematics]   # read-only
+shapes: { max_radius: 200 }       # the biggest sphere, cylinder, pyramid or cone (your group limit still applies)
+utilities: { max_radius: 64 }     # drain, fixwater, fill, removenear, snow, thaw, green...
 ```
 With several groups the most generous value wins: the biggest number, every world of every group, and a block is
 blocked only if every group blocks it. `presets.yml` names patterns and masks; `terrain.yml` has the terrain sizes,
 defaults and styles; `messages.yml` has every text (MiniMessage, translatable). Updating from 0.1.0: `terrain.yml` is
 created on the next start and a `config.yml` without the `terrain` section uses the values above. Updating from 0.2.0: a
-`config.yml` without `schematics` uses the values above and `schematics/` is created on the next start.
+`config.yml` without `schematics` uses the values above and `schematics/` is created on the next start. Updating from
+0.3.0: a `config.yml` without `shapes` and `utilities` uses the values above.
 
 ## Permissions
 | Permission | Default | What it allows |
@@ -213,18 +264,19 @@ created on the next start and a `config.yml` without the `terrain` section uses 
 | `worldcraft.admin` | op | `reload`, `validate`, `selftest` |
 | `worldcraft.schematic` | op | `/wc schem list`, `load` and `save` (pasting also needs `worldcraft.use`) |
 | `worldcraft.schematic.delete` | op | `/wc schem delete` and `save --overwrite` |
+| `worldcraft.navigate` | op | `/wc ascend`, `descend`, `ceil`, `thru`, `jumpto`, `unstuck`, `up` |
 | `worldcraft.limit.<group>` | — | The limits of that group in `config.yml` |
 
 ## Compatibility
 | Server | Status | Evidence |
 |---|---|---|
-| Paper 1.21.4 (build 232, Java 24) | **Verified** (0.3.0) | 0.3.0 (2026-11-01): gate 2 updating from 0.2.0 (save, load and paste a rotated chest and sign from the console, damaged files and unsafe names refused); in-game suite 15/15 twice with WorldEdit 7.3.19 on the server (WorldEdit's v3 and v2 files loaded and pasted by Worldcraft, Worldcraft's loaded and pasted by WorldEdit). 0.2.0: gate 2 (2026-11-01): updating from 0.1.0, mountains (up to 811 675 blocks), an island and undo from the console. In-game suite 12/12 twice (2026-11-01), terrain included. 0.1.0: gate 2 with a 100 000-block edit and undo after a restart, suite 8/8 twice |
+| Paper 1.21.4 (build 232, Java 24) | **Verified** (0.4.0) | 0.4.0 (2026-11-01): gate 2 updating from 0.3.0 (every shape, hollow, center, stack with a chest, move, line, drain and undo, fixwater, fill, removenear, snow, thaw, green, naturalize, overlay, extinguish, removebelow from the console: 31 checks); in-game suite 18/18 twice (a sphere previewed only for the editor, a pyramid and unstuck, stack and move with undo, drain, ascend, descend, thru, up with a glass block for a player who cannot fly). 0.3.0 (2026-11-01): 0.3.0 (2026-11-01): gate 2 updating from 0.2.0 (save, load and paste a rotated chest and sign from the console, damaged files and unsafe names refused); in-game suite 15/15 twice with WorldEdit 7.3.19 on the server (WorldEdit's v3 and v2 files loaded and pasted by Worldcraft, Worldcraft's loaded and pasted by WorldEdit). 0.2.0: gate 2 (2026-11-01): updating from 0.1.0, mountains (up to 811 675 blocks), an island and undo from the console. In-game suite 12/12 twice (2026-11-01), terrain included. 0.1.0: gate 2 with a 100 000-block edit and undo after a restart, suite 8/8 twice |
 | Paper 26.1.2 and other 1.21.x / 26.x | Not verified | |
 | Spigot, Folia | Not supported | |
 
 - **Java:** 21 or newer.
 - **Optional:** nothing. No network access, no server internals (only the Paper API).
-- **Not yet:** entities and biomes in schematics, `.schematic` (MCEdit) and `.litematic` files, shapes, rivers, height maps from images, a brush menu, WorldGuard regions,
+- **Not yet:** entities and biomes in schematics, `.schematic` (MCEdit) and `.litematic` files, non-box selections, biomes, building brushes, an API for other plugins, rivers, height maps from images, a brush menu, WorldGuard regions,
   rollback by area and time, entities
   (ideas in the [roadmap](../../docs/sdd/roadmap.md)). Running next to WorldEdit works: different command and wand.
 

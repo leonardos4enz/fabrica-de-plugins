@@ -27,6 +27,14 @@ public interface EditSource {
 
     Box bounds();
 
+    /**
+     * Los chunks en el orden en que se van a recorrer (para pedirlos antes). Spec 028: una fuente que no recorre toda su
+     * caja (move a lo lejos, una lista de puntos) da solo los suyos.
+     */
+    default long[] chunks() {
+        return dev.leo.worldcraft.region.ChunkOrder.chunks(bounds());
+    }
+
     /** Lista para empezar (un deshacer espera a leer su diario del disco). */
     default boolean ready() {
         return true;
