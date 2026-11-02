@@ -94,7 +94,12 @@ public final class SelfTest {
                                     return;
                                 }
                                 String create = create();
-                                if (create != null) fail(s, create);
+                                if (create != null) {
+                                    fail(s, create);
+                                    return;
+                                }
+                                String restore = restore(s, w);
+                                if (restore != null) fail(s, restore);
                             })));
         });
         edits.submitJob(set);
@@ -345,6 +350,69 @@ public final class SelfTest {
         } catch (dev.leo.worldcraft.pattern.ParseException | java.io.IOException | IllegalArgumentException e) {
             return "creation: " + e.getMessage();
         }
+    }
+
+    /**
+     * Spec 036: el chunk del punto de aparición leído del .mca que escribió Paper (con save-all flush antes) es igual al del
+     * mundo, bloque por bloque y con sus datos de bloque; y un mundo temporal con la semilla del mundo se crea, genera ese
+     * chunk con la misma capa de abajo y se borra.
+     */
+    private String restore(CommandSender s, World w) {
+        Location sp = w.getSpawnLocation();
+        int cx = sp.getBlockX() >> 4, cz = sp.getBlockZ() >> 4;
+        Box chunk = Box.chunk(cx, cz, w.getMinHeight(), w.getMaxHeight() - 1);
+        PaperBlocks blocks = plugin.edits().blocks();
+        java.nio.file.Path folder = w.getWorldFolder().toPath();
+        var entry = new dev.leo.worldcraft.snapshot.SnapshotRepo.Entry("selftest", folder.getParent(), false, null, 0, false);
+        dev.leo.worldcraft.snapshot.Restore.Raw raw;
+        try (var src = dev.leo.worldcraft.snapshot.SnapshotRepo.open(entry, folder.getFileName().toString())) {
+            raw = dev.leo.worldcraft.snapshot.Restore.read(chunk, src, true);
+        } catch (IOException e) {
+            return "backups: could not read the world's region file: " + e.getMessage();
+        }
+        if (raw.skipped() > 0) return "backups: the spawn chunk is not in the region file yet (" + raw.missing + " missing, " + raw.unfinished
+                + " unfinished, " + raw.broken + " broken, " + raw.unsupported + " unsupported " + raw.problem + "): run save-all flush first";
+        var res = dev.leo.worldcraft.schem.SchemBlocks.resolve(raw.palette, raw.counts, blocks, blocks.table());
+        if (res.unknown() > 0) return "backups: unknown blocks in the region file: " + res.unknownByName().keySet();
+        int diff = 0;
+        String first = null;
+        for (int y = chunk.minY(); y <= chunk.maxY(); y++) for (int z = chunk.minZ(); z <= chunk.maxZ(); z++) for (int x = chunk.minX(); x <= chunk.maxX(); x++) {
+            int i = ((y - chunk.minY()) * chunk.depth() + (z - chunk.minZ())) * chunk.width() + (x - chunk.minX());
+            int want = blocks.id(w.getBlockData(x, y, z)), got = res.map()[raw.states[i]];
+            if (want != got) {
+                if (first == null) first = x + " " + y + " " + z + ": the file has " + blocks.table().state(got) + ", the world " + blocks.table().state(want);
+                diff++;
+            }
+        }
+        if (diff > 0) return "backups: " + diff + " block(s) of the spawn chunk differ from the region file (" + first + "); run save-all flush first";
+        // Un mundo temporal con la misma semilla: la capa de abajo es la misma que la del mundo.
+        Regen regen = plugin.regen();
+        if (regen.busy() != null) return "regen: a regen is running, try again";
+        World temp;
+        try {
+            temp = regen.acquire(w, w.getSeed(), null, "selftest");
+        } catch (Regen.Problem e) {
+            return "regen: " + e.getMessage();
+        }
+        String why = null;
+        try {
+            temp.getChunkAt(cx, cz);
+            int bottom = w.getMinHeight();
+            for (int z = chunk.minZ(); z <= chunk.maxZ() && why == null; z++) for (int x = chunk.minX(); x <= chunk.maxX(); x++) {
+                String a = temp.getBlockData(x, bottom, z).getAsString(), b = w.getBlockData(x, bottom, z).getAsString();
+                if (!a.equals(b)) {
+                    why = "regen: at " + x + " " + bottom + " " + z + " the temporary world has " + a + " and the world " + b;
+                    break;
+                }
+            }
+        } finally {
+            regen.release();
+            regen.discard();
+        }
+        if (why != null) return why;
+        s.sendMessage(plugin.messages().get("selftest-restore-ok", "blocks", Edits.fmt(chunk.volume()), "tiles", String.valueOf(raw.tiles.size()),
+                "biomes", String.valueOf(raw.biomePalette.length), "ms", String.valueOf(regen.lastCreateMs())));
+        return null;
     }
 
     /** Lo que da fromCopy, en la forma que lee toCopy (Pos como double[], como al leer un archivo). */

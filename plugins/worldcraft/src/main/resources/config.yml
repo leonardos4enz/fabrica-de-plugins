@@ -169,3 +169,16 @@ images:
   # network), and only for players with worldcraft.image.link (op by default).
   links: false
   allowed_hosts: []       # sites allowed for links; empty = any public site; "*.imgur.com" also allows i.imgur.com
+
+# /wc regen: your selection back to how the world generator made it (a temporary world with the same seed).
+regen:
+  max_chunks: 256         # most chunks one regen may generate (1..4096)
+  keep_seconds: 60        # the temporary world stays loaded this long for the next regen (0..600); then it is deleted
+
+# /wc snapshot and /wc restore: put back what one of your backups had.
+snapshots:
+  # Where your backups are. Each backup is a folder or a .zip with the world folders inside, like
+  # backups/2026-11-02-14-30/world/region/r.0.0.mca (the date comes from the name, or from the file).
+  # Empty = off. Relative to the server folder (or a full path).
+  folder: ""
+  max_chunks: 1024        # most chunks one restore may read (1..16384)

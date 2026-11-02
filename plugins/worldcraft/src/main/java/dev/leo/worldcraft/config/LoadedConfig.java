@@ -22,7 +22,8 @@ import java.util.Map;
  */
 public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<String, String> patternPresets,
                            Map<String, String> maskPresets, TerrainSettings terrain, Issues issues, ToolSettings tools,
-                           NatureSettings nature, FormulaSettings formulas, CreateSettings create) {
+                           NatureSettings nature, FormulaSettings formulas, CreateSettings create,
+                           RestoreSettings restore) {
 
     public static LoadedConfig load(File folder, BlockRegistry registry, LoadedConfig previous) {
         Issues issues = new Issues();
@@ -93,7 +94,11 @@ public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<
         NatureSettings nature = config == null && previous != null ? previous.nature : NatureSettings.load(config, parser, issues);
         // Spec 035: minerales, cuevas e imágenes.
         CreateSettings create = config == null && previous != null ? previous.create : CreateSettings.load(config, parser, issues);
-        return new LoadedConfig(settings, limits, parser, Map.copyOf(pat), Map.copyOf(msk), terrain, issues, tools, nature, formulas, create);
+        // Spec 036: regen y copias de seguridad (la carpeta, relativa a la del servidor).
+        RestoreSettings restore = config == null && previous != null ? previous.restore
+                : RestoreSettings.load(config, java.nio.file.Path.of("").toAbsolutePath(), issues);
+        return new LoadedConfig(settings, limits, parser, Map.copyOf(pat), Map.copyOf(msk), terrain, issues, tools, nature, formulas, create,
+                restore);
     }
 
     private static Map<String, String> section(YamlConfiguration y, String name) {

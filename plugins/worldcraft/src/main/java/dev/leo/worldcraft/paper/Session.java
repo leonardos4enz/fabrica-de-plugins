@@ -20,6 +20,8 @@ public final class Session {
     public dev.leo.worldcraft.pattern.Mask gmask;
     /** Spec 034 H6 CA2: cuánto puede calcular una fórmula (ms, /wc timeout); −1 = el de config.yml. */
     public int formulaTimeout = -1;
+    /** Spec 036: la copia de seguridad elegida con /wc snapshot (su nombre), o null = la más nueva. */
+    public String snapshot;
 
     /** La caja seleccionada o null si falta una esquina o la forma no es una caja (spec 030: ver region()). */
     public Box box() {

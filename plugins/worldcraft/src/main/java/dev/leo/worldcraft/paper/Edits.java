@@ -488,6 +488,26 @@ public final class Edits {
         });
     }
 
+    /**
+     * Spec 036: lee la región de un mundo (el temporal de regen) a un portapapeles nuevo con el origen en la esquina mínima,
+     * sin tocar el del jugador; con biomes, también los biomas. done recibe el portapapeles; si se cancela, cancelled.
+     */
+    public void readClip(CommandSender who, World world, dev.leo.worldcraft.region.Region region, String label, boolean biomes,
+                         java.util.function.Consumer<Clipboard> done, Runnable cancelled) {
+        Box box = region.bounds();
+        Clipboard clip = new Clipboard(box, box.minX(), box.minY(), box.minZ());
+        PaperBiomes bw = biomes ? new PaperBiomes(plugin, world) : null;
+        EntityStage after = bw == null ? null : readBiomes(bw, region, clip);
+        readWith(who, world, new dev.leo.worldcraft.edit.RegionSource(region, dev.leo.worldcraft.region.Shape.FILL, null, null, 0), label,
+                (x, y, z, s, tile) -> clip.put(box, x, y, z, s, tile), null, after, () -> {
+                    if (bw != null) bw.close();
+                    done.accept(clip);
+                }, () -> {
+                    if (bw != null) bw.close();
+                    cancelled.run();
+                });
+    }
+
     /** Spec 033: lee los biomas de las celdas de la región al portapapeles (cada bloque de la región toma el de su celda). */
     public static EntityStage readBiomes(dev.leo.worldcraft.biome.BiomeWorld bw, dev.leo.worldcraft.region.Region region, Clipboard clip) {
         Box box = region.bounds();

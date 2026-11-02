@@ -178,4 +178,28 @@ class CommandTest {
         for (String sec : new String[]{"colors:", "ores:", "caves:", "images:"}) assertTrue(yml.contains("\n" + sec), sec);
         assertTrue(yml.contains("links: false"), "apagado de fábrica");
     }
+
+    @Test
+    void spec036_ayuda_mensajes_y_permisos_de_regen_y_copias() throws Exception {
+        YamlConfiguration m = new YamlConfiguration();
+        m.loadFromString(Files.readString(Path.of("src/main/resources/messages.yml")));
+        for (String s : RestoreCommands.SUBS) {
+            for (String k : new String[]{"usage", "text", "example"}) assertNotNull(m.getString("help." + s + "." + k), "falta help." + s + "." + k);
+            assertTrue(m.getString("help." + s + ".example").startsWith("/wc " + s), s);
+        }
+        assertEquals("snapshot", RestoreCommands.canonical("snap"));
+        assertEquals(RestoreCommands.PERM_REGEN, RestoreCommands.perm("regen"));
+        assertEquals(RestoreCommands.PERM_SNAPSHOT, RestoreCommands.perm("snap"));
+        assertEquals(RestoreCommands.PERM_SNAPSHOT, RestoreCommands.perm("restore"));
+        // Las claves armadas con msg().text(…) para decir por qué un chunk no se restaura.
+        for (String k : new String[]{"restore-why-missing", "restore-why-unfinished", "restore-why-old", "restore-why-broken", "restore-why-unsupported"}) {
+            assertNotNull(m.getString(k), k);
+        }
+        String plugin = Files.readString(Path.of("src/main/resources/plugin.yml"));
+        assertTrue(plugin.contains(RestoreCommands.PERM_REGEN + ":\n    description"));
+        assertTrue(plugin.contains(RestoreCommands.PERM_SNAPSHOT + ":\n    description"));
+        String yml = Files.readString(Path.of("src/main/resources/config.yml"));
+        for (String sec : new String[]{"regen:", "snapshots:"}) assertTrue(yml.contains("\n" + sec), sec);
+        assertTrue(yml.contains("folder: \"\""), "apagado de fábrica");
+    }
 }

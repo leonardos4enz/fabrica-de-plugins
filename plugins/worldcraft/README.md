@@ -8,7 +8,8 @@ and full control for experienced builders. Specs: [025](../../docs/sdd/specs/025
 [028](../../docs/sdd/specs/028-worldcraft-paridad-worldedit/spec.md) (the WorldEdit commands builders use most),
 [031](../../docs/sdd/specs/031-worldcraft-entidades/spec.md) (entities), [032](../../docs/sdd/specs/032-worldcraft-pinceles-y-herramientas/spec.md) (building brushes and one-click tools),
 [033](../../docs/sdd/specs/033-worldcraft-biomas-arboles-estructuras/spec.md) (biomes, trees and the game's structures),
-[034](../../docs/sdd/specs/034-worldcraft-formulas/spec.md) (formulas), [035](../../docs/sdd/specs/035-worldcraft-creacion-fawe/spec.md) (FAWE's caves, ores, pictures and color patterns).
+[034](../../docs/sdd/specs/034-worldcraft-formulas/spec.md) (formulas), [035](../../docs/sdd/specs/035-worldcraft-creacion-fawe/spec.md) (FAWE's caves, ores, pictures and color patterns),
+[036](../../docs/sdd/specs/036-worldcraft-regen-snapshots/spec.md) (`regen` and restoring from backups).
 
 ```
 /wc wand                                        left click = corner 1, right click = corner 2
@@ -33,6 +34,8 @@ and full control for experienced builders. Specs: [025](../../docs/sdd/specs/025
 /wc ores                                        the game's ores in your selection, deepslate ones in the deepslate
 /wc image logo.png 64                           a picture built with blocks, standing in front of you (or on the ground)
 /wc replace red_wool with #darken               color patterns: #color[red], #darken, #lighten, #saturate[#ff0000]...
+/wc regen                                       your selection back the way the world generator made it
+/wc restore --preview                           your selection back the way it was in the newest backup
 ```
 
 ## Terrain: easy for beginners, precise for experts
@@ -389,6 +392,37 @@ you look** (up to 200 blocks; a click in the air is fine) and shows a circle of 
   dye name (`white`, `light_gray`, `red`, `light_blue`...).
 - Not here: FAWE's `#anglecolor` (darker on slopes), dithering, picture and height-map brushes.
 
+## Back to the original terrain, or to a backup
+```
+/wc regen                                        the selection as the world generator made it (WorldEdit's //regen)
+/wc regen --biomes                               the biomes too (-b)
+/wc regen random                                 with another seed (-r); or write one: /wc regen 12345
+/wc regen desert                                 everything made as desert (and the biomes written)
+/wc snapshot list                                the backups of your world, newest first (alias snap)
+/wc snapshot before 2026-11-02 14:30             choose the newest backup before that moment (after: the oldest after it)
+/wc snapshot use 2026-11-02-12-00                choose one by name (sel 3: by its number in the list)
+/wc restore --preview                            the selection back the way it was in the chosen backup (or the newest)
+/wc restore nightly.zip --biomes                 from that backup, biomes too
+```
+- **regen** makes the terrain again in a **temporary world** with your world's seed and generator (also a generator of
+  another plugin, or the flat one): Paper can't regenerate chunks in place. The chunks are made away from the server
+  thread; then the blocks go in like any edit (preview, limits, undo, at most 8 ms per tick). Chests of structures come
+  back with their loot table. Mobs are not touched. Only one regen runs at a time on the server, at most
+  `regen.max_chunks` chunks. Making the temporary world pauses the server once for a moment (40-140 ms measured): it
+  stays loaded `regen.keep_seconds` for the next regen and is then deleted. Its folder is called
+  `worldcraft_regen_<n>` (tell map or world-manager plugins to ignore it); one left by a crash is deleted at the next
+  start, and Worldcraft never deletes a folder it did not make.
+- **Backups:** set `snapshots.folder` in `config.yml` to the folder where your backup tool (or your host) leaves them.
+  Each backup is a folder or a `.zip` with the world folders inside, like `backups/2026-11-02-14-30/world/region/`
+  (in a `.zip`, one extra folder is fine: `nightly.zip` with `server/world/region/`). The date comes from the name
+  (`2026-11-02`, `2026-11-02-14-30`, `2026-11-02_14-30-00`...) or else from the file. Worldcraft only reads them.
+- **restore** reads the chunks of your selection from the backup (away from the server thread) and puts back the
+  blocks, chests and signs with what they had, and other block data; `--biomes` the biomes too. Backups from Minecraft
+  1.18 and newer: blocks renamed since are translated; blocks this server does not have, chunks the backup does not
+  have, chunks not fully made yet, damaged ones and LZ4-compressed ones are **left as they are** and you are told how
+  many. A damaged or huge file never stops the server: nothing changes and you are told why.
+- Not here: the mobs of a backup (FAWE's `-e`), making backups (use your backup tool), backups from before 1.18, LZ4.
+
 ## Coming from WorldEdit
 | WorldEdit | Worldcraft |
 |---|---|
@@ -420,12 +454,14 @@ you look** (up to 200 blocks; a click in the air is fine) and shows a circle of 
 | `=y<64` (mask), FAWE `=…` (pattern) | `=y<64` (the same), `=formula -> block, block, …` (the formula picks the block) |
 | FAWE `//caves`, `//ore`, `//ores -d -b`, `//img <imgur link>` | `/wc caves [size] [frequency] [--rooms]` (tunnels like the game's since 1.18), `/wc ore` (the same arguments), `/wc ores` (deepslate goes by itself), `/wc image <file or link>` (alias `img`; any public site if you turn links on; standing or lying) |
 | FAWE `#color[…]`, `#darken`, `#lighten`, `#saturate[…]`, `#desaturate[…]`, `#averagecolor[…]` (patterns) | the same (with the 145-block color table of `config.yml`) |
+| `//regen [seed] [biome] -b`, FAWE `-r` | `/wc regen [seed\|random] [biome] --biomes` (`-b`, `-r` too; any selection shape, with preview and undo) |
+| `/snapshot list\|use\|sel\|before\|after`, `//restore [snapshot]` (FAWE `-b`) | `/wc snapshot list\|use\|sel\|before\|after`, `/wc restore [backup] --biomes` (folders and `.zip`; the mobs of the backup: not yet) |
 | — | `/wc mountain`, `/wc island`, styles, `/wc confirm`, `/wc history` |
 
 Not yet (see the [command-by-command comparison](../../docs/investigacion/paridad-worldedit-fawe.md), checked
 against the WorldEdit 7.3.19 and FAWE 2.16.2 jars): FAWE's `//sel list`, FAWE's
 line and curve brushes, the game's features and whole jigsaw structures, `query()` in formulas, FAWE's `#anglecolor` and image brushes,
-`//regen`, snapshots, and an API for other plugins (in that order in the [roadmap](../../docs/sdd/roadmap.md)). **WorldGuard and PlotSquared need WorldEdit itself**: keep it
+the mobs of a backup, and an API for other plugins (next in the [roadmap](../../docs/sdd/roadmap.md)). **WorldGuard and PlotSquared need WorldEdit itself**: keep it
 installed next to Worldcraft (different command and wand, they work side by side).
 
 ### Patterns (what to place)
@@ -565,6 +601,12 @@ images:
   max_file_kb: 2048                # biggest file, from the folder or a link (1..20480)
   links: false                     # /wc image https://... (the server downloads it): OFF by default
   allowed_hosts: []                # sites allowed for links; empty = any public site; "*.imgur.com" allows i.imgur.com
+regen:
+  max_chunks: 256                  # most chunks one regen may make (1..4096)
+  keep_seconds: 60                 # the temporary world stays loaded this long for the next regen (0..600)
+snapshots:
+  folder: ""                       # your backups (a folder or .zip each, with the world folders inside); empty = off
+  max_chunks: 1024                 # most chunks one restore may read (1..16384)
 ```
 With several groups the most generous value wins: the biggest number, every world of every group, and a block is
 blocked only if every group blocks it. `presets.yml` names patterns and masks; `terrain.yml` has the terrain sizes,
@@ -582,7 +624,9 @@ Updating from 0.8.0: a `config.yml` without `nature` uses the values above; no n
 `worldcraft.use`). Updating from 0.9.0: a `config.yml` without `formulas` uses the values above; the formula commands
 need only `worldcraft.use`. Updating from 0.10.0: a `config.yml` without `colors`, `ores`, `caves` and `images` uses the
 values above (links stay off); `images/` is created on the next start; `/wc caves`, `ore`, `ores` and `image` need
-`worldcraft.use`, and pictures from links also `worldcraft.image.link`. A
+`worldcraft.use`, and pictures from links also `worldcraft.image.link`. Updating from 0.11.0: a `config.yml` without
+`regen` and `snapshots` uses the values above (backups stay off until you set `snapshots.folder`); `/wc regen` needs
+`worldcraft.regen` and `/wc snapshot` and `/wc restore` need `worldcraft.snapshot` (op by default). A
 `messages.yml` from an older version keeps its old texts (they are yours to change): to see the new `/wc help brush`,
 delete the `brush:` line under `help:` (missing lines come from the plugin). Undo histories written by older versions
 keep working.
@@ -601,20 +645,23 @@ keep working.
 | `worldcraft.remove` | op | `/wc remove` (like `worldedit.remove`) |
 | `worldcraft.superpickaxe` | op | `/wc superpickaxe`, `/wc sp` (brushes and tools need only `worldcraft.use`; `brush butcher` also `worldcraft.butcher`, `tool navwand` also `worldcraft.navigate`) |
 | `worldcraft.image.link` | op | `/wc image https://...` when `images.links` is on (the server downloads the picture) |
+| `worldcraft.regen` | op | `/wc regen` (makes a temporary world for a moment) |
+| `worldcraft.snapshot` | op | `/wc snapshot` and `/wc restore` (reads the backups folder) |
 | `worldcraft.limit.<group>` | — | The limits of that group in `config.yml` |
 
 ## Compatibility
 | Server | Status | Evidence |
 |---|---|---|
-| Paper 1.21.4 (build 232, Java 24) | **Verified** (0.11.0) | 0.11.0 (2026-11-02): gate 2 with WorldEdit 7.3.19 and a fresh `config.yml` (selftest of creation: 145 block colors with the real registry, #color[red] and #darken, 40 ore veins, a cave and a 2×2 picture through ImageIO; from the console: caves --rooms, ores, ore, #color[red], #darken, a misspelled color pattern, image list, undo 7 back to nothing; no errors in either start); in-game suite 39/39 three times in a row (ores in rock with deepslate versions only in the deepslate, ore only where the mask is, #color, #lighten, caves that leave glass alone and fill with lava at caves.lava_y, a picture standing in front of the player without mirroring and lying on the ground when looking down, transparent pixels left alone, bad names, links off by default and on: downloaded from a local HTTPS server, a 404 told; undo for all). 0.10.0 (2026-11-02): gate 2 with WorldEdit 7.3.19 (selftest of formulas: a sphere of 485 blocks, the mask =y<0, a loop cut by its rounds and a calculation cut by its time; from the console: generate and generate --hollow, calc, a misspelled function, timeout 30 cutting a slow formula, an endless loop cut, a checkerboard pattern, replace =y<-45, deform --raw, generatebiome on 12 of 36 cells, undo 6 back to nothing; no errors in either start); in-game suite 36/36 twice (generate makes exactly as many blocks as WorldEdit's //generate with the same formula, hollow, calc, timeout and the loop limit; the checkerboard pattern, =y<-59 in replace and =x<43 as gmask; deform reads below the selection; generatebiome on half the cells; brush deform raises the ground; undo for all). 0.9.0 (2026-11-02): gate 2 with WorldEdit 7.3.19 and a `config.yml` without `nature` («Configuration OK»; selftest with the real registry: 65 biomes, an oak captured without touching the world, the game template igloo/top and 1201 templates listed; from the console: setbiome on 36 cells, biomeinfo, undo, village houses, a pillager tower, a shipwreck and a ruined portal loaded); in-game suite 33/33 twice (setbiome, biomeinfo, `$desert` in replace, undo and redo, the new biome reaches the player; copy and paste --biomes, a schematic with biomes saved, loaded and pasted by WorldEdit with `//paste -b`; forest with preview, flora, pumpkins, forestgen, tool tree, brush forest and undo; structure list and load, the igloo pasted and undone, a ruined portal chest with its loot table). 0.8.0 (2026-11-02): gate 2 updating from 0.7.0 with WorldEdit 7.3.19 (`config.yml` without `tools`: «Configuration OK»; selftest with the cycler on the real block registry: every facing, half and shape of a stair, the 8 ages of wheat); in-game suite 29/29 twice (a sphere brush on the item in the hand with an empty hand, its circle only for the editor, another blaze rod stays normal, `mask=air`, undo, `none` leaves a plain item, a cylinder on an ordinary blaze rod; gravity with a chest that stays, clipboard, extinguish, butcher with and without `--animals` and undo; repl picks and places a turned log, cycler, info, farwand, floodfill only on the connected blocks, lrbuild, deltree on a floating tree and not on a planted one, navwand; the super pickaxe drops nothing, undo, area, bedrock is never broken, a player without the permission). 0.7.0 (2026-11-02): gate 2 updating from 0.6.0 with WorldEdit 7.3.19 (selftest with real entities: an armor stand with a helmet and a name through a schematic, an item frame turned onto another wall with its apple, a pig with a chicken riding it; from the console: butcher spares a named husk and a cow, `--named` and `--friendly`, undo brings them back, remove cow, copy --entities, paste and paste --remove-entities, undo, a rotated schematic with entities saved, loaded and pasted); in-game suite 25/25 twice (copy --entities, rotate and paste: the frame hangs on the turned wall with its apple, the armor stand keeps its helmet; undo; cut --entities without dropping the frame and undo; --no-entities; move and stack --entities; paste --remove-entities; butcher spares a tamed wolf and a villager, --animals and undo; remove items; a schematic with entities pasted by WorldEdit with `//paste -e` and one from WorldEdit's `//copy -e` pasted by Worldcraft). 0.6.0 (2026-11-02): gate 2 updating from 0.5.0 with WorldEdit 7.3.19 (every shape from the console: sphere, cyl, poly, convex, extend and magic with set, walls, faces, count, outset, a sphere copied and pasted with --air without its corners, stack, move and undo); in-game suite 22/22 twice (a cylinder marked with the wand and its outline only for the editor, walls as a tube, a polygon, a magic selection that grows with a right click, a sphere copied, pasted, stacked and moved, a convex shape). 0.5.0 (2026-11-02): gate 2 updating from 0.4.0 with WorldEdit 7.3.19 (count, distr, masks that look around, `^stone_stairs`, `gmask`, outset/inset/trim/chunk, copy --mask and paste --origin/--select, clearhistory with confirm, schem import, from the console); in-game suite 20/20 twice (hpos at the block you look at, count, `^` keeps the stairs turned, `and !surface`, gmask, paste --select and --origin, clearhistory, import, and a player without `worldcraft.schematic.save` cannot save). 0.4.0 (2026-11-01): gate 2 updating from 0.3.0 (every shape, hollow, center, stack with a chest, move, line, drain and undo, fixwater, fill, removenear, snow, thaw, green, naturalize, overlay, extinguish, removebelow from the console: 31 checks); in-game suite 18/18 twice (a sphere previewed only for the editor, a pyramid and unstuck, stack and move with undo, drain, ascend, descend, thru, up with a glass block for a player who cannot fly). 0.3.0 (2026-11-01): 0.3.0 (2026-11-01): gate 2 updating from 0.2.0 (save, load and paste a rotated chest and sign from the console, damaged files and unsafe names refused); in-game suite 15/15 twice with WorldEdit 7.3.19 on the server (WorldEdit's v3 and v2 files loaded and pasted by Worldcraft, Worldcraft's loaded and pasted by WorldEdit). 0.2.0: gate 2 (2026-11-01): updating from 0.1.0, mountains (up to 811 675 blocks), an island and undo from the console. In-game suite 12/12 twice (2026-11-01), terrain included. 0.1.0: gate 2 with a 100 000-block edit and undo after a restart, suite 8/8 twice |
+| Paper 1.21.4 (build 232, Java 24) | **Verified** (0.12.0) | 0.12.0 (2026-11-02): gate 2 with WorldEdit 7.3.19 and two backups made by hand, a folder and a `.zip` (selftest of backups: the spawn chunk read from the region file Paper wrote is the world block by block, and a temporary world for regen made in 138 ms with the same bottom layer and deleted; from the console: regen in the air and on the ground, regen with a seed and with a biome, snapshot list, use with a misspelled name, sel, before, after, restore from the folder and from the `.zip` with biomes, undo 7 back to nothing; every temporary world folder deleted; no errors in either start); in-game suite 41/41 twice in a row (regen brings back air, the grass, dirt and bedrock and with --biomes the plains, a seed and a biome, undo; restore from a folder and from a `.zip` brings back stone and a chest with its diamonds, with preview and confirm, undo; list, use, sel, before, after; off by default; a player without the permissions). 0.11.0 (2026-11-02): gate 2 with WorldEdit 7.3.19 and a fresh `config.yml` (selftest of creation: 145 block colors with the real registry, #color[red] and #darken, 40 ore veins, a cave and a 2×2 picture through ImageIO; from the console: caves --rooms, ores, ore, #color[red], #darken, a misspelled color pattern, image list, undo 7 back to nothing; no errors in either start); in-game suite 39/39 three times in a row (ores in rock with deepslate versions only in the deepslate, ore only where the mask is, #color, #lighten, caves that leave glass alone and fill with lava at caves.lava_y, a picture standing in front of the player without mirroring and lying on the ground when looking down, transparent pixels left alone, bad names, links off by default and on: downloaded from a local HTTPS server, a 404 told; undo for all). 0.10.0 (2026-11-02): gate 2 with WorldEdit 7.3.19 (selftest of formulas: a sphere of 485 blocks, the mask =y<0, a loop cut by its rounds and a calculation cut by its time; from the console: generate and generate --hollow, calc, a misspelled function, timeout 30 cutting a slow formula, an endless loop cut, a checkerboard pattern, replace =y<-45, deform --raw, generatebiome on 12 of 36 cells, undo 6 back to nothing; no errors in either start); in-game suite 36/36 twice (generate makes exactly as many blocks as WorldEdit's //generate with the same formula, hollow, calc, timeout and the loop limit; the checkerboard pattern, =y<-59 in replace and =x<43 as gmask; deform reads below the selection; generatebiome on half the cells; brush deform raises the ground; undo for all). 0.9.0 (2026-11-02): gate 2 with WorldEdit 7.3.19 and a `config.yml` without `nature` («Configuration OK»; selftest with the real registry: 65 biomes, an oak captured without touching the world, the game template igloo/top and 1201 templates listed; from the console: setbiome on 36 cells, biomeinfo, undo, village houses, a pillager tower, a shipwreck and a ruined portal loaded); in-game suite 33/33 twice (setbiome, biomeinfo, `$desert` in replace, undo and redo, the new biome reaches the player; copy and paste --biomes, a schematic with biomes saved, loaded and pasted by WorldEdit with `//paste -b`; forest with preview, flora, pumpkins, forestgen, tool tree, brush forest and undo; structure list and load, the igloo pasted and undone, a ruined portal chest with its loot table). 0.8.0 (2026-11-02): gate 2 updating from 0.7.0 with WorldEdit 7.3.19 (`config.yml` without `tools`: «Configuration OK»; selftest with the cycler on the real block registry: every facing, half and shape of a stair, the 8 ages of wheat); in-game suite 29/29 twice (a sphere brush on the item in the hand with an empty hand, its circle only for the editor, another blaze rod stays normal, `mask=air`, undo, `none` leaves a plain item, a cylinder on an ordinary blaze rod; gravity with a chest that stays, clipboard, extinguish, butcher with and without `--animals` and undo; repl picks and places a turned log, cycler, info, farwand, floodfill only on the connected blocks, lrbuild, deltree on a floating tree and not on a planted one, navwand; the super pickaxe drops nothing, undo, area, bedrock is never broken, a player without the permission). 0.7.0 (2026-11-02): gate 2 updating from 0.6.0 with WorldEdit 7.3.19 (selftest with real entities: an armor stand with a helmet and a name through a schematic, an item frame turned onto another wall with its apple, a pig with a chicken riding it; from the console: butcher spares a named husk and a cow, `--named` and `--friendly`, undo brings them back, remove cow, copy --entities, paste and paste --remove-entities, undo, a rotated schematic with entities saved, loaded and pasted); in-game suite 25/25 twice (copy --entities, rotate and paste: the frame hangs on the turned wall with its apple, the armor stand keeps its helmet; undo; cut --entities without dropping the frame and undo; --no-entities; move and stack --entities; paste --remove-entities; butcher spares a tamed wolf and a villager, --animals and undo; remove items; a schematic with entities pasted by WorldEdit with `//paste -e` and one from WorldEdit's `//copy -e` pasted by Worldcraft). 0.6.0 (2026-11-02): gate 2 updating from 0.5.0 with WorldEdit 7.3.19 (every shape from the console: sphere, cyl, poly, convex, extend and magic with set, walls, faces, count, outset, a sphere copied and pasted with --air without its corners, stack, move and undo); in-game suite 22/22 twice (a cylinder marked with the wand and its outline only for the editor, walls as a tube, a polygon, a magic selection that grows with a right click, a sphere copied, pasted, stacked and moved, a convex shape). 0.5.0 (2026-11-02): gate 2 updating from 0.4.0 with WorldEdit 7.3.19 (count, distr, masks that look around, `^stone_stairs`, `gmask`, outset/inset/trim/chunk, copy --mask and paste --origin/--select, clearhistory with confirm, schem import, from the console); in-game suite 20/20 twice (hpos at the block you look at, count, `^` keeps the stairs turned, `and !surface`, gmask, paste --select and --origin, clearhistory, import, and a player without `worldcraft.schematic.save` cannot save). 0.4.0 (2026-11-01): gate 2 updating from 0.3.0 (every shape, hollow, center, stack with a chest, move, line, drain and undo, fixwater, fill, removenear, snow, thaw, green, naturalize, overlay, extinguish, removebelow from the console: 31 checks); in-game suite 18/18 twice (a sphere previewed only for the editor, a pyramid and unstuck, stack and move with undo, drain, ascend, descend, thru, up with a glass block for a player who cannot fly). 0.3.0 (2026-11-01): 0.3.0 (2026-11-01): gate 2 updating from 0.2.0 (save, load and paste a rotated chest and sign from the console, damaged files and unsafe names refused); in-game suite 15/15 twice with WorldEdit 7.3.19 on the server (WorldEdit's v3 and v2 files loaded and pasted by Worldcraft, Worldcraft's loaded and pasted by WorldEdit). 0.2.0: gate 2 (2026-11-01): updating from 0.1.0, mountains (up to 811 675 blocks), an island and undo from the console. In-game suite 12/12 twice (2026-11-01), terrain included. 0.1.0: gate 2 with a 100 000-block edit and undo after a restart, suite 8/8 twice |
 | Paper 26.1.2 and other 1.21.x / 26.x | Not verified | |
 | Spigot, Folia | Not supported | |
 
 - **Java:** 21 or newer.
-- **Optional:** nothing. No server internals (only the Paper API). No network access unless you turn on
+- **Optional:** nothing. No server internals (only the Paper API; `/wc regen` uses a temporary world, `/wc restore` reads
+  the region files of your backups itself). No network access unless you turn on
   `images.links` (then only `/wc image https://...`, to public sites).
 - **Not yet:** FAWE's `//sel list`, entities and biomes in the preview, the game's features and whole jigsaw structures,
-  `query()` in formulas, `.schematic` (MCEdit) and `.litematic` files, an API for other plugins, rivers, height maps from images, a
+  `query()` in formulas, `.schematic` (MCEdit) and `.litematic` files, the mobs of a backup, an API for other plugins, rivers, height maps from images, a
   brush menu, WorldGuard regions, rollback by area and time (ideas in the [roadmap](../../docs/sdd/roadmap.md)). Running next to WorldEdit works: different command and wand.
 
 ## Installation

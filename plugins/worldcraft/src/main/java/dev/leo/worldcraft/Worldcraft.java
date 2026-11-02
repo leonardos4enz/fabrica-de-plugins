@@ -50,6 +50,9 @@ public final class Worldcraft extends JavaPlugin {
     /** Spec 035: las imágenes se leen y se bajan en un hilo propio (una descarga lenta no frena las fórmulas). */
     private ExecutorService imageThread;
     private dev.leo.worldcraft.paper.Images images;
+    /** Spec 036: las copias de seguridad se leen en un hilo propio; regen usa un mundo temporal. */
+    private ExecutorService snapshotThread;
+    private dev.leo.worldcraft.paper.Regen regen;
 
     @Override
     public void onEnable() {
@@ -123,6 +126,13 @@ public final class Worldcraft extends JavaPlugin {
             return t;
         });
         images = new dev.leo.worldcraft.paper.Images(this, imageThread);
+        snapshotThread = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "Worldcraft-Snapshots");
+            t.setDaemon(true);
+            return t;
+        });
+        regen = new dev.leo.worldcraft.paper.Regen(this);
+        regen.cleanLeftovers();
         command = new WorldcraftCommand(this);
         PluginCommand cmd = getCommand("worldcraft");
         if (cmd != null) {
@@ -140,6 +150,8 @@ public final class Worldcraft extends JavaPlugin {
             if (terrainThread != null) terrainThread.shutdownNow();
             if (formulaThread != null) formulaThread.shutdownNow();
             if (imageThread != null) imageThread.shutdownNow();
+            if (snapshotThread != null) snapshotThread.shutdownNow();
+            if (regen != null) regen.shutdown();
             if (schematicThread != null) {
                 // Un esquema a medio escribir va a un temporal: cortar no deja un .schem roto.
                 schematicThread.shutdown();
@@ -216,6 +228,14 @@ public final class Worldcraft extends JavaPlugin {
 
     public dev.leo.worldcraft.paper.Images images() {
         return images;
+    }
+
+    public dev.leo.worldcraft.paper.Regen regen() {
+        return regen;
+    }
+
+    public ExecutorService snapshotThread() {
+        return snapshotThread;
     }
 
     public dev.leo.worldcraft.paper.Formulas formulas() {

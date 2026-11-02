@@ -90,7 +90,17 @@ public final class PaperWorld implements EditWorld {
                 ItemStack[] items = c.getInventory().getContents();
                 boolean any = false;
                 for (ItemStack i : items) if (i != null && !i.isEmpty()) any = true;
-                if (!any) return null;
+                if (!any) {
+                    // Spec 036: un cofre sin abrir de una estructura (el de regen) guarda su tabla de botín, como las plantillas.
+                    if (st instanceof org.bukkit.loot.Lootable l && l.getLootTable() != null) {
+                        byte[] k = l.getLootTable().getKey().toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+                        byte[] out = new byte[k.length + 1];
+                        out[0] = Structures.LOOT;
+                        System.arraycopy(k, 0, out, 1, k.length);
+                        return out;
+                    }
+                    return null;
+                }
                 byte[] raw = ItemStack.serializeItemsAsBytes(items);
                 byte[] out = new byte[raw.length + 1];
                 out[0] = CONTAINER;

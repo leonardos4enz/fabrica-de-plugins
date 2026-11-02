@@ -23,7 +23,7 @@ public record Settings(String wandItem, boolean showSelection, int showEveryTick
             8, 200_000, true, 50_000, 120, 50_000, 30, 7, Schematics.DEFAULTS, 200, 64, 64, 16, 32, 128);
 
     private static final Map<String, List<String>> KEYS = new java.util.HashMap<>(Map.of(
-            "", List.of("wand", "selection", "performance", "confirm", "preview", "history", "limits", "terrain", "schematics", "shapes", "utilities", "entities", "tools", "nature", "formulas", "colors", "ores", "caves", "images"),
+            "", List.of("wand", "selection", "performance", "confirm", "preview", "history", "limits", "terrain", "schematics", "shapes", "utilities", "entities", "tools", "nature", "formulas", "colors", "ores", "caves", "images", "regen", "snapshots"),
             "wand", List.of("item"),
             "selection", List.of("show", "show_every_ticks", "max_particles", "max_points", "magic_radius"),
             "performance", List.of("max_ms_per_tick", "max_blocks_per_tick"),

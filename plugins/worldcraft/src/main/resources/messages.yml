@@ -117,6 +117,9 @@ help:
   ore: { usage: "/wc ore <mask> <pattern> [size] [frequency] [rarity] [min y] [max y] [--preview]", text: "Spread veins of the pattern in your selection where the mask is, like FAWE's //ore: frequency tries per chunk (16×16), each with rarity % to come out, of about size blocks, between the two heights (default: 8 blocks, 10 tries, 100%, the whole selection).", example: "/wc ore stone gold_ore 9 4 100 -64 32" }
   ores: { usage: "/wc ores [mask] [--preview]", text: "Spread the game's ores in your selection (coal, iron, copper, gold, redstone, lapis, diamond, emerald) with their sizes, amounts and heights (the ores list in config.yml), in the rock of the mask (default: stone, deepslate, andesite, diorite, granite, tuff). In deepslate and tuff the deepslate version goes.", example: "/wc ores" }
   image: { usage: "/wc image <file | link | list> [size] [--floor|--wall] [--preview]", text: "Build a picture with blocks (alias img), each pixel the block of the closest color; transparent pixels are left as they are. Looking down it lies on the ground ahead of you; otherwise it stands like a wall 2 blocks in front of you. size is the long side in blocks. Files go in plugins/Worldcraft/images; links only if the server turns them on (images.links).", example: "/wc image logo.png 64" }
+  regen: { usage: "/wc regen [seed | random] [biome] [--biomes] [--preview]", text: "Put your selection back the way the world generator made it (WorldEdit's //regen): the blocks, and the loot chests of structures. With the world's seed by default; random (-r) another seed, or write one; a biome makes everything with that biome. --biomes (-b) puts the biomes back too. Mobs are not touched. The terrain is made in a temporary world that is deleted afterwards.", example: "/wc regen --biomes" }
+  snapshot: { usage: "/wc snapshot list [page] | use <name | latest> | sel <number> | before <date> | after <date>", text: "Choose one of the server's backups for /wc restore (alias snap). The backups are in the folder snapshots.folder of config.yml. A date is 2026-11-02 or 2026-11-02 14:30 (server time). Without choosing, /wc restore uses the newest.", example: "/wc snapshot before 2026-11-02 14:30" }
+  restore: { usage: "/wc restore [backup] [--biomes] [--preview]", text: "Put your selection back the way it was in a backup (WorldEdit's //restore): the blocks, chests and signs with what they had, and other block data; --biomes (-b) the biomes too. What the backup does not have is left as it is.", example: "/wc restore --preview" }
 
 wand-given: "{prefix}<green>Here is your wand: <white>left click</white> a block for corner 1, <white>right click</white> for corner 2."
 corner-set: "{prefix}Corner {which} at <white>{pos}</white>."
@@ -237,6 +240,7 @@ selftest-start: "{prefix}Selftest in a 6×6×6 box at {box}..."
 selftest-ok: "{prefix}<green>Selftest passed: set {changed} blocks, undo, redo and undo; the terrain is as before."
 selftest-failed: "{prefix}<red>Selftest failed: {reason}"
 selftest-entities-ok: "{prefix}<green>Selftest entities passed: an armor stand, an item frame (turned) and a pig with a rider were copied and created again whole."
+selftest-restore-ok: "{prefix}<green>Selftest backups passed: the spawn chunk read from the region file is the world, block by block ({blocks} blocks, {tiles} with data, {biomes} biome(s)); a temporary world for regen was made in {ms} ms with the same bottom layer, and deleted."
 selftest-tools-ok: "{prefix}<green>Selftest tools passed: the cycler finds every facing, half and shape of a stair on this server."
 
 # Terrain (/wc mountain, /wc island, /wc brush)
@@ -400,3 +404,33 @@ links-off: "{prefix}<red>Images from links are off on this server (images.links 
 invalid-link: "{prefix}<red>That link can't be used: {reason}."
 link-error: "{prefix}<red>Could not get the image from {host}: {reason}."
 host-not-allowed: "{prefix}<red>Links from {host} are not allowed. Allowed sites: <white>{hosts}</white> (images.allowed_hosts in config.yml)."
+
+# Spec 036: regen and backups (snapshots)
+regen-running: "{prefix}<red>Another regen is running ({who}): try again in a moment."
+regen-failed: "{prefix}<red>Could not make the terrain: {reason}."
+regen-too-many-chunks: "{prefix}<red>Your selection touches {chunks} chunks; a regen makes at most {max} (regen.max_chunks)."
+regen-start: "{prefix}<gray>Making {chunks} chunk(s) of {world} again in a temporary world (seed {seed}{biome})..."
+snapshots-off: "{prefix}<red>Backups are off on this server: set snapshots.folder in config.yml to the folder with your backups."
+snapshot-folder-error: "{prefix}<red>Could not read the backups folder {folder}: {reason}."
+snapshot-none: "{prefix}<yellow>There are no backups of {world} in {folder} (each backup is a folder or a .zip with {world}/region inside)."
+snapshot-list-header: "{prefix}Backups of {world} ({count}, newest first) <dark_gray>·</dark_gray> page {page} of {pages}:"
+snapshot-list-line: "<gray>{n}.</gray> <white>{name}</white> <dark_gray>·</dark_gray> <gray>{date}"
+snapshot-list-line-chosen: "<gray>{n}.</gray> <white>{name}</white> <dark_gray>·</dark_gray> <gray>{date}</gray> <green>(chosen)"
+snapshot-chosen: "{prefix}<green>Backup {name} ({date}) chosen for /wc restore."
+snapshot-unknown: "{prefix}<red>There is no backup '{input}' of {world}{hint}. See /wc snapshot list"
+snapshot-bad-number: "{prefix}<red>There is no backup number {n}: the list has {count}."
+snapshot-none-before: "{prefix}<red>There is no backup of {world} before {date}."
+snapshot-none-after: "{prefix}<red>There is no backup of {world} after {date}."
+snapshot-gone: "{prefix}<red>The backup {name} you chose is not in the folder any more (or has no {world}): choose another with /wc snapshot."
+snapshot-newest: "{prefix}<gray>Using the newest backup: {name} ({date}). /wc snapshot chooses another."
+restore-too-many-chunks: "{prefix}<red>Your selection touches {chunks} chunks; a restore reads at most {max} (snapshots.max_chunks)."
+restore-reading: "{prefix}<gray>Reading {chunks} chunk(s) from the backup {name}..."
+restore-failed: "{prefix}<red>Could not read the backup {name}: {reason}. Nothing was changed."
+restore-skipped: "{prefix}<yellow>{count} chunk(s) of your selection are left as they are: {why}."
+restore-why-missing: "{count} not in the backup"
+restore-why-unfinished: "{count} not fully made by the game yet"
+restore-why-old: "{count} from before Minecraft 1.18"
+restore-why-broken: "{count} damaged ({reason})"
+restore-why-unsupported: "{count} saved with {what} compression, which Worldcraft can't read"
+restore-unknown-blocks: "{prefix}<yellow>{count} block(s) of the backup don't exist on this server and are left as they are: {names}."
+restore-nothing: "{prefix}<yellow>Nothing of your selection is in this backup: nothing to change."

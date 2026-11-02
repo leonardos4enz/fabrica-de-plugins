@@ -252,6 +252,16 @@ con `--release 21`.
   un vidrio en el aire (y = -51). La red de SkinStatues se copió a Worldcraft (ADR 0007): un arreglo en una va en la otra.
   La suite de Worldcraft ya arranca el HTTPS local de la 023 (`antesDeArrancar`; `-Dworldcraft.test.localLinks=true`).
   Las formas con ruido (cuevas) se calibran mirando cortes con `jshell --class-path build/classes/java/main` (rápido, sin servidor).
+- **Spec 036 (regen y copias):** Paper no regenera chunks (`regenerateChunk` tira «not supported»): `regen` crea un mundo
+  temporal con `new WorldCreator(n).copy(mundo).seed(s).keepSpawnLoaded(TriState.FALSE)` (40–140 ms en el hilo principal,
+  una vez; el mundo plano respeta un `BiomeProvider` propio, que es una **clase abstracta**, no una interfaz) y lo lee con
+  `PaperWorld` (`getChunkAtAsync` genera fuera del hilo). Crear un mundo plano con `generator-settings={}` escribe «No key
+  layers» como ERROR (ruido ya filtrado). Windows no borra un archivo de región recién soltado: reintentar y borrar la
+  marca al final. Para leer un `.mca` del mundo vivo, `save-all flush` antes (el `selftest` lo compara bloque por bloque).
+  En la 3a, un suelo lejos de los bots necesita `forceload add` también para `fillbiome` y `execute if biome` (se repitió
+  la 022). Un heredoc del Bash con `node` perdió las barras invertidas de una regex: los scripts, con la herramienta de
+  escritura, y las regex de la suite, con la de edición. La suite de Worldcraft ahora repara la capa de pasto al empezar
+  (`antes`, F-02): el desgaste de escenarios viejos ya no tumba la 033 en la corrida siguiente.
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

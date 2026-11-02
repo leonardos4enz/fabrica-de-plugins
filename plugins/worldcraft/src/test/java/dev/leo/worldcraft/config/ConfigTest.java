@@ -306,4 +306,33 @@ class ConfigTest {
         assertEquals("[]", p.issues().all().stream().filter(i -> !i.file().equals("terrain.yml")).toList().toString());
         assertEquals("$shade", p.parser().pattern("$shade").text());
     }
+
+    @Test
+    void spec036_H4_CA2_secciones_regen_y_snapshots() throws Exception {
+        LoadedConfig old = load("history: { keep_days: 3 }\n", "");
+        assertEquals("[]", old.issues().all().stream().filter(i -> i.file().equals("config.yml")).toList().toString(), "un config.yml de la 0.11.0 carga sin avisos");
+        RestoreSettings d = old.restore();
+        assertEquals(RestoreSettings.DEFAULTS, d);
+        assertNull(d.folder(Path.of("srv")), "las copias vienen apagadas");
+        LoadedConfig c = load("""
+                regen:
+                  max_chunks: 99999
+                  keep_seconds: 0
+                  keep_secs: 3
+                snapshots:
+                  folder: "no-existe-esta-carpeta"
+                  max_chunks: 10
+                  fodler: x
+                """, "");
+        RestoreSettings r = c.restore();
+        assertEquals(256, r.regenMaxChunks(), "fuera de rango: el de fábrica");
+        assertEquals(0, r.regenKeepSeconds());
+        assertEquals(10, r.snapshotsMaxChunks());
+        assertEquals(Path.of("srv").resolve("no-existe-esta-carpeta"), r.folder(Path.of("srv")));
+        String all = c.issues().all().toString();
+        for (String path : new String[]{"regen.max_chunks", "regen.keep_secs", "snapshots.folder", "snapshots.fodler"}) {
+            assertTrue(all.contains(path), path + " en " + all);
+        }
+        assertTrue(all.contains("keep_seconds"), "did you mean: " + all);
+    }
 }

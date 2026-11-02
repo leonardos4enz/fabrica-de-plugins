@@ -43,3 +43,9 @@ permissions:
   worldcraft.superpickaxe:
     description: Break blocks instantly with any pickaxe (/wc superpickaxe, /wc sp); nothing is dropped and undo brings them back.
     default: op
+  worldcraft.regen:
+    description: Put the selection back the way the world generator made it (/wc regen). Makes a temporary world for a moment.
+    default: op
+  worldcraft.snapshot:
+    description: Choose a backup and restore the selection from it (/wc snapshot, /wc restore). Reads the server backups folder.
+    default: op

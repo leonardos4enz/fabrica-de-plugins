@@ -3,6 +3,7 @@
 // cada uno (la vista previa son bloques falsos que solo ve Ana).
 import fs from 'node:fs'
 import path from 'node:path'
+import zlib from 'node:zlib'
 import { fileURLToPath } from 'node:url'
 import { httpsLocal, png } from '../lib/https-local.mjs'
 
@@ -173,6 +174,33 @@ const RUTAS = {
   }
 }
 
+// ---------------------------------------------------------------- spec 036: copias de seguridad
+/** Un .zip sin comprimir (STORE) con esos archivos: así guarda copias más de una herramienta. */
+function zipGuardado (archivos) {
+  const partes = []
+  const central = []
+  let pos = 0
+  for (const [nombre, datos] of Object.entries(archivos)) {
+    const n = Buffer.from(nombre, 'utf8')
+    const crc = zlib.crc32(datos)
+    const local = Buffer.alloc(30)
+    local.writeUInt32LE(0x04034b50, 0); local.writeUInt16LE(20, 4); local.writeUInt16LE(0x21, 12)
+    local.writeUInt32LE(crc, 14); local.writeUInt32LE(datos.length, 18); local.writeUInt32LE(datos.length, 22); local.writeUInt16LE(n.length, 26)
+    const c = Buffer.alloc(46)
+    c.writeUInt32LE(0x02014b50, 0); c.writeUInt16LE(20, 4); c.writeUInt16LE(20, 6); c.writeUInt16LE(0x21, 14)
+    c.writeUInt32LE(crc, 16); c.writeUInt32LE(datos.length, 20); c.writeUInt32LE(datos.length, 24); c.writeUInt16LE(n.length, 28)
+    c.writeUInt32LE(pos, 42)
+    partes.push(local, n, datos)
+    central.push(c, n)
+    pos += local.length + n.length + datos.length
+  }
+  const cd = Buffer.concat(central)
+  const fin = Buffer.alloc(22)
+  fin.writeUInt32LE(0x06054b50, 0); fin.writeUInt16LE(Object.keys(archivos).length, 8); fin.writeUInt16LE(Object.keys(archivos).length, 10)
+  fin.writeUInt32LE(cd.length, 12); fin.writeUInt32LE(pos, 16)
+  return Buffer.concat([...partes, cd, fin])
+}
+
 export default {
   jar: /^Worldcraft-.*\.jar$/,
   // La configuración tal como está en el código fuente; el historial de corridas anteriores se borra (cada corrida
@@ -209,6 +237,10 @@ export default {
   },
 
   async antes (ctx) {
+    // Spec 036 F-02: escenarios viejos gastan el pasto del mundo plano (un pasto tapado unos segundos se vuelve tierra y
+    // la 033 deja arena si falla a la mitad); la corrida siguiente fallaba en la 033 o en H1. La capa se repara al empezar.
+    for (const c of ['forceload add 10 10 110 110', 'fill 10 -61 10 110 -61 110 grass_block replace dirt',
+      'fill 10 -61 10 110 -61 110 grass_block replace sand', 'forceload remove 10 10 110 110']) await ctx.srv.consola(c)
     await ctx.entrar(BETO)
     await ctx.entrar(ANA)
     await ctx.srv.consola(`op ${ANA}`, { espera: new RegExp(`Made ${ANA} a server operator|Nothing changed`) })
@@ -2075,6 +2107,136 @@ export default {
           fs.rmSync(path.join(carpeta, 'e2e.png'), { force: true })
           await srv.consola(`fill ${X - 3} -51 ${Z - 1} ${X + 3} -47 ${Z + 5} air`)
           await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 0.5} 0 0`)
+        }
+      }
+    },
+    {
+      id: '036 H1 CA1 · H1 CA2 · H1 CA3 · H1 CA4 · H4 CA1',
+      nombre: 'regen devuelve el aire donde había piedra y undo la trae; con el suelo vuelven el pasto, la tierra y la roca madre, y con --biomes la llanura; Beto sin permiso',
+      timeoutMs: 150000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        // El suelo de prueba (lejos de lo que cuentan la 033 y H1): 12 × 12, tres celdas de bioma por lado.
+        const G = X + 64
+        try {
+          await pide(bots[BETO], 'wc regen', /You don't have permission/)
+          // En el aire: la piedra vuelve a ser aire (mundo plano).
+          await srv.consola(`fill ${X} -55 ${Z} ${X + 5} -50 ${Z + 5} stone`)
+          await srv.sincronizar()
+          await seleccionar(ana, [X, -55, Z], [X + 5, -50, Z + 5])
+          const m = ana.marca()
+          ana.comando('wc regen')
+          await ana.esperar('chat', /Making 1 chunk\(s\) of world again in a temporary world \(seed -?\d+\)/, { desde: m, timeoutMs: 20000 })
+          const r = await ana.esperar('chat', /Done: regen changed ([\d,]+) blocks/, { desde: m, timeoutMs: 30000 })
+          if (!/changed 216 blocks/.test(r.texto)) throw new Error(`regen: ${r.texto}`)
+          await pide(ana, 'wc count stone', /\b0 of 216 blocks match/)
+          await pide(ana, 'wc undo', /Undone .*regen seed/)
+          await pide(ana, 'wc count stone', /\b216 of 216 blocks match/)
+          await srv.consola(`fill ${X} -55 ${Z} ${X + 5} -50 ${Z + 5} air`)
+          // Con el suelo: oro en el pasto y un desierto; regen --biomes deja pasto, tierra, roca madre y llanura. Lejos de
+          // Ana: el chunk se sostiene con forceload (si no, «That position is not loaded»).
+          await srv.consola(`forceload add ${G} ${G} ${G + 11} ${G + 11}`)
+          await srv.consola(`fill ${G} -61 ${G} ${G + 11} -61 ${G + 11} gold_block`)
+          await srv.consola(`fillbiome ${G} -64 ${G} ${G + 11} -61 ${G + 11} desert`)
+          await srv.sincronizar()
+          await seleccionar(ana, [G, -64, G], [G + 11, -61, G + 11])
+          await comprobar(srv, `biome ${G + 5} -62 ${G + 5} desert`)
+          const m2 = ana.marca()
+          ana.comando('wc regen -b')
+          await ana.esperar('chat', /Done: regen changed 144 blocks/, { desde: m2, timeoutMs: 40000 })
+          await ana.esperar('chat', /and 9 biome cell\(s\)/, { desde: m2, timeoutMs: 20000 })
+          await pide(ana, 'wc count grass_block', /\b144 of 576 blocks match/)
+          await pide(ana, 'wc count dirt', /\b288 of 576 blocks match/)
+          await pide(ana, 'wc count bedrock', /\b144 of 576 blocks match/)
+          await comprobar(srv, `biome ${G + 5} -62 ${G + 5} plains`)
+          await pide(ana, 'wc undo', /Undone .*regen seed -?\d+ --biomes/)
+          await pide(ana, 'wc count gold_block', /\b144 of 576 blocks match/)
+          // Otra semilla y un bioma: regen <semilla> <bioma> escribe el bioma (en el mundo plano el suelo es el mismo).
+          const m3 = ana.marca()
+          ana.comando('wc regen 42 desert')
+          await ana.esperar('chat', /seed 42, biome desert/, { desde: m3, timeoutMs: 20000 })
+          await ana.esperar('chat', /Done: regen changed 144 blocks/, { desde: m3, timeoutMs: 40000 })
+          await comprobar(srv, `biome ${G + 5} -62 ${G + 5} desert`)
+          await pide(ana, 'wc count grass_block', /\b144 of 576 blocks match/)
+          await pide(ana, 'wc regen 1 desrt', /Unknown biome 'desrt'.*did you mean 'desert'/)
+        } finally {
+          // El suelo como era (034 F-01): pasto, tierra y roca madre, y la llanura.
+          await srv.consola(`fill ${G} -64 ${G} ${G + 11} -64 ${G + 11} bedrock`)
+          await srv.consola(`fill ${G} -63 ${G} ${G + 11} -62 ${G + 11} dirt`)
+          await srv.consola(`fill ${G} -61 ${G} ${G + 11} -61 ${G + 11} grass_block`)
+          await srv.consola(`fillbiome ${G} -64 ${G} ${G + 11} -61 ${G + 11} plains`)
+          await srv.consola(`forceload remove ${G} ${G} ${G + 11} ${G + 11}`)
+          await srv.consola(`fill ${X} -55 ${Z} ${X + 5} -50 ${Z + 5} air`)
+        }
+      }
+    },
+    {
+      id: '036 H2 CA1 · H2 CA2 · H2 CA3 · H3 CA1 · H3 CA3 · H4 CA1',
+      nombre: 'restore desde una copia en carpeta y en un .zip trae la piedra y el cofre con sus diamantes; snapshot list, use, sel, before y after; un nombre mal escrito sugiere; apagado de fábrica',
+      timeoutMs: 150000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        const config = path.join(srv.run, 'plugins', 'Worldcraft', 'config.yml')
+        const antes = fs.readFileSync(config, 'utf8')
+        const copias = path.join(srv.run, 'snapshots')
+        const A = X + 20
+        const cofre = `${A + 2} -54 ${Z + 2}`
+        try {
+          await pide(ana, 'wc snapshot list', /Backups are off on this server/)
+          await pide(bots[BETO], 'wc snapshot list', /You don't have permission/)
+          // Lo que va a estar en la copia, en el aire: una caja de piedra con un cofre con 5 diamantes.
+          await srv.consola(`fill ${A} -55 ${Z} ${A + 4} -52 ${Z + 4} stone`)
+          await srv.consola(`setblock ${cofre} chest{Items:[{Slot:0b,id:"minecraft:diamond",count:5}]}`)
+          await srv.consola('save-all flush', { espera: /Saved the game/ })
+          // Dos copias: una carpeta con la fecha en el nombre y un .zip con una carpeta de más.
+          const region = fs.readFileSync(path.join(srv.run, 'world', 'region', 'r.0.0.mca'))
+          fs.rmSync(copias, { recursive: true, force: true })
+          fs.mkdirSync(path.join(copias, '2026-11-02-10-00', 'world', 'region'), { recursive: true })
+          fs.writeFileSync(path.join(copias, '2026-11-02-10-00', 'world', 'region', 'r.0.0.mca'), region)
+          fs.writeFileSync(path.join(copias, 'nightly-2026-11-01.zip'), zipGuardado({ 'nightly/world/region/r.0.0.mca': region }))
+          fs.writeFileSync(config, antes.replace('  folder: ""', '  folder: "snapshots"'))
+          await srv.consola('wc reload', { espera: /Reloaded: 0 error\(s\)/ })
+          // Se borra lo construido.
+          await seleccionar(ana, [A, -55, Z], [A + 4, -52, Z + 4])
+          await obra(ana, 'wc set air')
+          await comprobar(srv, `block ${cofre} air`)
+          const m = ana.marca()
+          ana.comando('wc snapshot list')
+          await ana.esperar('chat', /Backups of world \(2, newest first\)/, { desde: m })
+          await ana.esperar('chat', /1\. 2026-11-02-10-00 · 2026-11-02 10:00/, { desde: m })
+          await ana.esperar('chat', /2\. nightly-2026-11-01\.zip · 2026-11-01 00:00/, { desde: m })
+          await pide(ana, 'wc snap use 2026-11-02-10-0', /There is no backup '2026-11-02-10-0' of world \(did you mean '2026-11-02-10-00'\?\)/)
+          await pide(ana, 'wc snapshot before 2026-11-02', /Backup nightly-2026-11-01\.zip \(2026-11-01 00:00\) chosen/)
+          await pide(ana, 'wc snapshot after 2026-11-01 12:00', /Backup 2026-11-02-10-00 \(2026-11-02 10:00\) chosen/)
+          await pide(ana, 'wc snapshot after 2026-11-03', /There is no backup of world after 2026-11-03/)
+          await pide(ana, 'wc snapshot sel 1', /Backup 2026-11-02-10-00 .* chosen/)
+          // restore con la copia elegida (la carpeta): la piedra y el cofre con sus diamantes.
+          let r = await obra(ana, 'wc restore', 30000)
+          if (r.cambiados !== 100) throw new Error(`restore cambió ${r.cambiados} (100 = 99 de piedra y el cofre)`)
+          await pide(ana, 'wc count stone', /\b99 of 100 blocks match/)
+          await comprobar(srv, `data block ${cofre} Items[{id:"minecraft:diamond",count:5}]`)
+          await pide(ana, 'wc undo', /Undone .*restore 2026-11-02-10-00/)
+          await comprobar(srv, `block ${cofre} air`)
+          // Desde el .zip, con el nombre en el comando y vista previa + confirm.
+          const m2 = ana.marca()
+          ana.comando('wc restore nightly-2026-11-01.zip --preview')
+          await ana.esperar('chat', /Reading \d+ chunk\(s\) from the backup nightly-2026-11-01\.zip/, { desde: m2, timeoutMs: 20000 })
+          await ana.esperar('chat', /Preview ready/, { desde: m2, timeoutMs: 20000 })
+          await comprobar(srv, `block ${cofre} air`)
+          r = await obra(ana, 'wc confirm', 30000)
+          if (r.cambiados !== 100) throw new Error(`restore del .zip cambió ${r.cambiados}`)
+          await comprobar(srv, `data block ${cofre} Items[{id:"minecraft:diamond",count:5}]`)
+          await pide(ana, 'wc undo', /Undone .*restore nightly-2026-11-01\.zip/)
+          await pide(ana, 'wc count stone', /\b0 of 100 blocks match/)
+        } finally {
+          fs.writeFileSync(config, antes)
+          await srv.consola('wc reload')
+          fs.rmSync(copias, { recursive: true, force: true })
+          await srv.consola(`fill ${A} -55 ${Z} ${A + 4} -52 ${Z + 4} air`)
         }
       }
     }
