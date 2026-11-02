@@ -20,6 +20,13 @@ const CITIZENS = { archivo: 'Citizens-2.0.44-b4268.jar', url: 'https://ci.citize
 const PROTOCOLLIB_121 = { archivo: 'ProtocolLib-5.4.0.jar', url: 'https://github.com/dmulloy2/ProtocolLib/releases/download/5.4.0/ProtocolLib.jar', sha256: 'ee2e7ab9b5386f2d103081c4d108e61b1035df2ca692b53d6e2409fb1f5caccf' }
 const PROTOCOLLIB_26 = { archivo: 'ProtocolLib-5.5.0-b765.jar', url: 'https://ci.dmulloy2.net/job/ProtocolLib/765/artifact/build/libs/ProtocolLib-Spigot.jar', sha256: 'fae0b1673162ea8d80506210154f579a6b966c293a0ca86c70232a03f815b9c3' }
 
+// Spec 029: FastAsyncWorldEdit 2.16.2 (aprobado por el dueño) para comparar sus comandos con los de Worldcraft. Choca con
+// WorldEdit (no pueden estar los dos): no va en PLUGINS_EXTRA y solo se instala si un filtro lo pide (/fastasync/i).
+const FAWE = { archivo: 'FastAsyncWorldEdit-Paper-2.16.2.jar', url: 'https://cdn.modrinth.com/data/z4HZZnLr/versions/JOyEqKdC/FastAsyncWorldEdit-Paper-2.16.2.jar', sha256: 'a74219fa660c782c9779e6740867cde395a24d1381dcba6c4f8022e4e9c3f87d' }
+
+/** Jars que reemplazan a otro de la lista (FAWE en lugar de WorldEdit): solo con un filtro que los nombre. */
+export const PLUGINS_ALTERNATIVOS = { '1.21.4': [FAWE], '26.1.2': [FAWE] }
+
 /** Jars por versión de Paper (la de la suite si no se pide otra). */
 export const PLUGINS_EXTRA = {
   '1.21.4': [
@@ -45,7 +52,7 @@ export const PLUGINS_EXTRA = {
 }
 
 /** Nombres de los jars de todas las versiones: al instalar se quitan los de otra versión que hubiera en plugins/. */
-const TODOS = new Set(Object.values(PLUGINS_EXTRA).flat().map(p => p.archivo))
+const TODOS = new Set([...Object.values(PLUGINS_EXTRA), ...Object.values(PLUGINS_ALTERNATIVOS)].flat().map(p => p.archivo))
 
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex')
 
@@ -67,7 +74,9 @@ async function enCache (p, cache) {
 /** Deja en pluginsDir los jars de esa versión de Paper (y quita los de otras versiones). Devuelve sus nombres. */
 export async function instalarPluginsExtra (version, pluginsDir, cache, filtro = null) {
   // filtro (spec 020): solo los jars cuyo nombre coincide (las capturas de la presentación no quieren EssentialsX).
-  const lista = PLUGINS_EXTRA[version]?.filter(p => !filtro || filtro.test(p.archivo))
+  // Spec 029: los alternativos (FAWE) solo entran si el filtro los pide; sin filtro, nunca.
+  const lista = PLUGINS_EXTRA[version] && [...PLUGINS_EXTRA[version], ...(filtro ? PLUGINS_ALTERNATIVOS[version] ?? [] : [])]
+    .filter(p => !filtro || filtro.test(p.archivo))
   if (!lista) {
     console.log(`  (sin plugins de terceros para Paper ${version}: las integraciones no se prueban)`)
     return []

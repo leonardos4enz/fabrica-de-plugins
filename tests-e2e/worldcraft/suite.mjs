@@ -123,7 +123,7 @@ export default {
   datosDeJugador: [],
   bots: [ANA, BETO],
   // Spec 027: WorldEdit 7.3.19 en el servidor de prueba (aprobado en la 012) para comprobar que los dos leen los .schem del otro.
-  pluginsExtra: /worldedit/i,
+  pluginsExtra: /^worldedit/i, // no FastAsyncWorldEdit (spec 029)
   puerto: 25599,
   versionPorDefecto: '1.21.4',
   ruidoDelServidor: [/No key layers/],
