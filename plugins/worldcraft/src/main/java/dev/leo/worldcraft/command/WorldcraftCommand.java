@@ -20,6 +20,8 @@ import dev.leo.worldcraft.pattern.ParseException;
 import dev.leo.worldcraft.pattern.Pattern;
 import dev.leo.worldcraft.region.Box;
 import dev.leo.worldcraft.region.Direction;
+import dev.leo.worldcraft.region.Region;
+import dev.leo.worldcraft.region.Selector;
 import dev.leo.worldcraft.region.Shape;
 import dev.leo.worldcraft.terrain.BrushSettings;
 import dev.leo.worldcraft.terrain.Options;
@@ -70,6 +72,9 @@ public final class WorldcraftCommand implements TabExecutor {
     }
 
     private static final Set<String> EDIT_FLAGS = Set.of("preview");
+    /** Lo que se escribe después de /wc sel (spec 030: las formas, con los nombres de WorldEdit y FAWE). */
+    static final List<String> SEL_WORDS = List.of("clear", "show", "hide", "cuboid", "extend", "poly", "ellipsoid", "sphere",
+            "cyl", "convex", "magic", "box", "fuzzy", "hull", "polyhedral");
 
     private final Worldcraft plugin;
     private final BuildCommands build;
@@ -248,15 +253,35 @@ public final class WorldcraftCommand implements TabExecutor {
         return Integer.parseInt(v);
     }
 
-    /** Pone una esquina y dice el tamaño (también la usa la varita, H1 CA2 y CA3). */
+    /**
+     * Pone una esquina y dice el tamaño (también la usa la varita, H1 CA2 y CA3). Spec 030: en otras formas, el punto o
+     * el centro (which 1 = clic izquierdo, 2 = derecho, como WorldEdit); la mágica lee el mundo antes.
+     */
     public void setCorner(CommandSender s, UUID owner, int which, World world, int x, int y, int z) {
         Session ses = edits().session(owner);
-        ses.corner(which, world.getName(), x, y, z);
-        Box b = ses.box();
         String c = x + " " + y + " " + z;
-        if (b == null) s.sendMessage(msg().get("corner-set", "which", String.valueOf(which), "pos", c));
-        else s.sendMessage(msg().get("corner-set-size", "which", String.valueOf(which), "pos", c, "size", b.size(),
-                "blocks", Edits.fmt(b.volume())));
+        Selector.Kind kind = ses.selector().kind();
+        if (kind == Selector.Kind.MAGIC) {
+            ses.enter(world.getName());
+            selection.magic(s, ses, which, world, x, y, z);
+            return;
+        }
+        String what;
+        try {
+            what = ses.click(which, world.getName(), x, y, z, plugin.config().settings().maxPoints());
+        } catch (IllegalArgumentException e) {
+            s.sendMessage(msg().get("error", "message", e.getMessage()));
+            return;
+        }
+        Region r = ses.region();
+        if (kind == Selector.Kind.CUBOID) {
+            if (r == null) s.sendMessage(msg().get("corner-set", "which", String.valueOf(which), "pos", c));
+            else s.sendMessage(msg().get("corner-set-size", "which", String.valueOf(which), "pos", c, "size", r.size(),
+                    "blocks", Edits.fmt(r.volume())));
+            return;
+        }
+        s.sendMessage(msg().get("sel-point", "what", what, "pos", c, "kind", kind.id(), "size", r.size(),
+                "blocks", Edits.fmt(r.volume())));
     }
 
     private void sel(CommandSender s, String[] a) {
@@ -272,26 +297,58 @@ public final class WorldcraftCommand implements TabExecutor {
                 s.sendMessage(msg().get(what.equals("show") ? "sel-shown" : "sel-hidden"));
             }
             case "" -> {
-                Box b = ses.box();
-                if (b == null) {
-                    s.sendMessage(msg().get("no-selection"));
+                Region r = ses.region();
+                if (r == null) {
+                    Selector.Kind k = ses.selector().kind();
+                    s.sendMessage(k == Selector.Kind.CUBOID ? msg().get("no-selection") : msg().get("sel-kind-empty", "kind", k.id()));
                     return;
                 }
-                s.sendMessage(msg().get("sel-info", "size", b.size(), "blocks", Edits.fmt(b.volume()), "world", ses.world(),
-                        "from", b.minX() + " " + b.minY() + " " + b.minZ(), "to", b.maxX() + " " + b.maxY() + " " + b.maxZ()));
+                Box b = r.bounds();
+                String from = b.minX() + " " + b.minY() + " " + b.minZ(), to = b.maxX() + " " + b.maxY() + " " + b.maxZ();
+                if (ses.selector().kind() == Selector.Kind.CUBOID) {
+                    s.sendMessage(msg().get("sel-info", "size", b.size(), "blocks", Edits.fmt(b.volume()), "world", ses.world(),
+                            "from", from, "to", to));
+                    return;
+                }
+                // Spec 030 H1 CA2: la forma, sus puntos y los bloques de verdad (no los de la caja).
+                s.sendMessage(msg().get("sel-info-shape", "kind", ses.selector().kind().id(), "detail", ses.selector().describe(),
+                        "blocks", Edits.fmt(r.volume()), "world", ses.world(), "size", b.size(), "from", from, "to", to));
             }
-            default -> throw new Usage();
+            default -> {
+                // Spec 030 H1 CA1: /wc sel cuboid|extend|poly|ellipsoid|sphere|cyl|convex|magic
+                Selector.Kind k = Selector.NAMES.get(what);
+                if (k == null) {
+                    s.sendMessage(msg().get("unknown-selection", "input", a[1], "hint", hintText(Issues.closest(what, SEL_WORDS))));
+                    return;
+                }
+                ses.selector().kind(k);
+                s.sendMessage(msg().get(switch (k) {
+                    case CUBOID -> "sel-kind-cuboid";
+                    case EXTEND -> "sel-kind-extend";
+                    case POLY -> "sel-kind-poly";
+                    case ELLIPSOID -> "sel-kind-ellipsoid";
+                    case SPHERE -> "sel-kind-sphere";
+                    case CYL -> "sel-kind-cyl";
+                    case CONVEX -> "sel-kind-convex";
+                    case MAGIC -> "sel-kind-magic";
+                }));
+            }
         }
     }
 
     private void resize(CommandSender s, String[] a, String sub) {
         Session ses = edits().session(Edits.owner(s));
-        Box b = ses.box();
-        if (b == null) {
+        Region r = ses.region();
+        if (r == null) {
             s.sendMessage(msg().get("no-selection"));
             return;
         }
         World world = Bukkit.getWorld(ses.world());
+        if (!ses.selector().boxLike()) {
+            shapeResize(s, a, sub, ses, world);
+            return;
+        }
+        Box b = r.bounds();
         if (a.length >= 2 && sub.equals("expand") && a[1].equalsIgnoreCase("vert")) {
             if (world == null) return;
             b = b.withY(world.getMinHeight(), world.getMaxHeight() - 1);
@@ -339,11 +396,67 @@ public final class WorldcraftCommand implements TabExecutor {
         s.sendMessage(msg().get("sel-changed", "size", b.size(), "blocks", Edits.fmt(b.volume())));
     }
 
+    /**
+     * Spec 030 H4 CA5: shift mueve cualquier forma; expand/contract up o down y expand vert cambian el alto de poly y cyl.
+     * Lo demás se dice (una esfera no se agranda hacia un lado).
+     */
+    private void shapeResize(CommandSender s, String[] a, String sub, Session ses, World world) {
+        Selector sel = ses.selector();
+        try {
+            if (a.length >= 2 && sub.equals("expand") && a[1].equalsIgnoreCase("vert")) {
+                if (world == null) return;
+                sel.heightTo(world.getMinHeight(), world.getMaxHeight() - 1);
+            } else {
+                if (a.length < 2) throw new Usage();
+                int n;
+                try {
+                    n = Integer.parseInt(a[1]);
+                } catch (NumberFormatException e) {
+                    throw new Usage();
+                }
+                if (n < 0 || n > 100_000) throw new Usage();
+                Direction d;
+                if (a.length >= 3) {
+                    d = Direction.parse(a[2]);
+                    if (d == null) {
+                        s.sendMessage(msg().get("unknown-direction", "input", a[2], "hint", hintText(Issues.closest(a[2], Direction.NAMES))));
+                        return;
+                    }
+                } else if (s instanceof Player p) {
+                    d = Direction.facing(p.getLocation().getYaw(), p.getLocation().getPitch());
+                } else {
+                    throw new Usage();
+                }
+                if (sub.equals("shift")) {
+                    sel.shift(d.dx * n, d.dy * n, d.dz * n);
+                } else if (d.dy == 0) {
+                    throw new IllegalStateException(sel.kind().id());
+                } else {
+                    int k = sub.equals("expand") ? n : -n;
+                    // contract up achica desde arriba; contract down, desde abajo
+                    sel.height(d.dy < 0 ? k : 0, d.dy > 0 ? k : 0);
+                }
+            }
+        } catch (IllegalStateException e) {
+            s.sendMessage(msg().get("sel-not-for-shape", "kind", sel.kind().id(), "command", sub));
+            return;
+        } catch (IllegalArgumentException e) {
+            s.sendMessage(msg().get("sel-empty"));
+            return;
+        }
+        Region r = ses.region();
+        if (world != null && r.clampY(world.getMinHeight(), world.getMaxHeight() - 1) == null) {
+            s.sendMessage(msg().get("sel-outside"));
+            return;
+        }
+        s.sendMessage(msg().get("sel-changed", "size", r.size(), "blocks", Edits.fmt(r.volume())));
+    }
+
     // ------------------------------------------------------------------ operaciones
 
-    /** La selección dentro del mundo, o null (y lo dice). */
-    Box selection(CommandSender s, Session ses) {
-        Box b = ses.box();
+    /** La selección (cualquier forma, spec 030) dentro del mundo, o null (y lo dice). */
+    Region selection(CommandSender s, Session ses) {
+        Region b = ses.region();
         if (b == null) {
             s.sendMessage(msg().get("no-selection"));
             return null;
@@ -353,7 +466,7 @@ public final class WorldcraftCommand implements TabExecutor {
             s.sendMessage(msg().get("unknown-world", "world", ses.world()));
             return null;
         }
-        Box c = b.clampY(w.getMinHeight(), w.getMaxHeight() - 1);
+        Region c = b.clampY(w.getMinHeight(), w.getMaxHeight() - 1);
         if (c == null) s.sendMessage(msg().get("sel-outside"));
         return c;
     }
@@ -375,7 +488,7 @@ public final class WorldcraftCommand implements TabExecutor {
             if (patternText.isBlank()) throw new Usage();
         }
         Session ses = edits().session(Edits.owner(s));
-        Box box = selection(s, ses);
+        Region box = selection(s, ses);
         if (box == null) return;
         World world = Bukkit.getWorld(ses.world());
         Pattern pattern;
@@ -398,11 +511,11 @@ public final class WorldcraftCommand implements TabExecutor {
         boolean preview = args.flags.contains("preview");
         if (mask != null && mask.needsNeighbors()) {
             // Spec 029 H2 CA2: «above», «exposed»… se deciden con la foto de antes (la caja + 1), no con el mundo a medio hacer.
-            readAround(s, world, box, kind, snap -> edits().request(s, new Edits.Op(kind, detail, world, box, box.count(shape),
+            readAround(s, world, box.bounds(), kind, snap -> edits().request(s, new Edits.Op(kind, detail, world, box.bounds(), box.count(shape),
                     () -> new RegionSource(box, shape, mc, pc, seed, snap::get), placed, null), preview));
             return;
         }
-        edits().request(s, new Edits.Op(kind, detail, world, box, box.count(shape),
+        edits().request(s, new Edits.Op(kind, detail, world, box.bounds(), box.count(shape),
                 () -> new RegionSource(box, shape, mc, pc, seed), placed, null), preview);
     }
 
@@ -442,19 +555,21 @@ public final class WorldcraftCommand implements TabExecutor {
             throw new Usage();
         }
         Session ses = edits().session(Edits.owner(s));
-        Box box = selection(s, ses);
-        if (box == null) return;
+        Region region = selection(s, ses);
+        if (region == null) return;
+        // Spec 030 H4 CA3: de una forma se copia solo lo de adentro (lo demás queda «sin leer» y no se pega).
+        Box box = region.bounds();
         World world = Bukkit.getWorld(ses.world());
         Limits.Resolved lim = edits().limits(s);
-        if (box.volume() > lim.maxBlocks()) {
-            s.sendMessage(msg().get("limit-blocks", "blocks", Edits.fmt(box.volume()), "max", Edits.fmt(lim.maxBlocks()),
+        if (region.volume() > lim.maxBlocks() || box.volume() > Integer.MAX_VALUE - 8) {
+            s.sendMessage(msg().get("limit-blocks", "blocks", Edits.fmt(region.volume()), "max", Edits.fmt(lim.maxBlocks()),
                     "groups", String.join(", ", lim.groups())));
             return;
         }
         int[] o = origin(s, box);
         if (mask == null && !cut) {
-            edits().copy(s, world, box, o[0], o[1], o[2], () -> s.sendMessage(msg().get("copied",
-                    "size", box.size(), "blocks", Edits.fmt(box.volume()))));
+            edits().copy(s, world, region, o[0], o[1], o[2], () -> s.sendMessage(msg().get("copied",
+                    "size", box.size(), "blocks", Edits.fmt(region.volume()))));
             return;
         }
         PaperBlocks blocks = edits().blocks();
@@ -466,19 +581,19 @@ public final class WorldcraftCommand implements TabExecutor {
             // Lo que no pasa la máscara queda como aire en el portapapeles (como -m de WorldEdit).
             if (!cut) {
                 Clipboard clip = new Clipboard(box, o[0], o[1], o[2]);
-                edits().read(s, world, box, "copy", (x, y, z, st, tile) -> {
+                edits().read(s, world, region, "copy", (x, y, z, st, tile) -> {
                     boolean in = mc.test(x, y, z, st, near, seed);
                     clip.put(box, x, y, z, in ? st : air, in ? tile : null);
                 }, () -> {
                     ses.clipboard(clip, world.getName());
-                    s.sendMessage(msg().get("copied", "size", box.size(), "blocks", Edits.fmt(box.volume())));
+                    s.sendMessage(msg().get("copied", "size", box.size(), "blocks", Edits.fmt(region.volume())));
                 });
                 return;
             }
             Pattern.Compiled airP = Pattern.of("minecraft:air").compile(blocks.table());
             // cut --mask solo quita lo que pasa la máscara.
-            edits().request(s, new Edits.Op("cut", detail, world, box, box.volume(),
-                    () -> new RegionSource(box, Shape.FILL, mc, airP, seed, near), List.of(), () -> {
+            edits().request(s, new Edits.Op("cut", detail, world, box, region.volume(),
+                    () -> new RegionSource(region, Shape.FILL, mc, airP, seed, near), List.of(), () -> {
                 Clipboard clip = new Clipboard(box, o[0], o[1], o[2]);
                 ses.clipboard(clip, world.getName());
                 return (x, y, z, st, tile) -> {
@@ -984,7 +1099,7 @@ public final class WorldcraftCommand implements TabExecutor {
         }
         return switch (sub) {
             case "help" -> a.length == 2 ? filter(visible(s), last) : List.of();
-            case "sel" -> a.length == 2 ? filter(List.of("clear", "show", "hide"), last) : List.of();
+            case "sel" -> a.length == 2 ? filter(SEL_WORDS, last) : List.of();
             case "expand", "contract", "shift" -> a.length == 2 ? filter(sub.equals("expand") ? List.of("1", "5", "10", "vert") : List.of("1", "5", "10"), last)
                     : a.length == 3 ? filter(Direction.NAMES, last) : List.of();
             case "flip" -> a.length == 2 ? filter(Direction.NAMES, last) : List.of();

@@ -3,10 +3,13 @@ package dev.leo.worldcraft.region;
 /**
  * Recorre una forma dentro de una caja chunk por chunk (columna de 16×16), para que una operación cargue cada chunk una
  * sola vez y lo suelte al terminar con él (H5 CA3). Dentro de la columna va por (x, z) y luego y. Las columnas que una
- * forma hueca no toca (el interior de walls) se saltan sin recorrerlas.
+ * forma hueca no toca (el interior de walls) se saltan sin recorrerlas. Spec 030: cualquier {@link Region}; las columnas
+ * salen de {@link Region#ys}.
  */
 public final class ChunkOrder {
     private final Box box;
+    /** Spec 030: la forma si no es una caja (null = la caja, el camino rápido de la 025). */
+    private final Region region;
     private final Shape shape;
     private final int cx0, cz0, cx1, cz1;
     private int cx, cz;
@@ -15,8 +18,10 @@ public final class ChunkOrder {
     private int[] ys = new int[0];
     private boolean started, done;
 
-    public ChunkOrder(Box box, Shape shape) {
-        this.box = box;
+    public ChunkOrder(Region region, Shape shape) {
+        this.box = region.bounds();
+        this.region = region instanceof Box ? null : region;
+        Box box = this.box;
         this.shape = shape;
         cx0 = box.minX() >> 4;
         cz0 = box.minZ() >> 4;
@@ -94,6 +99,11 @@ public final class ChunkOrder {
     }
 
     private boolean prepareHeights() {
+        if (region != null) {
+            yIndex = 0;
+            ys = region.ys(x, z, shape);
+            return ys.length > 0;
+        }
         boolean edge = x == box.minX() || x == box.maxX() || z == box.minZ() || z == box.maxZ();
         yIndex = 0;
         switch (shape) {

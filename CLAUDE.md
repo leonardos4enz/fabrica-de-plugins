@@ -202,6 +202,14 @@ con `--release 21`.
   tras el escenario de navegación mineflayer 4.39 dejó de mandar el giro del bot (`data get entity X Rotation` seguía con el
   anterior): lo que depende de hacia dónde mira el jugador en el servidor se pone con `tp X x y z yaw pitch`. El pasto
   tapado por un bloque sólido se vuelve tierra con los ticks al azar: una cuenta sobre pasto depende del tiempo (usar tierra).
+- **Spec 030 (selecciones que no son cajas):** antes de crear una prueba, mirar si el nombre ya existe (`RegionTest` era de
+  la 025 y la herramienta de escritura la pisó sin avisar: se recuperó con `git checkout`). `CommandTest` busca cada
+  `msg().get("clave")` en `messages.yml`: una clave armada con `+` no se puede revisar (va un `switch` con las claves
+  escritas), y `Messages.get` escapa los valores (un valor con etiquetas MiniMessage se ve literal). La selección vive en
+  la sesión de cada jugador durante toda la suite: un escenario que cambia la forma la vuelve a `cuboid` en un `finally`
+  (si no, los siguientes esperan «Corner 1 at» y fallan). Una envolvente convexa sin casos degenerados: inflar cada
+  vértice a las 8 esquinas de su bloque y trabajar al doble con enteros (`long`); los vértices que caen sobre una arista la
+  parten en tramos (para el contorno se mide el largo, no la cantidad de segmentos).
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

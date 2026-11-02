@@ -3,6 +3,8 @@ package dev.leo.worldcraft.paper;
 import dev.leo.worldcraft.Worldcraft;
 import dev.leo.worldcraft.command.WorldcraftCommand;
 import dev.leo.worldcraft.region.Box;
+import dev.leo.worldcraft.region.Outline;
+import dev.leo.worldcraft.region.Region;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -81,6 +83,8 @@ public final class Wand implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent e) {
+        drawn.remove(e.getPlayer().getUniqueId());
+        shapes.remove(e.getPlayer().getUniqueId());
         plugin.edits().quit(e.getPlayer());
     }
 
@@ -107,13 +111,49 @@ public final class Wand implements Listener {
             if (!isWand(p.getInventory().getItemInMainHand())) continue;
             Session ses = plugin.edits().session(p.getUniqueId());
             if (!ses.show() || ses.world() == null || !ses.world().equals(p.getWorld().getName())) continue;
-            Box b = ses.box();
-            if (b == null) {
+            Region r = ses.region();
+            if (r == null) {
                 int[] c = ses.corner1() != null ? ses.corner1() : ses.corner2();
                 if (c != null) cube(p, c[0], c[1], c[2], c[0] + 1, c[1] + 1, c[2] + 1, CORNER, 48);
                 continue;
             }
-            cube(p, b.minX(), b.minY(), b.minZ(), b.maxX() + 1, b.maxY() + 1, b.maxZ() + 1, EDGE, max);
+            if (r instanceof Box b) {
+                cube(p, b.minX(), b.minY(), b.minZ(), b.maxX() + 1, b.maxY() + 1, b.maxZ() + 1, EDGE, max);
+                continue;
+            }
+            // Spec 030 H3: el contorno de cada forma (se calcula una vez por forma: el selector la guarda hasta que cambia).
+            Outline o = drawn.get(p.getUniqueId());
+            if (o == null || shapes.get(p.getUniqueId()) != r) {
+                o = Outline.of(r);
+                drawn.put(p.getUniqueId(), o);
+                shapes.put(p.getUniqueId(), r);
+            }
+            draw(p, o, max);
+        }
+    }
+
+    private final java.util.Map<java.util.UUID, Outline> drawn = new java.util.HashMap<>();
+    private final java.util.Map<java.util.UUID, Region> shapes = new java.util.HashMap<>();
+
+    /** Segmentos con el espaciado que haga falta y, si hay puntos sueltos (la mágica), una muestra pareja de ellos. */
+    private static void draw(Player p, Outline o, int max) {
+        List<double[]> pts = o.points();
+        int budget = Math.max(12, pts.isEmpty() ? max : max / 2);
+        double step = Math.max(0.5, o.length() / budget);
+        for (double[] e : o.segments()) {
+            double len = Math.sqrt(Math.pow(e[3] - e[0], 2) + Math.pow(e[4] - e[1], 2) + Math.pow(e[5] - e[2], 2));
+            int n = Math.max(1, (int) Math.ceil(len / step));
+            for (int i = 0; i <= n; i++) {
+                double t = i / (double) n;
+                p.spawnParticle(Particle.DUST, e[0] + (e[3] - e[0]) * t, e[1] + (e[4] - e[1]) * t, e[2] + (e[5] - e[2]) * t,
+                        1, 0, 0, 0, 0, EDGE);
+            }
+        }
+        if (pts.isEmpty()) return;
+        int every = Math.max(1, (int) Math.ceil(pts.size() / (double) (max - Math.min(max - 1, o.segments().size()))));
+        for (int i = 0; i < pts.size(); i += every) {
+            double[] q = pts.get(i);
+            p.spawnParticle(Particle.DUST, q[0], q[1], q[2], 1, 0, 0, 0, 0, EDGE);
         }
     }
 

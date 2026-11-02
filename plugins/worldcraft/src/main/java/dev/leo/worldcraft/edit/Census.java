@@ -55,11 +55,16 @@ public final class Census implements EditJob.Capture {
         if (z > bz) bz = z;
     }
 
-    /** Recorre una caja de una foto ya leída (cuando la máscara mira vecinos hubo que leer la caja + 1). */
-    public Census over(Snapshot snap, Box box) {
+    /**
+     * Recorre una forma de una foto ya leída (cuando la máscara mira vecinos hubo que leer la caja + 1). Spec 030: solo
+     * lo que está dentro de la forma.
+     */
+    public Census over(Snapshot snap, dev.leo.worldcraft.region.Region region) {
+        Box box = region.bounds();
+        boolean all = region instanceof Box;
         for (int y = box.minY(); y <= box.maxY(); y++) {
             for (int z = box.minZ(); z <= box.maxZ(); z++) {
-                for (int x = box.minX(); x <= box.maxX(); x++) take(x, y, z, snap.get(x, y, z), null);
+                for (int x = box.minX(); x <= box.maxX(); x++) if (all || region.contains(x, y, z)) take(x, y, z, snap.get(x, y, z), null);
             }
         }
         return this;

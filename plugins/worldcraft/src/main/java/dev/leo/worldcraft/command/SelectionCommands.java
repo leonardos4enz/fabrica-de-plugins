@@ -10,6 +10,9 @@ import dev.leo.worldcraft.paper.Session;
 import dev.leo.worldcraft.pattern.Mask;
 import dev.leo.worldcraft.pattern.ParseException;
 import dev.leo.worldcraft.region.Box;
+import dev.leo.worldcraft.region.PointSet;
+import dev.leo.worldcraft.region.Region;
+import dev.leo.worldcraft.region.Selector;
 import org.bukkit.Bukkit;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
@@ -115,8 +118,8 @@ final class SelectionCommands {
             cz = l.getBlockZ() >> 4;
         }
         Box b = Box.chunk(cx, cz, w.getMinHeight(), w.getMaxHeight() - 1);
-        Box old = ses.box();
-        if (args.flags.contains("expand") && old != null && w.getName().equals(ses.world())) b = old.union(b);
+        Region old = ses.region();
+        if (args.flags.contains("expand") && old != null && w.getName().equals(ses.world())) b = old.bounds().union(b);
         ses.selectBox(w.getName(), b);
         s.sendMessage(msg().get("sel-changed", "size", b.size(), "blocks", Edits.fmt(b.volume())));
     }
@@ -134,11 +137,27 @@ final class SelectionCommands {
         }
         if (n < 0 || n > 100_000) throw new WorldcraftCommand.Usage();
         Session ses = edits().session(Edits.owner(s));
-        Box b = ses.box();
-        if (b == null) {
+        if (ses.region() == null) {
             s.sendMessage(msg().get("no-selection"));
             return;
         }
+        if (!ses.selector().boxLike()) {
+            // Spec 030 H4 CA5: los radios de sphere, ellipsoid y cyl; el alto de poly (y de cyl).
+            Selector sel = ses.selector();
+            try {
+                sel.outset(inset ? -n : n, args.flags.contains("horizontal"), args.flags.contains("vertical"));
+            } catch (IllegalStateException e) {
+                s.sendMessage(msg().get("sel-not-for-shape", "kind", sel.kind().id(), "command", inset ? "inset" : "outset"));
+                return;
+            } catch (IllegalArgumentException e) {
+                s.sendMessage(msg().get("sel-empty"));
+                return;
+            }
+            Region r = ses.region();
+            s.sendMessage(msg().get("sel-changed", "size", r.size(), "blocks", Edits.fmt(r.volume())));
+            return;
+        }
+        Box b = ses.region().bounds();
         Box c;
         try {
             c = b.outset(inset ? -n : n, args.flags.contains("horizontal"), args.flags.contains("vertical"));
@@ -159,8 +178,8 @@ final class SelectionCommands {
     }
 
     /** La selección dentro del tope de bloques del grupo (lo que se lee también cuesta), o null y lo dice. */
-    private Box readable(CommandSender s, Session ses) {
-        Box box = main.selection(s, ses);
+    private Region readable(CommandSender s, Session ses) {
+        Region box = main.selection(s, ses);
         if (box == null) return null;
         Limits.Resolved lim = edits().limits(s);
         if (box.volume() > lim.maxBlocks()) {
@@ -182,7 +201,7 @@ final class SelectionCommands {
         }
         Mask mask = plugin.config().parser().maskNear(text);
         Session ses = edits().session(Edits.owner(s));
-        Box box = readable(s, ses);
+        Region box = readable(s, ses);
         if (box == null) return;
         World w = Bukkit.getWorld(ses.world());
         Mask.Compiled mc = mask.compile(edits().blocks().table());
@@ -202,7 +221,7 @@ final class SelectionCommands {
             s.sendMessage(msg().get("sel-changed", "size", t.size(), "blocks", Edits.fmt(t.volume())));
         };
         if (mask.needsNeighbors()) {
-            main.readAround(s, w, box, sub, snap -> done.accept(new Census(mc, snap::get, seed, false, edits().blocks().table()).over(snap, box)));
+            main.readAround(s, w, box.bounds(), sub, snap -> done.accept(new Census(mc, snap::get, seed, false, edits().blocks().table()).over(snap, box)));
             return;
         }
         Census c = new Census(mc, null, seed, false, edits().blocks().table());
@@ -226,7 +245,7 @@ final class SelectionCommands {
             show(s, c.over(clip));
             return;
         }
-        Box box = readable(s, ses);
+        Region box = readable(s, ses);
         if (box == null) return;
         edits().read(s, Bukkit.getWorld(ses.world()), box, "distr", c, () -> show(s, c));
     }
@@ -239,6 +258,64 @@ final class SelectionCommands {
         }
         int more = c.groups() - 10;
         if (more > 0) s.sendMessage(msg().get("distr-more", "count", String.valueOf(more)));
+    }
+
+    /**
+     * Spec 030 H2 CA8: la selección mágica. Lee la caja de selection.magic_radius alrededor del bloque (por tandas, con el
+     * tope de lectura del grupo), inunda en el hilo de cálculo los conectados del mismo material y, en el principal, los
+     * pone (which 2 = clic derecho: se suman a lo que había).
+     */
+    void magic(CommandSender s, Session ses, int which, World w, int x, int y, int z) {
+        int r = plugin.config().settings().magicRadius();
+        Box around = new Box(x - r, y - r, z - r, x + r, y + r, z + r).clampY(w.getMinHeight(), w.getMaxHeight() - 1);
+        if (around == null || !around.contains(x, y, z)) {
+            s.sendMessage(msg().get("sel-outside"));
+            return;
+        }
+        Limits.Resolved lim = edits().limits(s);
+        if (around.volume() > lim.maxBlocks()) {
+            s.sendMessage(msg().get("limit-blocks", "blocks", Edits.fmt(around.volume()), "max", Edits.fmt(lim.maxBlocks()),
+                    "groups", String.join(", ", lim.groups())));
+            return;
+        }
+        var table = edits().blocks().table();
+        dev.leo.worldcraft.edit.Snapshot snap = new dev.leo.worldcraft.edit.Snapshot(around);
+        edits().read(s, w, around, "magic", snap, () -> {
+            int start = snap.get(x, y, z);
+            if (start < 0 || edits().blocks().isAir(start)) {
+                s.sendMessage(msg().get("magic-air"));
+                return;
+            }
+            // El material se compara aquí (la tabla de estados es del hilo principal); el cálculo solo mira números.
+            String mat = table.material(start);
+            java.util.Set<Integer> same = new java.util.HashSet<>();
+            for (int st : snap.distinct()) if (table.material(st).equals(mat)) same.add(st);
+            java.util.concurrent.CompletableFuture.supplyAsync(() -> dev.leo.worldcraft.edit.Magic.flood(snap, x, y, z, same::contains), plugin.compute())
+                    .whenComplete((set, err) -> Bukkit.getScheduler().runTask(plugin, () -> {
+                        if (err != null || set == null) {
+                            if (err != null) plugin.getLogger().log(java.util.logging.Level.SEVERE, "Magic selection failed", err);
+                            s.sendMessage(msg().get("compute-error"));
+                            return;
+                        }
+                        PointSet before = ses.selector().kind() == Selector.Kind.MAGIC ? ses.selector().magicPoints() : null;
+                        boolean add = which == 2 && before != null && w.getName().equals(ses.world());
+                        PointSet all = add ? before.union(set) : set;
+                        if (all.volume() > lim.maxBlocks()) {
+                            s.sendMessage(msg().get("limit-blocks", "blocks", Edits.fmt(all.volume()), "max", Edits.fmt(lim.maxBlocks()),
+                                    "groups", String.join(", ", lim.groups())));
+                            return;
+                        }
+                        ses.enter(w.getName());
+                        ses.selector().magic(all, false);
+                        Box b = set.bounds();
+                        boolean edge = b.minX() == around.minX() || b.maxX() == around.maxX() || b.minZ() == around.minZ()
+                                || b.maxZ() == around.maxZ() || (b.minY() == around.minY() && around.minY() > w.getMinHeight())
+                                || (b.maxY() == around.maxY() && around.maxY() < w.getMaxHeight() - 1);
+                        s.sendMessage(msg().get(add ? "sel-magic-added" : "sel-magic", "count", Edits.fmt(set.volume()),
+                                "block", mat.replace("minecraft:", ""), "blocks", Edits.fmt(all.volume()),
+                                "edge", edge ? msg().raw("sel-magic-edge").replace("{radius}", String.valueOf(r)) : ""));
+                    }));
+        });
     }
 
     /** H1 CA6: borra el historial propio en disco, con /wc confirm. */

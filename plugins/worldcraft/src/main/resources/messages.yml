@@ -17,9 +17,9 @@ help-detail: "<yellow>{usage}</yellow>\n<gray>{text}\n<gray>Example: <white>{exa
 help:
   help: { usage: "/wc help [command]", text: "This list, or the details of one command.", example: "/wc help replace" }
   wand: { usage: "/wc wand", text: "Get the selection wand: left click a block for corner 1, right click for corner 2.", example: "/wc wand" }
-  pos1: { usage: "/wc pos1 [x y z] [--world <w>]", text: "Corner 1 where you stand, or at those coordinates (~ is relative).", example: "/wc pos1 ~ ~-1 ~" }
-  pos2: { usage: "/wc pos2 [x y z] [--world <w>]", text: "Corner 2 where you stand, or at those coordinates.", example: "/wc pos2 120 64 -30" }
-  sel: { usage: "/wc sel [clear|show|hide]", text: "Size of your selection; clear it; show or hide its outline.", example: "/wc sel" }
+  pos1: { usage: "/wc pos1 [x y z] [--world <w>]", text: "Corner 1 (or the first point or center of other shapes, like a left click) where you stand, or at those coordinates (~ is relative).", example: "/wc pos1 ~ ~-1 ~" }
+  pos2: { usage: "/wc pos2 [x y z] [--world <w>]", text: "Corner 2 (or another point or the radius, like a right click) where you stand, or at those coordinates.", example: "/wc pos2 120 64 -30" }
+  sel: { usage: "/wc sel [cuboid|extend|poly|ellipsoid|sphere|cyl|convex|magic|clear|show|hide]", text: "Your selection and its size; choose its shape (the wand says how to mark it); clear it; show or hide its outline.", example: "/wc sel cyl" }
   expand: { usage: "/wc expand <blocks> [direction] | vert", text: "Grow the selection where you look (or up, down, north...); vert = whole height.", example: "/wc expand 10 up" }
   contract: { usage: "/wc contract <blocks> [direction]", text: "Shrink the selection from that side.", example: "/wc contract 2 north" }
   shift: { usage: "/wc shift <blocks> [direction]", text: "Move the selection without changing its size.", example: "/wc shift 5 east" }
@@ -248,5 +248,24 @@ gmask-set: "{prefix}Global mask <white>{mask}</white>: your edits only change wh
 gmask-off: "{prefix}Global mask removed."
 gmask-applies: "{prefix}<yellow>With your global mask {mask}.</yellow> <gray>/wc gmask off to remove it."
 paste-no-origin: "{prefix}<red>This clipboard does not know where it was copied (it came from a schematic): paste without --origin."
+
+# Spec 030: selecciones que no son cajas
+sel-point: "{prefix}{what} at <white>{pos}</white> <dark_gray>·</dark_gray> {kind} <white>{size}</white> ({blocks} blocks)."
+sel-info-shape: "{prefix}Selection <white>{kind}</white>: {detail} <dark_gray>·</dark_gray> <white>{blocks}</white> blocks in {world}, inside {size} from {from} to {to}."
+sel-kind-empty: "{prefix}<yellow>Your {kind} selection has no points yet: left click a block with the wand (or /wc pos1)."
+unknown-selection: "{prefix}<red>'{input}' is not a selection shape{hint}: cuboid, extend, poly, ellipsoid, sphere, cyl, convex or magic."
+sel-kind-cuboid: "{prefix}Selecting a <white>cuboid</white>: left click a corner, right click the opposite corner."
+sel-kind-extend: "{prefix}Selecting an <white>extending cuboid</white>: left click to start, right click to grow it to include that block."
+sel-kind-poly: "{prefix}Selecting a <white>polygon</white>: left click the first point, right click the next ones. It is as tall as your lowest to highest point."
+sel-kind-ellipsoid: "{prefix}Selecting an <white>ellipsoid</white>: left click the center, right click to stretch it to that block."
+sel-kind-sphere: "{prefix}Selecting a <white>sphere</white>: left click the center, right click a block on its edge."
+sel-kind-cyl: "{prefix}Selecting a <white>cylinder</white>: left click the center, right click to widen it and make it taller up to that block."
+sel-kind-convex: "{prefix}Selecting a <white>convex shape</white>: left click the first point, right click the next ones; it wraps around all of them."
+sel-kind-magic: "{prefix}Selecting <white>magic</white>: left click a block to select the connected blocks of the same kind; right click to add more."
+sel-not-for-shape: "{prefix}<red>/wc {command} does not work on a {kind} selection.</red> <gray>Use /wc sel cuboid, or shift, outset and inset (round shapes) or expand up/down (poly and cyl)."
+sel-magic: "{prefix}Magic: <white>{count}</white> connected {block} blocks{edge}."
+sel-magic-added: "{prefix}Magic: added <white>{count}</white> connected {block} blocks{edge} <dark_gray>·</dark_gray> now {blocks}."
+sel-magic-edge: " (stopped at {radius} blocks from your click: there may be more)"
+magic-air: "{prefix}<red>Click a block, not air."
 schem-import-none: "{prefix}<yellow>There are no schematics in the WorldEdit or FAWE folders to import."
 schem-imported: "{prefix}<green>Imported {copied} schematics</green> <gray>({skipped} already here, {big} over {max} KB). The originals were left where they are."

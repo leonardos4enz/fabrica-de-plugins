@@ -52,15 +52,15 @@ public final class PointsSource implements EditSource {
         return ((long) x & 0x3FFFFFF) << 38 | ((long) z & 0x3FFFFFF) << 12 | ((y + 2048) & 0xFFF);
     }
 
-    static int unpackX(long p) {
+    public static int unpackX(long p) {
         return (int) (p >> 38) << 6 >> 6;
     }
 
-    static int unpackZ(long p) {
+    public static int unpackZ(long p) {
         return (int) ((p >> 12) & 0x3FFFFFF) << 6 >> 6;
     }
 
-    static int unpackY(long p) {
+    public static int unpackY(long p) {
         return (int) (p & 0xFFF) - 2048;
     }
 

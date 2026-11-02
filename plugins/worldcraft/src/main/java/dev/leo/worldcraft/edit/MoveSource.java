@@ -42,14 +42,18 @@ public final class MoveSource implements EditSource {
             if (first.next(p)) return true;
             inSecond = true;
         }
-        while (second.next(p)) if (!dest.contains(p[0], p[1], p[2])) return true;
+        // Lo que queda atrás: lo de la forma (spec 030: lo leído, -1 afuera) que la forma movida no cubre. En una caja es
+        // el origen menos el destino, como antes.
+        while (second.next(p)) {
+            if (snap.get(p[0], p[1], p[2]) >= 0 && snap.get(p[0] - dx, p[1] - dy, p[2] - dz) < 0) return true;
+        }
         return false;
     }
 
     @Override
     public int target(int x, int y, int z, int current) {
         tile = null;
-        if (dest.contains(x, y, z)) {
+        if (!inSecond) {
             int s = snap.get(x - dx, y - dy, z - dz);
             if (s < 0) return KEEP;
             tile = snap.tile(x - dx, y - dy, z - dz);

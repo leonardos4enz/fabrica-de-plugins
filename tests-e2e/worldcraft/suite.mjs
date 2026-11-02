@@ -939,6 +939,120 @@ export default {
         await pide(ana, 'wc undo', /nothing to undo/)
         await srv.consola(`fill ${X} -60 ${Z} ${X + 16} -60 ${Z + 6} air`)
       }
+    },
+    {
+      id: '030 H1 CA1 · H1 CA2 · H2 CA6 · H3 · H4 CA2 · H4 CA5',
+      nombre: 'un cilindro con la varita: centro con el clic izquierdo, radios con el derecho, el contorno solo para Ana, walls es el tubo',
+      timeoutMs: 90000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        try {
+          await pide(ana, 'wc wand', /Here is your wand/)
+          await ana.hasta('tener la varita en la mano', b => b.heldItem?.name === 'golden_axe')
+          await pide(ana, 'wc sel cyll', /did you mean 'cyl'/)
+          await pide(ana, 'wc sel cyl', /Selecting a cylinder: left click the center/)
+          // Clic izquierdo (empezar a romper) = el centro; clic derecho = los radios hasta ese bloque (como WorldEdit).
+          let m = ana.marca()
+          ana.bot._client.write('block_dig', { status: 0, location: v3(ana.bot, X + 2, -61, Z + 2), face: 1, sequence: 1 })
+          await ana.esperar('chat', new RegExp(`Center at ${X + 2} -61 ${Z + 2} · cyl 1×1×1 \\(1 blocks\\)`), { desde: m })
+          m = ana.marca()
+          await ana.bot.activateBlock(ana.bot.blockAt(v3(ana.bot, X + 4, -61, Z + 2)))
+          await ana.esperar('chat', /Radii 2, 0 at .* · cyl 5×1×1 \(5 blocks\)/, { desde: m })
+          m = ana.marca()
+          await ana.bot.activateBlock(ana.bot.blockAt(v3(ana.bot, X + 2, -61, Z + 4)))
+          await ana.esperar('chat', /Radii 2, 2 at .* · cyl 5×1×5 \(21 blocks\)/, { desde: m })
+          await comprobar(srv, `block ${X + 2} -61 ${Z + 2} grass_block`) // la varita no rompe
+          // H3: el contorno del cilindro lo ve solo Ana.
+          const mb = bots[BETO].marca()
+          await ana.esperar('particle', /dust/, { desde: m, timeoutMs: 5000 })
+          await bots[BETO].nunca('particle', /dust/, { desde: mb, ms: 1500 })
+          // H4 CA5: el alto de un cilindro crece hacia arriba; hacia un lado no (se dice).
+          await pide(ana, 'wc expand 3 up', /Selection now 5×4×5 \(84 blocks\)/)
+          await pide(ana, 'wc expand 2 north', /does not work on a cyl selection/)
+          await pide(ana, 'wc sel', new RegExp(`Selection cyl: center ${X + 2} ${Z + 2}, radii 2, 2; y -61 to -58 · 84 blocks`))
+          // H4 CA2: walls = el tubo (12 columnas del borde × 4), sin tocar el centro ni las esquinas de la caja.
+          const w = await obra(ana, 'wc walls glass')
+          if (w.cambiados !== 48) throw new Error(`walls del cilindro cambió ${w.cambiados}`)
+          await ana.hasta('ver el tubo de vidrio', b => bloque(b, X + 4, -59, Z + 2) === 'glass' && bloque(b, X + 2, -59, Z + 2) === 'air' &&
+            bloque(b, X + 4, -59, Z + 4) === 'air' && bloque(b, X + 3, -58, Z + 4) === 'glass')
+          await pide(ana, 'wc undo', /Undone/)
+          await ana.hasta('ver el pasto otra vez', b => bloque(b, X + 4, -61, Z + 2) === 'grass_block' && bloque(b, X + 4, -59, Z + 2) === 'air')
+        } finally {
+          await pide(ana, 'wc sel cuboid', /Selecting a cuboid/)
+        }
+      }
+    },
+    {
+      id: '030 H2 CA3 · H2 CA5 · H2 CA7 · H2 CA8 · H4 CA1 · H4 CA3 · H4 CA4',
+      nombre: 'poly, mágica (con el clic derecho suma), esfera copiada y pegada sin sus esquinas, stack y move de la esfera, convexa',
+      timeoutMs: 150000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        try {
+          // H2 CA3: un triángulo de 3 vértices, del más bajo al más alto (y -60 a -58): 28 columnas × 3.
+          await pide(ana, 'wc sel poly', /Selecting a polygon/)
+          await pide(ana, `wc pos1 ${X} -60 ${Z + 10}`, /Point 1 at/)
+          await pide(ana, `wc pos2 ${X + 6} -60 ${Z + 10}`, /Point 2 at/)
+          await pide(ana, `wc pos2 ${X} -58 ${Z + 16}`, /Point 3 at .* · poly 7×3×7 \(84 blocks\)/)
+          await pide(ana, 'wc sel', /Selection poly: 3 points: .*; y -60 to -58 · 84 blocks/)
+          const p = await obra(ana, 'wc set stone')
+          if (p.cambiados !== 84) throw new Error(`set del triángulo cambió ${p.cambiados}`)
+          await ana.hasta('ver el triángulo', b => bloque(b, X + 1, -58, Z + 11) === 'stone' && bloque(b, X + 3, -60, Z + 13) === 'stone' &&
+            bloque(b, X + 6, -60, Z + 16) === 'air' && bloque(b, X + 4, -60, Z + 13) === 'air')
+          // H2 CA8: la mágica toma la piedra conectada; el clic derecho (pos2) suma otro grupo.
+          await srv.consola(`fill ${X + 10} -60 ${Z + 10} ${X + 11} -60 ${Z + 10} stone`)
+          await srv.sincronizar()
+          await pide(ana, 'wc sel magic', /Selecting magic/)
+          await pide(ana, `wc pos1 ${X + 1} -60 ${Z + 11}`, /Magic: 84 connected stone blocks\./)
+          await pide(ana, `wc pos2 ${X + 10} -60 ${Z + 10}`, /Magic: added 2 connected stone blocks · now 86/)
+          const g = await obra(ana, 'wc set gold_block')
+          if (g.cambiados !== 86) throw new Error(`set de la mágica cambió ${g.cambiados}`)
+          await ana.hasta('ver el oro en los dos grupos', b => bloque(b, X + 11, -60, Z + 10) === 'gold_block' && bloque(b, X + 2, -59, Z + 12) === 'gold_block')
+          await srv.consola(`fill ${X} -60 ${Z + 10} ${X + 11} -58 ${Z + 16} air`)
+          // H2 CA5 y H4 CA3: una esfera de radio 2 en el aire; copiada y pegada con --air no pisa las esquinas de su caja.
+          await pide(ana, 'wc sel sphere', /Selecting a sphere/)
+          await pide(ana, `wc pos1 ${X + 3} -56 ${Z + 25}`, /Center at/)
+          const r = await pide(ana, `wc pos2 ${X + 5} -56 ${Z + 25}`, /Radius 2 at .* · sphere 5×5×5 \((\d+) blocks\)/)
+          const vol = Number(r.texto.match(/\((\d+) blocks\)/)[1])
+          if (vol >= 125 || vol < 30) throw new Error(`la esfera tiene ${vol}`)
+          const e = await obra(ana, 'wc set stone')
+          if (e.cambiados !== vol) throw new Error(`set de la esfera cambió ${e.cambiados}`)
+          await pide(ana, 'wc copy', new RegExp(`Copied 5×5×5 \\(${vol} blocks\\)`))
+          await srv.consola(`setblock ${X + 11} -58 ${Z + 23} gold_block`) // la esquina de la caja donde se va a pegar
+          await srv.consola(`tp ${ANA} ${X + 10.5} -60 ${Z + 0.5} 0 0`)
+          await srv.sincronizar()
+          await ana.hasta('estar en el otro lugar', b => Math.abs(b.entity.position.x - (X + 10.5)) < 0.6)
+          const pg = await obra(ana, 'wc paste --air')
+          if (pg.cambiados !== vol) throw new Error(`paste --air de la esfera cambió ${pg.cambiados}`)
+          await ana.hasta('ver la esfera pegada y la esquina intacta', b => bloque(b, X + 13, -56, Z + 25) === 'stone' &&
+            bloque(b, X + 11, -58, Z + 23) === 'gold_block' && bloque(b, X + 15, -56, Z + 25) === 'stone')
+          // H4 CA4: stack repite la esfera (no su caja) y move --select la mueve con la selección.
+          const st = await obra(ana, 'wc stack 1 up')
+          if (st.cambiados !== vol) throw new Error(`stack de la esfera cambió ${st.cambiados}`)
+          await ana.hasta('ver la copia de arriba', b => bloque(b, X + 3, -51, Z + 25) === 'stone' && bloque(b, X + 1, -53, Z + 23) === 'air')
+          await obra(ana, 'wc move 2 east --select')
+          await pide(ana, 'wc sel', new RegExp(`Selection sphere: center ${X + 5} -56 ${Z + 25}, radius 2`))
+          await ana.hasta('ver la esfera movida', b => bloque(b, X + 7, -56, Z + 25) === 'stone' && bloque(b, X + 1, -56, Z + 25) === 'air')
+          // H2 CA7: una convexa de 4 vértices (un tetraedro) cuenta sus bloques de verdad.
+          await pide(ana, 'wc sel convex', /Selecting a convex shape/)
+          await pide(ana, `wc pos1 ${X + 20} -60 ${Z + 10}`, /Point 1 at/)
+          await pide(ana, `wc pos2 ${X + 24} -60 ${Z + 10}`, /Point 2 at/)
+          await pide(ana, `wc pos2 ${X + 20} -56 ${Z + 10}`, /Point 3 at/)
+          const t = await pide(ana, `wc pos2 ${X + 20} -60 ${Z + 14}`, /Point 4 at .* · convex 5×5×5 \((\d+) blocks\)/)
+          const tv = Number(t.texto.match(/\((\d+) blocks\)/)[1])
+          const c = await obra(ana, 'wc set glass')
+          if (c.cambiados !== tv || tv >= 125) throw new Error(`set de la convexa cambió ${c.cambiados} de ${tv}`)
+          await ana.hasta('ver el tetraedro', b => bloque(b, X + 20, -60, Z + 10) === 'glass' && bloque(b, X + 24, -56, Z + 14) === 'air')
+          await pide(ana, 'wc undo 6', /Undone/)
+        } finally {
+          await pide(ana, 'wc sel cuboid', /Selecting a cuboid/)
+          await srv.consola(`fill ${X} -60 ${Z + 9} ${X + 26} -50 ${Z + 28} air`)
+        }
+      }
     }
   ]
 }

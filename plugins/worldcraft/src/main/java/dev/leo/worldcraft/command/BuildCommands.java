@@ -24,6 +24,7 @@ import dev.leo.worldcraft.pattern.Pattern;
 import dev.leo.worldcraft.region.Box;
 import dev.leo.worldcraft.region.Direction;
 import dev.leo.worldcraft.region.Line;
+import dev.leo.worldcraft.region.Region;
 import dev.leo.worldcraft.region.Shape;
 import dev.leo.worldcraft.region.Solid;
 import org.bukkit.Bukkit;
@@ -223,9 +224,16 @@ final class BuildCommands {
         return false;
     }
 
-    /** La selección dentro del mundo, o null (y lo dice). */
-    private Box selection(CommandSender s) {
+    /** La selección (cualquier forma, spec 030) dentro del mundo, o null (y lo dice). */
+    private Region selection(CommandSender s) {
         return main.selection(s, edits().session(Edits.owner(s)));
+    }
+
+    /** --select de stack y move (spec 030): una caja se vuelve a seleccionar; otra forma se mueve con sus puntos. */
+    private void selectMoved(UUID owner, World w, Box moved, int dx, int dy, int dz) {
+        Session ses = edits().session(owner);
+        if (ses.selector().boxLike()) ses.selectBox(w.getName(), moved);
+        else ses.selector().shift(dx, dy, dz);
     }
 
     private World selectionWorld(CommandSender s) {
@@ -321,10 +329,11 @@ final class BuildCommands {
         int n = intArg(args, 0, 1);
         if (n < 1 || n > 1000) throw new IllegalArgumentException("Stack 1 to 1000 copies");
         Direction d = direction(s, args.positional.size() > 1 ? args.positional.get(1) : null);
-        Box box = selection(s);
-        if (box == null) return;
+        Region region = selection(s);
+        if (region == null) return;
+        Box box = region.bounds();
         World w = selectionWorld(s);
-        if (overLimit(s, (double) box.volume() * n)) return;
+        if (overLimit(s, (double) region.volume() * n)) return;
         Box all = StackSource.copies(box, d, n);
         if (clampY(w, all) == null || !all.equals(clampY(w, all))) {
             s.sendMessage(msg().get("sel-outside"));
@@ -332,17 +341,16 @@ final class BuildCommands {
         }
         boolean air = args.flags.contains("air");
         UUID owner = Edits.owner(s);
+        // Spec 030 H4 CA4: de una forma solo se lee lo de adentro; lo demás queda -1 en la foto y no se repite.
         Snapshot snap = new Snapshot(box);
-        edits().read(s, w, box, "stack", snap, () -> {
-            Edits.Op op = new Edits.Op("stack", n + " " + d.id() + (air ? " with air" : ""), w, all, all.volume(),
+        edits().read(s, w, region, "stack", snap, () -> {
+            Edits.Op op = new Edits.Op("stack", n + " " + d.id() + (air ? " with air" : ""), w, all, region.volume() * n,
                     () -> new StackSource(snap, d, n, air, blocks()::isAir), snap.distinct(), null);
-            if (args.flags.contains("select")) op = op.then(() -> select(owner, w, StackSource.last(box, d, n)));
+            Box last = StackSource.last(box, d, n);
+            if (args.flags.contains("select")) op = op.then(() -> selectMoved(owner, w, last, last.minX() - box.minX(),
+                    last.minY() - box.minY(), last.minZ() - box.minZ()));
             edits().request(s, op, args.flags.contains("preview"));
         });
-    }
-
-    private void select(UUID owner, World w, Box b) {
-        edits().session(owner).selectBox(w.getName(), b);
     }
 
     private void move(CommandSender s, Args args) throws ParseException {
@@ -358,10 +366,11 @@ final class BuildCommands {
         Direction d = direction(s, dirText);
         String fillText = args.join(next);
         Pattern fill = fillText.isBlank() ? Pattern.of("minecraft:air") : pattern(fillText);
-        Box box = selection(s);
-        if (box == null) return;
+        Region region = selection(s);
+        if (region == null) return;
+        Box box = region.bounds();
         World w = selectionWorld(s);
-        if (overLimit(s, 2.0 * box.volume())) return;
+        if (overLimit(s, 2.0 * region.volume())) return;
         Box dest = box.shift(d, n);
         if (clampY(w, dest) == null || !dest.equals(clampY(w, dest))) {
             s.sendMessage(msg().get("sel-outside"));
@@ -370,14 +379,15 @@ final class BuildCommands {
         Pattern.Compiled fc = fill.compile(table());
         long seed = ThreadLocalRandom.current().nextLong();
         UUID owner = Edits.owner(s);
+        // Spec 030 H4 CA4: la foto tiene solo lo de la forma (-1 afuera): se mueve la forma y queda atrás solo lo suyo.
         Snapshot snap = new Snapshot(box);
-        edits().read(s, w, box, "move", snap, () -> {
+        edits().read(s, w, region, "move", snap, () -> {
             MoveSource probe = new MoveSource(snap, d.dx * n, d.dy * n, d.dz * n, fc, seed);
             Set<Integer> placed = new LinkedHashSet<>(snap.distinct());
             placed.addAll(states(fill));
             Edits.Op op = new Edits.Op("move", n + " " + d.id() + (fillText.isBlank() ? "" : ", leaving " + fill.text()), w,
                     probe.bounds(), probe.volume(), () -> new MoveSource(snap, d.dx * n, d.dy * n, d.dz * n, fc, seed), placed, null);
-            if (args.flags.contains("select")) op = op.then(() -> select(owner, w, dest));
+            if (args.flags.contains("select")) op = op.then(() -> selectMoved(owner, w, dest, d.dx * n, d.dy * n, d.dz * n));
             edits().request(s, op, args.flags.contains("preview"));
         });
     }
@@ -395,14 +405,16 @@ final class BuildCommands {
 
     private void overlay(CommandSender s, Args args) throws ParseException {
         Pattern p = pattern(args.join(0));
-        Box box = selection(s);
-        if (box == null) return;
+        Region region = selection(s);
+        if (region == null) return;
+        Box box = region.bounds();
         World w = selectionWorld(s);
         if (overLimit(s, (double) box.width() * box.depth())) return;
         var m = plugin.terrain().masksForCommands();
         IntPredicate open = open();
         IntPredicate skip = st -> open.test(st) || m.buryable().test(st);
-        TopScan scan = new TopScan(box, skip.negate(), (x, z) -> true);
+        // Spec 030 H4 CA1: solo las columnas de la forma.
+        TopScan scan = new TopScan(box, skip.negate(), region instanceof Box ? (x, z) -> true : (x, z) -> region.span(x, z) != null);
         Pattern.Compiled pc = p.compile(table());
         long seed = ThreadLocalRandom.current().nextLong();
         edits().readWith(s, w, scan, "overlay", scan, () -> {
@@ -425,15 +437,17 @@ final class BuildCommands {
     }
 
     private void naturalize(CommandSender s, Args args) {
-        Box box = selection(s);
-        if (box == null) return;
+        Region region = selection(s);
+        if (region == null) return;
+        Box box = region.bounds();
         World w = selectionWorld(s);
-        if (overLimit(s, box.volume())) return;
+        if (overLimit(s, region.volume())) return;
         int grass = state("minecraft:grass_block"), dirt = state("minecraft:dirt"), stone = state("minecraft:stone");
         Set<String> natural = Set.of("minecraft:grass_block", "minecraft:dirt", "minecraft:coarse_dirt", "minecraft:stone");
         IntPredicate nat = st -> natural.contains(table().material(st));
-        edits().request(s, new Edits.Op("naturalize", box.size(), w, box, box.volume(),
-                () -> new ColumnEdit(box, (x, z) -> new int[]{box.minY(), box.maxY()}, ColumnEdit.naturalize(nat, grass, dirt, stone)),
+        // Spec 030 H4 CA1: cada columna de la forma, de su y más alta a la más baja.
+        edits().request(s, new Edits.Op("naturalize", region.size(), w, box, region.volume(),
+                () -> new ColumnEdit(box, region::span, ColumnEdit.naturalize(nat, grass, dirt, stone)),
                 List.of(grass, dirt, stone), null), args.flags.contains("preview"));
     }
 
@@ -444,10 +458,10 @@ final class BuildCommands {
     private void smooth(CommandSender s, Args args) {
         int passes = intArg(args, 0, 1);
         if (passes < 1 || passes > 20) throw new IllegalArgumentException("Smooth 1 to 20 passes");
-        Box box = selection(s);
-        if (box == null) return;
-        if (overLimit(s, box.volume())) return;
-        plugin.terrain().smooth(s, selectionWorld(s), box, passes, args.flags.contains("preview"));
+        Region region = selection(s);
+        if (region == null) return;
+        if (overLimit(s, region.volume())) return;
+        plugin.terrain().smooth(s, selectionWorld(s), region, passes, args.flags.contains("preview"));
     }
 
     private void hollow(CommandSender s, Args args) throws ParseException {
@@ -455,25 +469,29 @@ final class BuildCommands {
         if (t < 1 || t > 32) throw new IllegalArgumentException("The thickness must be 1 to 32");
         String fillText = args.join(1);
         Pattern fill = fillText.isBlank() ? Pattern.of("minecraft:air") : pattern(fillText);
-        Box box = selection(s);
-        if (box == null) return;
+        Region region = selection(s);
+        if (region == null) return;
+        Box box = region.bounds();
         World w = selectionWorld(s);
         if (overLimit(s, box.volume())) return;
         Pattern.Compiled fc = fill.compile(table());
         long seed = ThreadLocalRandom.current().nextLong();
         Snapshot snap = new Snapshot(box);
         IntPredicate isAir = blocks()::isAir;
-        edits().read(s, w, box, "hollow", snap, () -> compute(s, () -> Flood.interior(snap, isAir, t), inside ->
+        // Spec 030 H4 CA1: el interior se calcula con la caja que la abarca y se queda lo que está en la forma.
+        edits().read(s, w, box, "hollow", snap, () -> compute(s, () -> region instanceof Box ? Flood.interior(snap, isAir, t)
+                : java.util.Arrays.stream(Flood.interior(snap, isAir, t))
+                .filter(k -> region.contains(PointsSource.unpackX(k), PointsSource.unpackY(k), PointsSource.unpackZ(k))).toArray(), inside ->
                 request(s, w, "hollow", "thickness " + t + (fillText.isBlank() ? "" : ", " + fill.text()),
                         () -> new PointsSource(inside, (x, y, z, c) -> fc.apply(x, y, z, c, seed)), states(fill), args)));
     }
 
     private void center(CommandSender s, Args args) throws ParseException {
         Pattern p = pattern(args.join(0));
-        Box b = selection(s);
-        if (b == null) return;
+        Region r = selection(s);
+        if (r == null) return;
         World w = selectionWorld(s);
-        Box c = b.center();
+        Box c = r.bounds().center(); // spec 030 H4 CA6: el centro de la caja que abarca la forma
         Pattern.Compiled pc = p.compile(table());
         long seed = ThreadLocalRandom.current().nextLong();
         edits().request(s, new Edits.Op("center", p.text(), w, c, c.volume(), () -> new RegionSource(c, Shape.FILL, null, pc, seed),
@@ -487,6 +505,11 @@ final class BuildCommands {
         if (r < 0 || r > 16) throw new IllegalArgumentException("The thickness must be 0 to 16");
         Pattern p = pattern(String.join(" ", pos));
         Session ses = edits().session(Edits.owner(s));
+        if (!ses.selector().boxLike()) {
+            // Spec 030 H4 CA6: una línea va de la esquina 1 a la 2.
+            s.sendMessage(msg().get("sel-not-for-shape", "kind", ses.selector().kind().id(), "command", "line"));
+            return;
+        }
         int[] a = ses.corner1(), b = ses.corner2();
         if (a == null || b == null) {
             s.sendMessage(msg().get("no-selection"));

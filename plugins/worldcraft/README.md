@@ -88,8 +88,9 @@ anything.
 - **See before you change.** `--preview` shows the result with fake blocks that **only you see**; nothing changes
   until `/wc confirm` (and the edit then does exactly what you saw). Edits bigger than `confirm.above_blocks` (50 000)
   ask first, saying how many blocks and how long (`confirm.enabled: false` turns that off).
-- **See your selection without a mod.** While you hold the wand, the selection box is drawn with particles only you
-  see. Only the wand that `/wc wand` gives selects: an ordinary golden axe stays an axe.
+- **See your selection without a mod.** While you hold the wand, the selection is drawn with particles only you
+  see, whatever its shape (box, polygon, sphere, cylinder, convex or magic). Only the wand that `/wc wand` gives
+  selects: an ordinary golden axe stays an axe.
 - **Undo that is not lost.** The history of every player is saved to disk: `undo` and `redo` work after a restart or a
   crash (a half-finished edit can be undone too). **Safe undo:** a block somebody changed after your edit is left
   alone, and you are told how many. Chest contents and sign text come back too. Moderators can see and undo other
@@ -115,6 +116,34 @@ anything.
 | `/wc chunk [--expand]` | The whole chunk you stand in, bottom to top (`--chunk-coords <x> <z>` another one; `--expand` adds it) |
 | `/wc trim [mask]` | Shrink the selection to what matches (everything but air without a mask) |
 | `/wc count <mask>`, `/wc distr [--states] [--clipboard]` | How many blocks match; the 10 most common blocks with their share (by state, or of your clipboard) |
+
+### Selections that are not boxes
+`/wc sel <shape>` chooses the shape (WorldEdit's names; it clears the points you had). Then the wand (or `/wc pos1`
+for a left click and `/wc pos2` for a right click, also `hpos1`/`hpos2`) marks it, like in WorldEdit:
+
+| Shape | Left click | Right click |
+|---|---|---|
+| `cuboid` (or `box`, the default) | Corner 1 | Corner 2 |
+| `extend` | Start: a one-block box | Grow the box to include that block |
+| `poly` | First point (starts over) | Another point. As tall as your lowest to highest point |
+| `ellipsoid` | Center | Stretch each radius to reach that block |
+| `sphere` | Center | The radius is the distance to that block |
+| `cyl` | Center | Widen it to that block and make it tall enough to include it |
+| `convex` (or `hull`) | First point (starts over) | Another point: the shape wraps around all of them (1 point is a block, 2 a line, points on a plane a flat sheet) |
+| `magic` (or `fuzzy`) | Selects the connected blocks of the same kind (up to `selection.magic_radius`, 16) | Adds the connected blocks of another one |
+
+- `/wc sel` tells the shape, its points and **how many blocks it really has** (not the box around it). The outline
+  follows the shape: a polygon, three circles, two circles and four lines, the convex edges, or the border of a magic
+  selection.
+- **Everything works on any shape:** `set`, `replace`, `count`, `distr`, `copy`, `cut`, `stack`, `move`, `hollow`,
+  `overlay`, `naturalize`, `smooth` and `gmask` only touch what is inside. `walls` is the side shell (a cylinder's walls
+  are a tube) and `faces` the whole shell (with floor and roof); on a box both are what they always were. A copied
+  sphere pastes as a sphere: the corners of its box are left alone, even with `--air`.
+- `shift` moves any shape; `expand`/`contract` up or down and `expand vert` change the height of `poly` and `cyl`;
+  `outset`/`inset` change the radius of `sphere`, `ellipsoid` and `cyl` (and the height of `poly` with `--vertical`).
+  `trim`, `chunk` and `paste --select` leave a box. `line` needs two corners (`cuboid` or `extend`); `center` is the
+  middle of the box around the shape.
+- `selection.max_points` (64) limits the points of `poly` and `convex`.
 
 ## Editing
 | Command | What it does |
@@ -166,6 +195,7 @@ From the console, shapes and the commands around you take `--at x,y,z [--world <
 | WorldEdit | Worldcraft |
 |---|---|
 | `//wand`, `//pos1`, `//pos2`, `//expand`, `//contract`, `//shift`, `//size` | `/wc wand`, `/wc pos1`, `/wc pos2`, `/wc expand`, `/wc contract`, `/wc shift`, `/wc sel` |
+| `//sel cuboid\|extend\|poly\|ellipsoid\|sphere\|cyl\|convex`, FAWE `//sel fuzzy\|magic\|hull\|polyhedral` | `/wc sel cuboid`, … (the same names; the wand clicks the same way) |
 | `//hpos1`, `//hpos2`, `//chunk`, `//outset`, `//inset`, `//trim`, `//count`, `//distr` | `/wc hpos1`, … (`-h` is `--horizontal`, `-v` is `--vertical`, `-s` is `--expand`, `-d` is `--states`, `-c` is `--clipboard` or `--chunk-coords`) |
 | `/clearclipboard`, `/clearhistory`, `/gmask` | `/wc clearclipboard`, `/wc clearhistory` (asks to confirm), `/wc gmask` |
 | `//paste -o -s -n`, `//copy -m`, `//cut -m` | `/wc paste --origin --select --only-select`, `/wc copy --mask …`, `/wc cut --mask …` |
@@ -182,7 +212,7 @@ From the console, shapes and the commands around you take `--at x,y,z [--world <
 | — | `/wc mountain`, `/wc island`, styles, `/wc confirm`, `/wc history` |
 
 Not yet (see the [command-by-command comparison](../../docs/investigacion/paridad-worldedit-fawe.md), checked
-against the WorldEdit 7.3.19 and FAWE 2.16.2 jars): selections that are not boxes, entities, building brushes and
+against the WorldEdit 7.3.19 and FAWE 2.16.2 jars): FAWE's `//sel list`, entities, building brushes and
 one-click tools, biomes, trees and game structures, `//generate` and other formulas, FAWE's caves, ores and images,
 `//regen`, snapshots, and an API for other plugins (in that order in the [roadmap](../../docs/sdd/roadmap.md)). **WorldGuard and PlotSquared need WorldEdit itself**: keep it
 installed next to Worldcraft (different command and wand, they work side by side).
@@ -253,7 +283,7 @@ without losing its schematics, and a schematic made here works on a server that 
 `config.yml` (every value is checked on load; `/wc validate` lists problems, `/wc reload` applies changes):
 ```yaml
 wand: { item: minecraft:golden_axe }
-selection: { show: true, show_every_ticks: 10, max_particles: 400 }
+selection: { show: true, show_every_ticks: 10, max_particles: 400, max_points: 64, magic_radius: 16 }
 performance: { max_ms_per_tick: 8, max_blocks_per_tick: 200000 }
 confirm: { enabled: true, above_blocks: 50000, expire_seconds: 120 }
 preview: { max_blocks: 50000 }
@@ -284,7 +314,9 @@ defaults and styles; `messages.yml` has every text (MiniMessage, translatable). 
 created on the next start and a `config.yml` without the `terrain` section uses the values above. Updating from 0.2.0: a
 `config.yml` without `schematics` uses the values above and `schematics/` is created on the next start. Updating from
 0.3.0: a `config.yml` without `shapes` and `utilities` uses the values above. **Updating from 0.4.0:** saving schematics now
-needs `worldcraft.schematic.save` (op by default): give it to whoever saved with `worldcraft.schematic` only.
+needs `worldcraft.schematic.save` (op by default): give it to whoever saved with `worldcraft.schematic` only. Updating
+from 0.5.0: a `config.yml` without `selection.max_points` and `selection.magic_radius` uses the values above; nothing
+else changes (the default shape is still the box).
 
 ## Permissions
 | Permission | Default | What it allows |
@@ -301,13 +333,13 @@ needs `worldcraft.schematic.save` (op by default): give it to whoever saved with
 ## Compatibility
 | Server | Status | Evidence |
 |---|---|---|
-| Paper 1.21.4 (build 232, Java 24) | **Verified** (0.5.0) | 0.5.0 (2026-11-02): gate 2 updating from 0.4.0 with WorldEdit 7.3.19 (count, distr, masks that look around, `^stone_stairs`, `gmask`, outset/inset/trim/chunk, copy --mask and paste --origin/--select, clearhistory with confirm, schem import, from the console); in-game suite 20/20 twice (hpos at the block you look at, count, `^` keeps the stairs turned, `and !surface`, gmask, paste --select and --origin, clearhistory, import, and a player without `worldcraft.schematic.save` cannot save). 0.4.0 (2026-11-01): gate 2 updating from 0.3.0 (every shape, hollow, center, stack with a chest, move, line, drain and undo, fixwater, fill, removenear, snow, thaw, green, naturalize, overlay, extinguish, removebelow from the console: 31 checks); in-game suite 18/18 twice (a sphere previewed only for the editor, a pyramid and unstuck, stack and move with undo, drain, ascend, descend, thru, up with a glass block for a player who cannot fly). 0.3.0 (2026-11-01): 0.3.0 (2026-11-01): gate 2 updating from 0.2.0 (save, load and paste a rotated chest and sign from the console, damaged files and unsafe names refused); in-game suite 15/15 twice with WorldEdit 7.3.19 on the server (WorldEdit's v3 and v2 files loaded and pasted by Worldcraft, Worldcraft's loaded and pasted by WorldEdit). 0.2.0: gate 2 (2026-11-01): updating from 0.1.0, mountains (up to 811 675 blocks), an island and undo from the console. In-game suite 12/12 twice (2026-11-01), terrain included. 0.1.0: gate 2 with a 100 000-block edit and undo after a restart, suite 8/8 twice |
+| Paper 1.21.4 (build 232, Java 24) | **Verified** (0.6.0) | 0.6.0 (2026-11-02): gate 2 updating from 0.5.0 with WorldEdit 7.3.19 (every shape from the console: sphere, cyl, poly, convex, extend and magic with set, walls, faces, count, outset, a sphere copied and pasted with --air without its corners, stack, move and undo); in-game suite 22/22 twice (a cylinder marked with the wand and its outline only for the editor, walls as a tube, a polygon, a magic selection that grows with a right click, a sphere copied, pasted, stacked and moved, a convex shape). 0.5.0 (2026-11-02): gate 2 updating from 0.4.0 with WorldEdit 7.3.19 (count, distr, masks that look around, `^stone_stairs`, `gmask`, outset/inset/trim/chunk, copy --mask and paste --origin/--select, clearhistory with confirm, schem import, from the console); in-game suite 20/20 twice (hpos at the block you look at, count, `^` keeps the stairs turned, `and !surface`, gmask, paste --select and --origin, clearhistory, import, and a player without `worldcraft.schematic.save` cannot save). 0.4.0 (2026-11-01): gate 2 updating from 0.3.0 (every shape, hollow, center, stack with a chest, move, line, drain and undo, fixwater, fill, removenear, snow, thaw, green, naturalize, overlay, extinguish, removebelow from the console: 31 checks); in-game suite 18/18 twice (a sphere previewed only for the editor, a pyramid and unstuck, stack and move with undo, drain, ascend, descend, thru, up with a glass block for a player who cannot fly). 0.3.0 (2026-11-01): 0.3.0 (2026-11-01): gate 2 updating from 0.2.0 (save, load and paste a rotated chest and sign from the console, damaged files and unsafe names refused); in-game suite 15/15 twice with WorldEdit 7.3.19 on the server (WorldEdit's v3 and v2 files loaded and pasted by Worldcraft, Worldcraft's loaded and pasted by WorldEdit). 0.2.0: gate 2 (2026-11-01): updating from 0.1.0, mountains (up to 811 675 blocks), an island and undo from the console. In-game suite 12/12 twice (2026-11-01), terrain included. 0.1.0: gate 2 with a 100 000-block edit and undo after a restart, suite 8/8 twice |
 | Paper 26.1.2 and other 1.21.x / 26.x | Not verified | |
 | Spigot, Folia | Not supported | |
 
 - **Java:** 21 or newer.
 - **Optional:** nothing. No network access, no server internals (only the Paper API).
-- **Not yet:** non-box selections, entities (also in schematics), biomes, building brushes, trees and structures,
+- **Not yet:** FAWE's `//sel list`, entities (also in schematics), biomes, building brushes, trees and structures,
   formulas, `.schematic` (MCEdit) and `.litematic` files, an API for other plugins, rivers, height maps from images, a
   brush menu, WorldGuard regions, rollback by area and time (ideas in the [roadmap](../../docs/sdd/roadmap.md)). Running next to WorldEdit works: different command and wand.
 

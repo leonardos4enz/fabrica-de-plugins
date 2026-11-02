@@ -10,7 +10,7 @@ import java.util.Map;
 public record Settings(String wandItem, boolean showSelection, int showEveryTicks, int maxParticles,
                        int maxMsPerTick, int maxBlocksPerTick, boolean confirmEnabled, long confirmAbove, int confirmSeconds, int previewMaxBlocks,
                        int historyMaxPerPlayer, int historyKeepDays, Schematics schematics,
-                       int shapesMaxRadius, int utilitiesMaxRadius) {
+                       int shapesMaxRadius, int utilitiesMaxRadius, int maxPoints, int magicRadius) {
 
     /** Spec 027: la sección schematics (plan 027 §2). */
     public record Schematics(int maxFileKb, int maxBlocks, int trashDays, List<String> extraFolders) {
@@ -19,12 +19,12 @@ public record Settings(String wandItem, boolean showSelection, int showEveryTick
     }
 
     public static final Settings DEFAULTS = new Settings("minecraft:golden_axe", true, 10, 400,
-            8, 200_000, true, 50_000, 120, 50_000, 30, 7, Schematics.DEFAULTS, 200, 64);
+            8, 200_000, true, 50_000, 120, 50_000, 30, 7, Schematics.DEFAULTS, 200, 64, 64, 16);
 
     private static final Map<String, List<String>> KEYS = Map.of(
             "", List.of("wand", "selection", "performance", "confirm", "preview", "history", "limits", "terrain", "schematics", "shapes", "utilities"),
             "wand", List.of("item"),
-            "selection", List.of("show", "show_every_ticks", "max_particles"),
+            "selection", List.of("show", "show_every_ticks", "max_particles", "max_points", "magic_radius"),
             "performance", List.of("max_ms_per_tick", "max_blocks_per_tick"),
             "confirm", List.of("enabled", "above_blocks", "expire_seconds"),
             "preview", List.of("max_blocks"),
@@ -66,7 +66,10 @@ public record Settings(String wandItem, boolean showSelection, int showEveryTick
                         r.list("schematics.extra_folders", d.schematics.extraFolders())),
                 // Spec 028: formas y utilidades alrededor del jugador.
                 r.integer("shapes.max_radius", d.shapesMaxRadius, 1, 1000),
-                r.integer("utilities.max_radius", d.utilitiesMaxRadius, 1, 256));
+                r.integer("utilities.max_radius", d.utilitiesMaxRadius, 1, 256),
+                // Spec 030: selecciones que no son cajas.
+                r.integer("selection.max_points", d.maxPoints, 3, 256),
+                r.integer("selection.magic_radius", d.magicRadius, 1, 64));
     }
 
     record Reader(ConfigurationSection c, String file, Issues issues) {

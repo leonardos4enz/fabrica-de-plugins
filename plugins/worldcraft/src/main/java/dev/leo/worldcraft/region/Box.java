@@ -4,7 +4,7 @@ package dev.leo.worldcraft.region;
  * Una caja de bloques con los dos extremos incluidos (la selección cuboide, H1). Inmutable; todas las operaciones
  * devuelven una caja nueva. Las coordenadas son de bloque.
  */
-public record Box(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+public record Box(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) implements Region {
 
     public Box {
         if (minX > maxX || minY > maxY || minZ > maxZ) throw new IllegalArgumentException("min > max");
@@ -31,6 +31,7 @@ public record Box(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
         return (long) width() * height() * depth();
     }
 
+    @Override
     public boolean contains(int x, int y, int z) {
         return x >= minX && x <= maxX && y >= minY && y <= maxY && z >= minZ && z <= maxZ;
     }
@@ -63,7 +64,41 @@ public record Box(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
         return shift(d.dx * n, d.dy * n, d.dz * n);
     }
 
+    @Override
+    public Box bounds() {
+        return this;
+    }
+
+    @Override
+    public String kind() {
+        return "cuboid";
+    }
+
+    /** Spec 030: las y de una columna de la caja (paredes: solo los bordes; caras: también piso y techo). */
+    @Override
+    public int[] ys(int x, int z, Shape shape) {
+        if (x < minX || x > maxX || z < minZ || z > maxZ) return new int[0];
+        boolean edge = x == minX || x == maxX || z == minZ || z == maxZ;
+        return switch (shape) {
+            case FILL -> range(minY, maxY);
+            case WALLS -> edge ? range(minY, maxY) : new int[0];
+            case FACES -> edge ? range(minY, maxY) : minY == maxY ? new int[]{minY} : new int[]{minY, maxY};
+        };
+    }
+
+    static int[] range(int a, int b) {
+        int[] out = new int[Math.max(0, b - a + 1)];
+        for (int i = 0; i < out.length; i++) out[i] = a + i;
+        return out;
+    }
+
+    @Override
+    public int[] span(int x, int z) {
+        return x < minX || x > maxX || z < minZ || z > maxZ ? null : new int[]{minY, maxY};
+    }
+
     /** Recorta en y al alto del mundo; null si no queda nada. */
+    @Override
     public Box clampY(int worldMin, int worldMaxInclusive) {
         int a = Math.max(minY, worldMin), b = Math.min(maxY, worldMaxInclusive);
         return a > b ? null : new Box(minX, a, minZ, maxX, b, maxZ);
@@ -111,11 +146,13 @@ public record Box(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
     }
 
     /** «12×5×8» (ancho × alto × fondo). */
+    @Override
     public String size() {
         return width() + "×" + height() + "×" + depth();
     }
 
     /** Cuántos bloques visita esa forma dentro de la caja (para límites y estimaciones, sin recorrerla). */
+    @Override
     public long count(Shape shape) {
         long w = width(), h = height(), d = depth();
         long ring = (w <= 2 || d <= 2) ? w * d : w * d - (w - 2) * (d - 2);

@@ -364,16 +364,24 @@ public final class Terrain {
      * /wc smooth sobre la selección (spec 028 H2 CA5): el suavizado del pincel en todo el rectángulo, solo sobre el
      * suelo natural (no derrite árboles ni casas). Lee un borde de 2 alrededor para que el borde empalme.
      */
-    public void smooth(CommandSender s, World w, Box box, int passes, boolean preview) {
+    public void smooth(CommandSender s, World w, dev.leo.worldcraft.region.Region region, int passes, boolean preview) {
         Session ses = edits().session(Edits.owner(s));
         if (busy(s, ses)) return;
+        Box box = region.bounds();
         Box rect = new Box(box.minX() - 2, 0, box.minZ() - 2, box.maxX() + 2, 0, box.maxZ() + 2);
         Masks m = masks();
         ColumnScan scan = new ColumnScan(rect, box.maxY(), box.minY(), m.ground(), m.cover(), m.buryable(), m.air());
         ses.terrainBusy = true;
         edits().scan(s, w, scan, () -> {
             HeightField f = scan.field();
-            run(s, ses, () -> Brush.smoothArea(f, box, passes), newTop -> {
+            run(s, ses, () -> {
+                int[] top = Brush.smoothArea(f, box, passes);
+                // Spec 030 H4 CA1: solo cambian las columnas de la forma (el borde se lee igual, para que empalme).
+                if (!(region instanceof Box)) {
+                    for (int i = 0; i < top.length; i++) if (region.span(f.x(i), f.z(i)) == null) top[i] = HeightField.NONE;
+                }
+                return top;
+            }, newTop -> {
                 int air = edits().blocks().air();
                 float[] slope = HeightField.slopes(groundOf(f), f.width, f.depth);
                 Supplier<EditSource> src = () -> new HeightSource(f, newTop, HeightSource.Mode.PRESERVE, null, slope,

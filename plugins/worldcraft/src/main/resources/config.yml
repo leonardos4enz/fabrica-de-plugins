@@ -9,6 +9,8 @@ selection:
   show: true              # draw the selection box with particles, only for you, while you hold the wand
   show_every_ticks: 10    # how often the box is redrawn (20 ticks = 1 second)
   max_particles: 400      # per drawing: big boxes get fewer particles per edge, never more than this
+  max_points: 64          # the most points of a poly or convex selection (3..256)
+  magic_radius: 16        # how far a magic selection looks for connected blocks around your click (1..64)
 
 performance:
   # The time budget of the whole plugin per server tick, shared by everybody's edits.

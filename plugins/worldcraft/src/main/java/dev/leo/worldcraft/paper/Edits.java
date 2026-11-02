@@ -334,10 +334,12 @@ public final class Edits {
     }
 
     /** Lee una caja al portapapeles (copy): sin historial; el portapapeles queda al terminar. */
-    public void copy(CommandSender who, World world, Box box, int ox, int oy, int oz, Runnable done) {
+    public void copy(CommandSender who, World world, dev.leo.worldcraft.region.Region region, int ox, int oy, int oz, Runnable done) {
         UUID owner = owner(who);
+        // Spec 030: de una forma solo se leen sus bloques; lo de afuera queda «sin leer» y paste lo salta.
+        Box box = region.bounds();
         Clipboard clip = new Clipboard(box, ox, oy, oz);
-        read(who, world, box, "copy", (x, y, z, s, tile) -> clip.put(box, x, y, z, s, tile), () -> {
+        read(who, world, region, "copy", (x, y, z, s, tile) -> clip.put(box, x, y, z, s, tile), () -> {
             session(owner).clipboard(clip, world.getName());
             done.run();
         });
@@ -347,7 +349,7 @@ public final class Edits {
      * Lee una caja por tandas (spec 028 §1.2: la foto de stack, move, hollow, drain…), sin historial. done corre en el
      * hilo principal si terminó; si se canceló, se avisa.
      */
-    public void read(CommandSender who, World world, Box box, String label, EditJob.Capture into, Runnable done) {
+    public void read(CommandSender who, World world, dev.leo.worldcraft.region.Region box, String label, EditJob.Capture into, Runnable done) {
         EditSource src = new dev.leo.worldcraft.edit.RegionSource(box, dev.leo.worldcraft.region.Shape.FILL, null, null, 0);
         readWith(who, world, src, label, into, done);
     }
