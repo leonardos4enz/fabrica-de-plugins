@@ -97,4 +97,26 @@ class ToolSpecTest {
         assertThrows(IllegalArgumentException.class, () -> ToolParser.update(tool("info"), Map.of("radius", "3"), CAPS));
         assertThrows(IllegalArgumentException.class, () -> ToolParser.update(s, Map.of("pattern", "dirt"), CAPS));
     }
+
+    /** Spec 033 H5 CA4, CA5: la herramienta de árbol y el pincel de bosque, con el tipo en vez de bloques. */
+    @Test
+    void spec033_tool_tree_y_brush_forest() {
+        ToolSpec t = tool("tree", "cherry");
+        assertEquals(ToolKind.TREE, t.kind());
+        assertEquals("cherry", t.text("type"));
+        assertEquals("oak", tool("tree").text("type"), "de fábrica, un roble");
+        assertEquals("spruce", tool("tree", "redwood").text("type"), "el alias de WorldEdit se guarda con el nombre");
+        ToolSpec f = brush("forest", "birch", "6", "10");
+        assertEquals(ToolKind.FOREST, f.kind());
+        assertEquals(6, f.radius());
+        assertEquals(10, f.number("density"));
+        assertEquals("forest · birch · radius 6 · density 10%", f.describe());
+        assertEquals(5, brush("forest").number("density"));
+        ToolSpec back = ToolSpec.decode(f.encode(), CAPS);
+        assertEquals(f, back, "ida y vuelta por el ítem");
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> tool("tree", "brich"));
+        assertTrue(e.getMessage().contains("did you mean 'birch'"), e.getMessage());
+        assertThrows(IllegalArgumentException.class, () -> brush("forest", "oak", "6", "200"), "densidad de 0 a 100");
+        assertThrows(IllegalArgumentException.class, () -> ToolParser.update(f, Map.of("mask", "stone"), CAPS), "el bosque no lleva mask=");
+    }
 }

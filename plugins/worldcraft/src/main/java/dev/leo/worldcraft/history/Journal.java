@@ -30,6 +30,8 @@ public final class Journal implements Closeable {
     private static final byte DICT = 1, BLOCK = 2, TILE_BEFORE = 3, TILE_AFTER = 4;
     /** Spec 031: una entidad que la obra quitó, una que creó, y un uuid que deshacer o rehacer cambió al recrearla. */
     private static final byte ENTITY_OUT = 5, ENTITY_IN = 6, REMAP = 7;
+    /** Spec 033: un nombre de bioma (diccionario propio: no son estados) y una celda de 4×4×4 que cambió de bioma. */
+    private static final byte BIOME_DICT = 8, BIOME = 9;
     /** Tope de los datos de un bloque: un cofre lleno de libros escritos cabe de sobra (constitución III.4). */
     public static final int MAX_TILE = 2 * 1024 * 1024;
 
@@ -41,8 +43,12 @@ public final class Journal implements Closeable {
     public record Change(int x, int y, int z, String before, String after, byte[] tileBefore, byte[] tileAfter) {
     }
 
+    /** Spec 033: una celda (esquina mínima) que pasó de un bioma a otro. */
+    public record BiomeChange(int x, int y, int z, String before, String after) {
+    }
+
     private final DataOutputStream out;
-    private final Map<String, Integer> dict = new HashMap<>();
+    private final Map<String, Integer> dict = new HashMap<>(), biomeDict = new HashMap<>();
 
     private Journal(DataOutputStream out) {
         this.out = out;
@@ -114,6 +120,30 @@ public final class Journal implements Closeable {
         out.flush();
     }
 
+    public void appendBiomes(List<BiomeChange> changes) throws IOException {
+        for (BiomeChange c : changes) {
+            int b = biomeRef(c.before()), a = biomeRef(c.after());
+            out.writeByte(BIOME);
+            out.writeInt(c.x());
+            out.writeInt(c.y());
+            out.writeInt(c.z());
+            out.writeInt(b);
+            out.writeInt(a);
+        }
+        out.flush();
+    }
+
+    private int biomeRef(String biome) throws IOException {
+        Integer i = biomeDict.get(biome);
+        if (i != null) return i;
+        int id = biomeDict.size();
+        biomeDict.put(biome, id);
+        out.writeByte(BIOME_DICT);
+        out.writeInt(id);
+        out.writeUTF(biome);
+        return id;
+    }
+
     private void tile(byte type, byte[] data) throws IOException {
         if (data == null || data.length > MAX_TILE) return;
         out.writeByte(type);
@@ -147,6 +177,27 @@ public final class Journal implements Closeable {
         public final List<EntityChange> entitiesOut = new ArrayList<>(), entitiesIn = new ArrayList<>();
         /** Spec 031: uuid de entonces → el de ahora (seguir la cadena con {@link #current}). */
         public final Map<UUID, UUID> remap = new HashMap<>();
+        /** Spec 033: las celdas que cambiaron de bioma (esquina mínima) y los índices en biomeDict de antes y después. */
+        public final List<String> biomeDict = new ArrayList<>();
+        public int biomes;
+        public int[] bx = new int[16], by = new int[16], bz = new int[16], bBefore = new int[16], bAfter = new int[16];
+
+        void addBiome(int px, int py, int pz, int b, int a) {
+            if (biomes == bx.length) {
+                int n = biomes * 2;
+                bx = Arrays.copyOf(bx, n);
+                by = Arrays.copyOf(by, n);
+                bz = Arrays.copyOf(bz, n);
+                bBefore = Arrays.copyOf(bBefore, n);
+                bAfter = Arrays.copyOf(bAfter, n);
+            }
+            bx[biomes] = px;
+            by[biomes] = py;
+            bz[biomes] = pz;
+            bBefore[biomes] = b;
+            bAfter[biomes] = a;
+            biomes++;
+        }
 
         /** El uuid que tiene ahora la entidad que el diario conoce como id (tras deshacer y rehacer). */
         public UUID current(UUID id) {
@@ -180,7 +231,7 @@ public final class Journal implements Closeable {
     public static Data read(Path file) throws IOException {
         Data d = new Data();
         if (!Files.exists(file)) return d;
-        Map<Integer, Integer> dictIndex = new HashMap<>();
+        Map<Integer, Integer> dictIndex = new HashMap<>(), biomeIndex = new HashMap<>();
         try (DataInputStream in = new DataInputStream(new BufferedInputStream(Files.newInputStream(file), 1 << 16))) {
             if (in.readInt() != MAGIC) throw new IOException("not a Worldcraft history file: " + file.getFileName());
             while (true) {
@@ -219,6 +270,16 @@ public final class Journal implements Closeable {
                 } else if (type == REMAP) {
                     UUID old = new UUID(in.readLong(), in.readLong()), now = new UUID(in.readLong(), in.readLong());
                     d.remap.put(old, now);
+                } else if (type == BIOME_DICT) {
+                    int id = in.readInt();
+                    String s = in.readUTF();
+                    biomeIndex.put(id, d.biomeDict.size());
+                    d.biomeDict.add(s);
+                } else if (type == BIOME) {
+                    int x = in.readInt(), y = in.readInt(), z = in.readInt(), b = in.readInt(), a = in.readInt();
+                    Integer bi = biomeIndex.get(b), ai = biomeIndex.get(a);
+                    if (bi == null || ai == null) break;
+                    d.addBiome(x, y, z, bi, ai);
                 } else {
                     break;
                 }

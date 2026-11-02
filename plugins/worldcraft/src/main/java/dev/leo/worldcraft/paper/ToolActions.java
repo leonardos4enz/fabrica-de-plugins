@@ -151,6 +151,15 @@ public final class ToolActions {
                     edits().request(p, new Edits.Op(kind, "radius " + r, w, solid.bounds(), solid.volume(),
                             () -> new MaskedSource(new SolidSource(solid, air, 0), fire, 0), List.of(blocks().air()), null), false);
                 }
+                case FOREST -> {
+                    // Spec 033 H5 CA5: un bosque en el círculo donde mira (la superficie entre y - radio e y + radio).
+                    dev.leo.worldcraft.nature.TreeKind tk = dev.leo.worldcraft.nature.TreeKind.parse(s.text("type") == null ? "oak" : s.text("type"));
+                    int lo = Math.max(w.getMinHeight(), y - r), hi = Math.min(w.getMaxHeight() - 2, y + r);
+                    var region = new dev.leo.worldcraft.region.Cylinder(x, z, r, r, lo, hi);
+                    UUID id = p.getUniqueId();
+                    busy.add(id);
+                    new Nature(plugin).forest(p, w, region, tk, s.number("density"), kind, s.describe(), false, () -> busy.remove(id));
+                }
                 case BUTCHER -> {
                     if (!p.hasPermission("worldcraft.butcher")) {
                         p.sendMessage(msg().get("no-permission"));
@@ -285,6 +294,20 @@ public final class ToolActions {
                     });
                 }
                 case FARWAND -> plugin.command().setCorner(p, p.getUniqueId(), right ? 2 : 1, w, x, y, z);
+                case TREE -> {
+                    // Spec 033 H5 CA4: un árbol sobre el bloque que mira (si encima hay lugar).
+                    if (!right) return;
+                    if (y + 1 >= w.getMaxHeight()) return;
+                    org.bukkit.block.Block above = w.getBlockAt(x, y + 1, z);
+                    if (!above.isEmpty() && !above.isReplaceable()) {
+                        p.sendActionBar(msg().get("tree-no-room"));
+                        return;
+                    }
+                    dev.leo.worldcraft.nature.TreeKind tk = dev.leo.worldcraft.nature.TreeKind.parse(s.text("type") == null ? "oak" : s.text("type"));
+                    UUID id = p.getUniqueId();
+                    busy.add(id);
+                    new Nature(plugin).tree(p, w, x, y + 1, z, tk, kind, () -> busy.remove(id));
+                }
                 case LRBUILD -> {
                     String text = s.text(right ? "right" : "left");
                     Pattern pat = plugin.config().parser().pattern(text);

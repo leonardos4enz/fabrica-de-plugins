@@ -113,7 +113,7 @@ public record Pattern(List<String> states, List<Double> weights, String text, Li
     }
 
     /** SplitMix64 de la posición y la semilla: el mismo lugar con la misma semilla da siempre el mismo número. */
-    static long mix(int x, int y, int z, long seed) {
+    public static long mix(int x, int y, int z, long seed) {
         long h = seed ^ (x * 0x9E3779B97F4A7C15L) ^ (y * 0xC2B2AE3D27D4EB4FL) ^ (z * 0x165667B19E3779F9L);
         h = (h ^ (h >>> 30)) * 0xBF58476D1CE4E5B9L;
         h = (h ^ (h >>> 27)) * 0x94D049BB133111EBL;

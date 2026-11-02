@@ -726,7 +726,7 @@ final class BuildCommands {
         Box box = around(s, at, r);
         if (box == null) return;
         if (overLimit(s, box.volume())) return;
-        Mask.Compiled mc = mask.compile(table());
+        Mask.Compiled mc = edits().compile(mask, at.world);
         Pattern.Compiled pc = p.compile(table());
         long seed = ThreadLocalRandom.current().nextLong();
         String detail = (sub.equals("replacenear") ? mask.text() + " -> " + p.text() : mask.text()) + " radius " + r;

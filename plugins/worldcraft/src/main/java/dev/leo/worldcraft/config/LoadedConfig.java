@@ -21,7 +21,8 @@ import java.util.Map;
  * funcionaba (si había algo) y dice archivo, ruta y causa.
  */
 public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<String, String> patternPresets,
-                           Map<String, String> maskPresets, TerrainSettings terrain, Issues issues, ToolSettings tools) {
+                           Map<String, String> maskPresets, TerrainSettings terrain, Issues issues, ToolSettings tools,
+                           NatureSettings nature) {
 
     public static LoadedConfig load(File folder, BlockRegistry registry, LoadedConfig previous) {
         Issues issues = new Issues();
@@ -69,6 +70,12 @@ public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<
                 }
             });
         }
+        // Spec 033 H3 CA2: un preset de máscara que se llama como un bioma tapa «$bioma».
+        for (String k : msk.keySet()) {
+            if (registry.biomes().contains(k.contains(":") ? k : "minecraft:" + k)) {
+                issues.warn("presets.yml", "masks." + k, "has the name of a biome: $" + k + " is this preset, not the biome");
+            }
+        }
         Parser parser = new Parser(registry, Map.copyOf(pat), Map.copyOf(msk));
         Limits limits = config == null && previous != null ? previous.limits
                 : Limits.load(config == null ? null : config.getConfigurationSection("limits"), parser, "config.yml", issues, registry.entityTypes());
@@ -77,7 +84,9 @@ public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<
                 : TerrainConfig.load(config == null ? null : config.getConfigurationSection("terrain"), terrainFile, parser, issues);
         // Spec 032: pinceles de construcción y herramientas (un config.yml ilegible conserva los anteriores).
         ToolSettings tools = config == null && previous != null ? previous.tools : ToolSettings.load(config, parser, issues);
-        return new LoadedConfig(settings, limits, parser, Map.copyOf(pat), Map.copyOf(msk), terrain, issues, tools);
+        // Spec 033: árboles, plantas y calabazas.
+        NatureSettings nature = config == null && previous != null ? previous.nature : NatureSettings.load(config, parser, issues);
+        return new LoadedConfig(settings, limits, parser, Map.copyOf(pat), Map.copyOf(msk), terrain, issues, tools, nature);
     }
 
     private static Map<String, String> section(YamlConfiguration y, String name) {

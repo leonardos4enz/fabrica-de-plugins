@@ -104,6 +104,11 @@ public final class PaperBlocks implements BlockRegistry, StateOps {
 
     /** Spec 031: los tipos de entidad que se pueden crear (sin el jugador ni «unknown»). */
     @Override
+    public Collection<String> biomes() {
+        return PaperBiomes.names();
+    }
+
+    @Override
     public Collection<String> entityTypes() {
         java.util.List<String> out = new java.util.ArrayList<>();
         for (org.bukkit.entity.EntityType t : org.bukkit.entity.EntityType.values()) {

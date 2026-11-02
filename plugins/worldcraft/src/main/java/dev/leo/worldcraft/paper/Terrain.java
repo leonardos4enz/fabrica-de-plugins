@@ -114,7 +114,7 @@ public final class Terrain {
     }
 
     /** Lo que mira el jugador (sin plantas ni agua), hasta range bloques. */
-    static RayTraceResult look(Player p, int range) {
+    public static RayTraceResult look(Player p, int range) {
         return p.getWorld().rayTraceBlocks(p.getEyeLocation(), p.getEyeLocation().getDirection(), range,
                 FluidCollisionMode.NEVER, true);
     }

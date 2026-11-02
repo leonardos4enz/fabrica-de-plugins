@@ -39,6 +39,11 @@ public interface BlockRegistry {
         return java.util.List.of();
     }
 
+    /** Spec 033: los ids de los biomas del servidor («minecraft:plains»…), para la máscara «$desert»; vacío = ninguno. */
+    default Collection<String> biomes() {
+        return java.util.List.of();
+    }
+
     /** Los ids de aire (aire, aire de cueva, aire del vacío). */
     Set<String> AIR = Set.of("minecraft:air", "minecraft:cave_air", "minecraft:void_air");
 }

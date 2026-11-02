@@ -24,7 +24,10 @@ public final class SchemConvert {
      * @param placeable datos de bloque que se pondrán al pegar (contenedores y carteles)
      * @param kept      datos de bloque que se conservan para volver a guardar pero no se ponen, por id
      */
-    public record Loaded(Clipboard clipboard, int placeable, Map<String, Integer> kept) {
+    public record Loaded(Clipboard clipboard, int placeable, Map<String, Integer> kept, int biomes, java.util.Set<String> unknownBiomes) {
+        public Loaded(Clipboard clipboard, int placeable, Map<String, Integer> kept) {
+            this(clipboard, placeable, kept, 0, java.util.Set.of());
+        }
     }
 
     /** map: de índice de la paleta a número de estado (SchemBlocks); isAir: para soltar datos de un bloque que quedó aire. */
@@ -34,6 +37,12 @@ public final class SchemConvert {
 
     /** Spec 031: fallbackDataVersion es la del servidor, para las entidades de un esquema que no dice la suya. */
     public static Loaded toClipboard(Schematic s, int[] map, IntPredicate isAir, int fallbackDataVersion) {
+        return toClipboard(s, map, isAir, fallbackDataVersion, b -> true);
+    }
+
+    /** Spec 033: knownBiome dice qué biomas tiene el servidor; los demás quedan sin bioma y se cuentan. */
+    public static Loaded toClipboard(Schematic s, int[] map, IntPredicate isAir, int fallbackDataVersion,
+                                     java.util.function.Predicate<String> knownBiome) {
         int[] blocks = s.blocks();
         int[] states = new int[blocks.length];
         for (int i = 0; i < blocks.length; i++) states[i] = map[blocks[i]];
@@ -54,7 +63,20 @@ public final class SchemConvert {
         List<dev.leo.worldcraft.entity.EntityCopy> ents = new ArrayList<>();
         for (Map<String, Object> e : s.entityList()) ents.add(SchemEntities.toCopy(e, o, s.dataVersion(), fallbackDataVersion));
         clip.entities(ents);
-        return new Loaded(clip, placeable, kept);
+        java.util.Set<String> unknown = new java.util.TreeSet<>();
+        int biomes = 0;
+        if (s.biomes() != null && s.biomePalette() != null) {
+            String[] pal = s.biomePalette().clone();
+            for (int i = 0; i < pal.length; i++) {
+                if (pal[i] != null && !knownBiome.test(pal[i])) {
+                    unknown.add(pal[i]);
+                    pal[i] = null;
+                }
+            }
+            clip.biomes(pal, s.biomes());
+            for (String p : pal) if (p != null) biomes++;
+        }
+        return new Loaded(clip, placeable, kept, biomes, unknown);
     }
 
     /**
@@ -102,7 +124,14 @@ public final class SchemConvert {
                 // una entidad dañada no se guarda; el resto sí
             }
         }
-        return new Schematic(3, dataVersion, c.width(), c.height(), c.depth(), c.offset(), pal, blocks, bes, ents.size(), 0,
+        Schematic out = new Schematic(3, dataVersion, c.width(), c.height(), c.depth(), c.offset(), pal, blocks, bes, ents.size(), 0,
                 name, author, date, ents);
+        // Spec 033 H4 CA3: v3 pide un bioma por bloque; lo que no se leyó lleva el primero.
+        if (c.hasBiomes() && !c.biomeNames().isEmpty()) {
+            int[] bio = c.rawBiomes().clone();
+            for (int i = 0; i < bio.length; i++) if (bio[i] < 0) bio[i] = 0;
+            out = out.withBiomes(c.biomeNames().toArray(new String[0]), bio);
+        }
+        return out;
     }
 }

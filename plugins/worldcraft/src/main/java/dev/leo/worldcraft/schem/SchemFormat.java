@@ -97,8 +97,44 @@ public final class SchemFormat {
         String author = meta == null ? null : Nbt.string(meta, "Author");
         Long date = meta == null ? null : Nbt.integer(meta, "Date");
         List<Map<String, Object>> entities = SchemEntities.read(ents, version, new int[1]);
-        return new Schematic(version, dataVersion, w, h, l, offset, palette, blocks, tiles, ents == null ? 0 : ents.items().size(),
+        Schematic out = new Schematic(version, dataVersion, w, h, l, offset, palette, blocks, tiles, ents == null ? 0 : ents.items().size(),
                 bad, name, author, date == null ? 0 : date, entities);
+        return biomes(out, s, version, volume);
+    }
+
+    /**
+     * Spec 033 (plan §1.3): v3 trae {@code Biomes{Palette, Data}} por bloque; v2, {@code BiomePalette} y {@code BiomeData} por
+     * columna ({@code x + z·ancho}), que vale para toda la altura. Se revisan como la paleta de bloques.
+     */
+    private static Schematic biomes(Schematic sc, Map<String, Object> s, int version, long volume) throws Nbt.NbtException {
+        Map<String, Object> paletteTag;
+        Object dataTag;
+        if (version == 3) {
+            Map<String, Object> b = Nbt.compound(s, "Biomes");
+            if (b == null) return sc;
+            paletteTag = Nbt.compound(b, "Palette");
+            dataTag = b.get("Data");
+        } else {
+            paletteTag = Nbt.compound(s, "BiomePalette");
+            dataTag = s.get("BiomeData");
+        }
+        if (paletteTag == null || !(dataTag instanceof byte[] data)) return sc;
+        int w = sc.width(), h = sc.height(), l = sc.length();
+        long count = version == 3 ? volume : (long) w * l;
+        String[] palette = palette(paletteTag, count);
+        int[] read = VarInts.decode(data, (int) count);
+        for (int b : read) {
+            if (b >= palette.length || palette[b] == null) throw new Nbt.NbtException("the biome data uses a palette entry that does not exist (" + b + ")");
+        }
+        int[] perBlock;
+        if (version == 3) {
+            perBlock = read;
+        } else {
+            perBlock = new int[(int) volume];
+            int wl = w * l;
+            for (int y = 0; y < h; y++) System.arraycopy(read, 0, perBlock, y * wl, wl);
+        }
+        return sc.withBiomes(palette, perBlock);
     }
 
     private static int side(Map<String, Object> s, String key) throws Nbt.NbtException {
@@ -169,6 +205,15 @@ public final class SchemFormat {
         });
         blocks.put("BlockEntities", new Nbt.TagList(Nbt.COMPOUND, bes));
         sc.put("Blocks", blocks);
+        // Spec 033 H4 CA3: los biomas por bloque (v3), si el portapapeles los tiene.
+        if (s.biomes() != null && s.biomePalette() != null) {
+            Map<String, Object> bio = new LinkedHashMap<>();
+            Map<String, Object> bp = new LinkedHashMap<>();
+            for (int i = 0; i < s.biomePalette().length; i++) bp.put(s.biomePalette()[i], i);
+            bio.put("Palette", bp);
+            bio.put("Data", VarInts.encode(s.biomes()));
+            sc.put("Biomes", bio);
+        }
         // Spec 031 H6 CA1: las entidades, con Pos relativa a la esquina mínima (lo de un archivo leído viene como double[]).
         if (!s.entityList().isEmpty()) {
             List<Object> ents = new ArrayList<>();

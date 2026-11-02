@@ -38,7 +38,9 @@ public final class TestBlocks {
                 "dandelion", "crimson_nylium", "warped_nylium", "coal_ore", "iron_ore", "copper_ore", "gold_ore",
                 "redstone_ore", "lapis_ore", "diamond_ore", "emerald_ore", "hanging_roots", "oak_sapling", "cobblestone",
                 // spec 032: deltree, extinguish, splatter
-                "vine", "cocoa", "bee_nest", "mangrove_roots", "fire", "soul_fire", "moss_block")) {
+                "vine", "cocoa", "bee_nest", "mangrove_roots", "fire", "soul_fire", "moss_block",
+                // spec 033: plantas, calabazas y suelos
+                "cactus", "dead_bush", "cornflower", "oxeye_daisy", "azure_bluet", "rooted_dirt", "mycelium", "pumpkin")) {
             BLOCKS.put("minecraft:" + b, Map.of());
         }
         Map<String, List<String>> stairs = new LinkedHashMap<>();
@@ -86,6 +88,10 @@ public final class TestBlocks {
         TAGS.put("minecraft:saplings", List.of("oak_sapling"));
     }
 
+    /** Spec 033: los biomas que conocen las pruebas. */
+    public static final List<String> BIOMES = List.of("minecraft:plains", "minecraft:desert", "minecraft:forest",
+            "minecraft:badlands", "minecraft:cherry_grove");
+
     public static final BlockRegistry REGISTRY = new BlockRegistry() {
         @Override
         public Collection<String> blocks() {
@@ -125,6 +131,12 @@ public final class TestBlocks {
         @Override
         public Collection<String> tags() {
             return TAGS.keySet();
+        }
+
+        /** Spec 033: unos pocos biomas. */
+        @Override
+        public Collection<String> biomes() {
+            return BIOMES;
         }
 
         /** Spec 029: las plantas, la luz y los líquidos no son sólidos (como Material.isSolid). */
@@ -252,6 +264,48 @@ public final class TestBlocks {
             Map<Long, String> out = new TreeMap<>();
             for (Map.Entry<Long, Integer> e : blocks.entrySet()) out.put(e.getKey(), table.state(e.getValue()));
             return out;
+        }
+    }
+
+    /** Spec 033: los biomas de un mundo en memoria, por celda de 4×4×4 (todo «plains» salvo lo que se ponga). */
+    public static class MemoryBiomes implements dev.leo.worldcraft.biome.BiomeWorld {
+        public final Map<Long, String> cells = new HashMap<>();
+        public final Set<Long> refreshed = new HashSet<>();
+        public int sets;
+
+        static long cell(int x, int y, int z) {
+            return MemoryWorld.key(x & ~3, y & ~3, z & ~3);
+        }
+
+        @Override
+        public int minY() {
+            return -64;
+        }
+
+        @Override
+        public int maxY() {
+            return 319;
+        }
+
+        @Override
+        public String get(int x, int y, int z) {
+            return cells.getOrDefault(cell(x, y, z), "minecraft:plains");
+        }
+
+        @Override
+        public void set(int x, int y, int z, String biome) {
+            sets++;
+            cells.put(cell(x, y, z), biome);
+        }
+
+        @Override
+        public boolean ready(int cx, int cz) {
+            return true;
+        }
+
+        @Override
+        public void refresh(int cx, int cz) {
+            refreshed.add(dev.leo.worldcraft.region.ChunkOrder.pack(cx, cz));
         }
     }
 }

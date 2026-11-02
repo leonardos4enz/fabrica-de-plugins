@@ -114,3 +114,13 @@ tools:
   tree_blocks: "#logs, #leaves, vine, cocoa, bee_nest, mangrove_roots"   # what deltree removes (mask syntax)
   # Blocks the super pickaxe never breaks (mask syntax).
   never_break: "bedrock, barrier, end_portal_frame, end_portal, end_gateway, nether_portal, command_block, chain_command_block, repeating_command_block, structure_block, jigsaw"
+
+# Trees, plants and pumpkins (/wc forest, forestgen, flora, pumpkins, /wc tool tree, /wc brush forest).
+# The trees are the game's own (the same that grow from a sapling) and go through the editor: preview, limits and undo.
+nature:
+  max_trees: 300          # trees in one edit at most (1..5000)
+  max_size: 32            # the biggest size of /wc forestgen and /wc pumpkins (1..64)
+  soil: "grass_block, dirt, podzol, coarse_dirt, rooted_dirt, mycelium, moss_block, mud"   # where a tree grows (mask syntax)
+  # What /wc flora plants (pattern syntax): on grass and dirt, and on sand.
+  flora_grass: "80% short_grass, 5% dandelion, 5% poppy, 4% cornflower, 3% oxeye_daisy, 3% azure_bluet"
+  flora_sand: "90% dead_bush, 10% cactus"

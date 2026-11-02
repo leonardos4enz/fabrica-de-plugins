@@ -28,12 +28,27 @@ public final class Parser {
     private final BlockRegistry registry;
     private final Map<String, String> patternPresets, maskPresets;
     private final Set<String> blockNames = new HashSet<>();
+    /** Spec 033: los biomas del servidor («minecraft:plains»), para «$desert». */
+    private final Set<String> biomeNames = new HashSet<>();
 
     public Parser(BlockRegistry registry, Map<String, String> patternPresets, Map<String, String> maskPresets) {
         this.registry = registry;
         this.patternPresets = patternPresets;
         this.maskPresets = maskPresets;
         for (String b : registry.blocks()) blockNames.add(b);
+        biomeNames.addAll(registry.biomes());
+    }
+
+    /** Spec 033: el id completo de un bioma escrito por alguien («desert» → «minecraft:desert»), o null si no existe. */
+    public String biome(String name) {
+        String id = withNs(name.trim().toLowerCase(Locale.ROOT));
+        return biomeNames.contains(id) ? id : null;
+    }
+
+    /** Spec 033: «did you mean» entre los biomas. */
+    public String biomeHint(String name) {
+        String hint = Issues.closest(withNs(name.trim().toLowerCase(Locale.ROOT)), biomeNames);
+        return hint == null ? "" : " (did you mean '" + hint.replace("minecraft:", "") + "'?)";
     }
 
     public Pattern pattern(String input) throws ParseException {
@@ -154,7 +169,10 @@ public final class Parser {
     public Mask maskNear(String input) throws ParseException {
         String text = input.trim();
         if (text.isEmpty()) throw new ParseException("Missing mask: write the blocks to change, like 'dirt, grass_block' or '!air'");
-        if (text.startsWith("$")) return new Mask(maskNear(preset(text, maskPresets, "mask")).terms(), text);
+        // Spec 033: «$nombre» solo es un preset si existe; si no, es un bioma («$desert, $badlands», «$desert and sand»).
+        if (text.startsWith("$") && maskPresets.containsKey(text.substring(1).trim().toLowerCase(Locale.ROOT))) {
+            return new Mask(maskNear(preset(text, maskPresets, "mask")).terms(), text);
+        }
         if (text.equals("*")) return new Mask(List.of(), text);
         List<Mask.Term> terms = new ArrayList<>();
         for (String raw : split(text)) {
@@ -249,6 +267,17 @@ public final class Parser {
             }
             if (lower.matches("^\\d.*%.*")) {
                 throw new ParseException("'" + raw + "': weights (%) work in patterns; in a mask write a chance, like '30% chance'");
+            }
+            if (lower.startsWith("$")) {
+                String name = lower.substring(1).trim();
+                String id = biome(name);
+                if (id == null) {
+                    List<String> known = new ArrayList<>(maskPresets.keySet());
+                    for (String b : biomeNames) known.add(b.replace("minecraft:", ""));
+                    throw new ParseException("'" + part + "' is not a mask preset in presets.yml nor a biome" + Issues.hint(name, known));
+                }
+                near.add(new Mask.Near.Biome(Set.of(id)));
+                return null;
             }
             if (lower.equals("exposed")) {
                 near.add(new Mask.Near.Exposed());

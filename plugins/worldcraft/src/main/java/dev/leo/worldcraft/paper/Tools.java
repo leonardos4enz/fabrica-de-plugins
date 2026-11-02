@@ -119,6 +119,7 @@ public final class Tools implements Listener {
             case REPL -> "Right click: place · left click: pick a block";
             case CYCLER -> "Right click: next value · left click: next property";
             case LRBUILD -> "Left click: " + s.text("left") + " · right click: " + s.text("right");
+            case TREE -> "Right click: a tree on the block you look at";
             default -> "Right click: use it where you look";
         };
         return List.of(right, "/wc " + (s.kind().brush ? "brush" : "tool") + " none: back to a normal item");

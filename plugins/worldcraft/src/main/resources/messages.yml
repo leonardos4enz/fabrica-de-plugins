@@ -27,9 +27,9 @@ help:
   replace: { usage: "/wc replace <mask> with <pattern> [--preview]", text: "Change only the blocks that match the mask.", example: "/wc replace dirt, grass_block with stone" }
   walls: { usage: "/wc walls <pattern> [--preview]", text: "The four side walls of the selection.", example: "/wc walls stone_bricks" }
   faces: { usage: "/wc faces <pattern> [--preview]", text: "Walls, floor and roof: a hollow box.", example: "/wc faces glass" }
-  copy: { usage: "/wc copy [--entities] [--mask <mask>]", text: "Copy the selection, relative to where you stand. --entities also copies the armor stands, item frames, paintings and mobs inside. With --mask, what does not match is copied as air.", example: "/wc copy --entities" }
-  cut: { usage: "/wc cut [--entities] [--mask <mask>] [--preview]", text: "Copy the selection and leave air. --entities also takes the entities inside. With --mask, only what matches is cut.", example: "/wc cut --entities" }
-  paste: { usage: "/wc paste [--air] [--origin] [--select] [--only-select] [--no-entities] [--remove-entities] [--preview]", text: "Paste what you copied, relative to where you stand (--origin: where it was copied). Copied air is skipped unless --air. Copied entities come too (--no-entities leaves them); --remove-entities first removes the entities already there. --select selects what you pasted; --only-select only selects where it would go.", example: "/wc paste --preview" }
+  copy: { usage: "/wc copy [--entities] [--biomes] [--mask <mask>]", text: "Copy the selection, relative to where you stand. --entities also copies the armor stands, item frames, paintings and mobs inside; --biomes also copies the biomes. With --mask, what does not match is copied as air.", example: "/wc copy --entities" }
+  cut: { usage: "/wc cut [--entities] [--biomes] [--mask <mask>] [--preview]", text: "Copy the selection and leave air. --entities also takes the entities inside; --biomes copies the biomes (the place keeps its own). With --mask, only what matches is cut.", example: "/wc cut --entities" }
+  paste: { usage: "/wc paste [--air] [--origin] [--select] [--only-select] [--no-entities] [--remove-entities] [--biomes] [--preview]", text: "Paste what you copied, relative to where you stand (--origin: where it was copied). Copied air is skipped unless --air. Copied entities come too (--no-entities leaves them); --remove-entities first removes the entities already there. --biomes also pastes the copied biomes. --select selects what you pasted; --only-select only selects where it would go.", example: "/wc paste --preview" }
   rotate: { usage: "/wc rotate <90|180|270|-90>", text: "Turn what you copied (clockwise seen from above), stairs and logs included.", example: "/wc rotate 90" }
   flip: { usage: "/wc flip [direction]", text: "Mirror what you copied towards where you look (or a direction).", example: "/wc flip up" }
   undo: { usage: "/wc undo [count] [--player <name>]", text: "Undo your last edits, also after a restart. Blocks someone changed since are left alone.", example: "/wc undo 3" }
@@ -42,8 +42,8 @@ help:
   mountain: { usage: "/wc mountain [small|medium|large|huge|radius] [style] [key=value...] [--now]", text: "A mountain where you look, shown first. Options: height, peaks, roughness, ridges, sharpness, crater, seed, style, at=x,y,z, world.", example: "/wc mountain large style=volcano seed=42" }
   island: { usage: "/wc island [small|medium|large|huge|radius] [style] [key=value...] [--now]", text: "A floating island in front of you, shown first. Options: depth, relief, spikes, roots, trees, seed, style, at=x,y,z, world.", example: "/wc island large trees=5 spikes=1" }
   reroll: { usage: "/wc reroll", text: "The last mountain or island again with another seed (a new preview).", example: "/wc reroll" }
-  brush: { usage: "/wc brush <sphere|cyl|set|clipboard|splatter|scatter|rock|gravity|extinguish|butcher|none> ... | [raise|lower|smooth|flatten|erode|paint] [radius] [strength]", text: "Turn the item in your hand into a brush (only that item; an empty hand gets one): right click uses it where you look. Building brushes: sphere <blocks> [radius] [--hollow], cyl <blocks> [radius] [height], set <cube|sphere|cyl> [radius] <blocks>, clipboard [--air] [--origin], splatter <blocks> [radius] [decay], scatter <blocks> [radius] [points] [distance] [--overlay], rock <blocks> [radius] [sphericity] [frequency] [amplitude], gravity [radius] [--height], extinguish [radius], butcher [radius] [--animals...]; mask=.. and radius=.. change the brush in your hand; none makes it a normal item again. Terrain brushes (raise, lower, smooth, flatten, erode, paint) only move natural ground; left click picks the next mode.", example: "/wc brush sphere stone 4" }
-  tool: { usage: "/wc tool <repl|floodfill|info|cycler|deltree|farwand|lrbuild|navwand|none> ...", text: "Turn the item in your hand into a one-click tool: repl <blocks> (right click places, left click picks), floodfill <blocks> [range], info, cycler (right click: next value, left click: next property), deltree (removes a floating tree), farwand (corners from far away), lrbuild <left> <right> (build from far away; air removes), navwand (left: jump to, right: through walls). none makes it a normal item again.", example: "/wc tool repl oak_planks" }
+  brush: { usage: "/wc brush <sphere|cyl|set|clipboard|splatter|scatter|rock|gravity|extinguish|butcher|forest|none> ... | [raise|lower|smooth|flatten|erode|paint] [radius] [strength]", text: "Turn the item in your hand into a brush (only that item; an empty hand gets one): right click uses it where you look. Building brushes: sphere <blocks> [radius] [--hollow], cyl <blocks> [radius] [height], set <cube|sphere|cyl> [radius] <blocks>, clipboard [--air] [--origin], splatter <blocks> [radius] [decay], scatter <blocks> [radius] [points] [distance] [--overlay], rock <blocks> [radius] [sphericity] [frequency] [amplitude], gravity [radius] [--height], extinguish [radius], butcher [radius] [--animals...], forest [tree] [radius] [density]; mask=.. and radius=.. change the brush in your hand; none makes it a normal item again. Terrain brushes (raise, lower, smooth, flatten, erode, paint) only move natural ground; left click picks the next mode.", example: "/wc brush sphere stone 4" }
+  tool: { usage: "/wc tool <repl|floodfill|info|cycler|deltree|farwand|lrbuild|navwand|tree|none> ...", text: "Turn the item in your hand into a one-click tool: repl <blocks> (right click places, left click picks), floodfill <blocks> [range], info, cycler (right click: next value, left click: next property), deltree (removes a floating tree), farwand (corners from far away), lrbuild <left> <right> (build from far away; air removes), navwand (left: jump to, right: through walls), tree [type] (right click grows a tree on the block). none makes it a normal item again.", example: "/wc tool repl oak_planks" }
   superpickaxe: { usage: "/wc superpickaxe [single|area <radius>|recursive <radius>|off]", text: "Break blocks instantly with any pickaxe (left click): single, area (the same block in a cube) or recursive (the same block, connected). Nothing is dropped and /wc undo brings them back. /wc sp alone turns it on or off.", example: "/wc sp area 2" }
   sp: { usage: "/wc sp [single|area <radius>|recursive <radius>|off]", text: "Short for /wc superpickaxe.", example: "/wc sp" }
   styles: { usage: "/wc styles", text: "The terrain styles in terrain.yml (which blocks go where).", example: "/wc styles" }
@@ -99,6 +99,14 @@ help:
   distr: { usage: "/wc distr [--states] [--clipboard]", text: "The 10 most common blocks in the selection (or your clipboard) with their share.", example: "/wc distr" }
   clearclipboard: { usage: "/wc clearclipboard", text: "Empty your clipboard.", example: "/wc clearclipboard" }
   clearhistory: { usage: "/wc clearhistory", text: "Delete your undo history from the disk (asks /wc confirm first).", example: "/wc clearhistory" }
+  biomelist: { usage: "/wc biomelist [page] [filter]", text: "List the server's biomes (data pack biomes too), 15 per page.", example: "/wc biomelist 2" }
+  biomeinfo: { usage: "/wc biomeinfo [--target | --here]", text: "The biomes in your selection with their %; --target (-t) the biome of the block you look at, --here (-p) the one where you stand.", example: "/wc biomeinfo --target" }
+  setbiome: { usage: "/wc setbiome <biome> [--here]", text: "Change the biome of your selection (any shape). The game keeps one biome per 4×4×4 cell: every cell your selection touches changes. --here (-p): only the cell where you stand. Undo brings the old biomes back.", example: "/wc setbiome cherry_grove" }
+  forest: { usage: "/wc forest [tree] [density] [--preview]", text: "The game's trees on the grass and dirt of your selection that have air above, density % per column (default oak, 5). Trees: oak, birch, spruce, big_oak, jungle, dark_oak, cherry, mangrove, pale_oak, crimson_fungus, red_mushroom, chorus, random...", example: "/wc forest birch 10 --preview" }
+  forestgen: { usage: "/wc forestgen [size] [tree] [density] [--preview]", text: "A forest around you, size blocks each way (default 10, at most nature.max_size).", example: "/wc forestgen 15 spruce 8" }
+  flora: { usage: "/wc flora [density] [--preview]", text: "Grass and flowers on the grass of your selection, dead bushes and some cactus on sand (density %, default 10; the plants are in nature.flora_grass and flora_sand).", example: "/wc flora 20" }
+  pumpkins: { usage: "/wc pumpkins [size] [density] [--preview]", text: "Pumpkin patches with leaves on the grass around you (density %, default 2; 0.02 works too, like WorldEdit).", example: "/wc pumpkins 12 5" }
+  structure: { usage: "/wc structure list [filter] [page] | load <name> [--palette <n>]", text: "The game's structure templates (igloo, village houses, shipwrecks, ruins...) and those of data packs: load one into your clipboard, then /wc paste (rotate, flip, preview and undo work). Chests keep their loot table.", example: "/wc structure load igloo/top" }
   gmask: { usage: "/wc gmask [mask | off]", text: "A mask for all your edits until 'off' (or until you leave): only matching blocks change.", example: "/wc gmask !#logs" }
 
 wand-given: "{prefix}<green>Here is your wand: <white>left click</white> a block for corner 1, <white>right click</white> for corner 2."
@@ -137,6 +145,9 @@ progress: "<gold>{kind}</gold> <white>{percent}%</white> <gray>· {done} of {tot
 
 copied: "{prefix}<green>Copied {size} ({blocks} blocks).</green> <gray>/wc paste puts it relative to where you stand."
 copied-entities: "{prefix}<green>... and {count} entity(ies).</green>"
+copied-biomes: "{prefix}<green>... and the biomes ({count} kind(s)).</green> <gray>/wc paste --biomes puts them too."
+paste-no-biomes: "{prefix}<red>Your clipboard has no biomes: copy with /wc copy --biomes (or load a .schem that has them)."
+note-biomes: "the biomes change after the blocks."
 copy-entities-limit: "{prefix}<yellow>Only the first {max} entities were copied: that is your group's limit (max_entities)."
 limit-entities: "{prefix}<red>That would create {count} entities; your limit is {max} (groups: {groups}). Use --no-entities, or select less."
 limit-entity-blocked: "{prefix}<red>You may not create {entity} (blocked for your group: see /wc limits). Use --no-entities to leave the entities out."
@@ -146,6 +157,35 @@ note-entities-clear: "The entities already there will be removed first."
 note-entities-cut: "the entities inside will be cut too."
 note-entities-move: "the entities inside will move too."
 edit-done-entities: "{prefix}<green>Done: {kind} in {time}.</green> <gray>/wc undo to undo it (#{id})."
+edit-done-biomes: "{prefix}<green>Done: {kind} changed {changed} biome cell(s) in {time}.</green> <gray>/wc undo to undo it (#{id})."
+edit-biomes: "{prefix}<green>... and {cells} biome cell(s).</green>"
+setbiome-cells: "{prefix}<gray>The game keeps one biome per 4×4×4 cell: {cells} cell(s) will become {biome}."
+undo-done-biomes: "{prefix}<green>Undone #{id} ({kind} {detail}): the biomes are back."
+redo-done-biomes: "{prefix}<green>Redone #{id} ({kind} {detail})."
+undo-biomes: "{prefix}<green>Biomes: {cells} cell(s) back.</green>"
+undo-biomes-skipped: "{prefix}<yellow>{skipped} biome cell(s) were left alone: someone changed them afterwards."
+biomelist-header: "{prefix}Biomes ({count}), page {page} of {pages}:"
+biomelist-line: "  <white>{biome}"
+biomeinfo-one: "{prefix}Biome at {pos}: <white>{biome}"
+biomeinfo-header: "{prefix}Biomes in the selection ({count}, {blocks} blocks):"
+biomeinfo-line: "  <white>{percent}%</white> {biome}"
+trees-growing: "<gray>Growing {count} tree(s)..."
+trees-all: "{prefix}<green>{planted} tree(s) grown."
+trees-some: "{prefix}<green>{planted} tree(s) grown</green> <yellow>({failed} did not fit: a roof, another tree or the world's edge)."
+trees-none: "{prefix}<yellow>No tree fits there ({count} tried): they need room above."
+trees-no-ground: "{prefix}<yellow>No place for a tree: they grow on grass or dirt (nature.soil) with air above."
+tree-no-room: "<yellow>No room for a tree on that block"
+flora-none: "{prefix}<yellow>No place for plants: they go on grass, dirt or sand with air above."
+pumpkins-none: "{prefix}<yellow>No place for pumpkins: they go on grass with air above."
+structure-list-header: "{prefix}Game structures ({count}), page {page} of {pages}: /wc structure load <name>"
+structure-list-line: "  <white>{name}"
+structure-bad-name: "{prefix}<red>'{name}' is not a structure name: write it like igloo/top or mypack:house."
+structure-unknown: "{prefix}<red>There is no structure '{name}'{hint}. See /wc structure list"
+structure-empty: "{prefix}<red>The structure '{name}' has no blocks."
+structure-palette: "{prefix}<red>That structure has {count} palette(s): --palette goes from 0."
+structure-loaded: "{prefix}<green>Loaded {name}{palette} into your clipboard: {size}, {blocks} blocks.</green> <gray>/wc paste --preview to see it where you stand."
+structure-loot: " <green>• {count} chest(s) keep their loot table."
+structure-entities: " <yellow>• The template has {count} entity(ies): they are not loaded."
 edit-entities: "{prefix}<green>Entities: {added} added, {removed} removed{types}.</green>"
 edit-entities-limit: "{prefix}<yellow>Entities: {added} added, {removed} removed{types}. Stopped at your limit of {max} (max_entities): run it again for the rest."
 undo-entities: "{prefix}<green>Entities: {back} back, {removed} removed.</green>"
@@ -243,6 +283,8 @@ schem-note-adjusted: " <gray>• {count} block state(s) lost a property this ser
 schem-note-renamed: " <gray>• {count} block(s) renamed since that version of the game were translated."
 schem-note-entities: " <green>• {count} entity(ies) come with it: /wc paste puts them too (--no-entities leaves them)."
 schem-note-entities-bad: " <yellow>• {count} entity(ies) in the file could not be read and are left out."
+schem-note-biomes: " <green>• It has biomes ({count} kind(s)): /wc paste --biomes puts them too."
+schem-note-biomes-unknown: " <yellow>• {count} biome(s) this server does not have are left out: {kinds}."
 schem-note-bad: " <yellow>• {count} block data entry(ies) in the file were damaged and skipped."
 schem-note-newer: " <yellow>• The file is from a newer version of the game (data version {version}; this server: {server}): some blocks may be missing."
 schem-note-tiles-failed: "{prefix}<yellow>{count} block data entry(ies) could not be saved (see the server log)."

@@ -60,9 +60,19 @@ public record Mask(List<Term> terms, String text) {
         record Chance(double p) implements Near {
         }
 
+        /** Spec 033: el bioma de la posición es uno de esos («$desert», ids completos). */
+        record Biome(Set<String> biomes) implements Near {
+        }
+
         /** F-01: lo contrario («stone and !surface»). */
         record Not(Near of) implements Near {
         }
+    }
+
+    /** Spec 033: el bioma de una posición («minecraft:plains»); en Paper lee el mundo en el hilo principal. */
+    @FunctionalInterface
+    public interface BiomeLookup {
+        String at(int x, int y, int z);
     }
 
     /** Lo que hay alrededor: la foto leída antes de la obra (H2 CA2). -1 = no se sabe (fuera de la foto). */
@@ -99,7 +109,18 @@ public record Mask(List<Term> terms, String text) {
 
     /** Spec 029: mira los bloques de al lado (hace falta leer una foto antes de la obra). */
     public boolean needsNeighbors() {
-        for (Term t : terms) for (Near n : t.near) if (!((n instanceof Near.Not no ? no.of() : n) instanceof Near.Chance)) return true;
+        for (Term t : terms) {
+            for (Near n : t.near) {
+                Near in = n instanceof Near.Not no ? no.of() : n;
+                if (!(in instanceof Near.Chance) && !(in instanceof Near.Biome)) return true;
+            }
+        }
+        return false;
+    }
+
+    /** Spec 033: mira el bioma (hace falta un {@link BiomeLookup} al compilar). */
+    public boolean needsBiomes() {
+        for (Term t : terms) for (Near n : t.near) if ((n instanceof Near.Not no ? no.of() : n) instanceof Near.Biome) return true;
         return false;
     }
 
@@ -117,6 +138,8 @@ public record Mask(List<Term> terms, String text) {
         private final byte[][] termMemo;
         private final Compiled[][] inner;
         private byte[] air = new byte[64];
+        /** Spec 033: de dónde sale el bioma; null = ningún bioma pasa. */
+        private BiomeLookup biomes;
 
         Compiled(Mask mask, StateTable table) {
             this.mask = mask;
@@ -137,6 +160,13 @@ public record Mask(List<Term> terms, String text) {
 
         public Mask mask() {
             return mask;
+        }
+
+        /** Spec 033: con qué se lee el bioma de una posición (también en las máscaras de «above»/«below»). */
+        public Compiled biomes(BiomeLookup lookup) {
+            this.biomes = lookup;
+            for (Compiled[] row : inner) for (Compiled c : row) if (c != null) c.biomes(lookup);
+            return this;
         }
 
         /** Solo el estado: para las máscaras sin posición (las de hoy, el terreno, el pincel). */
@@ -192,6 +222,7 @@ public record Mask(List<Term> terms, String text) {
                     case Near.Exposed e -> near != null && !isAir(id) && (isAir(near.at(x + 1, y, z)) || isAir(near.at(x - 1, y, z))
                             || isAir(near.at(x, y + 1, z)) || isAir(near.at(x, y - 1, z))
                             || isAir(near.at(x, y, z + 1)) || isAir(near.at(x, y, z - 1)));
+                    case Near.Biome b -> biomes != null && b.biomes().contains(biomes.at(x, y, z));
                     case Near.Not no -> throw new IllegalStateException("not inside not");
                 };
                 if (ok == flip) return false;

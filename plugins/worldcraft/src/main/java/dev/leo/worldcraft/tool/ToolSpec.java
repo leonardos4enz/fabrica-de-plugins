@@ -74,6 +74,7 @@ public record ToolSpec(ToolKind kind, Map<String, String> opts) {
             case "frequency" -> 30;
             case "amplitude" -> 50;
             case "range" -> 5;
+            case "density" -> 5;
             default -> 0;
         };
     }
@@ -124,6 +125,7 @@ public record ToolSpec(ToolKind kind, Map<String, String> opts) {
         clamp(opts, "sphericity", 1, 100);
         clamp(opts, "frequency", 1, 100);
         clamp(opts, "amplitude", 0, 100);
+        clamp(opts, "density", 0, 100);
         return new ToolSpec(kind, opts);
     }
 
@@ -158,6 +160,7 @@ public record ToolSpec(ToolKind kind, Map<String, String> opts) {
             case CYCLER -> {
                 if (opts.containsKey("property")) sb.append(" · ").append(opts.get("property"));
             }
+            case TREE, FOREST -> sb.append(" · ").append(opts.getOrDefault("type", "oak"));
             default -> {
                 if (pattern() != null) sb.append(" · ").append(pattern());
             }
@@ -170,6 +173,7 @@ public record ToolSpec(ToolKind kind, Map<String, String> opts) {
             case ROCK -> sb.append(" · sphericity ").append(number("sphericity")).append(" · frequency ").append(number("frequency"))
                     .append(" · amplitude ").append(number("amplitude"));
             case FLOODFILL -> sb.append(" · range ").append(number("range"));
+            case FOREST -> sb.append(" · density ").append(number("density")).append("%");
             default -> {
             }
         }

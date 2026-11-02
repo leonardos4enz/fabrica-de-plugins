@@ -165,6 +165,29 @@ class ConfigTest {
     }
 
     @Test
+    void spec033_H8_CA1_seccion_nature_validada() throws Exception {
+        assertEquals(NatureSettings.DEFAULTS, load("history: { keep_days: 3 }\n", "").nature(), "un config.yml de la 0.8.0 usa lo de fábrica");
+        LoadedConfig c = load("""
+                nature:
+                  max_trees: 0
+                  max_size: 10
+                  soil: [grass_block, sand]
+                  flora_grass: "50% short_grass, 50% popy"
+                  flora_snad: dead_bush
+                """, "masks: { desert: sand }\n");
+        NatureSettings n = c.nature();
+        assertEquals(300, n.maxTrees(), "fuera de rango: el de fábrica");
+        assertEquals(10, n.maxSize());
+        assertEquals("grass_block, sand", n.soil(), "también como lista");
+        assertEquals(NatureSettings.DEFAULTS.floraGrass(), n.floraGrass(), "un patrón que no se entiende: el de fábrica");
+        String all = c.issues().all().toString();
+        assertTrue(all.contains("nature.max_trees"), all);
+        assertTrue(all.contains("nature.flora_grass") && all.contains("poppy"), all);
+        assertTrue(all.contains("nature.flora_snad") && all.contains("did you mean 'flora_sand'"), all);
+        assertTrue(all.contains("masks.desert") && all.contains("biome"), "un preset con nombre de bioma avisa: " + all);
+    }
+
+    @Test
     void H8_CA2_un_archivo_roto_conserva_lo_anterior() throws Exception {
         LoadedConfig first = load("performance: { max_ms_per_tick: 4 }\n", "patterns: { a: stone }\n");
         Files.writeString(dir.resolve("config.yml"), "performance: [\n");

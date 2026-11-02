@@ -61,7 +61,13 @@ public final class Edits {
      */
     public record Op(String kind, String detail, World world, Box bounds, long volume, Supplier<EditSource> source,
                      Collection<Integer> placed, Supplier<EditJob.Capture> capture, Supplier<EditSource> preview,
-                     String note, boolean rerollable, Runnable after, EntityWork entities) {
+                     String note, boolean rerollable, Runnable after, EntityWork entities, BiomeWork biomes) {
+        public Op(String kind, String detail, World world, Box bounds, long volume, Supplier<EditSource> source,
+                  Collection<Integer> placed, Supplier<EditJob.Capture> capture, Supplier<EditSource> preview,
+                  String note, boolean rerollable, Runnable after, EntityWork entities) {
+            this(kind, detail, world, bounds, volume, source, placed, capture, preview, note, rerollable, after, entities, null);
+        }
+
         public Op(String kind, String detail, World world, Box bounds, long volume, Supplier<EditSource> source,
                   Collection<Integer> placed, Supplier<EditJob.Capture> capture, Supplier<EditSource> preview,
                   String note, boolean rerollable, Runnable after) {
@@ -81,13 +87,31 @@ public final class Edits {
 
         /** La misma operación con algo que hacer al terminar. */
         public Op then(Runnable r) {
-            return new Op(kind, detail, world, bounds, volume, source, placed, capture, preview, note, rerollable, r, entities);
+            return new Op(kind, detail, world, bounds, volume, source, placed, capture, preview, note, rerollable, r, entities, biomes);
         }
 
         /** Spec 031: la misma operación con entidades. */
         public Op with(EntityWork w) {
-            return new Op(kind, detail, world, bounds, volume, source, placed, capture, preview, note, rerollable, after, w);
+            return new Op(kind, detail, world, bounds, volume, source, placed, capture, preview, note, rerollable, after, w, biomes);
         }
+
+        /** Spec 033: la misma operación con biomas. */
+        public Op with(BiomeWork b) {
+            return new Op(kind, detail, world, bounds, volume, source, placed, capture, preview, note, rerollable, after, entities, b);
+        }
+    }
+
+    /** Spec 033: arma la etapa de biomas con el mundo de Paper y el diario de la obra. */
+    public interface BiomeMaker {
+        EntityStage make(dev.leo.worldcraft.biome.BiomeWorld world, dev.leo.worldcraft.biome.BiomeSink sink);
+    }
+
+    /**
+     * Spec 033 (plan §1.1): lo que una obra hace con los biomas, después de los bloques y las entidades.
+     *
+     * @param note lo que se dice en la vista previa («biomes are not shown»), o vacío
+     */
+    public record BiomeWork(BiomeMaker maker, String note) {
     }
 
     /** Spec 031: arma una etapa de entidades con el mundo, el diario, el tope del grupo y la etapa anterior (o null). */
@@ -248,6 +272,7 @@ public final class Edits {
             submit(pj);
             who.sendMessage(msg.get("preview-start", "kind", op.kind(), "blocks", fmt(op.volume())));
             if (op.entities() != null && !op.entities().note().isEmpty()) who.sendMessage(msg.get("preview-entities", "note", op.entities().note()));
+            if (op.biomes() != null && !op.biomes().note().isEmpty()) who.sendMessage(msg.get("preview-entities", "note", op.biomes().note()));
             return;
         }
         // El dueño puede apagar la confirmación (confirm.enabled); --preview sigue esperando su confirm.
@@ -309,12 +334,12 @@ public final class Edits {
 
     /** La misma obra con la máscara global: deja (KEEP) lo que no pasa; el azar usa una semilla fija por obra. */
     private Op masked(Op op, Mask gmask) {
-        Mask.Compiled mc = gmask.compile(blocks.table());
+        Mask.Compiled mc = compile(gmask, op.world());
         long seed = java.util.concurrent.ThreadLocalRandom.current().nextLong();
         java.util.function.Function<Supplier<EditSource>, Supplier<EditSource>> wrap = sup -> sup == null ? null
                 : () -> new dev.leo.worldcraft.edit.MaskedSource(sup.get(), mc, seed);
         return new Op(op.kind(), op.detail() + " (gmask " + gmask.text() + ")", op.world(), op.bounds(), op.volume(),
-                wrap.apply(op.source()), op.placed(), op.capture(), wrap.apply(op.preview()), op.note(), op.rerollable(), op.after(), op.entities());
+                wrap.apply(op.source()), op.placed(), op.capture(), wrap.apply(op.preview()), op.note(), op.rerollable(), op.after(), op.entities(), op.biomes());
     }
 
     /** Cancela lo que espera confirmación o, si no hay, las operaciones en marcha de quien lo pide. */
@@ -364,16 +389,21 @@ public final class Edits {
                 e -> plugin.getLogger().log(Level.SEVERE, "Could not write the undo history of edit #" + entry.id(), e));
         EditJob job = new EditJob(nextJob++, owner, op.kind(), w, src, EditJob.Mode.APPLY, sink,
                 op.capture() == null ? null : op.capture().get(), Long.MAX_VALUE, System::nanoTime);
+        EntityStage b = null, a = null;
         if (op.entities() != null) {
             PaperEntities ew = new PaperEntities(plugin, op.world());
             int max = limits(who).maxEntities();
-            EntityStage b = op.entities().before() == null ? null : op.entities().before().make(ew, sink, max, null);
-            EntityStage a = op.entities().after() == null ? null : op.entities().after().make(ew, sink, max, b);
-            job.stages(b, a);
+            b = op.entities().before() == null ? null : op.entities().before().make(ew, sink, max, null);
+            a = op.entities().after() == null ? null : op.entities().after().make(ew, sink, max, b);
         }
+        // Spec 033: los biomas, después de los bloques y las entidades.
+        PaperBiomes bw = op.biomes() == null ? null : new PaperBiomes(plugin, op.world());
+        if (bw != null) a = EntityStage.chain(a, op.biomes().maker().make(bw, sink));
+        if (b != null || a != null) job.stages(b, a);
         long started = System.nanoTime();
         job.onEnd(() -> {
             w.close();
+            if (bw != null) bw.close();
             jobs.remove(job.id());
             boolean ok = job.state() == EditJob.State.DONE;
             history.finish(entry, job.changed(), ok);
@@ -381,10 +411,18 @@ public final class Edits {
             String secs = seconds((System.nanoTime() - started) / 1e9);
             // Spec 031: una obra solo de entidades (butcher, remove) no habla de bloques.
             String doneKey = op.volume() == 0 && op.entities() != null ? "edit-done-entities" : "edit-done";
+            // Spec 033: una obra solo de biomas (setbiome) habla de celdas, no de bloques.
+            boolean onlyBiomes = op.biomes() != null && job.visited() == 0 && op.entities() == null;
+            if (onlyBiomes) doneKey = "edit-done-biomes";
             Component m = ok
-                    ? msg.get(doneKey, "kind", op.kind(), "changed", fmt(job.changed()), "time", secs, "id", String.valueOf(entry.id()))
+                    ? msg.get(doneKey, "kind", op.kind(), "changed", fmt(onlyBiomes ? sink.biomeCells() : job.changed()), "time", secs, "id", String.valueOf(entry.id()))
                     : msg.get("edit-cancelled", "kind", op.kind(), "changed", fmt(job.changed()));
             tell(owner, who, m);
+            if (ok && !onlyBiomes && sink.biomeCells() > 0) {
+                Component bm = msg.get("edit-biomes", "cells", fmt(sink.biomeCells()));
+                tell(owner, who, bm);
+                if (owner.equals(CONSOLE) || owner.equals(SELFTEST)) plugin.getLogger().info(net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(bm));
+            }
             Component em = entityNote(job, sink.added(), sink.removed());
             if (em != null) tell(owner, who, em);
             if (owner.equals(CONSOLE) || owner.equals(SELFTEST)) {
@@ -425,12 +463,22 @@ public final class Edits {
     /** Spec 031: con entities, también las entidades de la región (relativas a quien copió); done recibe el portapapeles. */
     public void copy(CommandSender who, World world, dev.leo.worldcraft.region.Region region, int ox, int oy, int oz,
                      boolean entities, java.util.function.Consumer<Clipboard> done) {
+        copy(who, world, region, ox, oy, oz, entities, false, done);
+    }
+
+    /** Spec 033: con biomes, también el bioma de cada bloque (leído por celdas después de los bloques). */
+    public void copy(CommandSender who, World world, dev.leo.worldcraft.region.Region region, int ox, int oy, int oz,
+                     boolean entities, boolean biomes, java.util.function.Consumer<Clipboard> done) {
         UUID owner = owner(who);
         // Spec 030: de una forma solo se leen sus bloques; lo de afuera queda «sin leer» y paste lo salta.
         Box box = region.bounds();
         Clipboard clip = new Clipboard(box, ox, oy, oz);
         EntityStage.Scan scan = entities ? scan(who, world, region) : null;
-        read(who, world, region, "copy", (x, y, z, s, tile) -> clip.put(box, x, y, z, s, tile), scan, () -> {
+        PaperBiomes bw = biomes ? new PaperBiomes(plugin, world) : null;
+        EntityStage after = bw == null ? null : readBiomes(bw, region, clip);
+        readWith(who, world, new dev.leo.worldcraft.edit.RegionSource(region, dev.leo.worldcraft.region.Shape.FILL, null, null, 0), "copy",
+                (x, y, z, s, tile) -> clip.put(box, x, y, z, s, tile), scan, after, () -> {
+            if (bw != null) bw.close();
             if (scan != null) {
                 clip.entities(relative(scan.result(), ox, oy, oz));
                 if (scan.truncated()) who.sendMessage(plugin.messages().get("copy-entities-limit", "max", fmt(scan.done())));
@@ -438,6 +486,24 @@ public final class Edits {
             session(owner).clipboard(clip, world.getName());
             done.accept(clip);
         });
+    }
+
+    /** Spec 033: lee los biomas de las celdas de la región al portapapeles (cada bloque de la región toma el de su celda). */
+    public static EntityStage readBiomes(dev.leo.worldcraft.biome.BiomeWorld bw, dev.leo.worldcraft.region.Region region, Clipboard clip) {
+        Box box = region.bounds();
+        return dev.leo.worldcraft.biome.BiomeStage.read(bw, dev.leo.worldcraft.biome.Cells.of(region), (x, y, z, biome) -> {
+            for (int dx = 0; dx < 4; dx++) for (int dy = 0; dy < 4; dy++) for (int dz = 0; dz < 4; dz++) {
+                int px = x + dx, py = y + dy, pz = z + dz;
+                if (box.contains(px, py, pz) && region.contains(px, py, pz)) clip.putBiome(box, px, py, pz, biome);
+            }
+        });
+    }
+
+    /** Spec 033: una máscara compilada que lee el bioma del mundo si lo pide («$desert»). */
+    public Mask.Compiled compile(Mask mask, World world) {
+        Mask.Compiled c = mask.compile(blocks.table());
+        if (mask.needsBiomes()) c.biomes(PaperBiomes.lookup(world));
+        return c;
     }
 
     /** Spec 031: una búsqueda de entidades (sin quitar) para copiar, hasta el tope del grupo. */
@@ -485,6 +551,22 @@ public final class Edits {
 
     private void readWith(CommandSender who, World world, EditSource src, String label, EditJob.Capture into,
                           EntityStage.Scan scan, Runnable done, Runnable cancelled) {
+        readWith(who, world, src, label, into, scan, null, done, cancelled);
+    }
+
+    private void readWith(CommandSender who, World world, EditSource src, String label, EditJob.Capture into,
+                          EntityStage.Scan scan, EntityStage after, Runnable done) {
+        readWith(who, world, src, label, into, scan, after, done, null);
+    }
+
+    /** Spec 033: una lectura con una etapa después de los bloques (biomeinfo); src puede no tener bloques. */
+    public void readStage(CommandSender who, World world, EditSource src, String label, EntityStage after, Runnable done) {
+        readWith(who, world, src, label, (x, y, z, s, t) -> {
+        }, null, after, done, null);
+    }
+
+    private void readWith(CommandSender who, World world, EditSource src, String label, EditJob.Capture into,
+                          EntityStage.Scan scan, EntityStage after, Runnable done, Runnable cancelled) {
         UUID owner = owner(who);
         PaperWorld w = world(world, src);
         EditJob job = new EditJob(nextJob++, owner, label, w, src, EditJob.Mode.READ, new EditJob.Sink() {
@@ -492,7 +574,7 @@ public final class Edits {
             public void changed(int x, int y, int z, int b, int a, byte[] tb, byte[] ta) {
             }
         }, into, Long.MAX_VALUE, System::nanoTime);
-        if (scan != null) job.stages(scan, null);
+        if (scan != null || after != null) job.stages(scan, after);
         job.onEnd(() -> {
             w.close();
             jobs.remove(job.id());
@@ -584,10 +666,15 @@ public final class Edits {
                     ex -> plugin.getLogger().log(Level.SEVERE, "Could not write the undo history of edit #" + e.id(), ex));
             EntityStage.Kill kill = UndoEntities.kill(new PaperEntities(plugin, world), data, redo);
             EntityStage.Spawn spawn = UndoEntities.spawn(new PaperEntities(plugin, world), data, redo, remaps);
+            // Spec 033: los biomas vuelven después (deshacer seguro, celda por celda).
+            PaperBiomes bw = new PaperBiomes(plugin, world);
+            dev.leo.worldcraft.biome.BiomeStage biomes = dev.leo.worldcraft.biome.BiomeStage.undo(bw,
+                    () -> data.isDone() && !data.isCompletedExceptionally() ? data.join() : null, redo);
             EditJob job = new EditJob(nextJob++, owner(who).equals(target) ? target : owner(who), redo ? "redo" : "undo",
-                    w, src, EditJob.Mode.APPLY, remaps, null, Long.MAX_VALUE, System::nanoTime).stages(kill, spawn);
+                    w, src, EditJob.Mode.APPLY, remaps, null, Long.MAX_VALUE, System::nanoTime).stages(kill, EntityStage.chain(spawn, biomes));
             job.onEnd(() -> {
                 w.close();
+                bw.close();
                 jobs.remove(job.id());
                 if (job.state() != EditJob.State.DONE) {
                     tell(owner(who), who, msg.get("undo-cancelled", "id", String.valueOf(e.id())));
@@ -596,7 +683,9 @@ public final class Edits {
                 history.mark(e, redo ? HistoryStore.State.DONE : HistoryStore.State.UNDONE);
                 // Spec 031: una obra solo de entidades (butcher, remove) no habla de bloques.
                 boolean onlyEntities = job.changed() == 0 && kill.done() + spawn.done() > 0;
-                String key = onlyEntities ? (redo ? "redo-done-entities" : "undo-done-entities") : (redo ? "redo-done" : "undo-done");
+                boolean onlyBiomes = job.changed() == 0 && !onlyEntities && biomes.done() + biomes.skipped() > 0;
+                String key = onlyEntities ? (redo ? "redo-done-entities" : "undo-done-entities")
+                        : onlyBiomes ? (redo ? "redo-done-biomes" : "undo-done-biomes") : (redo ? "redo-done" : "undo-done");
                 Component m = msg.get(key, "id", String.valueOf(e.id()), "kind", e.kind(),
                         "detail", e.detail(), "changed", fmt(job.changed()), "player", targetName);
                 tell(owner(who), who, m);
@@ -605,6 +694,8 @@ public final class Edits {
                         "back", fmt(spawn.done()), "removed", fmt(kill.done())));
                 if (kill.skipped() + spawn.skipped() > 0) tell(owner(who), who, msg.get("undo-entities-skipped",
                         "skipped", fmt(kill.skipped() + spawn.skipped())));
+                if (biomes.done() > 0 && !onlyBiomes) tell(owner(who), who, msg.get("undo-biomes", "cells", fmt(biomes.done())));
+                if (biomes.skipped() > 0) tell(owner(who), who, msg.get("undo-biomes-skipped", "skipped", fmt(biomes.skipped())));
             });
             jobs.put(job.id(), job);
             submit(job);
@@ -655,6 +746,14 @@ public final class Edits {
             }
             blocks.data(blocks.air());
             blocks.hasTile(blocks.air());
+            // Spec 033: el primer árbol capturado paga el código frío del generador (sin tocar el mundo: se captura).
+            try {
+                Trees.capture(w, blocks, x, Math.min(top - 20, y + 30), z, dev.leo.worldcraft.nature.TreeKind.OAK, new java.util.Random(1));
+                PaperBiomes.names();
+                w.getBiome(x, y, z);
+            } catch (RuntimeException ignored) {
+                // solo es calentar
+            }
             plugin.messages().text("edit-done", "kind", "set", "changed", "0", "time", "0", "id", "0");
             net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(plugin.messages().text("progress",
                     "kind", "set", "percent", "0", "done", "0", "total", "0"));

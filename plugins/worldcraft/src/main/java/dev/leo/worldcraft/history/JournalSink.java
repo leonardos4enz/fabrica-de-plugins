@@ -14,14 +14,15 @@ import java.util.function.Consumer;
  * Lleva los cambios de una operación a su diario (plan 025 §4). Junta la tanda en el hilo principal (solo números a
  * texto, que la tabla ya tiene) y la escribe en el hilo de E/S, en orden, en el mismo tick en que se ponen los bloques.
  */
-public final class JournalSink implements EditJob.Sink, dev.leo.worldcraft.entity.EntitySink {
+public final class JournalSink implements EditJob.Sink, dev.leo.worldcraft.entity.EntitySink, dev.leo.worldcraft.biome.BiomeSink {
     private final Path file;
     private final StateTable table;
     private final Executor io;
     private final Consumer<IOException> onError;
     private List<Journal.Change> batch = new ArrayList<>();
     private List<Journal.EntityChange> entities = new ArrayList<>();
-    private int added, removed;
+    private List<Journal.BiomeChange> biomes = new ArrayList<>();
+    private int added, removed, biomeCells;
     private Journal journal;
     private boolean failed;
 
@@ -49,6 +50,17 @@ public final class JournalSink implements EditJob.Sink, dev.leo.worldcraft.entit
         added++;
     }
 
+    @Override
+    public void biome(int x, int y, int z, String before, String after) {
+        biomes.add(new Journal.BiomeChange(x, y, z, before, after));
+        biomeCells++;
+    }
+
+    /** Spec 033: celdas que la obra cambió de bioma (para el mensaje). */
+    public int biomeCells() {
+        return biomeCells;
+    }
+
     /** Spec 031: entidades que la obra creó y quitó (para el mensaje). */
     public int added() {
         return added;
@@ -60,17 +72,20 @@ public final class JournalSink implements EditJob.Sink, dev.leo.worldcraft.entit
 
     @Override
     public void flush() {
-        if (batch.isEmpty() && entities.isEmpty()) return;
+        if (batch.isEmpty() && entities.isEmpty() && biomes.isEmpty()) return;
         List<Journal.Change> b = batch;
         List<Journal.EntityChange> en = entities;
+        List<Journal.BiomeChange> bi = biomes;
         batch = new ArrayList<>();
         entities = new ArrayList<>();
+        biomes = new ArrayList<>();
         io.execute(() -> {
             if (failed) return;
             try {
                 if (journal == null) journal = Journal.create(file);
                 journal.append(b);
                 if (!en.isEmpty()) journal.appendEntities(en);
+                if (!bi.isEmpty()) journal.appendBiomes(bi);
             } catch (IOException e) {
                 failed = true;
                 onError.accept(e);

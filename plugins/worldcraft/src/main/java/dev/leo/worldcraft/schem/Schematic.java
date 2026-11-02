@@ -13,10 +13,26 @@ import java.util.Map;
  * @param entities         cuántas entidades traía el archivo
  * @param entityList       spec 031: las que se pudieron leer, en la forma de v3 ({Pos double[3], Id, Data}; ver SchemEntities)
  * @param badBlockEntities datos de bloque que no se pudieron leer (posición fuera o mal formada)
+ * @param biomePalette     spec 033: los nombres de los biomas, o null si no trae
+ * @param biomes           spec 033: un índice de biomePalette por bloque (el mismo orden que blocks), o null
  */
 public record Schematic(int version, int dataVersion, int width, int height, int length, int[] offset, String[] palette,
                         int[] blocks, Map<Integer, Map<String, Object>> blockEntities, int entities, int badBlockEntities,
-                        String name, String author, long date, List<Map<String, Object>> entityList) {
+                        String name, String author, long date, List<Map<String, Object>> entityList,
+                        String[] biomePalette, int[] biomes) {
+    public Schematic(int version, int dataVersion, int width, int height, int length, int[] offset, String[] palette,
+                     int[] blocks, Map<Integer, Map<String, Object>> blockEntities, int entities, int badBlockEntities,
+                     String name, String author, long date, List<Map<String, Object>> entityList) {
+        this(version, dataVersion, width, height, length, offset, palette, blocks, blockEntities, entities, badBlockEntities,
+                name, author, date, entityList, null, null);
+    }
+
+    /** Spec 033: el mismo esquema con biomas. */
+    public Schematic withBiomes(String[] palette, int[] perBlock) {
+        return new Schematic(version, dataVersion, width, height, length, offset, this.palette, blocks, blockEntities, entities,
+                badBlockEntities, name, author, date, entityList, palette, perBlock);
+    }
+
     public Schematic(int version, int dataVersion, int width, int height, int length, int[] offset, String[] palette,
                      int[] blocks, Map<Integer, Map<String, Object>> blockEntities, int entities, int badBlockEntities,
                      String name, String author, long date) {

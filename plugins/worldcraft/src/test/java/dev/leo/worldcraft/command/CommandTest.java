@@ -119,4 +119,22 @@ class CommandTest {
         String yml = Files.readString(Path.of("src/main/resources/plugin.yml"));
         assertTrue(yml.contains("worldcraft.schematic.save:"), "el permiso de guardar (H5 CA2)");
     }
+
+    /** Spec 033: biomas, árboles, plantas y estructuras con su ayuda y ejemplo; la densidad como WorldEdit. */
+    @Test
+    void spec033_ayuda_de_biomas_naturaleza_y_estructuras() throws Exception {
+        YamlConfiguration m = new YamlConfiguration();
+        m.loadFromString(Files.readString(Path.of("src/main/resources/messages.yml")));
+        assertEquals(8, NatureCommands.SUBS.size());
+        for (String s : NatureCommands.SUBS) {
+            for (String k : new String[]{"usage", "text", "example"}) assertNotNull(m.getString("help." + s + "." + k), "falta help." + s + "." + k);
+            assertTrue(m.getString("help." + s + ".example").startsWith("/wc " + s), s);
+        }
+        assertTrue(m.getString("help.paste.usage").contains("--biomes"));
+        assertTrue(m.getString("help.tool.usage").contains("tree"));
+        assertTrue(m.getString("help.brush.usage").contains("forest"));
+        assertEquals(5, NatureCommands.density("5"), 1e-9);
+        assertEquals(2, NatureCommands.density("0.02"), 1e-9, "0.02 de WorldEdit es 2 %");
+        assertThrows(IllegalArgumentException.class, () -> NatureCommands.density("150"));
+    }
 }

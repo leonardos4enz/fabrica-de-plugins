@@ -32,6 +32,8 @@ public final class ToolParser {
             case REPL -> List.of("pattern");
             case FLOODFILL -> List.of("pattern", "range");
             case LRBUILD -> List.of("left", "right");
+            case FOREST -> List.of("type", "radius", "density");
+            case TREE -> List.of("type");
             default -> List.<String>of();
         });
         if (k.placesBlocks()) out.add("mask");
@@ -58,6 +60,7 @@ public final class ToolParser {
             case SCATTER -> List.of("radius", "points", "distance");
             case ROCK -> List.of("radius", "sphericity", "frequency", "amplitude");
             case FLOODFILL -> List.of("range");
+            case FOREST -> List.of("radius", "density");
             default -> List.of();
         };
     }
@@ -108,6 +111,23 @@ public final class ToolParser {
                 o.put("left", l);
                 o.put("right", r);
             }
+            case TREE, FOREST -> {
+                // Spec 033: el tipo de árbol en vez de bloques («forest birch 6 10», «tree cherry»).
+                List<String> nums = numbers(kind);
+                int n = 0;
+                while (n < rest.size() && rest.get(rest.size() - 1 - n).matches("-?\\d+")) n++;
+                if (n > nums.size()) {
+                    throw new IllegalArgumentException(nums.isEmpty() ? kind.id() + " takes no numbers: " + example(kind)
+                            : kind.id() + " takes at most " + nums.size() + " numbers (" + String.join(", ", nums) + ")");
+                }
+                List<String> tail = new ArrayList<>(rest.subList(rest.size() - n, rest.size()));
+                for (int i = 0; i < tail.size(); i++) o.put(nums.get(i), tail.get(i));
+                List<String> names = rest.subList(0, rest.size() - n);
+                if (names.size() > 1) throw new IllegalArgumentException(kind.id() + " takes one tree type: " + example(kind));
+                String tree = kv.containsKey("type") ? kv.get("type") : names.isEmpty() ? "oak" : names.get(0);
+                o.put("type", dev.leo.worldcraft.nature.TreeKind.parse(tree).id());
+                rest = new ArrayList<>();
+            }
             default -> {
                 List<String> nums = numbers(kind);
                 int n = 0;
@@ -122,7 +142,8 @@ public final class ToolParser {
             }
         }
         for (Map.Entry<String, String> e : kv.entrySet()) {
-            if (!e.getKey().equals("mask") && !e.getKey().equals("shape") && !e.getKey().equals("left") && !e.getKey().equals("right")) o.put(e.getKey(), e.getValue());
+            if (!e.getKey().equals("mask") && !e.getKey().equals("shape") && !e.getKey().equals("left") && !e.getKey().equals("right")
+                    && !e.getKey().equals("type")) o.put(e.getKey(), e.getValue());
         }
         boolean takesPattern = allowed.contains("pattern");
         String pattern = kv.containsKey("pattern") ? kv.get("pattern") : String.join(" ", rest);
@@ -141,6 +162,7 @@ public final class ToolParser {
         range(o, "frequency", 1, 100);
         range(o, "amplitude", 0, 100);
         range(o, "range", 1, caps.maxRange());
+        range(o, "density", 0, 100);
         if (kv.containsKey("mask")) {
             String m = kv.get("mask");
             if (!m.isBlank() && !m.equals("*")) o.put("mask", m);
@@ -210,6 +232,8 @@ public final class ToolParser {
             case FARWAND -> "/wc tool farwand";
             case LRBUILD -> "/wc tool lrbuild air stone";
             case NAVWAND -> "/wc tool navwand";
+            case FOREST -> "/wc brush forest birch 6 10";
+            case TREE -> "/wc tool tree cherry";
         };
     }
 }

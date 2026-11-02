@@ -142,6 +142,15 @@ public final class PaperWorld implements EditWorld {
                 }
                 s.setWaxed(in.readBoolean());
                 st.update(true, false);
+            } else if (data[0] == Structures.LOOT && st instanceof org.bukkit.loot.Lootable l) {
+                // Spec 033 H7 CA3: el cofre de una plantilla del juego, con su tabla de botín.
+                String key = new String(data, 1, data.length - 1, java.nio.charset.StandardCharsets.UTF_8);
+                org.bukkit.NamespacedKey nk = org.bukkit.NamespacedKey.fromString(key);
+                org.bukkit.loot.LootTable table = nk == null ? null : org.bukkit.Bukkit.getLootTable(nk);
+                if (table != null) {
+                    l.setLootTable(table);
+                    st.update(true, false);
+                }
             } else if (TileData.is(data)) {
                 // Spec 027: los datos de un esquema, en la forma estándar del juego.
                 TileNbt.restore(st, TileData.decode(data));

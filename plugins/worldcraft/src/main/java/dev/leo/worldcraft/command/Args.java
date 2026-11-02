@@ -13,7 +13,7 @@ import java.util.Set;
  * con valor (--player, --world) toman el siguiente argumento.
  */
 public final class Args {
-    public static final Set<String> WITH_VALUE = Set.of("player", "world", "at", "thickness");
+    public static final Set<String> WITH_VALUE = Set.of("player", "world", "at", "thickness", "palette");
 
     public final List<String> positional = new ArrayList<>();
     public final Set<String> flags = new HashSet<>();

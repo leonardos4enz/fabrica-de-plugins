@@ -40,6 +40,8 @@ public final class Worldcraft extends JavaPlugin {
     private Terrain terrain;
     private BrushTool brush;
     private Tools tools;
+    /** Spec 033: las plantillas de estructuras del juego. */
+    private dev.leo.worldcraft.paper.Structures structures;
     private ExecutorService schematicThread;
     private Schematics schematics;
 
@@ -92,6 +94,9 @@ public final class Worldcraft extends JavaPlugin {
         tools = new Tools(this);
         getServer().getPluginManager().registerEvents(tools, this);
         tools.start();
+        // Spec 033: la lista de plantillas del juego se lee en el hilo de E/S.
+        structures = new dev.leo.worldcraft.paper.Structures(this);
+        structures.scan();
         // Spec 027: el disco, la compresión y el NBT de los esquemas, en un hilo propio (no atrasa los diarios).
         schematicThread = Executors.newSingleThreadExecutor(r -> {
             Thread t = new Thread(r, "Worldcraft-Schematics");
@@ -179,6 +184,10 @@ public final class Worldcraft extends JavaPlugin {
 
     public Tools tools() {
         return tools;
+    }
+
+    public dev.leo.worldcraft.paper.Structures structures() {
+        return structures;
     }
 
     public Schematics schematics() {

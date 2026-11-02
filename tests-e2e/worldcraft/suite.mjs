@@ -1543,6 +1543,215 @@ export default {
           await borrarEntidades(srv)
         }
       }
+    },
+    {
+      id: '033 H1 CA1 · H1 CA2 · H2 CA1 · H2 CA2 · H3 CA1',
+      nombre: 'setbiome cambia las celdas de 4×4×4 que toca, Ana ve el desierto sin salir, biomeinfo lo dice, $desert en replace solo ahí, undo y redo; un nombre mal escrito sugiere',
+      timeoutMs: 150000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        try {
+          await pide(ana, 'wc biomelist 1 cherry', /Biomes \(1\), page 1 of 1/)
+          await pide(ana, 'wc setbiome desrt', /Unknown biome 'desrt' \(did you mean 'desert'\?\)/)
+          // X = 40 y Z = 40 son múltiplos de 4: x 40..51 son tres celdas, y -64..-53 otras tres, z 40..51 tres: 27.
+          // execute if biome (y el cliente) usan el «zoom difuso» del juego: cerca del borde de una celda pueden tomar
+          // la vecina. Se mira el centro (X + 6, -58, Z + 6), rodeado de desierto.
+          await seleccionar(ana, [X, -64, Z], [X + 11, -53, Z + 11])
+          const antes = ana.bot.blockAt(v3(ana.bot, X + 6, -58, Z + 6))?.biome?.id
+          const r = await pide(ana, 'wc setbiome desert', /Done: setbiome changed (\d+) biome cell\(s\)/, 30000)
+          if (!/changed 27 biome/.test(r.texto)) throw new Error(`se esperaban 27 celdas: ${r.texto}`)
+          await comprobar(srv, `biome ${X + 6} -58 ${Z + 6} minecraft:desert`)
+          await comprobar(srv, `biome ${X + 20} -58 ${Z + 6} minecraft:plains`)
+          // H2 CA2: el chunk se reenvía; el bot ve otro bioma sin salir y entrar (mineflayer 4.39 no nombra bien los
+          // biomas de 1.21.4: se compara el número que recibió).
+          await ana.hasta('ver el bioma nuevo', b => {
+            const id = b.blockAt(v3(b, X + 6, -58, Z + 6))?.biome?.id
+            return id !== undefined && id !== antes
+          }, 20000)
+          const visto = ana.bot.blockAt(v3(ana.bot, X + 6, -58, Z + 6))?.biome
+          console.log(`    (bioma que ve el bot: ${antes} → ${visto?.id} ${visto?.name})`)
+          await pide(ana, 'wc biomeinfo', /Biomes in the selection \(1, 1,728 blocks\)/)
+          await pide(ana, 'wc biomeinfo --here', /Biome at .*: desert/)
+          // $desert lee la celda exacta: el pasto se vuelve arena solo en x 40..51 (de x 36..55), z 40..43.
+          await seleccionar(ana, [X - 4, -61, Z], [X + 15, -61, Z + 3])
+          await pide(ana, 'wc replace $desert and grass_block with sand', /Done: replace changed 48 blocks/, 30000)
+          await comprobar(srv, `block ${X} -61 ${Z} sand`)
+          await comprobar(srv, `block ${X - 1} -61 ${Z} grass_block`)
+          await comprobar(srv, `block ${X + 12} -61 ${Z} grass_block`)
+          await pide(ana, 'wc undo', /Undone .*replace/)
+          await pide(ana, 'wc undo', /Undone .*setbiome .*the biomes are back/)
+          await comprobar(srv, `biome ${X + 6} -58 ${Z + 6} minecraft:plains`)
+          await pide(ana, 'wc redo', /Redone .*setbiome/)
+          await comprobar(srv, `biome ${X + 6} -58 ${Z + 6} minecraft:desert`)
+          await pide(ana, 'wc undo', /Undone .*setbiome/)
+          await comprobar(srv, `biome ${X + 6} -58 ${Z + 6} minecraft:plains`)
+        } finally {
+          await srv.consola(`fillbiome ${X - 8} -64 ${Z - 8} ${X + 24} -40 ${Z + 20} minecraft:plains`)
+        }
+      }
+    },
+    {
+      id: '033 H4 CA1 · H4 CA2 · H4 CA3',
+      nombre: 'copy --biomes y paste --biomes llevan el desierto con el oro (sin la opción, solo bloques); el .schem guardado los trae y WorldEdit los pega con //paste -b',
+      timeoutMs: 180000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        const we = carpetaWE(srv)
+        try {
+          // 3×3×3 celdas de desierto (X+16..27, Z+16..27) con oro en el medio; Ana copia desde (X, Z). Se mira el bioma en
+          // el centro (el «zoom difuso» del juego puede tomar la celda vecina cerca de un borde).
+          await srv.consola(`fillbiome ${X + 16} -64 ${Z + 16} ${X + 27} -53 ${Z + 27} minecraft:desert`)
+          await srv.consola(`setblock ${X + 22} -60 ${Z + 22} gold_block`)
+          await srv.sincronizar()
+          await seleccionar(ana, [X + 16, -61, Z + 16], [X + 27, -56, Z + 27])
+          await pide(ana, 'wc copy --biomes', /and the biomes \(1 kind/)
+          // Pegado 40 más al este: sin --biomes, solo el oro.
+          await srv.consola(`tp ${ANA} ${X + 40.5} -60 ${Z + 0.5} 0 0`)
+          await ana.hasta('llegar', b => Math.abs(b.entity.position.x - (X + 40.5)) < 0.6)
+          await pide(ana, 'wc paste', /Done: paste changed/, 30000)
+          await comprobar(srv, `block ${X + 62} -60 ${Z + 22} gold_block`)
+          await comprobar(srv, `biome ${X + 62} -59 ${Z + 22} minecraft:plains`)
+          await pide(ana, 'wc undo', /Undone .*paste/)
+          await pide(ana, 'wc paste --biomes', /biome cell\(s\)/, 30000)
+          await comprobar(srv, `block ${X + 62} -60 ${Z + 22} gold_block`)
+          await comprobar(srv, `biome ${X + 62} -59 ${Z + 22} minecraft:desert`)
+          await pide(ana, 'wc undo', /Undone .*paste/)
+          await comprobar(srv, `biome ${X + 62} -59 ${Z + 22} minecraft:plains`)
+          // El esquema trae los biomas (v3) y Worldcraft los vuelve a leer.
+          await pide(ana, 'wc schem save e2e_bio --overwrite', /Saved e2e_bio/)
+          await pide(ana, 'wc clearclipboard', /clipboard/i)
+          const m = ana.marca()
+          ana.comando('wc schem load e2e_bio')
+          await ana.esperar('chat', /It has biomes \(1 kind/, { desde: m, timeoutMs: 20000 })
+          await pide(ana, 'wc paste --biomes', /biome cell\(s\)/, 30000)
+          await comprobar(srv, `biome ${X + 62} -59 ${Z + 22} minecraft:desert`)
+          await pide(ana, 'wc undo', /Undone .*paste/)
+          // WorldEdit 7.3.19 lee los biomas del esquema de Worldcraft.
+          fs.mkdirSync(we, { recursive: true })
+          fs.copyFileSync(path.join(srv.run, 'plugins', 'Worldcraft', 'schematics', 'e2e_bio.schem'), path.join(we, 'e2e_bio.schem'))
+          await pide(ana, '/schem load e2e_bio', /loaded/i, 30000)
+          await pide(ana, '/paste -b', /pasted/i, 30000)
+          await comprobar(srv, `block ${X + 62} -60 ${Z + 22} gold_block`)
+          await comprobar(srv, `biome ${X + 62} -59 ${Z + 22} minecraft:desert`)
+          await pide(ana, '/undo', /Undo successful|undid|undone/i)
+        } finally {
+          fs.rmSync(path.join(we, 'e2e_bio.schem'), { force: true })
+          await srv.consola(`fillbiome ${X + 12} -64 ${Z + 12} ${X + 72} -50 ${Z + 32} minecraft:plains`)
+          await srv.consola(`fill ${X + 12} -60 ${Z + 12} ${X + 72} -57 ${Z + 32} air`)
+        }
+      }
+    },
+    {
+      id: '033 H5 CA1 · H5 CA2 · H5 CA3 · H5 CA4 · H5 CA5 · H6 CA1 · H6 CA2 · H6 CA3',
+      nombre: 'forest con vista previa pone abedules del juego y undo los quita; flora y pumpkins; forestgen; tool tree pone un cerezo donde mira; brush forest; un árbol mal escrito sugiere',
+      timeoutMs: 240000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        const cuenta = async (mascara) => {
+          const r = await pide(ana, `wc count ${mascara}`, /([\d,]+) of [\d,]+ blocks match/)
+          return Number(r.texto.match(/([\d,]+) of [\d,]+ blocks match/)[1].replace(/,/g, ''))
+        }
+        try {
+          await pide(ana, 'wc forest brich', /Unknown tree 'brich' \(did you mean 'birch'\?\)/)
+          // Un terreno de 16×16 de pasto (el del mundo plano) con aire hasta y = -41.
+          await seleccionar(ana, [X + 4, -61, Z + 4], [X + 19, -41, Z + 19])
+          let m = ana.marca()
+          ana.comando('wc forest birch 15 --preview')
+          await ana.esperar('chat', /tree\(s\) grown/, { desde: m, timeoutMs: 30000 })
+          await ana.esperar('chat', /Preview ready/, { desde: m, timeoutMs: 30000 })
+          if (await cuenta('birch_log') !== 0) throw new Error('la vista previa puso troncos de verdad')
+          m = ana.marca()
+          ana.comando('wc confirm')
+          await ana.esperar('chat', /Done: forest changed [\d,]+ blocks/, { desde: m, timeoutMs: 30000 })
+          const troncos = await cuenta('birch_log')
+          if (troncos < 4) throw new Error(`pocos troncos: ${troncos}`)
+          if (await cuenta('birch_leaves') < 10) throw new Error('el abedul no tiene hojas')
+          await pide(ana, 'wc undo', /Undone .*forest/)
+          if (await cuenta('birch_log') !== 0) throw new Error('undo dejó troncos')
+          // flora: pasto corto y flores sobre el pasto.
+          await pide(ana, 'wc flora 60', /Done: flora changed [\d,]+ blocks/, 30000)
+          if (await cuenta('short_grass, dandelion, poppy, cornflower, oxeye_daisy, azure_bluet') < 50) throw new Error('flora puso pocas plantas')
+          await pide(ana, 'wc undo', /Undone .*flora/)
+          if (await cuenta('short_grass') !== 0) throw new Error('undo dejó plantas')
+          // pumpkins alrededor de Ana (tamaño 8).
+          await pide(ana, 'wc pumpkins 8 10', /Done: pumpkins changed [\d,]+ blocks/, 30000)
+          await seleccionar(ana, [X - 8, -61, Z - 8], [X + 8, -52, Z + 8])
+          if (await cuenta('pumpkin') < 1) throw new Error('no hay calabazas')
+          if (await cuenta('oak_leaves') < 2) throw new Error('las calabazas no tienen hojas')
+          await pide(ana, 'wc undo', /Undone .*pumpkins/)
+          // forestgen alrededor de Ana.
+          m = ana.marca()
+          ana.comando('wc forestgen 6 spruce 20')
+          await ana.esperar('chat', /Done: forestgen changed [\d,]+ blocks/, { desde: m, timeoutMs: 40000 })
+          await seleccionar(ana, [X - 6, -61, Z - 6], [X + 6, -41, Z + 6])
+          if (await cuenta('spruce_log') < 1) throw new Error('forestgen sin abetos')
+          await pide(ana, 'wc undo', /Undone .*forestgen/)
+          // tool tree: un cerezo sobre el pasto que mira (X, -61, Z + 8).
+          await mirarSuelo(ctx)
+          await pide(ana, 'wc tool tree cherry', /Here is your tool \(tree · cherry\)/)
+          m = ana.marca()
+          ana.bot.activateItem()
+          await ana.esperar('chat', /Done: tool tree changed [\d,]+ blocks/, { desde: m, timeoutMs: 30000 })
+          await comprobar(srv, `block ${X} -60 ${Z + 8} cherry_log`)
+          await pide(ana, 'wc undo', /Undone .*tool tree/)
+          await comprobar(srv, `block ${X} -60 ${Z + 8} air`)
+          // brush forest: robles en el círculo donde mira.
+          await pide(ana, 'wc brush forest oak 4 60', /Your brush is now forest · oak · radius 4 · density 60%/)
+          m = ana.marca()
+          ana.bot.activateItem()
+          await ana.esperar('chat', /Done: brush forest changed [\d,]+ blocks/, { desde: m, timeoutMs: 30000 })
+          await seleccionar(ana, [X - 5, -61, Z + 3], [X + 5, -41, Z + 13])
+          if (await cuenta('oak_log') < 1) throw new Error('brush forest sin robles')
+          await pide(ana, 'wc undo', /Undone .*brush forest/)
+          if (await cuenta('oak_log') !== 0) throw new Error('undo dejó robles')
+        } finally {
+          await srv.consola(`clear ${ANA}`)
+        }
+      }
+    },
+    {
+      id: '033 H7 CA1 · H7 CA2 · H7 CA3',
+      nombre: 'structure list y load: el iglú del juego al portapapeles, se pega con su nieve y undo lo quita; el portal en ruinas trae el cofre con su botín; un nombre mal escrito sugiere',
+      timeoutMs: 150000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        try {
+          await pide(ana, 'wc structure list igloo', /Game structures \(3\)/)
+          await pide(ana, 'wc structure load iglo/top', /There is no structure 'iglo\/top' \(did you mean 'igloo\/top'\?\)/)
+          await pide(ana, 'wc structure load igloo/top', /Loaded igloo\/top into your clipboard: 7×5×8/)
+          await pide(ana, 'wc paste', /Done: paste changed [\d,]+ blocks/, 30000)
+          await seleccionar(ana, [X, -60, Z], [X + 6, -56, Z + 7])
+          const nieve = await pide(ana, 'wc count snow_block', /([\d,]+) of [\d,]+ blocks match/)
+          if (Number(nieve.texto.match(/([\d,]+) of/)[1].replace(/,/g, '')) < 20) throw new Error(`poca nieve: ${nieve.texto}`)
+          await pide(ana, 'wc undo', /Undone .*paste/)
+          await pide(ana, 'wc count snow_block', /\b0 of [\d,]+ blocks match/)
+          // El portal en ruinas: un cofre con su tabla de botín (el del iglú la recibe de un marcador al generarse).
+          const m = ana.marca()
+          ana.comando('wc structure load ruined_portal/portal_1')
+          await ana.esperar('chat', /Loaded ruined_portal\/portal_1/, { desde: m })
+          await ana.esperar('chat', /1 chest\(s\) keep their loot table/, { desde: m })
+          await pide(ana, 'wc paste', /Done: paste changed [\d,]+ blocks/, 30000)
+          let cofre = null
+          await ana.hasta('ver el cofre', b => {
+            for (let x = X; x < X + 6 && !cofre; x++) for (let y = -60; y < -50 && !cofre; y++) for (let z = Z; z < Z + 6 && !cofre; z++) {
+              if (bloque(b, x, y, z) === 'chest') cofre = [x, y, z]
+            }
+            return cofre !== null
+          }, 20000)
+          await srv.consola(`data get block ${cofre.join(' ')} LootTable`, { espera: /chests\/ruined_portal/ })
+          await pide(ana, 'wc undo', /Undone .*paste/)
+        } finally {
+          await srv.consola(`fill ${X - 2} -60 ${Z - 2} ${X + 14} -45 ${Z + 16} air`)
+        }
+      }
     }
   ]
 }

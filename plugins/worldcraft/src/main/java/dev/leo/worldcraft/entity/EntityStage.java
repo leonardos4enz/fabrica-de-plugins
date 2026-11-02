@@ -31,6 +31,37 @@ public interface EntityStage {
         return 0;
     }
 
+    /**
+     * Spec 033: dos etapas, una tras otra (las entidades y después los biomas). Si una es null, la otra; done y skipped
+     * son los de la primera (los mensajes de entidades miran esa).
+     */
+    static EntityStage chain(EntityStage a, EntityStage b) {
+        if (a == null) return b;
+        if (b == null) return a;
+        return new EntityStage() {
+            private boolean firstDone;
+
+            @Override
+            public boolean step(long deadlineNanos, LongSupplier clock) {
+                if (!firstDone) {
+                    if (!a.step(deadlineNanos, clock)) return false;
+                    firstDone = true;
+                }
+                return b.step(deadlineNanos, clock);
+            }
+
+            @Override
+            public int done() {
+                return a.done();
+            }
+
+            @Override
+            public int skipped() {
+                return a.skipped();
+            }
+        };
+    }
+
     /** Algo que se hace una vez (dejar las entidades en el portapapeles al cortar). */
     static EntityStage action(Runnable r) {
         return new EntityStage() {

@@ -204,7 +204,7 @@ final class SelectionCommands {
         Region box = readable(s, ses);
         if (box == null) return;
         World w = Bukkit.getWorld(ses.world());
-        Mask.Compiled mc = mask.compile(edits().blocks().table());
+        Mask.Compiled mc = edits().compile(mask, w);
         long seed = ThreadLocalRandom.current().nextLong();
         String shown = mask.text();
         java.util.function.Consumer<Census> done = c -> {

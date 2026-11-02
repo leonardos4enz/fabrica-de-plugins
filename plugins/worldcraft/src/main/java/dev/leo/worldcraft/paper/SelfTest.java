@@ -83,6 +83,8 @@ public final class SelfTest {
                                     return;
                                 }
                                 s.sendMessage(plugin.messages().get("selftest-tools-ok"));
+                                String nature = nature(w, box);
+                                if (nature != null) fail(s, nature);
                             })));
         });
         edits.submitJob(set);
@@ -232,6 +234,31 @@ public final class SelfTest {
         if (dev.leo.worldcraft.tool.Cycler.values(wheat, "age", valid).size() != 8) return "tools: the cycler does not find the 8 ages of wheat";
         String turned = dev.leo.worldcraft.tool.Cycler.cycle(stair, "facing", false, valid);
         if (turned == null || !valid.test(turned) || turned.equals(stair)) return "tools: the cycler did not turn the stairs";
+        return null;
+    }
+
+    /**
+     * Spec 033 (compuerta 2): el registro de biomas, un roble capturado de verdad sin que el mundo cambie y la plantilla
+     * igloo/top del juego. Dice qué pasó y devuelve null si salió bien.
+     */
+    private String nature(World w, Box box) {
+        List<String> biomes = PaperBiomes.names();
+        if (!biomes.contains("minecraft:plains") || !biomes.contains("minecraft:desert")) return "nature: the biome list has no plains or desert";
+        if (plugin.config().parser().biome("cherry_grove") == null) return "nature: '$cherry_grove' is not a biome for the masks";
+        int x = box.minX() + 2, y = box.minY(), z = box.minZ() + 2;
+        List<String> before = read(w, box);
+        var tree = Trees.capture(w, plugin.edits().blocks(), x, y, z, dev.leo.worldcraft.nature.TreeKind.OAK, new java.util.Random(7));
+        if (tree == null || tree.isEmpty()) return "nature: an oak in the air was not captured";
+        var table = plugin.edits().blocks().table();
+        if (tree.values().stream().noneMatch(st -> table.material(st).equals("minecraft:oak_log"))) return "nature: the captured oak has no logs";
+        if (!read(w, box).equals(before)) return "nature: capturing a tree changed the world";
+        org.bukkit.structure.Structure igloo = org.bukkit.Bukkit.getStructureManager().loadStructure(org.bukkit.NamespacedKey.minecraft("igloo/top"), false);
+        if (igloo == null || igloo.getPaletteCount() == 0) return "nature: the game template igloo/top did not load";
+        var size = igloo.getSize();
+        int listed = plugin.structures().all().size();
+        plugin.getLogger().info("Selftest nature passed: " + biomes.size() + " biomes; an oak of " + tree.size()
+                + " blocks captured without touching the world; igloo/top is " + size.getBlockX() + "×" + size.getBlockY() + "×"
+                + size.getBlockZ() + "; " + listed + " templates listed");
         return null;
     }
 

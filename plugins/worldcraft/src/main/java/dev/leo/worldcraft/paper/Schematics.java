@@ -174,12 +174,15 @@ public final class Schematics {
             SchemBlocks.Result res = SchemBlocks.resolve(r.schem.palette(), r.counts, blocks, blocks.table());
             Set<Integer> air = new HashSet<>();
             for (int id : res.map()) if (blocks.isAir(id)) air.add(id);
-            return new Object[]{r, res, Set.copyOf(air)};
+            // Spec 033: los biomas del servidor, leídos aquí (el registro, en el hilo principal).
+            return new Object[]{r, res, Set.copyOf(air), Set.copyOf(PaperBiomes.names())};
         }, main).thenApplyAsync(o -> {
             Read r = (Read) o[0];
             @SuppressWarnings("unchecked")
             Set<Integer> air = (Set<Integer>) o[2];
-            SchemConvert.Loaded l = SchemConvert.toClipboard(r.schem, ((SchemBlocks.Result) o[1]).map(), air::contains, dv);
+            @SuppressWarnings("unchecked")
+            Set<String> biomes = (Set<String>) o[3];
+            SchemConvert.Loaded l = SchemConvert.toClipboard(r.schem, ((SchemBlocks.Result) o[1]).map(), air::contains, dv, biomes::contains);
             return new Object[]{r, o[1], l};
         }, thread).whenCompleteAsync((o, t) -> {
             busy.remove(owner);
@@ -218,6 +221,10 @@ public final class Schematics {
         if (sc.entities() > sc.entityList().size()) {
             s.sendMessage(msg().get("schem-note-entities-bad", "count", String.valueOf(sc.entities() - sc.entityList().size())));
         }
+        // Spec 033 H4 CA3: los biomas vienen con el esquema (se pegan con paste --biomes).
+        if (l.biomes() > 0) s.sendMessage(msg().get("schem-note-biomes", "count", String.valueOf(l.biomes())));
+        if (!l.unknownBiomes().isEmpty()) s.sendMessage(msg().get("schem-note-biomes-unknown", "count", String.valueOf(l.unknownBiomes().size()),
+                "kinds", String.join(", ", l.unknownBiomes().stream().limit(5).toList())));
         if (sc.badBlockEntities() > 0) s.sendMessage(msg().get("schem-note-bad", "count", String.valueOf(sc.badBlockEntities())));
         if (sc.dataVersion() > TileNbt.serverDataVersion()) {
             s.sendMessage(msg().get("schem-note-newer", "version", String.valueOf(sc.dataVersion()), "server", String.valueOf(TileNbt.serverDataVersion())));
@@ -285,6 +292,8 @@ public final class Schematics {
         int dv = TileNbt.serverDataVersion();
         String author = s.getName();
         String version = plugin.getPluginMeta().getVersion();
+        String[] biomeNames = clip.hasBiomes() ? clip.biomeNames().toArray(new String[0]) : null;
+        int[] biomeData = clip.hasBiomes() ? clip.rawBiomes().clone() : null;
         SchemFiles files = files();
         s.sendMessage(msg().get("schem-saving", "name", clean));
         Runnable write = () -> CompletableFuture.supplyAsync(() -> {
@@ -292,6 +301,8 @@ public final class Schematics {
                 Clipboard c = Clipboard.of(clip.width(), clip.height(), clip.depth(), clip.offset()[0], clip.offset()[1],
                         clip.offset()[2], raw, std);
                 c.entities(clip.entities());
+                // Spec 033 F-01: la copia que se guarda también lleva los biomas (antes se perdían aquí).
+                if (biomeNames != null) c.biomes(biomeNames, biomeData);
                 c.transform(transform);
                 Clipboard baked = c.baked(st -> turned.getOrDefault(st, st));
                 Schematic sc = SchemConvert.fromClipboard(baked, stateNames, "minecraft:air", dv, clean, author, System.currentTimeMillis());

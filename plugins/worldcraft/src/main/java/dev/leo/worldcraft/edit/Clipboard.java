@@ -21,6 +21,10 @@ public final class Clipboard {
     private int[] source;
     /** Spec 031: las entidades copiadas (con --entities o de un esquema), relativas a quien copió y sin transformar. */
     private java.util.List<dev.leo.worldcraft.entity.EntityCopy> entities = java.util.List.of();
+    /** Spec 033: el bioma de cada bloque (índice en biomeNames; -1 = sin bioma); null si no lleva biomas. */
+    private int[] biomes;
+    private final java.util.List<String> biomeNames = new java.util.ArrayList<>();
+    private final Map<String, Integer> biomeIndex = new HashMap<>();
 
     public Clipboard(Box box, int originX, int originY, int originZ) {
         this.source = new int[]{originX, originY, originZ};
@@ -86,7 +90,85 @@ public final class Clipboard {
         }
         Clipboard c = new Clipboard(nw, nh, nd, t.minX(), t.minY(), t.minZ(), out, nt);
         c.entities = entities.stream().map(e -> e.transformed(transform)).toList();
+        if (biomes != null) {
+            // Spec 033: los biomas giran con su bloque.
+            i = 0;
+            for (int y = 0; y < nh; y++) {
+                for (int z = 0; z < nd; z++) {
+                    for (int x = 0; x < nw; x++, i++) {
+                        transform.inverse(t.minX() + x, t.minY() + y, t.minZ() + z, v);
+                        String b = biomeAt(v[0], v[1], v[2]);
+                        if (b != null) c.putBiomeAt(i, b);
+                    }
+                }
+            }
+        }
         return c;
+    }
+
+    // ------------------------------------------------------------------ spec 033: biomas
+
+    /** ¿Lleva biomas? (copy --biomes o un esquema que los traía) */
+    public boolean hasBiomes() {
+        return biomes != null;
+    }
+
+    private void putBiomeAt(int i, String biome) {
+        if (biomes == null) {
+            biomes = new int[states.length];
+            java.util.Arrays.fill(biomes, -1);
+        }
+        Integer k = biomeIndex.get(biome);
+        if (k == null) {
+            k = biomeNames.size();
+            biomeNames.add(biome);
+            biomeIndex.put(biome, k);
+        }
+        biomes[i] = k;
+    }
+
+    /** Guarda el bioma de una posición del mundo (con la caja original de la copia). */
+    public void putBiome(Box box, int x, int y, int z, String biome) {
+        putBiomeAt(index(x - box.minX(), y - box.minY(), z - box.minZ()), biome);
+    }
+
+    /** Los biomas por índice, en el orden de los estados (para un esquema); null para dejarlos sin bioma. */
+    public void biomes(String[] palette, int[] perBlock) {
+        if (perBlock == null) {
+            biomes = null;
+            return;
+        }
+        if (perBlock.length != states.length) throw new IllegalArgumentException("size");
+        for (int i = 0; i < perBlock.length; i++) {
+            int b = perBlock[i];
+            if (b >= 0 && b < palette.length && palette[b] != null) putBiomeAt(i, palette[b]);
+        }
+    }
+
+    /** Spec 033: el bioma de cada bloque sin transformar (-1 = ninguno), o null; no se cambia. */
+    public int[] rawBiomes() {
+        return biomes;
+    }
+
+    public java.util.List<String> biomeNames() {
+        return java.util.Collections.unmodifiableList(biomeNames);
+    }
+
+    /** El bioma en esa posición relativa al origen, sin transformar; null si no hay. */
+    String biomeAt(int vx, int vy, int vz) {
+        if (biomes == null) return null;
+        int rx = vx - offX, ry = vy - offY, rz = vz - offZ;
+        if (rx < 0 || ry < 0 || rz < 0 || rx >= w || ry >= h || rz >= d) return null;
+        int b = biomes[index(rx, ry, rz)];
+        return b < 0 ? null : biomeNames.get(b);
+    }
+
+    /** El bioma que va en la posición del mundo (x, y, z) al pegar con el jugador en (px, py, pz), ya girado; null si no hay. */
+    public String biomeFor(int x, int y, int z, int px, int py, int pz) {
+        if (biomes == null) return null;
+        int[] v = new int[3];
+        transform.inverse(x - px, y - py, z - pz, v);
+        return biomeAt(v[0], v[1], v[2]);
     }
 
     /** Spec 031: las entidades sin transformar, relativas a quien copió. */

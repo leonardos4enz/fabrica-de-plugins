@@ -72,6 +72,8 @@ public final class WorldcraftCommand implements TabExecutor {
         SUBS.put("remove", BuildCommands.PERM_REMOVE);
         // Spec 029: selección, información y máscara global (como cualquier edición).
         for (String s : SelectionCommands.SUBS) SUBS.put(s, USE);
+        // Spec 033: biomas, árboles, plantas y estructuras del juego (como cualquier edición).
+        for (String s : NatureCommands.SUBS) SUBS.put(s, USE);
         // Spec 032: el superpico, con su propio permiso (los pinceles y herramientas van con worldcraft.use).
         SUBS.put("superpickaxe", dev.leo.worldcraft.paper.Tools.SUPERPICKAXE);
         SUBS.put("sp", dev.leo.worldcraft.paper.Tools.SUPERPICKAXE);
@@ -88,6 +90,7 @@ public final class WorldcraftCommand implements TabExecutor {
     private final NavigationCommands navigation;
     private final SelectionCommands selection;
     private final ToolCommands tool;
+    private final NatureCommands nature;
 
     public WorldcraftCommand(Worldcraft plugin) {
         this.plugin = plugin;
@@ -95,6 +98,7 @@ public final class WorldcraftCommand implements TabExecutor {
         this.navigation = new NavigationCommands(plugin);
         this.selection = new SelectionCommands(plugin, this);
         this.tool = new ToolCommands(plugin);
+        this.nature = new NatureCommands(plugin, this);
     }
 
     /** Spec 032 H4 CA3: el pincel butcher (la obra de /wc butcher en otro punto). */
@@ -163,6 +167,7 @@ public final class WorldcraftCommand implements TabExecutor {
                 default -> {
                     if (NavigationCommands.SUBS.contains(sub)) navigation.run(s, sub, a);
                     else if (SelectionCommands.SUBS.contains(sub)) selection.run(s, sub, a);
+                    else if (NatureCommands.SUBS.contains(sub)) nature.run(s, sub, a);
                     else if (BuildCommands.SHAPES.contains(sub) || BuildCommands.REGION.contains(sub)
                             || BuildCommands.UTILITIES.contains(sub) || BuildCommands.ENTITIES.contains(sub)) build.run(s, sub, a);
                     else help(s, a);
@@ -523,7 +528,7 @@ public final class WorldcraftCommand implements TabExecutor {
         }
         PaperBlocks blocks = edits().blocks();
         Pattern.Compiled pc = pattern.compile(blocks.table());
-        Mask.Compiled mc = mask == null ? null : mask.compile(blocks.table());
+        Mask.Compiled mc = mask == null ? null : edits().compile(mask, world);
         long seed = ThreadLocalRandom.current().nextLong();
         List<Integer> placed = new ArrayList<>();
         for (String st : pattern.placedStates()) placed.add(blocks.table().intern(st));
@@ -557,7 +562,7 @@ public final class WorldcraftCommand implements TabExecutor {
     }
 
     private void copy(CommandSender s, String[] a, boolean cut) {
-        Args args = Args.parse(a, 1, cut ? Set.of("preview", "mask", "entities") : Set.of("mask", "entities"));
+        Args args = Args.parse(a, 1, cut ? Set.of("preview", "mask", "entities", "biomes") : Set.of("mask", "entities", "biomes"));
         if (args.problem != null) {
             s.sendMessage(msg().get("error", "message", args.problem));
             return;
@@ -590,15 +595,18 @@ public final class WorldcraftCommand implements TabExecutor {
         int[] o = origin(s, box);
         // Spec 031 H1 CA1: entidades solo con --entities (como //copy -e de WorldEdit; decisión del dueño).
         boolean entities = args.flags.contains("entities");
+        // Spec 033 H4 CA1: biomas solo con --biomes (como -b de WorldEdit; decisión del dueño).
+        boolean biomes = args.flags.contains("biomes");
         if (mask == null && !cut) {
-            edits().copy(s, world, region, o[0], o[1], o[2], entities, clip -> {
+            edits().copy(s, world, region, o[0], o[1], o[2], entities, biomes, clip -> {
                 s.sendMessage(msg().get("copied", "size", box.size(), "blocks", Edits.fmt(region.volume())));
                 if (entities) s.sendMessage(msg().get("copied-entities", "count", Edits.fmt(clip.entities().size())));
+                if (biomes) s.sendMessage(msg().get("copied-biomes", "count", Edits.fmt(clip.biomeNames().size())));
             });
             return;
         }
         PaperBlocks blocks = edits().blocks();
-        Mask.Compiled mc = mask == null ? null : mask.compile(blocks.table());
+        Mask.Compiled mc = mask == null ? null : edits().compile(mask, world);
         long seed = ThreadLocalRandom.current().nextLong();
         int air = blocks.air();
         String detail = mask == null ? "" : "mask " + mask.text();
@@ -612,9 +620,22 @@ public final class WorldcraftCommand implements TabExecutor {
                     clip.put(box, x, y, z, in ? st : air, in ? tile : null);
                 }, scan, () -> {
                     if (scan != null) clip.entities(Edits.relative(scan.result(), o[0], o[1], o[2]));
-                    ses.clipboard(clip, world.getName());
-                    s.sendMessage(msg().get("copied", "size", box.size(), "blocks", Edits.fmt(region.volume())));
-                    if (scan != null) s.sendMessage(msg().get("copied-entities", "count", Edits.fmt(clip.entities().size())));
+                    Runnable fin = () -> {
+                        ses.clipboard(clip, world.getName());
+                        s.sendMessage(msg().get("copied", "size", box.size(), "blocks", Edits.fmt(region.volume())));
+                        if (scan != null) s.sendMessage(msg().get("copied-entities", "count", Edits.fmt(clip.entities().size())));
+                        if (biomes) s.sendMessage(msg().get("copied-biomes", "count", Edits.fmt(clip.biomeNames().size())));
+                    };
+                    if (!biomes) {
+                        fin.run();
+                        return;
+                    }
+                    // Spec 033: los biomas, en otra lectura por celdas (copy --mask --biomes).
+                    dev.leo.worldcraft.paper.PaperBiomes bw = new dev.leo.worldcraft.paper.PaperBiomes(plugin, world);
+                    edits().readStage(s, world, new dev.leo.worldcraft.edit.EmptySource(box), "copy", Edits.readBiomes(bw, region, clip), () -> {
+                        bw.close();
+                        fin.run();
+                    });
                 });
                 return;
             }
@@ -632,6 +653,8 @@ public final class WorldcraftCommand implements TabExecutor {
                 };
             });
             // Spec 031 H1 CA2: cut --entities las quita antes que los bloques (un marco sin pared se cae) y las deja en el portapapeles.
+            // Spec 033 H4 CA1: cut --biomes los guarda en el portapapeles; el lugar conserva su bioma.
+            if (biomes) op = op.with(new Edits.BiomeWork((bw, sink) -> Edits.readBiomes(bw, region, made[0]), ""));
             if (entities) op = op.with(new Edits.EntityWork(
                     (w, sink, max, b) -> new EntityStage.Scan(w, region, e -> true, true, max, sink),
                     (w, sink, max, b) -> EntityStage.action(() -> made[0].entities(
@@ -654,7 +677,7 @@ public final class WorldcraftCommand implements TabExecutor {
     }
 
     private void paste(CommandSender s, String[] a) {
-        Args args = Args.parse(a, 1, Set.of("preview", "air", "origin", "select", "only-select", "no-entities", "remove-entities"));
+        Args args = Args.parse(a, 1, Set.of("preview", "air", "origin", "select", "only-select", "no-entities", "remove-entities", "biomes"));
         if (args.problem != null) {
             s.sendMessage(msg().get("error", "message", args.problem));
             return;
@@ -713,6 +736,18 @@ public final class WorldcraftCommand implements TabExecutor {
                     clear ? (w, sink, max, b) -> new EntityStage.Scan(w, target, e -> true, true, max, sink) : null,
                     ents.isEmpty() ? null : (w, sink, max, b) -> new EntityStage.Spawn(w, () -> items, sink),
                     ents.size(), ents.isEmpty() ? Set.of() : clip.entityTypes(), note));
+        }
+        // Spec 033 H4 CA2: los biomas del portapapeles (girados con él), cada celda por el bloque de su centro.
+        if (args.flags.contains("biomes")) {
+            if (!clip.hasBiomes()) {
+                s.sendMessage(msg().get("paste-no-biomes"));
+                return;
+            }
+            long[] cells = dev.leo.worldcraft.biome.Cells.of(target);
+            op = op.with(new Edits.BiomeWork((bw, sink) -> dev.leo.worldcraft.biome.BiomeStage.apply(bw, cells, (i, x, y, z, c) -> {
+                int[] m = dev.leo.worldcraft.biome.Cells.center(x, y, z, target);
+                return clip.biomeFor(m[0], m[1], m[2], o[0], o[1], o[2]);
+            }, sink), msg().text("note-biomes")));
         }
         edits().request(s, op, args.flags.contains("preview"));
     }
@@ -1169,15 +1204,19 @@ public final class WorldcraftCommand implements TabExecutor {
         if (last.startsWith("--")) {
             Set<String> opts = switch (sub) {
                 case "set", "replace", "walls", "faces" -> Set.of("--preview");
-                case "cut" -> Set.of("--preview", "--mask", "--entities");
-                case "copy" -> Set.of("--mask", "--entities");
-                case "paste" -> Set.of("--preview", "--air", "--origin", "--select", "--only-select", "--no-entities", "--remove-entities");
+                case "cut" -> Set.of("--preview", "--mask", "--entities", "--biomes");
+                case "copy" -> Set.of("--mask", "--entities", "--biomes");
+                case "paste" -> Set.of("--preview", "--air", "--origin", "--select", "--only-select", "--no-entities", "--remove-entities", "--biomes");
                 case "chunk" -> Set.of("--expand", "--chunk-coords");
                 case "outset", "inset" -> Set.of("--horizontal", "--vertical");
                 case "distr" -> Set.of("--states", "--clipboard");
                 case "undo", "redo" -> Set.of("--player");
                 case "pos1", "pos2" -> Set.of("--world");
                 case "mountain", "island", "floating_island" -> Set.of("--now");
+                case "biomeinfo" -> Set.of("--target", "--here");
+                case "setbiome" -> Set.of("--here");
+                case "forest", "forestgen", "flora", "pumpkins" -> Set.of("--preview");
+                case "structure" -> Set.of("--palette");
                 case "brush", "tool" -> {
                     var k = a.length > 2 ? dev.leo.worldcraft.tool.ToolKind.parse(a[1], sub.equals("brush")) : null;
                     Set<String> f = new HashSet<>();
@@ -1188,7 +1227,7 @@ public final class WorldcraftCommand implements TabExecutor {
                         ? Set.of("--overwrite") : Set.of();
                 default -> {
                     Set<String> f = new HashSet<>();
-                    if (!NavigationCommands.SUBS.contains(sub) && !SelectionCommands.SUBS.contains(sub)) for (String o : BuildCommands.flags(sub)) f.add("--" + o);
+                    if (!NavigationCommands.SUBS.contains(sub) && !SelectionCommands.SUBS.contains(sub) && !NatureCommands.SUBS.contains(sub)) for (String o : BuildCommands.flags(sub)) f.add("--" + o);
                     yield f;
                 }
             };
@@ -1217,6 +1256,7 @@ public final class WorldcraftCommand implements TabExecutor {
             case "copy", "cut" -> hasFlag(a, "--mask") ? blockSuggestions(last, true) : List.of();
             case "gmask" -> a.length == 2 ? merge(filter(List.of("off"), last), blockSuggestions(last, true)) : blockSuggestions(last, true);
             case "outset", "inset" -> a.length == 2 ? filter(List.of("1", "5", "10"), last) : List.of();
+            case "biomelist", "biomeinfo", "setbiome", "forest", "forestgen", "flora", "pumpkins", "structure" -> nature.complete(sub, a, last);
             default -> buildSuggestions(sub, a, last);
         };
     }
@@ -1312,7 +1352,7 @@ public final class WorldcraftCommand implements TabExecutor {
         return out;
     }
 
-    private static List<String> filter(List<String> options, String prefix) {
+    static List<String> filter(List<String> options, String prefix) {
         String p = prefix.toLowerCase(Locale.ROOT);
         List<String> out = new ArrayList<>();
         for (String o : options) if (o.toLowerCase(Locale.ROOT).startsWith(p)) out.add(o);

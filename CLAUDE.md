@@ -228,6 +228,14 @@ con `--release 21`.
   versión anterior conserva sus textos (también la ayuda vieja): una línea nueva llega sola, una cambiada no (README).
   `createBlockData` tira una excepción por cada estado inválido: el cycler recuerda lo probado. Se repitió la 002 F-03:
   después de un `setblock` de la consola, `srv.sincronizar()` antes de que el bot haga clic.
+- **Spec 033 (biomas, árboles y estructuras):** el juego guarda un bioma por celda de 4×4×4; `getBiome` de Bukkit lee la
+  celda exacta, pero `execute if biome` y el cliente usan el «zoom difuso» (cerca del borde toman la celda vecina): una
+  prueba mira el centro de una zona de varias celdas. mineflayer 4.39 no nombra los biomas de 1.21.4 (`biome.name`
+  vacío): comparar `biome.id`. `generateTree(…, Predicate)` con el predicado en `false` captura el árbol sin tocar el
+  mundo (el generador no mira el suelo: el suelo lo elige el plugin). La lista de plantillas no tiene API: se lee del jar
+  del servidor (`data/<ns>/structure/**.nbt` por el cargador de clases). El iglú recibe el botín de un marcador de datos
+  al generarse (su cofre de plantilla no lo trae): para probar el botín, `ruined_portal/portal_1`. Al guardar un `.schem`
+  se arma un portapapeles nuevo: todo lo nuevo del portapapeles (biomas) hay que pasarlo ahí (F-01).
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.
