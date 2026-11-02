@@ -77,6 +77,12 @@ public final class SelfTest {
                                 }
                                 s.sendMessage(plugin.messages().get("selftest-ok", "changed", Edits.fmt(set.changed())));
                                 s.sendMessage(plugin.messages().get("selftest-entities-ok"));
+                                String tools = tools();
+                                if (tools != null) {
+                                    fail(s, tools);
+                                    return;
+                                }
+                                s.sendMessage(plugin.messages().get("selftest-tools-ok"));
                             })));
         });
         edits.submitJob(set);
@@ -200,6 +206,33 @@ public final class SelfTest {
             w.getBlockAt(x + 1, y, z + 2).setBlockData(air, false);
             w.getBlockAt(x + 4, y, z + 1).setBlockData(air, false);
         }
+    }
+
+    /**
+     * Spec 032 (compuerta 2): el cycler con el registro real (las unitarias usan una tabla): una escalera tiene 4 caras,
+     * 2 mitades y 5 formas, y el trigo 8 edades. null si salió bien.
+     */
+    private static String tools() {
+        java.util.function.Predicate<String> valid = st -> {
+            try {
+                org.bukkit.Bukkit.createBlockData(st);
+                return true;
+            } catch (IllegalArgumentException e) {
+                return false;
+            }
+        };
+        String stair = org.bukkit.Material.OAK_STAIRS.createBlockData().getAsString();
+        int[] expected = {4, 2, 5};
+        String[] props = {"facing", "half", "shape"};
+        for (int i = 0; i < props.length; i++) {
+            int n = dev.leo.worldcraft.tool.Cycler.values(stair, props[i], valid).size();
+            if (n != expected[i]) return "tools: the cycler finds " + n + " values of " + props[i] + " in " + stair + ", not " + expected[i];
+        }
+        String wheat = org.bukkit.Material.WHEAT.createBlockData().getAsString();
+        if (dev.leo.worldcraft.tool.Cycler.values(wheat, "age", valid).size() != 8) return "tools: the cycler does not find the 8 ages of wheat";
+        String turned = dev.leo.worldcraft.tool.Cycler.cycle(stair, "facing", false, valid);
+        if (turned == null || !valid.test(turned) || turned.equals(stair)) return "tools: the cycler did not turn the stairs";
+        return null;
     }
 
     /** Lo que da fromCopy, en la forma que lee toCopy (Pos como double[], como al leer un archivo). */

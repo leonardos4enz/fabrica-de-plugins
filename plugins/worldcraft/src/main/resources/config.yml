@@ -99,3 +99,18 @@ utilities:
 entities:
   butcher_radius: 32
   max_radius: 128
+
+# Building brushes and one-click tools (/wc brush sphere, /wc tool repl...) and the super pickaxe (/wc sp).
+# /wc brush and /wc tool turn the item in your hand into the brush (only that item); with an empty hand you get one.
+tools:
+  item: minecraft:blaze_rod        # what you get with an empty hand
+  navwand_item: minecraft:compass  # what /wc tool navwand gives with an empty hand
+  range: 200                       # how far a brush or tool reaches where you look (1..512)
+  show: true                       # a circle of particles where the brush would land, only for you
+  brush_max_radius: 16             # the biggest brush radius (0..64)
+  max_range: 32                    # the biggest floodfill range (1..64)
+  deltree_range: 24                # how far deltree looks around a floating tree (4..64)
+  superpickaxe_max_radius: 5       # the biggest area or recursive super pickaxe (1..16)
+  tree_blocks: "#logs, #leaves, vine, cocoa, bee_nest, mangrove_roots"   # what deltree removes (mask syntax)
+  # Blocks the super pickaxe never breaks (mask syntax).
+  never_break: "bedrock, barrier, end_portal_frame, end_portal, end_gateway, nether_portal, command_block, chain_command_block, repeating_command_block, structure_block, jigsaw"

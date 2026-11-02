@@ -21,7 +21,7 @@ import java.util.Map;
  * funcionaba (si había algo) y dice archivo, ruta y causa.
  */
 public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<String, String> patternPresets,
-                           Map<String, String> maskPresets, TerrainSettings terrain, Issues issues) {
+                           Map<String, String> maskPresets, TerrainSettings terrain, Issues issues, ToolSettings tools) {
 
     public static LoadedConfig load(File folder, BlockRegistry registry, LoadedConfig previous) {
         Issues issues = new Issues();
@@ -75,7 +75,9 @@ public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<
         // Spec 026: un terrain.yml ilegible conserva el anterior; una sección terrain mala, sus valores de fábrica.
         TerrainSettings terrain = terrainFile == null && previous != null ? previous.terrain
                 : TerrainConfig.load(config == null ? null : config.getConfigurationSection("terrain"), terrainFile, parser, issues);
-        return new LoadedConfig(settings, limits, parser, Map.copyOf(pat), Map.copyOf(msk), terrain, issues);
+        // Spec 032: pinceles de construcción y herramientas (un config.yml ilegible conserva los anteriores).
+        ToolSettings tools = config == null && previous != null ? previous.tools : ToolSettings.load(config, parser, issues);
+        return new LoadedConfig(settings, limits, parser, Map.copyOf(pat), Map.copyOf(msk), terrain, issues, tools);
     }
 
     private static Map<String, String> section(YamlConfiguration y, String name) {

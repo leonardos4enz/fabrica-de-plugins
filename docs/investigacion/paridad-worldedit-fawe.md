@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-11-01 · **Para:** el dueño de la fábrica · **Spec:** [028](../sdd/specs/028-worldcraft-paridad-worldedit/spec.md),
 corregida en la [029](../sdd/specs/029-worldcraft-paridad-worldedit-2/spec.md) contra los jars ·
-**Estado:** la 028 implementó formas, región, utilidades y navegación (columna «Worldcraft» al día con la 0.4.0)
+**Estado:** la 028 implementó formas, región, utilidades y navegación; la 029–032, selección, máscaras, formas de selección, entidades, pinceles y herramientas (columna «Worldcraft» al día con la 0.8.0)
 
 ## 0. Verificación contra los jars (spec 029)
 El dueño pidió confirmar que no faltara ningún comando, **no solo con la ayuda sino desde el código**. Se cruzaron tres
@@ -65,7 +65,7 @@ Cantidades del bytecode (§0). «FAWE agrega» es la diferencia con WorldEdit en
 | Generación | 13 | 5 | formas (7) y montaña e isla (WE no las tiene) | `//generate`, árboles, *features*, estructuras; FAWE: cuevas, minerales, imagen, roca |
 | Portapapeles y esquemas | 12 | 7 | 10, mejor deshacer y seguridad | `clearclipboard`, pegar con opciones (`-o`, `-s`, `-n`, máscara), biomas, multi-portapapeles (entidades: hecho en la 031) |
 | Historial | 3 | 8 (`//history`, base de datos) | 3, mejor (en disco, seguro) | `clearhistory`, rollback por zona y tiempo, inspeccionar |
-| Herramientas y pinceles | 49 | 34 | pincel de terreno (6 modos), mejor en terreno | pinceles de construcción (esfera, cilindro, portapapeles, dispersar…), herramientas (árbol, relleno, info), desatar |
+| Herramientas y pinceles | 49 | 34 | pincel de terreno (6 modos), mejor en terreno; desde la 032, 10 pinceles de construcción, 8 herramientas y el superpico | árbol (033), `snow`, `forest`, `deform`, los de líneas y curvas de FAWE, guardar pinceles |
 | Navegación | 7 | — | 7 (`ascend`, `descend`, `ceil`, `thru`, `jumpto`, `up`, `unstuck`) | `-f`/`-g` en `up` y `ceil`; la varita de navegación |
 | Utilidades | 17 | 4 | 12 (`drain`, `fixwater`, `fill`, `snow`…) + `cancel`, `confirm`, `help`; `butcher` y `remove` (031) | `calculate` |
 | Biomas, chunks, snapshots, scripts | 14 | — | 0 | biomas (medio); snapshots (alto); `delchunks` y scripts, no |
@@ -101,7 +101,7 @@ WorldEdit**, aunque los constructores usen Worldcraft (§3).
 | `//sel poly\|ellipsoid\|sphere\|cyl\|convex` | Polígono, elipsoide, esfera, cilindro, poliedro convexo | `/wc sel poly\|ellipsoid\|sphere\|cyl\|convex` con los clics de WorldEdit, el contorno de cada forma con partículas sin mod y todos los comandos de región sobre la forma (**030**) | **mejor** (se ve sin CUI; `walls` de un cilindro es el tubo) | — | |
 | FAWE `//sel fuzzy`/`magic`, `polyhedral`/`polyhedron`/`hull`, `list` (**029**: `hull`, `list` y `magic` faltaban) | Selección «mágica» por bloques conectados; poliedro (envolvente convexa de los puntos); lista de puntos sueltos | `magic`/`fuzzy` (mismo material, hasta `selection.magic_radius`, leído por tandas) y `hull`/`polyhedral` = `convex` (**030**); falta `list` | parcial (`list`) | B (`list`) | |
 | WE `//pos` (`--s`; FAWE no lo tiene; **029**) | Las dos esquinas en un solo comando | `/wc pos1 x y z` y `pos2` | parcial | B | |
-| `//wand -n` (**029**) | La varita de navegación (brújula) | — | **falta** | B | |
+| `//wand -n` (**029**) | La varita de navegación (brújula) | `/wc tool navwand` (**032**) | igual | — | |
 | `//drawsel` y el mod WorldEdit CUI | Mostrar la selección (con un mod en el cliente) | contorno con partículas, sin mod, solo para quien selecciona | **mejor** | — | |
 | FAWE `//wer` | Seleccionar la región donde te dejan construir | — | falta (depende de integrar regiones) | M | |
 
@@ -182,21 +182,21 @@ WorldEdit**, aunque los constructores usen Worldcraft (§3).
 | `/brush raise\|lower\|smooth\|erode\|dilate\|morph\|paint` | Pinceles de terreno | `/wc brush raise\|lower\|smooth\|flatten\|erode\|paint`: solo el suelo natural, círculo de partículas | **mejor** en terreno (no derrite árboles ni construcciones; estilos por pendiente y altura) | — | |
 | FAWE `/brush flatten`, `blendball`, `height`, `cliff`, `stencil`, `layer`, `surface` | Más pinceles de terreno, mapas de alturas | `flatten`, `paint` con estilos | parcial | M | |
 | `/brush heightmap`, FAWE `image` | Terreno o color desde una imagen | — | **falta** (roadmap 026: mapas de alturas PNG) | M | |
-| `/brush sphere\|cylinder\|set` (`-h` hueca; FAWE `-f` esferas que caen; **029**) | Pincel que pone esferas o cilindros de un patrón | — | **falta** | B–M | |
-| `/brush none`, `/tool none` (**029**) | Desatar el pincel o la herramienta del ítem en la mano | — (el pincel de terreno se apaga con `/wc brush off`) | parcial | B | |
+| `/brush sphere\|cylinder\|set` (`-h` hueca; FAWE `-f` esferas que caen; **029**) | Pincel que pone esferas o cilindros de un patrón | `/wc brush sphere\|cyl\|set` con `--hollow`/`-h` y `mask=` (**032**); solo el ítem de la mano | igual (sin `-f` de FAWE) | — | |
+| `/brush none`, `/tool none` (**029**) | Desatar el pincel o la herramienta del ítem en la mano | `/wc brush none\|off`, `/wc tool none` (**032**): el ítem queda como era (nombre y descripción incluidos) | **mejor** | — | |
 | `/brush apply\|paint <forma> <radio> forest\|item\|set` (**029**: `item` faltaba) | Aplicar o pintar con una forma: árboles, usar un ítem (huesos, semillas) o poner un bloque | — | **falta** | M | |
-| `/brush clipboard`, FAWE `copypaste`, `populateschematic` | Pegar el portapapeles (o esquemas al azar) con el pincel | — | **falta** | M | |
-| `/brush splatter`, FAWE `scatter`, `rock`, `shatter` | Dispersar bloques, rocas, grietas | — | **falta** | M | |
-| `/brush gravity` (`-h`), `snow` (`-s`), `snowsmooth` (`-l -m`), `extinguish`, `butcher` (flags de `/butcher`), `biome` (`-c`), `forest`, `feature`, FAWE `structure`, `deform` (`-r -o`), `apply` | Gravedad, nieve, apagar fuego, matar criaturas, biomas, árboles, fórmulas | — | **falta** | B–M c/u | |
+| `/brush clipboard`, FAWE `copypaste`, `populateschematic` | Pegar el portapapeles (o esquemas al azar) con el pincel | `/wc brush clipboard [--air] [--origin]` (**032**: el portapapeles del momento del clic, sin entidades) | parcial (falta `-e`, `copypaste`, `populateschematic`) | M | |
+| `/brush splatter`, FAWE `scatter`, `rock`, `shatter` | Dispersar bloques, rocas, grietas | `/wc brush splatter`, `scatter [--overlay]`, `rock` (`blob`) (**032**) | parcial (falta `shatter`) | B | |
+| `/brush gravity` (`-h`), `snow` (`-s`), `snowsmooth` (`-l -m`), `extinguish`, `butcher` (flags de `/butcher`), `biome` (`-c`), `forest`, `feature`, FAWE `structure`, `deform` (`-r -o`), `apply` | Gravedad, nieve, apagar fuego, matar criaturas, biomas, árboles, fórmulas | `gravity [--height]`, `extinguish`, `butcher` con las opciones de `/wc butcher` (**032**, con deshacer) | parcial (falta `snow`, `snowsmooth`, `biome`, `forest` (033), `feature`, `structure`, `deform` (034), `apply`) | B–M c/u | |
 | FAWE `/brush pull` (**029**) | Tirar del terreno hacia el jugador | — | **falta** | B | |
 | FAWE `/brush line`, `spline`, `surfacespline`, `catenary`, `sweep`, `circle`, `recursive` | Líneas, curvas, cuerdas colgantes, barrer el portapapeles por una curva | — | **falta** (roadmap 026: ríos y caminos) | M–A | |
 | FAWE `/brush command`, `scattercommand` | Correr comandos donde toca el pincel | — | **no** (escalada de permisos, como `player_command_as_op` en la 014) | — | |
-| `/mask`, `/material`, `/range`, `/size`, `/tracemask` | Ajustes del pincel | opciones `mask=`, `style=`, radio, fuerza; `terrain.brush.range` | parcial | — | |
+| `/mask`, `/material`, `/range`, `/size`, `/tracemask` | Ajustes del pincel | `mask=`, `radius=` sobre el pincel de la mano (**032**), `style=` y fuerza en el de terreno; `tools.range` y `terrain.brush.range` | parcial (falta `/tracemask`; el patrón se cambia escribiendo el pincel otra vez) | — | |
 | FAWE `primary`, `secondary`, `scroll`, `target`, `targetoffset`, `smask`, `transform` | Pincel en cada botón, cambiar con la rueda, modos de puntería | clic izquierdo cambia de modo | parcial | M (menú del pincel en el roadmap 026) | |
 | FAWE `savebrush` (`-g` global), `/listbrush` (`loadbrush` está comentado en el código: **no existe en el jar**, 029) | Guardar pinceles | — | **falta** (en FAWE tampoco se pueden volver a cargar) | B | |
-| `/tool tree`, `floodfill`, `repl`, `cycler`, `deltree`, `stacker`, `info`, `farwand`, `lrbuild`, `navwand`, `selwand` (FAWE: sueltos, `/tree`, y dentro de `/brush`; sin el grupo `/tool`, **029**) | Herramientas de un clic | — | **falta** | B c/u | |
+| `/tool tree`, `floodfill`, `repl`, `cycler`, `deltree`, `stacker`, `info`, `farwand`, `lrbuild`, `navwand`, `selwand` (FAWE: sueltos, `/tree`, y dentro de `/brush`; sin el grupo `/tool`, **029**) | Herramientas de un clic | `/wc tool repl`, `floodfill`, `info`, `cycler`, `deltree`, `farwand`, `lrbuild`, `navwand` (**032**: cada clic es una obra con deshacer; solo el ítem de la mano); `selwand` es `/wc wand` | parcial (falta `tree` (033) y `stacker`) | B c/u | |
 | FAWE `/tool featureplacer`, `structureplacer` | Poner *features* o estructuras con un clic | — | **falta** | M | |
-| `/superpickaxe single\|area\|recursive`, `//` | Romper al instante, en área o lo conectado | — | **falta** | B | |
+| `/superpickaxe single\|area\|recursive`, `//` | Romper al instante, en área o lo conectado | `/wc superpickaxe single\|area\|recursive\|off`, `/wc sp` (**032**): no suelta ítems y se deshace; nunca la roca madre ni los portales (`tools.never_break`) | **mejor** (deshacer sin duplicar) | — | |
 
 ### 2.7 Navegación (`NavigationCommands`)
 | WE | Qué hace | Worldcraft | Brecha | Costo | Núcleo |
@@ -321,7 +321,7 @@ Costo: **B** horas · **M** una spec normal · **A** más de una spec o con ries
 | **029** | Selección, información y máscaras (D + F) + la spec chica de la 027 + la deuda de la 028 | `hpos1/2`, `chunk`, `outset`, `inset`, `trim`, `count`, `distr`, `clearclipboard`, `clearhistory`, `paste --origin/--select/--only-select`, `copy --mask`; máscaras `above`/`below`, `exposed`, `surface`, `solid`, `50% chance`, `^[estado]`; patrones `^tipo` y `^[estado]`; `gmask`; `/wc schem import` y `worldcraft.schematic.save`; pruebas de `center` y `fixwater` | M | Lo que más se escribe al construir y en lo que el motor ya está; las máscaras con vecinos son el cambio más grande (hoy la máscara solo mira el estado) |
 | ~~030~~ (hecha) | Selecciones que no son cajas | `sel poly`, `ellipsoid`, `sphere`, `cyl`, `convex`, `extend`; FAWE `fuzzy`/`magic` (bloques conectados); contorno con partículas de cada forma; `set`, `replace`, `copy`, `count`, `walls`… sobre cualquier forma | M | El dueño pidió no perderlas de vista; toca la selección, que usan casi todos los comandos |
 | ~~031~~ (hecha) | Entidades | `copy`/`cut`/`paste`/`stack`/`move --entities`, entidades en los `.schem` (Sponge v2/v3), `paste --remove-entities`, `butcher` (con sus 9 tipos), `remove <tipo>`; deshacer que devuelve las entidades | M | Paper 1.21.4 copia y recrea entidades sin NMS (`Entity#createSnapshot`, `getAsString`, `EntityFactory`); hay que extender el historial |
-| 032 | Pinceles de construcción y herramientas | `brush sphere`, `cyl`, `set`, `clipboard`, `splatter`/`scatter`, `rock` (`blob`), `gravity`, `extinguish`, `butcher` (tras la 031), `none`; herramientas `tree`, `floodfill`, `repl`, `cycler`, `info`, `deltree`, `farwand`, `lrbuild`, `navwand`, superpico | M | Reusa el pincel de la 026 (mira, círculo, una obra por pasada) |
+| ~~032~~ (hecha) | Pinceles de construcción y herramientas | `brush sphere`, `cyl`, `set`, `clipboard`, `splatter`/`scatter`, `rock` (`blob`), `gravity`, `extinguish`, `butcher`, `none`; herramientas `floodfill`, `repl`, `cycler`, `info`, `deltree`, `farwand`, `lrbuild`, `navwand`, superpico (`tool tree` pasó a la 033, decisión del dueño) | M | Reusa el pincel de la 026 (mira, círculo, una obra por pasada) |
 | 033 | Biomas, árboles y estructuras | `biomelist`, `biomeinfo`, `setbiome`, máscara `$bioma`, biomas en `copy`/`paste`/`.schem`; `forest`, `flora`, `forestgen`, `pumpkins`, `brush forest`, `tool tree`; `structure` (plantillas del juego) | M | `setBiome` + `refreshChunk`; los árboles con `generateTree(…, Predicate)` pasan por el motor (vista previa y deshacer). Los *features* (`//feature`) no tienen API en Paper: se investiga en el plan |
 | 034 | Fórmulas | `generate`, `generatebiome`, `deform`, máscara y patrón `=fórmula`, `calculate`, `brush deform`, `timeout` | A | Un lenguaje de fórmulas propio con tope de tiempo (o el de OmniEvents como biblioteca común, con un ADR) |
 | 035 | Lo de FAWE para crear | `caves`, `ore`/`ores`, `img` desde un link (red segura de SkinStatues 023), patrones por color (tabla de colores de SkinStatues) | M–A | Generadores nuevos; la imagen necesita la red segura |

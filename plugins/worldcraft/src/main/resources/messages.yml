@@ -42,7 +42,10 @@ help:
   mountain: { usage: "/wc mountain [small|medium|large|huge|radius] [style] [key=value...] [--now]", text: "A mountain where you look, shown first. Options: height, peaks, roughness, ridges, sharpness, crater, seed, style, at=x,y,z, world.", example: "/wc mountain large style=volcano seed=42" }
   island: { usage: "/wc island [small|medium|large|huge|radius] [style] [key=value...] [--now]", text: "A floating island in front of you, shown first. Options: depth, relief, spikes, roots, trees, seed, style, at=x,y,z, world.", example: "/wc island large trees=5 spikes=1" }
   reroll: { usage: "/wc reroll", text: "The last mountain or island again with another seed (a new preview).", example: "/wc reroll" }
-  brush: { usage: "/wc brush [raise|lower|smooth|flatten|erode|paint] [radius] [strength] [blocks] [style=..] [mask=..]", text: "Get or change the terrain brush: right click uses it where you look, left click picks the next mode.", example: "/wc brush smooth 6 0.5" }
+  brush: { usage: "/wc brush <sphere|cyl|set|clipboard|splatter|scatter|rock|gravity|extinguish|butcher|none> ... | [raise|lower|smooth|flatten|erode|paint] [radius] [strength]", text: "Turn the item in your hand into a brush (only that item; an empty hand gets one): right click uses it where you look. Building brushes: sphere <blocks> [radius] [--hollow], cyl <blocks> [radius] [height], set <cube|sphere|cyl> [radius] <blocks>, clipboard [--air] [--origin], splatter <blocks> [radius] [decay], scatter <blocks> [radius] [points] [distance] [--overlay], rock <blocks> [radius] [sphericity] [frequency] [amplitude], gravity [radius] [--height], extinguish [radius], butcher [radius] [--animals...]; mask=.. and radius=.. change the brush in your hand; none makes it a normal item again. Terrain brushes (raise, lower, smooth, flatten, erode, paint) only move natural ground; left click picks the next mode.", example: "/wc brush sphere stone 4" }
+  tool: { usage: "/wc tool <repl|floodfill|info|cycler|deltree|farwand|lrbuild|navwand|none> ...", text: "Turn the item in your hand into a one-click tool: repl <blocks> (right click places, left click picks), floodfill <blocks> [range], info, cycler (right click: next value, left click: next property), deltree (removes a floating tree), farwand (corners from far away), lrbuild <left> <right> (build from far away; air removes), navwand (left: jump to, right: through walls). none makes it a normal item again.", example: "/wc tool repl oak_planks" }
+  superpickaxe: { usage: "/wc superpickaxe [single|area <radius>|recursive <radius>|off]", text: "Break blocks instantly with any pickaxe (left click): single, area (the same block in a cube) or recursive (the same block, connected). Nothing is dropped and /wc undo brings them back. /wc sp alone turns it on or off.", example: "/wc sp area 2" }
+  sp: { usage: "/wc sp [single|area <radius>|recursive <radius>|off]", text: "Short for /wc superpickaxe.", example: "/wc sp" }
   styles: { usage: "/wc styles", text: "The terrain styles in terrain.yml (which blocks go where).", example: "/wc styles" }
   schem: { usage: "/wc schem list [page] [filter] | load <name> | save <name> [--overwrite] | delete <name> | import [--overwrite]", text: "WorldEdit's .schem files (also /wc schematic): load one into your clipboard (then /wc paste --preview), save your clipboard, list or delete them. WorldEdit's folder is read too; import copies WorldEdit's and FAWE's into Worldcraft's folder.", example: "/wc schem load castles/tower" }
   reload: { usage: "/wc reload", text: "Reload config.yml, messages.yml, presets.yml and terrain.yml.", example: "/wc reload" }
@@ -185,6 +188,7 @@ selftest-start: "{prefix}Selftest in a 6×6×6 box at {box}..."
 selftest-ok: "{prefix}<green>Selftest passed: set {changed} blocks, undo, redo and undo; the terrain is as before."
 selftest-failed: "{prefix}<red>Selftest failed: {reason}"
 selftest-entities-ok: "{prefix}<green>Selftest entities passed: an armor stand, an item frame (turned) and a pig with a rider were copied and created again whole."
+selftest-tools-ok: "{prefix}<green>Selftest tools passed: the cycler finds every facing, half and shape of a stair on this server."
 
 # Terrain (/wc mountain, /wc island, /wc brush)
 terrain-reading: "{prefix}<gray>Reading the ground for your {kind}..."
@@ -202,6 +206,26 @@ nothing-to-reroll: "{prefix}<red>Make a mountain or an island first: /wc mountai
 brush-given: "{prefix}<green>Here is your terrain brush</green> <gray>({brush}). <white>Right click</white> where you look to use it, <white>left click</white> for the next mode."
 brush-updated: "{prefix}Brush set to <white>{brush}</white>."
 brush-mode: "<gold>Brush</gold> <white>{brush}</white>"
+
+# Building brushes and one-click tools (spec 032)
+tool-given: "{prefix}<green>Here is your {what}</green> <gray>(<white>{tool}</white>). <white>Right click</white> where you look to use it; <white>/wc {what} none</white> makes it a normal item."
+tool-bound: "{prefix}<green>Your {item} is now a {what}</green> <gray>(<white>{tool}</white>). Only this item: another {item} stays normal. <white>/wc {what} none</white> undoes it."
+tool-updated: "{prefix}Your {what} is now <white>{tool}</white>."
+tool-not-on-wand: "{prefix}<red>That's your selection wand: hold another item (or nothing) for a {what}."
+tool-removed: "{prefix}It's a normal item again."
+tool-nothing-to-remove: "{prefix}<red>The item in your hand is not a brush or tool."
+tool-no-target: "<red>Nothing in reach (up to {range} blocks)"
+tool-nothing: "<gray>Nothing to change for {kind} there"
+tool-info: "{prefix}<white>{pos}</white> <dark_gray>·</dark_gray> <white>{block}</white> <dark_gray>·</dark_gray> biome {biome} <dark_gray>·</dark_gray> light {light}"
+repl-picked: "<gold>Replace with</gold> <white>{block}</white>"
+cycler-property: "<gold>Cycler</gold> <white>{property}</white> = {value}"
+cycler-nothing: "<gray>{block} has nothing to cycle"
+deltree-not-tree: "<gray>That is not a tree"
+deltree-grounded: "{prefix}<red>That tree touches the ground: deltree only removes floating trees."
+deltree-too-big: "{prefix}<red>That tree goes further than {range} blocks: nothing was removed (tools.deltree_range)."
+superpickaxe-on: "{prefix}<green>Super pickaxe on</green> <gray>({mode}): left click a block with any pickaxe. Nothing is dropped; /wc undo brings blocks back."
+superpickaxe-off: "{prefix}Super pickaxe off."
+superpickaxe-never: "<red>The super pickaxe never breaks {block}"
 styles-header: "{prefix}{count} terrain styles <gray>(use them with style=name; edit them in terrain.yml)"
 styles-line: " <yellow>{name}</yellow> <dark_gray>-</dark_gray> <gray>{description}"
 

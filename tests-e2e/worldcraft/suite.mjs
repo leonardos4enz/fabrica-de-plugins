@@ -141,6 +141,21 @@ async function borrarEntidades (srv) {
   await srv.sincronizar()
 }
 
+// ---------------------------------------------------------------- pinceles y herramientas (spec 032)
+/** Ana en el punto de trabajo mirando al sur y 12° abajo: la mira cae en el pasto de (X, -61, Z + 8). */
+async function mirarSuelo ({ srv, bots }) {
+  await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 0.5} 0 12`)
+  await srv.sincronizar()
+  await bots[ANA].hasta('mirar al suelo', b => Math.abs(Math.abs(b.entity.pitch) - 12 * Math.PI / 180) < 0.05 &&
+    Math.abs(b.entity.position.z - (Z + 0.5)) < 0.6)
+}
+
+/** Empieza a picar un bloque (un clic izquierdo en él: LEFT_CLICK_BLOCK). El superpico lo cancela: el error de mineflayer se ignora. */
+function picar (jugador, x, y, z) {
+  const b = jugador.bot.blockAt(v3(jugador.bot, x, y, z))
+  jugador.bot.dig(b, true).catch(() => {})
+}
+
 export default {
   jar: /^Worldcraft-.*\.jar$/,
   // La configuración tal como está en el código fuente; el historial de corridas anteriores se borra (cada corrida
@@ -1242,6 +1257,290 @@ export default {
           for (const n of ['e2e_ent', 'e2e_ent_we']) fs.rmSync(path.join(we, `${n}.schem`), { force: true })
           await borrarEntidades(srv)
           await srv.consola(`fill ${X - 2} -60 ${Z} ${X + 8} -58 ${Z + 36} air`)
+        }
+      }
+    },
+
+    // ---------------------------------------------------------------- spec 032: pinceles y herramientas
+    {
+      id: '032 H1 CA1 · H1 CA2 · H1 CA3 · H1 CA4 · H1 CA5 · H2 CA1 · H2 CA2',
+      nombre: 'la esfera con la mano vacía: clic derecho donde mira, otra vara igual no es pincel, mask=air, undo; none la deja como era; el cilindro en la vara normal',
+      timeoutMs: 120000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        await mirarSuelo(ctx)
+        await pide(ana, 'wc brush sphere stone 2', /Here is your brush \(sphere · stone · radius 2\)/)
+        await ana.hasta('tener la vara en la mano', b => b.heldItem?.name === 'blaze_rod')
+        const mb = bots[BETO].marca()
+        let m = ana.marca()
+        await ana.esperar('particle', /dust/, { desde: m, timeoutMs: 5000 })
+        await bots[BETO].nunca('particle', /dust/, { desde: mb, ms: 1500 })
+        m = ana.marca()
+        ana.bot.activateItem()
+        await ana.esperar('chat', /Done: brush sphere changed [\d,]+ blocks/, { desde: m, timeoutMs: 20000 })
+        await comprobar(srv, `block ${X} -61 ${Z + 8} stone`)
+        await comprobar(srv, `block ${X} -59 ${Z + 8} stone`)
+        await comprobar(srv, `block ${X} -58 ${Z + 8} air`)
+        // Otra vara de blaze igual no es pincel (solo el ítem marcado).
+        await srv.consola(`item replace entity ${ANA} hotbar.1 with minecraft:blaze_rod`)
+        ana.bot.setQuickBarSlot(1)
+        await ana.hasta('tener la otra vara', b => b.quickBarSlot === 1 && b.heldItem?.name === 'blaze_rod')
+        m = ana.marca()
+        ana.bot.activateItem()
+        await ana.nunca('chat', /Done: brush/, { desde: m, ms: 1500 })
+        ana.bot.setQuickBarSlot(0)
+        await ana.hasta('volver al pincel', b => b.quickBarSlot === 0)
+        await pide(ana, 'wc undo', /Undone .*brush sphere/)
+        await ana.hasta('ver la esfera quitada', b => bloque(b, X, -59, Z + 8) === 'air')
+        // mask=air: solo cambia el aire (el pasto queda).
+        await pide(ana, 'wc brush mask=air', /Your brush is now sphere · stone · radius 2 · only on air/)
+        m = ana.marca()
+        ana.bot.activateItem()
+        await ana.esperar('chat', /Done: brush sphere changed [\d,]+ blocks/, { desde: m, timeoutMs: 20000 })
+        await comprobar(srv, `block ${X} -61 ${Z + 8} grass_block`)
+        await comprobar(srv, `block ${X} -59 ${Z + 8} stone`)
+        await pide(ana, 'wc undo', /Undone .*brush sphere/)
+        // none: un ítem normal otra vez, sin nombre ni marca.
+        await pide(ana, 'wc brush none', /It's a normal item again/)
+        const r = await srv.consola(`data get entity ${ANA} SelectedItem`, { espera: /blaze_rod/ })
+        if (/custom_data|custom_name|lore/.test(r.texto ?? String(r))) throw new Error(`la vara conserva algo: ${r.texto}`)
+        m = ana.marca()
+        ana.bot.activateItem()
+        await ana.nunca('chat', /Done: brush/, { desde: m, ms: 1500 })
+        // La vara normal de la mano se vuelve el pincel (H1 CA1); un cilindro de alto 3 desde el bloque que mira.
+        await pide(ana, 'wc brush cyl glass 1 3', /Your blaze_rod is now a brush \(cyl · glass · radius 1 · height 3\)/)
+        m = ana.marca()
+        ana.bot.activateItem()
+        await ana.esperar('chat', /Done: brush cyl changed [\d,]+ blocks/, { desde: m, timeoutMs: 20000 })
+        await comprobar(srv, `block ${X} -59 ${Z + 8} glass`)
+        await comprobar(srv, `block ${X + 1} -60 ${Z + 8} glass`)
+        await comprobar(srv, `block ${X} -58 ${Z + 8} air`)
+        await pide(ana, 'wc undo', /Undone .*brush cyl/)
+        await pide(ana, 'wc brush spere stone', /Unknown brush 'spere' \(did you mean 'sphere'\?\)/)
+        await srv.consola(`clear ${ANA}`)
+      }
+    },
+    {
+      id: '032 H2 CA4 · H4 CA1 · H4 CA2 · H4 CA3',
+      nombre: 'gravity hace caer la piedra y el cofre se queda; clipboard pega el portapapeles donde mira; extinguish apaga el fuego; butcher --animals se lleva la vaca y undo la devuelve',
+      timeoutMs: 150000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        try {
+          await borrarEntidades(srv)
+          await srv.consola('gamerule doFireTick false')
+          // Piedra flotando en y = -58 y -57 y un cofre flotando con piedra encima, junto a donde mira Ana.
+          await srv.consola(`fill ${X} -58 ${Z + 8} ${X} -57 ${Z + 8} stone`)
+          await srv.consola(`setblock ${X + 1} -59 ${Z + 8} chest`)
+          await srv.consola(`setblock ${X + 1} -58 ${Z + 8} stone`)
+          await mirarSuelo(ctx)
+          await pide(ana, 'wc brush gravity 4', /Here is your brush \(gravity · radius 4\)/)
+          let m = ana.marca()
+          ana.bot.activateItem()
+          await ana.esperar('chat', /Done: brush gravity changed [\d,]+ blocks/, { desde: m, timeoutMs: 20000 })
+          await comprobar(srv, `block ${X} -60 ${Z + 8} stone`)
+          await comprobar(srv, `block ${X} -59 ${Z + 8} stone`)
+          await comprobar(srv, `block ${X} -57 ${Z + 8} air`)
+          await comprobar(srv, `block ${X + 1} -59 ${Z + 8} chest`)
+          await comprobar(srv, `block ${X + 1} -58 ${Z + 8} stone`)
+          await pide(ana, 'wc undo', /Undone .*brush gravity/)
+          await comprobar(srv, `block ${X} -57 ${Z + 8} stone`)
+          await srv.consola(`fill ${X} -60 ${Z + 8} ${X + 1} -57 ${Z + 8} air`)
+          // El portapapeles (dos de oro), pegado centrado en el bloque que mira.
+          await srv.consola(`fill ${X + 3} -60 ${Z + 3} ${X + 3} -59 ${Z + 3} gold_block`)
+          await srv.sincronizar()
+          await seleccionar(ana, [X + 3, -60, Z + 3], [X + 3, -59, Z + 3])
+          await pide(ana, 'wc copy', /Copied/)
+          await pide(ana, 'wc brush clipboard', /Your brush is now clipboard/)
+          m = ana.marca()
+          ana.bot.activateItem()
+          await ana.esperar('chat', /Done: brush clipboard changed 2 blocks/, { desde: m, timeoutMs: 20000 })
+          await comprobar(srv, `block ${X} -61 ${Z + 8} gold_block`)
+          await comprobar(srv, `block ${X} -60 ${Z + 8} gold_block`)
+          await pide(ana, 'wc undo', /Undone .*brush clipboard/)
+          await comprobar(srv, `block ${X} -61 ${Z + 8} grass_block`)
+          // Fuego en el pasto: extinguish lo apaga (la mira lo atraviesa y cae en el pasto).
+          await srv.consola(`setblock ${X + 1} -60 ${Z + 8} fire`)
+          await comprobar(srv, `block ${X + 1} -60 ${Z + 8} fire`)
+          await pide(ana, 'wc brush extinguish 3', /Your brush is now extinguish · radius 3/)
+          m = ana.marca()
+          ana.bot.activateItem()
+          await ana.esperar('chat', /Done: brush extinguish changed 1 blocks/, { desde: m, timeoutMs: 20000 })
+          await comprobar(srv, `block ${X + 1} -60 ${Z + 8} air`)
+          // butcher: sin opciones no toca la vaca; con --animals se la lleva; undo la devuelve.
+          await srv.consola(`summon cow ${X + 1.5} -60 ${Z + 8.5} {NoAI:1b}`)
+          await srv.sincronizar()
+          await pide(ana, 'wc brush butcher 3', /Your brush is now butcher · radius 3/)
+          m = ana.marca()
+          ana.bot.activateItem()
+          await ana.esperar('chat', /Done: brush butcher/, { desde: m, timeoutMs: 20000 })
+          if (await cuantas(srv, 'cow', [X - 3, X + 3], [-62, -56], [Z + 5, Z + 11]) !== 1) throw new Error('butcher sin opciones mató la vaca')
+          await pide(ana, 'wc brush butcher 3 --animals', /Your brush is now butcher · radius 3 · animals/)
+          m = ana.marca()
+          ana.bot.activateItem()
+          await ana.esperar('chat', /Entities: 0 added, 1 removed \(1 cow\)/, { desde: m, timeoutMs: 20000 })
+          if (await cuantas(srv, 'cow', [X - 3, X + 3], [-62, -56], [Z + 5, Z + 11]) !== 0) throw new Error('la vaca sigue')
+          await pide(ana, 'wc undo', /Undone .*brush butcher/)
+          await comprobar(srv, `entity ${en('cow', X + 1, -60, Z + 8)}`)
+        } finally {
+          await borrarEntidades(srv)
+          await srv.consola('gamerule doFireTick true')
+          await srv.consola(`fill ${X - 2} -60 ${Z} ${X + 4} -56 ${Z + 10} air`)
+          await srv.consola(`fill ${X - 2} -61 ${Z} ${X + 4} -61 ${Z + 10} grass_block`)
+          await srv.consola(`clear ${ANA}`)
+        }
+      }
+    },
+    {
+      id: '032 H5 CA1 · H5 CA2 · H5 CA3 · H5 CA4 · H5 CA5 · H5 CA6 · H5 CA7 · H5 CA8',
+      nombre: 'herramientas: repl toma y pone el tronco girado, cycler lo gira, info lo dice, farwand marca de lejos, floodfill solo lo conectado, deltree quita el árbol flotante y no el plantado, lrbuild y navwand',
+      timeoutMs: 180000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        try {
+          await srv.consola(`setblock ${X} -61 ${Z + 8} oak_log[axis=x]`)
+          await mirarSuelo(ctx)
+          await pide(ana, 'wc tool repl stone', /Here is your tool \(repl · stone\)/)
+          let m = ana.marca()
+          ana.bot.swingArm()
+          await ana.esperar('actionbar', /Replace with oak_log\[axis=x\]/, { desde: m })
+          await srv.consola(`setblock ${X} -61 ${Z + 8} grass_block`)
+          await srv.sincronizar()
+          m = ana.marca()
+          ana.bot.activateItem()
+          await ana.esperar('chat', /Done: tool repl changed 1 blocks/, { desde: m, timeoutMs: 20000 })
+          await comprobar(srv, `block ${X} -61 ${Z + 8} oak_log[axis=x]`)
+          // cycler: el eje siguiente; clic izquierdo dice la propiedad.
+          await pide(ana, 'wc tool cycler', /Your tool is now cycler/)
+          m = ana.marca()
+          ana.bot.activateItem()
+          await ana.esperar('chat', /Done: tool cycler changed 1 blocks/, { desde: m, timeoutMs: 20000 })
+          await comprobar(srv, `block ${X} -61 ${Z + 8} oak_log[axis=y]`)
+          m = ana.marca()
+          ana.bot.swingArm()
+          await ana.esperar('actionbar', /Cycler axis = y/, { desde: m })
+          // info: el estado completo, el bioma y la luz, sin cambiar nada.
+          await pide(ana, 'wc tool info', /Your tool is now info/)
+          m = ana.marca()
+          ana.bot.activateItem()
+          await ana.esperar('chat', new RegExp(`${X} -61 ${Z + 8} · minecraft:oak_log\\[axis=y\\] · biome minecraft:\\w+ · light`), { desde: m })
+          // farwand: las esquinas de lejos.
+          await pide(ana, 'wc tool farwand', /Your tool is now farwand/)
+          m = ana.marca()
+          ana.bot.swingArm()
+          await ana.esperar('chat', new RegExp(`Corner 1 at ${X} -61 ${Z + 8}`), { desde: m })
+          m = ana.marca()
+          ana.bot.activateItem()
+          await ana.esperar('chat', new RegExp(`Corner 2 at ${X} -61 ${Z + 8}`), { desde: m })
+          // floodfill: la lana roja conectada se vuelve azul; la suelta queda roja.
+          await srv.consola(`fill ${X - 1} -61 ${Z + 8} ${X + 1} -61 ${Z + 8} red_wool`)
+          await srv.consola(`setblock ${X + 3} -61 ${Z + 8} red_wool`)
+          await srv.sincronizar()
+          await pide(ana, 'wc tool floodfill blue_wool 5', /Your tool is now floodfill · blue_wool · range 5/)
+          m = ana.marca()
+          ana.bot.activateItem()
+          await ana.esperar('chat', /Done: tool floodfill changed 3 blocks/, { desde: m, timeoutMs: 20000 })
+          await comprobar(srv, `block ${X - 1} -61 ${Z + 8} blue_wool`)
+          await comprobar(srv, `block ${X + 3} -61 ${Z + 8} red_wool`)
+          // lrbuild: derecho pone piedra contra la cara que mira; izquierdo (aire) la quita.
+          await pide(ana, 'wc tool lrbuild air stone', /Your tool is now lrbuild · left air · right stone/)
+          m = ana.marca()
+          ana.bot.activateItem()
+          await ana.esperar('chat', /Done: tool lrbuild changed 1 blocks/, { desde: m, timeoutMs: 20000 })
+          await comprobar(srv, `block ${X} -60 ${Z + 8} stone`)
+          m = ana.marca()
+          ana.bot.swingArm()
+          await ana.esperar('chat', /Done: tool lrbuild changed 1 blocks/, { desde: m, timeoutMs: 20000 })
+          await comprobar(srv, `block ${X} -60 ${Z + 8} air`)
+          // deltree: un tronco flotante con hojas en la mira (a 3 bloques) se quita entero.
+          await srv.consola(`setblock ${X} -59 ${Z + 3} oak_log`)
+          await srv.consola(`fill ${X} -58 ${Z + 3} ${X + 1} -58 ${Z + 3} oak_leaves[persistent=true]`)
+          await srv.sincronizar()
+          await pide(ana, 'wc tool deltree', /Your tool is now deltree/)
+          m = ana.marca()
+          ana.bot.activateItem()
+          await ana.esperar('chat', /Done: tool deltree changed 3 blocks/, { desde: m, timeoutMs: 20000 })
+          await comprobar(srv, `block ${X + 1} -58 ${Z + 3} air`)
+          // Uno plantado en el pasto (a 5 bloques) no se toca.
+          await srv.consola(`setblock ${X} -60 ${Z + 5} oak_log`)
+          await srv.sincronizar()
+          m = ana.marca()
+          ana.bot.activateItem()
+          await ana.esperar('chat', /touches the ground/, { desde: m })
+          await comprobar(srv, `block ${X} -60 ${Z + 5} oak_log`)
+          await srv.consola(`setblock ${X} -60 ${Z + 5} air`)
+          // navwand: derecho atraviesa la pared del sur; izquierdo salta a donde mira.
+          await srv.consola(`fill ${X - 1} -60 ${Z + 2} ${X + 1} -58 ${Z + 2} stone`)
+          await srv.sincronizar()
+          await pide(ana, 'wc tool navwand', /Your tool is now navwand/)
+          m = ana.marca()
+          ana.bot.activateItem()
+          await ana.esperar('chat', /Whoosh!/, { desde: m })
+          await ana.hasta('estar del otro lado de la pared', b => Math.floor(b.entity.position.z) === Z + 3)
+          m = ana.marca()
+          ana.bot.swingArm()
+          await ana.esperar('chat', /Whoosh!/, { desde: m })
+          await ana.hasta('saltar a donde mira', b => Math.floor(b.entity.position.z) > Z + 6)
+          await pide(bots[BETO], 'wc tool info', /You don't have permission/)
+        } finally {
+          await srv.consola(`fill ${X - 2} -60 ${Z} ${X + 4} -56 ${Z + 10} air`)
+          await srv.consola(`fill ${X - 2} -61 ${Z} ${X + 4} -61 ${Z + 10} grass_block`)
+          await srv.consola(`clear ${ANA}`)
+        }
+      }
+    },
+    {
+      id: '032 H6 CA1 · H6 CA2 · H6 CA3',
+      nombre: 'superpico: Beto sin permiso; single rompe sin soltar nada y undo lo devuelve; area los del mismo tipo; la roca madre no se rompe; off',
+      timeoutMs: 120000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        try {
+          await borrarEntidades(srv)
+          await pide(bots[BETO], 'wc sp', /You don't have permission/)
+          await srv.consola(`item replace entity ${ANA} weapon.mainhand with minecraft:diamond_pickaxe`)
+          await ana.hasta('tener el pico', b => b.heldItem?.name === 'diamond_pickaxe')
+          await srv.consola(`setblock ${X} -60 ${Z + 2} stone`)
+          await srv.sincronizar()
+          await pide(ana, 'wc sp', /Super pickaxe on \(single\)/)
+          let m = ana.marca()
+          picar(ana, X, -60, Z + 2)
+          await ana.esperar('chat', /Done: superpickaxe changed 1 blocks/, { desde: m, timeoutMs: 20000 })
+          await comprobar(srv, `block ${X} -60 ${Z + 2} air`)
+          await dormir(500)
+          if (await cuantas(srv, 'item', [X - 3, X + 3], [-62, -56], [Z - 1, Z + 5]) !== 0) throw new Error('el superpico soltó un ítem')
+          await pide(ana, 'wc undo', /Undone .*superpickaxe/)
+          await comprobar(srv, `block ${X} -60 ${Z + 2} stone`)
+          // area 1: las tres piedras de la fila; la tierra de encima queda.
+          await srv.consola(`fill ${X - 1} -60 ${Z + 2} ${X + 1} -60 ${Z + 2} stone`)
+          await srv.consola(`setblock ${X} -59 ${Z + 2} dirt`)
+          await srv.sincronizar()
+          await pide(ana, 'wc sp area 1', /Super pickaxe on \(area 1\)/)
+          m = ana.marca()
+          picar(ana, X, -60, Z + 2)
+          await ana.esperar('chat', /Done: superpickaxe changed 3 blocks/, { desde: m, timeoutMs: 20000 })
+          await comprobar(srv, `block ${X + 1} -60 ${Z + 2} air`)
+          await comprobar(srv, `block ${X} -59 ${Z + 2} dirt`)
+          // La roca madre nunca (tools.never_break).
+          await srv.consola(`setblock ${X} -60 ${Z + 2} bedrock`)
+          await srv.sincronizar()
+          m = ana.marca()
+          picar(ana, X, -60, Z + 2)
+          await ana.esperar('actionbar', /never breaks bedrock/, { desde: m })
+          await comprobar(srv, `block ${X} -60 ${Z + 2} bedrock`)
+          await pide(ana, 'wc sp off', /Super pickaxe off/)
+        } finally {
+          await srv.consola(`fill ${X - 2} -60 ${Z} ${X + 2} -58 ${Z + 4} air`)
+          await srv.consola(`clear ${ANA}`)
+          await borrarEntidades(srv)
         }
       }
     }

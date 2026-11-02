@@ -56,7 +56,7 @@ public final class WorldcraftCommand implements TabExecutor {
     static {
         for (String s : List.of("help", "wand", "pos1", "pos2", "sel", "expand", "contract", "shift", "set", "replace",
                 "walls", "faces", "copy", "cut", "paste", "rotate", "flip", "undo", "redo", "history", "confirm", "cancel",
-                "jobs", "limits", "mountain", "island", "floating_island", "reroll", "brush", "styles")) {
+                "jobs", "limits", "mountain", "island", "floating_island", "reroll", "brush", "tool", "styles")) {
             SUBS.put(s, USE);
         }
         // Spec 027: esquemas, con su propio permiso (un ayudante puede pegar sin poder llenar el disco).
@@ -72,6 +72,9 @@ public final class WorldcraftCommand implements TabExecutor {
         SUBS.put("remove", BuildCommands.PERM_REMOVE);
         // Spec 029: selección, información y máscara global (como cualquier edición).
         for (String s : SelectionCommands.SUBS) SUBS.put(s, USE);
+        // Spec 032: el superpico, con su propio permiso (los pinceles y herramientas van con worldcraft.use).
+        SUBS.put("superpickaxe", dev.leo.worldcraft.paper.Tools.SUPERPICKAXE);
+        SUBS.put("sp", dev.leo.worldcraft.paper.Tools.SUPERPICKAXE);
         for (String s : List.of("reload", "validate", "selftest")) SUBS.put(s, ADMIN);
     }
 
@@ -84,12 +87,24 @@ public final class WorldcraftCommand implements TabExecutor {
     private final BuildCommands build;
     private final NavigationCommands navigation;
     private final SelectionCommands selection;
+    private final ToolCommands tool;
 
     public WorldcraftCommand(Worldcraft plugin) {
         this.plugin = plugin;
         this.build = new BuildCommands(plugin, this);
         this.navigation = new NavigationCommands(plugin);
         this.selection = new SelectionCommands(plugin, this);
+        this.tool = new ToolCommands(plugin);
+    }
+
+    /** Spec 032 H4 CA3: el pincel butcher (la obra de /wc butcher en otro punto). */
+    public void butcherAt(Player p, World w, int x, int y, int z, int r, Set<String> flags) {
+        build.butcherAt(p, w, x, y, z, r, flags);
+    }
+
+    /** Spec 032 H5 CA8: la brújula (jumpto con el clic izquierdo, thru con el derecho). */
+    public void navigate(Player p, String sub) {
+        navigation.run(p, sub, new String[]{sub});
     }
 
     private Messages msg() {
@@ -141,6 +156,8 @@ public final class WorldcraftCommand implements TabExecutor {
                 case "island", "floating_island" -> generate(s, a, Options.Tool.ISLAND);
                 case "reroll" -> plugin.terrain().reroll(s);
                 case "brush" -> brush(s, a);
+                case "tool" -> tool.tool(s, a);
+                case "superpickaxe", "sp" -> tool.superpickaxe(s, a);
                 case "styles" -> styles(s);
                 case "schem", "schematic" -> schem(s, a);
                 default -> {
@@ -166,7 +183,7 @@ public final class WorldcraftCommand implements TabExecutor {
 
     /** floating_island usa la ayuda de island. */
     private static String helpKey(String sub) {
-        return sub.equals("floating_island") ? "island" : sub.equals("schematic") ? "schem" : sub;
+        return sub.equals("floating_island") ? "island" : sub.equals("schematic") ? "schem" : sub.equals("sp") ? "superpickaxe" : sub;
     }
 
     private static String hintText(String closest) {
@@ -195,7 +212,7 @@ public final class WorldcraftCommand implements TabExecutor {
         }
         s.sendMessage(msg().get("help-header"));
         for (String sub : visible(s)) {
-            if (sub.equals("floating_island") || sub.equals("schematic")) continue;
+            if (sub.equals("floating_island") || sub.equals("schematic") || sub.equals("sp")) continue;
             s.sendMessage(msg().get("help-line", "usage", msg().raw("help." + sub + ".usage"), "text", msg().raw("help." + sub + ".text")));
         }
         s.sendMessage(msg().get("help-footer"));
@@ -915,9 +932,14 @@ public final class WorldcraftCommand implements TabExecutor {
     private void brush(CommandSender s, String[] a) {
         Player p = player(s);
         if (p == null) return;
+        // Spec 032: los pinceles de construcción (y none, radius=, mask= sobre uno de ellos).
+        if (this.tool.brush(p, a)) return;
         var tool = plugin.brush();
         var held = p.getInventory().getItemInMainHand();
-        BrushSettings current = tool.settings(held);
+        // Un pincel de construcción en la mano pasa a ser de terreno (el mismo ítem).
+        boolean convert = plugin.tools().spec(held) != null;
+        if (convert) plugin.tools().unbind(held);
+        BrushSettings current = convert ? BrushSettings.DEFAULT : tool.settings(held);
         BrushSettings base = current != null ? current : BrushSettings.DEFAULT;
         List<String> words = new ArrayList<>();
         Map<String, String> kv = keyValues(List.of(a).subList(1, a.length), words);
@@ -928,6 +950,10 @@ public final class WorldcraftCommand implements TabExecutor {
             if (b.mask() != null) plugin.config().parser().mask(b.mask());
             if (current != null) {
                 tool.write(held, b);
+                if (convert) {
+                    s.sendMessage(msg().get("brush-given", "brush", b.describe()));
+                    return;
+                }
                 s.sendMessage(msg().get("brush-updated", "brush", b.describe()));
             } else {
                 p.getInventory().addItem(tool.create(b));
@@ -1084,7 +1110,37 @@ public final class WorldcraftCommand implements TabExecutor {
         return filter(out, last);
     }
 
+    /** Spec 032: tras /wc brush o /wc tool &lt;tipo&gt;: sus opciones, números y bloques. */
+    private List<String> toolSuggestions(String[] a, String last, boolean brush) {
+        if (a.length == 2) {
+            List<String> out = new ArrayList<>(dev.leo.worldcraft.tool.ToolKind.ids(brush));
+            out.add("none");
+            if (brush) out.addAll(BrushSettings.Mode.ids());
+            return filter(out, last);
+        }
+        var kind = dev.leo.worldcraft.tool.ToolKind.parse(a[1], brush);
+        if (kind == null) return List.of();
+        if (last.toLowerCase(Locale.ROOT).startsWith("mask=")) {
+            List<String> out = new ArrayList<>();
+            for (String b : blockSuggestions(last.substring(5), true)) out.add(last.substring(0, 5) + b);
+            return out;
+        }
+        if (last.startsWith("-")) return filter(ToolCommands.optionWords(kind), last);
+        if (kind == dev.leo.worldcraft.tool.ToolKind.SET && a.length == 3) return filter(dev.leo.worldcraft.tool.ToolParser.SET_SHAPES, last);
+        boolean number = !last.isEmpty() && Character.isDigit(last.charAt(0));
+        boolean blocks = switch (kind) {
+            case SPHERE, CYL, SET, SPLATTER, SCATTER, ROCK, REPL, FLOODFILL, LRBUILD -> true;
+            default -> false;
+        };
+        List<String> out = new ArrayList<>();
+        if (number || !blocks) out.addAll(filter(RADII, last));
+        if (blocks && !number) out.addAll(blockSuggestions(last, false));
+        if (!number) out.addAll(filter(ToolCommands.optionWords(kind), last));
+        return out;
+    }
+
     private List<String> brushSuggestions(String[] a, String last) {
+        if (a.length == 2 || dev.leo.worldcraft.tool.ToolKind.parse(a[1], true) != null) return toolSuggestions(a, last, true);
         String l = last.toLowerCase(Locale.ROOT);
         List<String> out = new ArrayList<>();
         if (l.startsWith("style=")) {
@@ -1122,6 +1178,12 @@ public final class WorldcraftCommand implements TabExecutor {
                 case "undo", "redo" -> Set.of("--player");
                 case "pos1", "pos2" -> Set.of("--world");
                 case "mountain", "island", "floating_island" -> Set.of("--now");
+                case "brush", "tool" -> {
+                    var k = a.length > 2 ? dev.leo.worldcraft.tool.ToolKind.parse(a[1], sub.equals("brush")) : null;
+                    Set<String> f = new HashSet<>();
+                    if (k != null) for (String o : dev.leo.worldcraft.tool.ToolParser.flags(k)) f.add("--" + o);
+                    yield f;
+                }
                 case "schem", "schematic" -> a.length > 1 && (a[1].equalsIgnoreCase("save") || a[1].equalsIgnoreCase("import")) && s.hasPermission(Schematics.PERM_DELETE)
                         ? Set.of("--overwrite") : Set.of();
                 default -> {
@@ -1146,6 +1208,9 @@ public final class WorldcraftCommand implements TabExecutor {
             case "mountain" -> terrainSuggestions(Options.Tool.MOUNTAIN, last);
             case "island", "floating_island" -> terrainSuggestions(Options.Tool.ISLAND, last);
             case "brush" -> brushSuggestions(a, last);
+            case "tool" -> toolSuggestions(a, last, false);
+            case "superpickaxe", "sp" -> a.length == 2 ? filter(ToolCommands.SP_MODES, last)
+                    : a.length == 3 && !a[1].equalsIgnoreCase("single") && !a[1].equalsIgnoreCase("off") ? filter(List.of("1", "2", "3", "5"), last) : List.of();
             case "schem", "schematic" -> schemSuggestions(s, a, last);
             // Spec 029
             case "count", "trim" -> blockSuggestions(last, true);

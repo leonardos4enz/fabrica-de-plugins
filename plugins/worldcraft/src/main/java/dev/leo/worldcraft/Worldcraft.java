@@ -10,6 +10,7 @@ import dev.leo.worldcraft.paper.PaperBlocks;
 import dev.leo.worldcraft.paper.BrushTool;
 import dev.leo.worldcraft.paper.Schematics;
 import dev.leo.worldcraft.paper.Terrain;
+import dev.leo.worldcraft.paper.Tools;
 import dev.leo.worldcraft.paper.Wand;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -38,6 +39,7 @@ public final class Worldcraft extends JavaPlugin {
     private ExecutorService terrainThread;
     private Terrain terrain;
     private BrushTool brush;
+    private Tools tools;
     private ExecutorService schematicThread;
     private Schematics schematics;
 
@@ -86,6 +88,10 @@ public final class Worldcraft extends JavaPlugin {
         brush = new BrushTool(this);
         getServer().getPluginManager().registerEvents(brush, this);
         brush.start();
+        // Spec 032: pinceles de construcción, herramientas de un clic y superpico.
+        tools = new Tools(this);
+        getServer().getPluginManager().registerEvents(tools, this);
+        tools.start();
         // Spec 027: el disco, la compresión y el NBT de los esquemas, en un hilo propio (no atrasa los diarios).
         schematicThread = Executors.newSingleThreadExecutor(r -> {
             Thread t = new Thread(r, "Worldcraft-Schematics");
@@ -107,6 +113,7 @@ public final class Worldcraft extends JavaPlugin {
         try {
             if (wand != null) wand.stop();
             if (brush != null) brush.stop();
+            if (tools != null) tools.stop();
             if (terrainThread != null) terrainThread.shutdownNow();
             if (schematicThread != null) {
                 // Un esquema a medio escribir va a un temporal: cortar no deja un .schem roto.
@@ -142,6 +149,7 @@ public final class Worldcraft extends JavaPlugin {
         }
         if (wand != null) wand.startOutline();
         if (brush != null) brush.start();
+        if (tools != null) tools.start();
         return cfg;
     }
 
@@ -167,6 +175,10 @@ public final class Worldcraft extends JavaPlugin {
 
     public BrushTool brush() {
         return brush;
+    }
+
+    public Tools tools() {
+        return tools;
     }
 
     public Schematics schematics() {

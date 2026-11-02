@@ -220,6 +220,14 @@ con `--release 21`.
   veces. `data get entity` necesita `limit=1` aunque el selector tenga `dx=0`. En un `.schem`, WorldEdit pega un marco
   con la diferencia entre `Data.Pos` y `TileX/Y/Z`: los dos coherentes (F-01, F-02); y WorldEdit 7.3.19 mismo hace que
   Paper avise «Block-attached entity at invalid position» al pegar un marco a más de 16 bloques (ruido de terceros).
+- **Spec 032 (pinceles y herramientas):** un pincel o herramienta calcula la mira con su propio `rayTraceBlocks` y acepta
+  `*_AIR` y `*_BLOCK` (mineflayer manda `RIGHT_CLICK_AIR`/`LEFT_CLICK_AIR`; un clic izquierdo al aire solo llega si no hay
+  bloque a menos de ~5); para un `LEFT_CLICK_BLOCK` de verdad (superpico) el bot usa `bot.dig(bloque)` en creativo e ignora
+  su error (el plugin cancela la rotura). Lo que pregunta al registro (`hasTile`, `isAir`, la tabla de estados) se arma
+  como un conjunto en el hilo principal y el cálculo en el otro hilo solo consulta ese conjunto. Un `messages.yml` de una
+  versión anterior conserva sus textos (también la ayuda vieja): una línea nueva llega sola, una cambiada no (README).
+  `createBlockData` tira una excepción por cada estado inválido: el cycler recuerda lo probado. Se repitió la 002 F-03:
+  después de un `setblock` de la consola, `srv.sincronizar()` antes de que el bot haga clic.
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

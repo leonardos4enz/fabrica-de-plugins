@@ -62,6 +62,15 @@ public final class BrushTool implements Listener {
         it.setItemMeta(meta);
     }
 
+    /** Spec 032: deja de ser pincel de terreno (pasa a ser de construcción, o un ítem normal con /wc brush none). */
+    public void clear(ItemStack it) {
+        ItemMeta meta = it.getItemMeta();
+        meta.getPersistentDataContainer().remove(key);
+        meta.displayName(null);
+        meta.lore(null);
+        it.setItemMeta(meta);
+    }
+
     /** Los ajustes del ítem, o null si no es un pincel. */
     public BrushSettings settings(ItemStack it) {
         if (it == null || it.isEmpty() || !it.hasItemMeta()) return null;

@@ -36,7 +36,9 @@ public final class TestBlocks {
                 "sandstone", "red_sandstone", "red_sand", "terracotta", "calcite", "dripstone_block", "end_stone",
                 "end_stone_bricks", "blackstone", "netherrack", "podzol", "coarse_dirt", "mud", "short_grass", "poppy",
                 "dandelion", "crimson_nylium", "warped_nylium", "coal_ore", "iron_ore", "copper_ore", "gold_ore",
-                "redstone_ore", "lapis_ore", "diamond_ore", "emerald_ore", "hanging_roots", "oak_sapling", "cobblestone")) {
+                "redstone_ore", "lapis_ore", "diamond_ore", "emerald_ore", "hanging_roots", "oak_sapling", "cobblestone",
+                // spec 032: deltree, extinguish, splatter
+                "vine", "cocoa", "bee_nest", "mangrove_roots", "fire", "soul_fire", "moss_block")) {
             BLOCKS.put("minecraft:" + b, Map.of());
         }
         Map<String, List<String>> stairs = new LinkedHashMap<>();

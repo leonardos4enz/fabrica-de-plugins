@@ -471,8 +471,20 @@ public final class Edits {
         readWith(who, world, src, label, into, null, done);
     }
 
+    /** Spec 032: la misma lectura de una caja y, si se cancela, cancelled (el pincel deja de esperar). */
+    public void readOrCancel(CommandSender who, World world, dev.leo.worldcraft.region.Region box, String label, EditJob.Capture into,
+                     Runnable done, Runnable cancelled) {
+        readWith(who, world, new dev.leo.worldcraft.edit.RegionSource(box, dev.leo.worldcraft.region.Shape.FILL, null, null, 0),
+                label, into, null, done, cancelled);
+    }
+
     private void readWith(CommandSender who, World world, EditSource src, String label, EditJob.Capture into,
                           EntityStage.Scan scan, Runnable done) {
+        readWith(who, world, src, label, into, scan, done, null);
+    }
+
+    private void readWith(CommandSender who, World world, EditSource src, String label, EditJob.Capture into,
+                          EntityStage.Scan scan, Runnable done, Runnable cancelled) {
         UUID owner = owner(who);
         PaperWorld w = world(world, src);
         EditJob job = new EditJob(nextJob++, owner, label, w, src, EditJob.Mode.READ, new EditJob.Sink() {
@@ -487,7 +499,10 @@ public final class Edits {
             // Spec 028: lo que sigue (pedir la obra) corre en el tick siguiente, cuando la lectura ya salió del planificador;
             // si no, la obra decía «waiting for your previous edit» por la lectura que ya había terminado.
             if (job.state() == EditJob.State.DONE) Bukkit.getScheduler().runTask(plugin, done);
-            else tell(owner, who, plugin.messages().get(label.equals("copy") ? "copy-cancelled" : "read-cancelled", "kind", label));
+            else {
+                if (cancelled != null) cancelled.run();
+                tell(owner, who, plugin.messages().get(label.equals("copy") ? "copy-cancelled" : "read-cancelled", "kind", label));
+            }
         });
         jobs.put(job.id(), job);
         submit(job);

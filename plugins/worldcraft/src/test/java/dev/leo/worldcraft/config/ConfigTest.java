@@ -143,6 +143,28 @@ class ConfigTest {
     }
 
     @Test
+    void spec032_H7_CA3_seccion_tools_validada() throws Exception {
+        assertEquals(ToolSettings.DEFAULTS, load("history: { keep_days: 3 }\n", "").tools(), "un config.yml de la 0.7.0 usa lo de fábrica");
+        LoadedConfig c = load("""
+                tools:
+                  range: 9000
+                  brush_max_radius: 8
+                  never_break: "bedrock, stonne"
+                  tree_blocks: [oak_log, oak_leaves]
+                  rnage: 3
+                """, "");
+        ToolSettings t = c.tools();
+        assertEquals(200, t.range(), "fuera de rango: el de fábrica");
+        assertEquals(8, t.brushMaxRadius());
+        assertEquals(ToolSettings.DEFAULTS.neverBreak(), t.neverBreak(), "una máscara que no se entiende: la de fábrica");
+        assertEquals("oak_log, oak_leaves", t.treeBlocks(), "también como lista");
+        String all = c.issues().all().toString();
+        assertTrue(all.contains("tools.range"), all);
+        assertTrue(all.contains("tools.never_break"), all);
+        assertTrue(all.contains("tools.rnage") && all.contains("did you mean 'range'"), all);
+    }
+
+    @Test
     void H8_CA2_un_archivo_roto_conserva_lo_anterior() throws Exception {
         LoadedConfig first = load("performance: { max_ms_per_tick: 4 }\n", "patterns: { a: stone }\n");
         Files.writeString(dir.resolve("config.yml"), "performance: [\n");

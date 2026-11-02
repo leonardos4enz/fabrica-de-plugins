@@ -465,6 +465,17 @@ final class BuildCommands {
         if (!radiusOk(s, r, plugin.config().settings().entitiesMaxRadius())) return;
         Place at = place(s, args);
         if (at == null) return;
+        entitiesAt(s, at, kind, detail, r, which);
+    }
+
+    /** Spec 032 H4 CA3: el pincel butcher, en la esfera de radio r alrededor de (x, y, z), con las opciones de /wc butcher. */
+    public void butcherAt(CommandSender s, World w, int x, int y, int z, int r, Set<String> flags) {
+        Butcher who = Butcher.of(flags);
+        entitiesAt(s, new Place(w, x, y, z), "brush butcher", r + (flags.isEmpty() ? "" : " --" + String.join(" --", new java.util.TreeSet<>(flags))),
+                r, e -> who.kills(e.kinds()));
+    }
+
+    private void entitiesAt(CommandSender s, Place at, String kind, String detail, int r, java.util.function.Predicate<EntityInfo> which) {
         Box box = clampY(at.world, new Box(at.x - r, at.y - r, at.z - r, at.x + r, at.y + r, at.z + r));
         if (box == null) {
             s.sendMessage(msg().get("sel-outside"));
