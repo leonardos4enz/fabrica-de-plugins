@@ -193,6 +193,15 @@ con `--release 21`.
   terminada (F-02). Lo que busca la cima de una columna no se acota a ±radio de los pies: volando o en una ladera la cima
   queda fuera (F-01). Una esfera de radio r usa r + ½ (radio 1 = 19 bloques, como WorldEdit): al armar un escenario,
   la esquina de un cuadrado de lado r queda fuera.
+- **Spec 029 (paridad verificada contra los jars):** el inventario de un plugin sale del **bytecode** con `javap -v` (las
+  anotaciones `@Command` son visibles; `@Arg`/`@Switch` quedan como «invisibles» pero javap también las muestra) y se cruza
+  con el código fuente y con un servidor real: el código de FAWE tiene comandos **comentados** que no existen en el jar.
+  Desde la consola, `help <Plugin>` lista los de primer nivel y `worldedit help -p N <grupo>` da la línea `Usage:` con los
+  subcomandos (`//help` no se resuelve en la consola). FAWE y WorldEdit no conviven: FAWE va en `PLUGINS_ALTERNATIVOS` de
+  `plugins-extra.mjs` y solo se instala con un filtro que lo nombre (la suite de Worldcraft usa `/^worldedit/i`). En la 3a,
+  tras el escenario de navegación mineflayer 4.39 dejó de mandar el giro del bot (`data get entity X Rotation` seguía con el
+  anterior): lo que depende de hacia dónde mira el jugador en el servidor se pone con `tp X x y z yaw pitch`. El pasto
+  tapado por un bloque sólido se vuelve tierra con los ticks al azar: una cuenta sobre pasto depende del tiempo (usar tierra).
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

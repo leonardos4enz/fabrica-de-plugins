@@ -86,7 +86,7 @@ public final class ColumnEdit extends ColumnSource {
 
     /** overlay (H2 CA3): el patrón encima de la cima, solo donde hay aire o cobertura (no sobre un tronco). */
     public static Rule overlay(IntPredicate open, dev.leo.worldcraft.pattern.Pattern.Compiled pattern, long seed) {
-        return (x, y, z, current) -> open.test(current) ? pattern.apply(x, y, z, seed) : KEEP;
+        return (x, y, z, current) -> open.test(current) ? pattern.apply(x, y, z, current, seed) : KEEP;
     }
 
     /** snow (H3 CA4): el agua quieta de la cima se congela; sobre un bloque firme, una capa de nieve si hay aire. */

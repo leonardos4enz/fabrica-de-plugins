@@ -14,14 +14,21 @@ public final class RegionSource implements EditSource {
     private final Pattern.Compiled pattern;
     private final long seed;
     private final ChunkOrder order;
+    /** Spec 029: lo que había alrededor antes de la obra (para «above», «exposed»…); null si la máscara no lo mira. */
+    private final Mask.Neighbors near;
 
     /** mask null = todo. */
     public RegionSource(Box box, Shape shape, Mask.Compiled mask, Pattern.Compiled pattern, long seed) {
+        this(box, shape, mask, pattern, seed, null);
+    }
+
+    public RegionSource(Box box, Shape shape, Mask.Compiled mask, Pattern.Compiled pattern, long seed, Mask.Neighbors near) {
         this.box = box;
         this.shape = shape;
         this.mask = mask;
         this.pattern = pattern;
         this.seed = seed;
+        this.near = near;
         this.order = new ChunkOrder(box, shape);
     }
 
@@ -32,8 +39,8 @@ public final class RegionSource implements EditSource {
 
     @Override
     public int target(int x, int y, int z, int current) {
-        if (mask != null && !mask.test(current)) return KEEP;
-        return pattern == null ? KEEP : pattern.apply(x, y, z, seed);
+        if (mask != null && !mask.test(x, y, z, current, near, seed)) return KEEP;
+        return pattern == null ? KEEP : pattern.apply(x, y, z, current, seed);
     }
 
     @Override

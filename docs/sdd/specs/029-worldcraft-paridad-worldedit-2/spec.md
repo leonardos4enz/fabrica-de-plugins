@@ -1,6 +1,6 @@
 # Spec 029 — Worldcraft: paridad con WorldEdit y FAWE, segunda parte (tabla verificada contra los jars y partición)
 
-**Estado:** CLARIFY respondido por el dueño (029 = selección, información y máscaras; orden 030–036 aceptado) · **Plugin:** Worldcraft (`/wc`, hoy 0.4.0) ·
+**Estado:** Implementado y verificado en Paper 1.21.4 (compuertas 1, 2 y 3a, 20/20 dos veces) (ver [verify](verify.md)) · CLARIFY respondido por el dueño (029 = selección, información y máscaras; orden 030–036 aceptado) · **Plugin:** Worldcraft (`/wc`, hoy 0.4.0) ·
 **Depende de:** [025](../025-worldcraft-nucleo/spec.md) (motor por tandas, vista previa, deshacer, límites, patrones y
 máscaras), [026](../026-worldcraft-terreno-facil/spec.md), [027](../027-worldcraft-esquemas-schem/spec.md) (esquemas),
 [028](../028-worldcraft-paridad-worldedit/spec.md) (formas, región, utilidades y navegación) ·
@@ -71,9 +71,9 @@ la tabla.
   pegar (`-n`). `/wc copy --mask <máscara>` y `cut --mask` copian solo lo que cumple la máscara (el resto, aire).
 
 **H2 — Máscaras con vecinos y probabilidad.** Como *constructor*, quiero decir «la piedra que tiene aire encima».
-- CA1: En toda máscara: `above <máscara>` (el bloque de abajo cumple…, es decir, está encima de), `below <máscara>`,
-  `exposed` (toca aire por alguna cara), `surface` (sólido con aire encima), `solid` y `50% chance`. Se combinan con lo
-  de hoy: `stone above grass_block`, `!exposed`, `stone, 30% chance`.
+- CA1: En las máscaras de `replace`, `replacenear`, `removenear`, `count`, `trim` y `copy --mask` (las del terreno y el pincel siguen siendo de bloques): `above <máscara>` (el bloque de abajo cumple…, es decir, está encima de), `below <máscara>`,
+  `exposed` (toca aire por alguna cara), `surface` (sólido con aire encima), `solid` y `50% chance`. Se combinan con «and» (la coma sigue
+  siendo «o»): `stone above grass_block`, `stone and exposed`, `!exposed`, `dirt and 30% chance`.
 - CA2: Lo que mira vecinos lee la foto de la obra (`Edits.read`), no el mundo a mitad de edición: el resultado no depende
   del orden en que se escriben los bloques.
 - CA3: `^[estado]` como máscara: cualquier bloque con ese estado (`^[waterlogged=true]`).

@@ -61,7 +61,7 @@ public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<
             });
             msk.entrySet().removeIf(e -> {
                 try {
-                    plain.mask(e.getValue());
+                    plain.maskNear(e.getValue()); // spec 029: un preset puede mirar alrededor (solo sirve donde se admite)
                     return false;
                 } catch (ParseException ex) {
                     issues.error("presets.yml", "masks." + e.getKey(), ex.getMessage() + ": skipped");

@@ -158,6 +158,38 @@ public final class SchemFiles {
         return f;
     }
 
+    /** Lo que hizo /wc schem import (spec 029 H5): copiados, los que ya estaban y los que pasan del tope. */
+    public record Imported(int copied, int skipped, int tooBig) {
+    }
+
+    /**
+     * Spec 029 H5 CA1: copia los .schem de las carpetas de solo lectura (WorldEdit, FAWE) a la propia, con su subcarpeta.
+     * Los originales no se tocan; uno que ya existe en la propia no se pisa sin overwrite; uno de más de maxBytes se
+     * salta (el mismo tope que load). Mismo recorrido que list: sin enlaces, nombres seguros, hasta MAX_LIST.
+     */
+    public Imported importAll(boolean overwrite, long maxBytes) throws IOException {
+        int copied = 0, skipped = 0, tooBig = 0;
+        Set<String> done = new HashSet<>();
+        for (Extra e : extra) {
+            List<Entry> found = new ArrayList<>();
+            walk(e.folder(), e.label(), "", 0, found, new HashSet<>());
+            for (Entry en : found) {
+                if (!done.add(en.name().toLowerCase(Locale.ROOT))) continue; // el mismo nombre en WorldEdit y FAWE: el primero
+                if (en.bytes() > maxBytes) {
+                    tooBig++;
+                    continue;
+                }
+                if (!overwrite && Files.isDirectory(own) && inside(own, en.name()) != null) {
+                    skipped++;
+                    continue;
+                }
+                write(en.name(), Files.readAllBytes(en.path()), overwrite);
+                copied++;
+            }
+        }
+        return new Imported(copied, skipped, tooBig);
+    }
+
     /** Lo pasa a .trash/ (H4 CA2): solo de la carpeta propia. false si no existe. */
     public boolean trash(String name, long now) throws IOException {
         String n = clean(name);

@@ -110,6 +110,11 @@ anything.
 | `/wc sel` | Size, blocks, world and corners. `sel clear`, `sel hide`, `sel show` |
 | `/wc expand <n> [direction]` | Grow towards where you look, or `up`, `down`, `north`, `south`, `east`, `west` (or `u`, `d`, `n`…). `expand vert` = whole world height |
 | `/wc contract <n> [direction]`, `/wc shift <n> [direction]` | Shrink from that side; move without changing the size |
+| `/wc hpos1`, `/wc hpos2` | A corner at the block you look at, however far (up to `terrain.reach`) |
+| `/wc outset <n>`, `/wc inset <n>` | Grow or shrink to every side; `--horizontal` or `--vertical` for only those |
+| `/wc chunk [--expand]` | The whole chunk you stand in, bottom to top (`--chunk-coords <x> <z>` another one; `--expand` adds it) |
+| `/wc trim [mask]` | Shrink the selection to what matches (everything but air without a mask) |
+| `/wc count <mask>`, `/wc distr [--states] [--clipboard]` | How many blocks match; the 10 most common blocks with their share (by state, or of your clipboard) |
 
 ## Editing
 | Command | What it does |
@@ -118,8 +123,10 @@ anything.
 | `/wc replace <mask> with <pattern>` | Change only what matches (without `with`, the first word is the mask) |
 | `/wc walls <pattern>` | The four side walls |
 | `/wc faces <pattern>` | Walls, floor and roof: a hollow box |
-| `/wc copy`, `/wc cut` | Copy (or copy and leave air), relative to where you stand |
-| `/wc paste [--air]` | Paste relative to where you stand; copied air only with `--air` |
+| `/wc copy [--mask <mask>]`, `/wc cut [--mask <mask>]` | Copy (or copy and leave air), relative to where you stand. With a mask, only what matches is copied (and cut) |
+| `/wc paste [--air] [--origin] [--select] [--only-select]` | Paste relative to where you stand; copied air only with `--air`. `--origin`: where it was copied; `--select`: select what you pasted; `--only-select`: only select where it would go |
+| `/wc clearclipboard`, `/wc clearhistory` | Empty your clipboard; delete your undo history from the disk (asks `/wc confirm`) |
+| `/wc gmask <mask>`, `/wc gmask off` | A global mask: until `off` (or until you leave) every edit only changes what matches, and says so |
 | `/wc rotate <90\|180\|270\|-90>`, `/wc flip [direction]` | Turn or mirror the clipboard (block states too) |
 | `--preview` | On `set`, `replace`, `walls`, `faces`, `cut` and `paste`: show it to you first |
 | `/wc confirm`, `/wc cancel` | Run the waiting edit; drop it (or stop your running edits: what was done can be undone) |
@@ -159,6 +166,11 @@ From the console, shapes and the commands around you take `--at x,y,z [--world <
 | WorldEdit | Worldcraft |
 |---|---|
 | `//wand`, `//pos1`, `//pos2`, `//expand`, `//contract`, `//shift`, `//size` | `/wc wand`, `/wc pos1`, `/wc pos2`, `/wc expand`, `/wc contract`, `/wc shift`, `/wc sel` |
+| `//hpos1`, `//hpos2`, `//chunk`, `//outset`, `//inset`, `//trim`, `//count`, `//distr` | `/wc hpos1`, … (`-h` is `--horizontal`, `-v` is `--vertical`, `-s` is `--expand`, `-d` is `--states`, `-c` is `--clipboard` or `--chunk-coords`) |
+| `/clearclipboard`, `/clearhistory`, `/gmask` | `/wc clearclipboard`, `/wc clearhistory` (asks to confirm), `/wc gmask` |
+| `//paste -o -s -n`, `//copy -m`, `//cut -m` | `/wc paste --origin --select --only-select`, `/wc copy --mask …`, `/wc cut --mask …` |
+| `>grass_block`, `<grass_block`, `#exposed`, `#surface`, `#solid`, `%50`, `^[waterlogged=true]` (masks) | `above grass_block`, `below grass_block`, `exposed`, `surface`, `solid`, `50% chance`, `^[waterlogged=true]` |
+| `^stone_stairs`, `^[waterlogged=false]` (patterns) | the same |
 | `//set`, `//replace`, `//walls`, `//faces` | `/wc set`, `/wc replace <mask> with <pattern>`, `/wc walls`, `/wc faces` (all with `--preview`) |
 | `//copy`, `//cut`, `//paste`, `//rotate`, `//flip`, `//schem` | `/wc copy`, `/wc cut`, `/wc paste`, `/wc rotate`, `/wc flip`, `/wc schem` |
 | `//undo`, `//redo` | `/wc undo`, `/wc redo` (on disk: they survive a restart) |
@@ -169,9 +181,10 @@ From the console, shapes and the commands around you take `--at x,y,z [--world <
 | `//brush smooth`, `//brush raise` | `/wc brush smooth`, `/wc brush raise` (only natural ground) |
 | — | `/wc mountain`, `/wc island`, styles, `/wc confirm`, `/wc history` |
 
-Not yet (see the [command-by-command comparison](../../docs/investigacion/paridad-worldedit-fawe.md)): selections
-that are not boxes, entities, biomes, building brushes (sphere, clipboard, scatter), `//generate` and other formulas,
-`//regen`, snapshots, and an API for other plugins. **WorldGuard and PlotSquared need WorldEdit itself**: keep it
+Not yet (see the [command-by-command comparison](../../docs/investigacion/paridad-worldedit-fawe.md), checked
+against the WorldEdit 7.3.19 and FAWE 2.16.2 jars): selections that are not boxes, entities, building brushes and
+one-click tools, biomes, trees and game structures, `//generate` and other formulas, FAWE's caves, ores and images,
+`//regen`, snapshots, and an API for other plugins (in that order in the [roadmap](../../docs/sdd/roadmap.md)). **WorldGuard and PlotSquared need WorldEdit itself**: keep it
 installed next to Worldcraft (different command and wand, they work side by side).
 
 ### Patterns (what to place)
@@ -179,6 +192,8 @@ installed next to Worldcraft (different command and wand, they work side by side
 stone                                  one block (minecraft: is optional)
 oak_stairs[facing=north,half=top]      a block state; the rest of its properties keep their defaults
 70% stone, 30% andesite                a mix with weights (or no weights: equal parts)
+^stone_stairs                          change the type and keep the state it accepts (stairs stay turned)
+^[waterlogged=false]                   change only that property and keep the block
 $castle_wall                           a preset from presets.yml
 ```
 ### Masks (what to change)
@@ -189,7 +204,20 @@ dirt, grass_block                      any of these
 oak_log[axis=y]                        only upright oak logs
 !air                                   everything except air (air includes cave and void air)
 $natural                               a preset from presets.yml
+^[waterlogged=true]                    any block with that state
 ```
+In `replace`, `replacenear`, `removenear`, `count`, `trim`, `copy --mask` and `cut --mask`, a mask can also look
+around. Join parts with `and` (a comma is still "or"; `!` or `not` negates one part or the whole entry):
+```
+stone above grass_block                stone that has grass under it (below: above it)
+exposed                                touches air on some side
+surface                                not air, with air right above
+solid                                  solid blocks (not plants, liquids or air)
+dirt and 30% chance                    a random third of the dirt (the preview and the edit pick the same ones)
+stone and !surface                     stone with something on top
+```
+What is around is read before the edit starts, so the order in which blocks change never matters. Terrain styles,
+brushes and `gmask` take masks that only look at the block itself (`gmask` also takes `% chance`).
 
 ## Schematics (.schem): coming from WorldEdit
 Worldcraft reads and writes the `.schem` files of WorldEdit and FAWE (the open Sponge format), so a server can switch
@@ -199,6 +227,7 @@ without losing its schematics, and a schematic made here works on a server that 
 /wc schem load castles/tower            into your clipboard; then /wc paste --preview, /wc rotate, /wc flip, /wc undo
 /wc schem save gate                     your clipboard (already turned if you rotated it) as schematics/gate.schem
 /wc schem save gate --overwrite         replace it (needs the permission to delete)
+/wc schem import                        copy WorldEdit's and FAWE's schematics into Worldcraft's folder (the originals stay)
 /wc schem delete gate                   moved to schematics/.trash/ for 7 days, in case you want it back
 ```
 - **WorldEdit's folder is read where it is:** `plugins/WorldEdit/schematics` and `plugins/FastAsyncWorldEdit/schematics`
@@ -254,7 +283,8 @@ blocked only if every group blocks it. `presets.yml` names patterns and masks; `
 defaults and styles; `messages.yml` has every text (MiniMessage, translatable). Updating from 0.1.0: `terrain.yml` is
 created on the next start and a `config.yml` without the `terrain` section uses the values above. Updating from 0.2.0: a
 `config.yml` without `schematics` uses the values above and `schematics/` is created on the next start. Updating from
-0.3.0: a `config.yml` without `shapes` and `utilities` uses the values above.
+0.3.0: a `config.yml` without `shapes` and `utilities` uses the values above. **Updating from 0.4.0:** saving schematics now
+needs `worldcraft.schematic.save` (op by default): give it to whoever saved with `worldcraft.schematic` only.
 
 ## Permissions
 | Permission | Default | What it allows |
@@ -262,23 +292,24 @@ created on the next start and a `config.yml` without the `terrain` section uses 
 | `worldcraft.use` | op | The wand and every edit on your own selection and history |
 | `worldcraft.moderate` | op | See and undo other players' edits; see and cancel everybody's running edits |
 | `worldcraft.admin` | op | `reload`, `validate`, `selftest` |
-| `worldcraft.schematic` | op | `/wc schem list`, `load` and `save` (pasting also needs `worldcraft.use`) |
-| `worldcraft.schematic.delete` | op | `/wc schem delete` and `save --overwrite` |
+| `worldcraft.schematic` | op | `/wc schem list` and `load` (pasting also needs `worldcraft.use`) |
+| `worldcraft.schematic.save` | op | `/wc schem save` and `import` (they write to the disk) |
+| `worldcraft.schematic.delete` | op | `/wc schem delete`, `save --overwrite` and `import --overwrite` |
 | `worldcraft.navigate` | op | `/wc ascend`, `descend`, `ceil`, `thru`, `jumpto`, `unstuck`, `up` |
 | `worldcraft.limit.<group>` | — | The limits of that group in `config.yml` |
 
 ## Compatibility
 | Server | Status | Evidence |
 |---|---|---|
-| Paper 1.21.4 (build 232, Java 24) | **Verified** (0.4.0) | 0.4.0 (2026-11-01): gate 2 updating from 0.3.0 (every shape, hollow, center, stack with a chest, move, line, drain and undo, fixwater, fill, removenear, snow, thaw, green, naturalize, overlay, extinguish, removebelow from the console: 31 checks); in-game suite 18/18 twice (a sphere previewed only for the editor, a pyramid and unstuck, stack and move with undo, drain, ascend, descend, thru, up with a glass block for a player who cannot fly). 0.3.0 (2026-11-01): 0.3.0 (2026-11-01): gate 2 updating from 0.2.0 (save, load and paste a rotated chest and sign from the console, damaged files and unsafe names refused); in-game suite 15/15 twice with WorldEdit 7.3.19 on the server (WorldEdit's v3 and v2 files loaded and pasted by Worldcraft, Worldcraft's loaded and pasted by WorldEdit). 0.2.0: gate 2 (2026-11-01): updating from 0.1.0, mountains (up to 811 675 blocks), an island and undo from the console. In-game suite 12/12 twice (2026-11-01), terrain included. 0.1.0: gate 2 with a 100 000-block edit and undo after a restart, suite 8/8 twice |
+| Paper 1.21.4 (build 232, Java 24) | **Verified** (0.5.0) | 0.5.0 (2026-11-02): gate 2 updating from 0.4.0 with WorldEdit 7.3.19 (count, distr, masks that look around, `^stone_stairs`, `gmask`, outset/inset/trim/chunk, copy --mask and paste --origin/--select, clearhistory with confirm, schem import, from the console); in-game suite 20/20 twice (hpos at the block you look at, count, `^` keeps the stairs turned, `and !surface`, gmask, paste --select and --origin, clearhistory, import, and a player without `worldcraft.schematic.save` cannot save). 0.4.0 (2026-11-01): gate 2 updating from 0.3.0 (every shape, hollow, center, stack with a chest, move, line, drain and undo, fixwater, fill, removenear, snow, thaw, green, naturalize, overlay, extinguish, removebelow from the console: 31 checks); in-game suite 18/18 twice (a sphere previewed only for the editor, a pyramid and unstuck, stack and move with undo, drain, ascend, descend, thru, up with a glass block for a player who cannot fly). 0.3.0 (2026-11-01): 0.3.0 (2026-11-01): gate 2 updating from 0.2.0 (save, load and paste a rotated chest and sign from the console, damaged files and unsafe names refused); in-game suite 15/15 twice with WorldEdit 7.3.19 on the server (WorldEdit's v3 and v2 files loaded and pasted by Worldcraft, Worldcraft's loaded and pasted by WorldEdit). 0.2.0: gate 2 (2026-11-01): updating from 0.1.0, mountains (up to 811 675 blocks), an island and undo from the console. In-game suite 12/12 twice (2026-11-01), terrain included. 0.1.0: gate 2 with a 100 000-block edit and undo after a restart, suite 8/8 twice |
 | Paper 26.1.2 and other 1.21.x / 26.x | Not verified | |
 | Spigot, Folia | Not supported | |
 
 - **Java:** 21 or newer.
 - **Optional:** nothing. No network access, no server internals (only the Paper API).
-- **Not yet:** entities and biomes in schematics, `.schematic` (MCEdit) and `.litematic` files, non-box selections, biomes, building brushes, an API for other plugins, rivers, height maps from images, a brush menu, WorldGuard regions,
-  rollback by area and time, entities
-  (ideas in the [roadmap](../../docs/sdd/roadmap.md)). Running next to WorldEdit works: different command and wand.
+- **Not yet:** non-box selections, entities (also in schematics), biomes, building brushes, trees and structures,
+  formulas, `.schematic` (MCEdit) and `.litematic` files, an API for other plugins, rivers, height maps from images, a
+  brush menu, WorldGuard regions, rollback by area and time (ideas in the [roadmap](../../docs/sdd/roadmap.md)). Running next to WorldEdit works: different command and wand.
 
 ## Installation
 1. Copy `Worldcraft-x.y.z.jar` to `plugins/` and start the server.

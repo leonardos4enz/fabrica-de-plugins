@@ -73,6 +73,43 @@ public record Box(int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
         return new Box(minX, Math.min(a, b), minZ, maxX, Math.max(a, b), maxZ);
     }
 
+    /**
+     * Spec 029 (outset, inset): n bloques hacia todos los lados; horizontal o vertical solo esos ejes. n negativo achica.
+     *
+     * @throws IllegalArgumentException si la caja quedaría vacía
+     */
+    public Box outset(int n, boolean horizontal, boolean vertical) {
+        int h = vertical && !horizontal ? 0 : n, v = horizontal && !vertical ? 0 : n;
+        int ax = minX - h, ay = minY - v, az = minZ - h, bx = maxX + h, by = maxY + v, bz = maxZ + h;
+        if (ax > bx || ay > by || az > bz) throw new IllegalArgumentException("the selection would be empty");
+        return new Box(ax, ay, az, bx, by, bz);
+    }
+
+    /** La caja con un borde de n bloques más (para leer los vecinos de una máscara, spec 029). */
+    public Box grow(int n) {
+        return outset(n, false, false);
+    }
+
+    /** La caja que abarca esta y otra (chunk --expand, spec 029). */
+    public Box union(Box o) {
+        return new Box(Math.min(minX, o.minX), Math.min(minY, o.minY), Math.min(minZ, o.minZ),
+                Math.max(maxX, o.maxX), Math.max(maxY, o.maxY), Math.max(maxZ, o.maxZ));
+    }
+
+    /**
+     * El centro (center, spec 028; deuda probada en la 029): 1 bloque por eje si el lado es impar, 2 si es par; así la
+     * caja del centro tiene 1, 2, 4 u 8 bloques.
+     */
+    public Box center() {
+        return new Box(minX + (width() - 1) / 2, minY + (height() - 1) / 2, minZ + (depth() - 1) / 2,
+                maxX - (width() - 1) / 2, maxY - (height() - 1) / 2, maxZ - (depth() - 1) / 2);
+    }
+
+    /** La columna entera de un chunk (spec 029, /wc chunk), del fondo al techo del mundo. */
+    public static Box chunk(int chunkX, int chunkZ, int worldMin, int worldMaxInclusive) {
+        return new Box(chunkX << 4, worldMin, chunkZ << 4, (chunkX << 4) + 15, worldMaxInclusive, (chunkZ << 4) + 15);
+    }
+
     /** «12×5×8» (ancho × alto × fondo). */
     public String size() {
         return width() + "×" + height() + "×" + depth();

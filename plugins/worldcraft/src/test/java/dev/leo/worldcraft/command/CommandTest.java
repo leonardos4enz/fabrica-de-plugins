@@ -103,4 +103,20 @@ class CommandTest {
         var neg = new java.util.ArrayList<>(java.util.List.of("stone", "4", "-6"));
         assertArrayEquals(new int[]{-6}, BuildCommands.trailingNumbers(neg, 2).get(1));
     }
+
+    /** Spec 029: cada subcomando nuevo tiene su ayuda con ejemplo; schem nombra import. */
+    @Test
+    void spec029_ayuda_de_seleccion_informacion_y_gmask() throws Exception {
+        YamlConfiguration m = new YamlConfiguration();
+        m.loadFromString(Files.readString(Path.of("src/main/resources/messages.yml")));
+        assertEquals(11, SelectionCommands.SUBS.size());
+        for (String s : SelectionCommands.SUBS) {
+            for (String k : new String[]{"usage", "text", "example"}) assertNotNull(m.getString("help." + s + "." + k), "falta help." + s + "." + k);
+            assertTrue(m.getString("help." + s + ".example").startsWith("/wc " + s), s);
+        }
+        assertTrue(m.getString("help.schem.usage").contains("import"));
+        assertTrue(m.getString("help.paste.usage").contains("--origin"));
+        String yml = Files.readString(Path.of("src/main/resources/plugin.yml"));
+        assertTrue(yml.contains("worldcraft.schematic.save:"), "el permiso de guardar (H5 CA2)");
+    }
 }

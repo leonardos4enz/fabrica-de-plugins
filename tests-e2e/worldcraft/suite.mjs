@@ -378,7 +378,8 @@ export default {
         await pide(ana, 'wc set stnoe', /Unknown block 'stnoe' \(did you mean 'stone'\?\)/)
         await pide(ana, 'wc replace #lgos with stone', /Unknown block tag '#lgos' \(did you mean 'minecraft:logs'\?\)/)
         await pide(ana, 'wc set stone --previwe', /Unknown option '--previwe' \(did you mean '--preview'\?\)/)
-        await pide(ana, 'wc replace 50% dirt with stone', /weights \(%\) work in patterns, not in masks/)
+        // Spec 029: el mensaje ahora dice cómo escribir el azar en una máscara.
+        await pide(ana, 'wc replace 50% dirt with stone', /weights \(%\) work in patterns; in a mask write a chance/)
         await pide(ana, 'wc set oak_stairs[facing=up]', /'up' is not a value of 'facing'/)
         await pide(ana, 'wc expand 3 left', /'left' is not a direction/)
         await comprobar(srv, `blocks ${X} -60 ${Z} ${X + 3} -60 ${Z + 3} ${X} -50 ${Z} all`) // todo sigue en aire (igual que y = -50)
@@ -691,13 +692,16 @@ export default {
           await pide(beto, 'wc schem load e2e_cmd', /Loaded e2e_cmd \(Sponge v3\): 1×1×1/)
           await pide(beto, 'wc paste', /You may not place command_block/)
           await pide(beto, 'wc schem delete e2e_cmd', /You don't have permission/)
-          await pide(beto, 'wc schem save e2e_cmd --overwrite', /Replacing a schematic needs the permission/)
+          // Spec 029 H5 CA2: guardar e importar piden worldcraft.schematic.save (Beto solo tiene worldcraft.schematic).
+          await pide(beto, 'wc schem save e2e_cmd --overwrite', /You don't have permission/)
+          await pide(beto, 'wc schem import', /You don't have permission/)
           await pide(beto, 'wc schem load ../../server', /is not a valid name/)
           await pide(beto, 'wc schem load C:/Windows/win', /is not a valid name/)
           const nombres = (await beto.bot.tabComplete('/wc schem load e2e_')).map(x => x.match ?? x)
           for (const n of ['e2e_cmd', 'e2e_ajeno']) if (!nombres.includes(n)) throw new Error(`no sugiere ${n}: ${nombres}`)
           const ops = (await beto.bot.tabComplete('/wc schem ')).map(x => x.match ?? x)
           if (ops.includes('delete')) throw new Error(`Beto ve delete: ${ops}`)
+          for (const o of ['save', 'import']) if (ops.includes(o)) throw new Error(`Beto ve ${o}: ${ops}`)
         } finally {
           if (antes == null) fs.rmSync(permisos, { force: true })
           else fs.writeFileSync(permisos, antes)
@@ -711,6 +715,12 @@ export default {
         if (!fs.readdirSync(path.join(propia, '.trash')).some(f => f.startsWith('e2e_cmd-'))) throw new Error('e2e_cmd no está en la papelera')
         await pide(ana, 'wc schem load e2e_cmd', /There is no schematic called e2e_cmd/)
         if (!fs.existsSync(path.join(carpetaWE(srv), 'e2e_ajeno.schem'))) throw new Error('se borró el de WorldEdit')
+        // Spec 029 H5 CA1: import copia el de WorldEdit a la carpeta propia y deja el original; la segunda vez no pisa.
+        await pide(ana, 'wc schem import', /Imported [1-9]\d* schematics.*The originals were left/)
+        if (!fs.existsSync(path.join(propia, 'e2e_ajeno.schem'))) throw new Error('import no copió e2e_ajeno')
+        if (!fs.existsSync(path.join(carpetaWE(srv), 'e2e_ajeno.schem'))) throw new Error('import borró el original')
+        await pide(ana, 'wc schem import', /Imported 0 schematics \([1-9]\d* already here/)
+        fs.rmSync(path.join(propia, 'e2e_ajeno.schem'), { force: true })
         fs.rmSync(path.join(propia, 'e2e_roto.schem'), { force: true })
         fs.rmSync(path.join(carpetaWE(srv), 'e2e_ajeno.schem'), { force: true })
       }
@@ -817,6 +827,117 @@ export default {
         await pide(ana, 'wc undo', /Undone .*up/)
         await ana.hasta('ver el vidrio quitado', b => bloque(b, X, -55, Z + 5) === 'air')
         await srv.consola(`fill ${X - 2} -60 ${Z - 2} ${X + 2} -57 ${Z + 2} air`)
+      }
+    },
+
+    // ---------------------------------------------------------------- spec 029: selección, información y máscaras
+    {
+      id: '029 H1 CA1 · H1 CA5 · H2 CA1 · H2 CA2 · H3 CA1 · H4',
+      nombre: 'hpos con la mira; count y distr; ^tipo conserva el giro de la escalera; «and !surface» con la foto; gmask solo cambia la piedra',
+      timeoutMs: 120000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        // Una capa de piedra de 5×5 (y = -60) sobre tierra y una escalera encima del centro. Tierra y no pasto: el pasto
+        // tapado se vuelve tierra con los ticks al azar y la cuenta dependería del tiempo.
+        await srv.consola(`fill ${X} -61 ${Z + 2} ${X + 4} -61 ${Z + 6} dirt`)
+        await srv.consola(`fill ${X} -60 ${Z + 2} ${X + 4} -60 ${Z + 6} stone`)
+        await srv.consola(`setblock ${X + 2} -59 ${Z + 4} oak_stairs[facing=west,half=top]`)
+        await srv.consola(`setblock ${X + 4} -57 ${Z + 6} gold_block`) // en el aire: la mira no choca antes con el piso
+        await srv.sincronizar()
+        await ana.hasta('ver la piedra', b => bloque(b, X + 4, -60, Z + 2) === 'stone' && bloque(b, X + 2, -59, Z + 4) === 'oak_stairs')
+        // H1 CA1: la esquina en el bloque que mira (más lejos que el alcance de un clic, que la varita necesita). hpos usa
+        // hacia dónde mira Ana según el servidor; tras el escenario de navegación, mineflayer 4.39 dejó de mandar el giro
+        // del bot (el servidor seguía con el anterior: data get entity … Rotation), así que el giro se pone con tp.
+        const mirarY = async ([px, py, pz], comando, esperado) => {
+          const ojo = [X + 0.5, -60 + 1.62, Z + 0.5]
+          const dx = px - ojo[0], dy = py - ojo[1], dz = pz - ojo[2]
+          const yaw = Math.atan2(-dx, dz) * 180 / Math.PI
+          const pitch = -Math.atan2(dy, Math.hypot(dx, dz)) * 180 / Math.PI
+          await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 0.5} ${yaw.toFixed(2)} ${pitch.toFixed(2)}`)
+          await srv.sincronizar()
+          await pide(ana, comando, esperado)
+        }
+        await mirarY([X + 4.5, -56.5, Z + 6.5], 'wc hpos2', new RegExp(`Corner 2 at ${X + 4} -57 ${Z + 6}`))
+        await srv.consola(`setblock ${X + 4} -57 ${Z + 6} air`)
+        await srv.consola(`setblock ${X - 3} -57 ${Z + 8} gold_block`)
+        await srv.sincronizar()
+        await ana.hasta('ver el otro bloque en el aire', b => bloque(b, X - 3, -57, Z + 8) === 'gold_block')
+        await mirarY([X - 2.5, -56.5, Z + 8.5], 'wc hpos1', new RegExp(`Corner 1 at ${X - 3} -57 ${Z + 8}`))
+        await srv.consola(`setblock ${X - 3} -57 ${Z + 8} air`)
+        await pide(ana, `wc pos1 ${X} -60 ${Z + 2}`, /Corner 1 at/)
+        await pide(ana, `wc pos2 ${X + 4} -59 ${Z + 6}`, /selection 5×2×5 \(50 blocks\)/)
+        await pide(ana, 'wc count stone above dirt', /25 of 50 blocks match stone above dirt/)
+        await pide(ana, 'wc count exposd', /did you mean 'exposed'/)
+        await pide(ana, 'wc distr', /50\.0% stone \(25\)|48\.0% air \(24\)/)
+        // H3 CA1: la escalera pasa a piedra y sigue mirando al oeste, arriba.
+        const tipo = await obra(ana, 'wc replace oak_stairs with ^stone_stairs')
+        if (tipo.cambiados !== 1) throw new Error(`^tipo cambió ${tipo.cambiados}`)
+        await ana.hasta('ver la escalera de piedra girada como antes', b => {
+          const k = b.blockAt(v3(b, X + 2, -59, Z + 4))
+          return k?.name === 'stone_stairs' && k.getProperties().facing === 'west' && k.getProperties().half === 'top'
+        })
+        // H2: solo la piedra que no es superficie (la que tiene la escalera encima), decidido con la foto de antes.
+        const ns = await obra(ana, 'wc replace stone above dirt and !surface with andesite')
+        if (ns.cambiados !== 1) throw new Error(`«and !surface» cambió ${ns.cambiados}`)
+        await ana.hasta('ver la andesita bajo la escalera', b => bloque(b, X + 2, -60, Z + 4) === 'andesite')
+        // H4: con la máscara global, set solo cambia la piedra (24): ni la andesita, ni la escalera, ni el aire.
+        await pide(ana, 'wc gmask stone', /Global mask stone/)
+        await pide(ana, 'wc gmask exposed', /a global mask can't/)
+        const g = await obra(ana, 'wc set gold_block')
+        if (g.cambiados !== 24) throw new Error(`set con gmask cambió ${g.cambiados}`)
+        await ana.hasta('ver el oro y lo demás igual', b => bloque(b, X, -60, Z + 2) === 'gold_block' && bloque(b, X + 2, -60, Z + 4) === 'andesite' &&
+          bloque(b, X, -59, Z + 2) === 'air')
+        await pide(ana, 'wc gmask off', /Global mask removed/)
+        await pide(ana, 'wc undo 3', /Undone/)
+        await ana.hasta('ver la piedra otra vez', b => bloque(b, X, -60, Z + 2) === 'stone' && bloque(b, X + 2, -60, Z + 4) === 'stone')
+        await srv.consola(`fill ${X} -60 ${Z + 2} ${X + 4} -59 ${Z + 6} air`)
+        await srv.consola(`fill ${X} -61 ${Z + 2} ${X + 4} -61 ${Z + 6} grass_block`)
+      }
+    },
+    {
+      id: '029 H1 CA2 · H1 CA3 · H1 CA4 · H1 CA6 · H1 CA7',
+      nombre: 'outset, inset, chunk y trim; copy --mask y paste --select en otro lugar y --origin donde se copió; clearclipboard; clearhistory pide confirm',
+      timeoutMs: 120000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        await srv.consola(`fill ${X + 2} -60 ${Z + 2} ${X + 4} -60 ${Z + 4} stone`)
+        await srv.consola(`setblock ${X + 3} -60 ${Z + 3} gold_block`)
+        await srv.sincronizar()
+        await seleccionar(ana, [X + 3, -60, Z + 3], [X + 3, -60, Z + 3])
+        await pide(ana, 'wc outset 1 --horizontal', /Selection now 3×1×3 \(9 blocks\)/)
+        await pide(ana, 'wc outset 2', /Selection now 7×5×7/)
+        await pide(ana, 'wc inset 4', /would leave the selection empty/)
+        await pide(ana, 'wc trim stone, gold_block', /Selection now 3×1×3 \(9 blocks\)/)
+        await pide(ana, 'wc trim gold_block', /Selection now 1×1×1/)
+        await pide(ana, 'wc chunk', /Selection now 16×384×16/)
+        await seleccionar(ana, [X + 2, -60, Z + 2], [X + 4, -60, Z + 4])
+        // H1 CA7: solo el oro va al portapapeles; la piedra queda como aire y no se pega.
+        await pide(ana, 'wc copy --mask gold_block', /Copied 3×1×3/)
+        await pide(ana, 'wc distr --clipboard', /11\.1% gold_block \(1\)/)
+        await srv.consola(`tp ${ANA} ${X + 10.5} -60 ${Z + 0.5} 0 0`)
+        await srv.sincronizar()
+        await ana.hasta('estar en el otro lugar', b => Math.abs(b.entity.position.x - (X + 10.5)) < 0.6)
+        const p = await obra(ana, 'wc paste --select')
+        if (p.cambiados !== 1) throw new Error(`paste cambió ${p.cambiados}`)
+        await ana.hasta('ver el oro copiado sin la piedra', b => bloque(b, X + 13, -60, Z + 3) === 'gold_block' && bloque(b, X + 12, -60, Z + 2) === 'air')
+        await pide(ana, 'wc sel', new RegExp(`3×1×3 .* from ${X + 12} -60 ${Z + 2}`))
+        await srv.consola(`setblock ${X + 3} -60 ${Z + 3} air`)
+        await srv.sincronizar() // la consola no espera (002 F-03)
+        await ana.hasta('ver que el oro original se fue', b => bloque(b, X + 3, -60, Z + 3) === 'air')
+        const o = await obra(ana, 'wc paste --origin')
+        if (o.cambiados !== 1) throw new Error(`paste --origin cambió ${o.cambiados}`)
+        await ana.hasta('ver el oro de vuelta donde se copió', b => bloque(b, X + 3, -60, Z + 3) === 'gold_block')
+        await pide(ana, 'wc clearclipboard', /Clipboard emptied/)
+        await pide(ana, 'wc paste', /Your clipboard is empty/)
+        // H1 CA6: borrar el historial pide confirmación; después no hay nada que deshacer.
+        await pide(ana, 'wc clearhistory', /This deletes your \d+ saved edits/)
+        await pide(ana, 'wc confirm', /History deleted \(\d+ edits\)/)
+        await pide(ana, 'wc undo', /nothing to undo/)
+        await srv.consola(`fill ${X} -60 ${Z} ${X + 16} -60 ${Z + 6} air`)
       }
     }
   ]

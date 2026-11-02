@@ -27,9 +27,9 @@ help:
   replace: { usage: "/wc replace <mask> with <pattern> [--preview]", text: "Change only the blocks that match the mask.", example: "/wc replace dirt, grass_block with stone" }
   walls: { usage: "/wc walls <pattern> [--preview]", text: "The four side walls of the selection.", example: "/wc walls stone_bricks" }
   faces: { usage: "/wc faces <pattern> [--preview]", text: "Walls, floor and roof: a hollow box.", example: "/wc faces glass" }
-  copy: { usage: "/wc copy", text: "Copy the selection, relative to where you stand.", example: "/wc copy" }
-  cut: { usage: "/wc cut [--preview]", text: "Copy the selection and leave air.", example: "/wc cut" }
-  paste: { usage: "/wc paste [--air] [--preview]", text: "Paste what you copied, relative to where you stand. Copied air is skipped unless --air.", example: "/wc paste --preview" }
+  copy: { usage: "/wc copy [--mask <mask>]", text: "Copy the selection, relative to where you stand. With --mask, what does not match is copied as air.", example: "/wc copy --mask !air" }
+  cut: { usage: "/wc cut [--mask <mask>] [--preview]", text: "Copy the selection and leave air. With --mask, only what matches is cut.", example: "/wc cut --mask #logs" }
+  paste: { usage: "/wc paste [--air] [--origin] [--select] [--only-select] [--preview]", text: "Paste what you copied, relative to where you stand (--origin: where it was copied). Copied air is skipped unless --air. --select selects what you pasted; --only-select only selects where it would go.", example: "/wc paste --preview" }
   rotate: { usage: "/wc rotate <90|180|270|-90>", text: "Turn what you copied (clockwise seen from above), stairs and logs included.", example: "/wc rotate 90" }
   flip: { usage: "/wc flip [direction]", text: "Mirror what you copied towards where you look (or a direction).", example: "/wc flip up" }
   undo: { usage: "/wc undo [count] [--player <name>]", text: "Undo your last edits, also after a restart. Blocks someone changed since are left alone.", example: "/wc undo 3" }
@@ -44,7 +44,7 @@ help:
   reroll: { usage: "/wc reroll", text: "The last mountain or island again with another seed (a new preview).", example: "/wc reroll" }
   brush: { usage: "/wc brush [raise|lower|smooth|flatten|erode|paint] [radius] [strength] [blocks] [style=..] [mask=..]", text: "Get or change the terrain brush: right click uses it where you look, left click picks the next mode.", example: "/wc brush smooth 6 0.5" }
   styles: { usage: "/wc styles", text: "The terrain styles in terrain.yml (which blocks go where).", example: "/wc styles" }
-  schem: { usage: "/wc schem list [page] [filter] | load <name> | save <name> [--overwrite] | delete <name>", text: "WorldEdit's .schem files: load one into your clipboard (then /wc paste --preview), save your clipboard, list or delete them. WorldEdit's folder is read too.", example: "/wc schem load castles/tower" }
+  schem: { usage: "/wc schem list [page] [filter] | load <name> | save <name> [--overwrite] | delete <name> | import [--overwrite]", text: "WorldEdit's .schem files (also /wc schematic): load one into your clipboard (then /wc paste --preview), save your clipboard, list or delete them. WorldEdit's folder is read too; import copies WorldEdit's and FAWE's into Worldcraft's folder.", example: "/wc schem load castles/tower" }
   reload: { usage: "/wc reload", text: "Reload config.yml, messages.yml, presets.yml and terrain.yml.", example: "/wc reload" }
   validate: { usage: "/wc validate", text: "List the problems in the configuration.", example: "/wc validate" }
   selftest: { usage: "/wc selftest", text: "Edit, undo, redo and undo a small box near spawn and check every step.", example: "/wc selftest" }
@@ -83,6 +83,18 @@ help:
   thru: { usage: "/wc thru", text: "Go through the wall (or floor, or ceiling) you look at.", example: "/wc thru" }
   jumpto: { usage: "/wc jumpto", text: "Go to the block you look at.", example: "/wc jumpto" }
   up: { usage: "/wc up <blocks>", text: "Go straight up; if you cannot fly, a glass block is put under your feet (/wc undo removes it).", example: "/wc up 10" }
+  # Spec 029: selección, información y máscara global
+  hpos1: { usage: "/wc hpos1", text: "Corner 1 at the block you look at, far away too.", example: "/wc hpos1" }
+  hpos2: { usage: "/wc hpos2", text: "Corner 2 at the block you look at, far away too.", example: "/wc hpos2" }
+  chunk: { usage: "/wc chunk [--expand] [--chunk-coords <x> <z>]", text: "Select the whole chunk you stand in, from bottom to top; --expand adds it to your selection.", example: "/wc chunk --expand" }
+  outset: { usage: "/wc outset <blocks> [--horizontal] [--vertical]", text: "Grow the selection to every side.", example: "/wc outset 2 --horizontal" }
+  inset: { usage: "/wc inset <blocks> [--horizontal] [--vertical]", text: "Shrink the selection from every side.", example: "/wc inset 1" }
+  trim: { usage: "/wc trim [mask]", text: "Shrink the selection to the blocks that match (everything but air if no mask).", example: "/wc trim !air" }
+  count: { usage: "/wc count <mask>", text: "Count the blocks in the selection that match. Masks can look around: 'stone above grass_block', 'exposed', '30% chance'.", example: "/wc count diamond_ore" }
+  distr: { usage: "/wc distr [--states] [--clipboard]", text: "The 10 most common blocks in the selection (or your clipboard) with their share.", example: "/wc distr" }
+  clearclipboard: { usage: "/wc clearclipboard", text: "Empty your clipboard.", example: "/wc clearclipboard" }
+  clearhistory: { usage: "/wc clearhistory", text: "Delete your undo history from the disk (asks /wc confirm first).", example: "/wc clearhistory" }
+  gmask: { usage: "/wc gmask [mask | off]", text: "A mask for all your edits until 'off' (or until you leave): only matching blocks change.", example: "/wc gmask !#logs" }
 
 wand-given: "{prefix}<green>Here is your wand: <white>left click</white> a block for corner 1, <white>right click</white> for corner 2."
 corner-set: "{prefix}Corner {which} at <white>{pos}</white>."
@@ -219,3 +231,22 @@ nav-no-ceiling: "{prefix}<red>There is no ceiling above you."
 nav-blocked: "{prefix}<red>Something is in the way up there."
 nav-no-wall: "{prefix}<red>There is no wall to go through where you look (up to 32 blocks)."
 nav-no-target: "{prefix}<red>Look at a block (up to {reach} blocks away)."
+
+# Spec 029
+clipboard-cleared: "{prefix}Clipboard emptied."
+count-result: "{prefix}<white>{count}</white> of {blocks} blocks match <white>{mask}</white>."
+trim-none: "{prefix}<yellow>Nothing in the selection matches {mask}: the selection did not change."
+distr-header: "{prefix}Blocks in the selection ({total}):"
+distr-line: "  <white>{percent}%</white> {name} <gray>({count})"
+distr-more: "  <gray>… and {count} more."
+history-empty-clear: "{prefix}<yellow>Your history is already empty."
+clearhistory-confirm: "{prefix}<yellow>This deletes your {count} saved edits: you will not be able to undo them.</yellow> <click:run_command:'/wc confirm'><green>[Confirm]</green></click> within {seconds} s."
+history-cleared: "{prefix}History deleted ({count} edits)."
+gmask-none: "{prefix}You have no global mask. <gray>/wc gmask <mask> to set one."
+gmask-current: "{prefix}Your global mask: <white>{mask}</white>. <gray>/wc gmask off to remove it."
+gmask-set: "{prefix}Global mask <white>{mask}</white>: your edits only change what matches, until /wc gmask off."
+gmask-off: "{prefix}Global mask removed."
+gmask-applies: "{prefix}<yellow>With your global mask {mask}.</yellow> <gray>/wc gmask off to remove it."
+paste-no-origin: "{prefix}<red>This clipboard does not know where it was copied (it came from a schematic): paste without --origin."
+schem-import-none: "{prefix}<yellow>There are no schematics in the WorldEdit or FAWE folders to import."
+schem-imported: "{prefix}<green>Imported {copied} schematics</green> <gray>({skipped} already here, {big} over {max} KB). The originals were left where they are."

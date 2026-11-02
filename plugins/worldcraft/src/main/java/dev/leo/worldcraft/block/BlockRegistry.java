@@ -26,6 +26,14 @@ public interface BlockRegistry {
     /** Los nombres de las etiquetas de bloques («minecraft:logs»…), para sugerencias. */
     Collection<String> tags();
 
+    /**
+     * Spec 029 (máscara «solid»): si el bloque es sólido. En Paper, {@code Material.isSolid}; de fábrica, todo lo que no es
+     * aire ni líquido.
+     */
+    default boolean solid(String id) {
+        return !AIR.contains(id) && !id.equals("minecraft:water") && !id.equals("minecraft:lava");
+    }
+
     /** Los ids de aire (aire, aire de cueva, aire del vacío). */
     Set<String> AIR = Set.of("minecraft:air", "minecraft:cave_air", "minecraft:void_air");
 }

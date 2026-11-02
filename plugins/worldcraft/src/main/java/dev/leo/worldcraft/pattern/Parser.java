@@ -41,11 +41,12 @@ public final class Parser {
         if (text.isEmpty()) throw new ParseException("Missing pattern: write a block, like 'stone', or a mix, like '70% stone, 30% andesite'");
         if (text.startsWith("$")) {
             Pattern p = pattern(preset(text, patternPresets, "pattern"));
-            return new Pattern(p.states(), p.weights(), text);
+            return new Pattern(p.states(), p.weights(), text, p.changes());
         }
         List<String> parts = split(text);
         List<String> states = new ArrayList<>();
         List<Double> weights = new ArrayList<>();
+        List<java.util.function.UnaryOperator<String>> changes = new ArrayList<>();
         int weighted = 0;
         for (String raw : parts) {
             String p = raw.trim();
@@ -61,19 +62,99 @@ public final class Parser {
             if (p.startsWith("#")) throw new ParseException("'" + p + "' is a tag: tags work in masks (what to replace), a pattern needs blocks");
             if (p.startsWith("!")) throw new ParseException("'" + p + "': '!' works in masks (what to replace), not in a pattern");
             if (p.contains("*")) throw new ParseException("'" + p + "': '*' works in masks (what to replace), a pattern needs exact blocks");
-            states.add(state(p));
+            if (p.startsWith("^")) {
+                change(p, states, changes);
+            } else {
+                states.add(state(p));
+                changes.add(null);
+            }
             weights.add(w);
         }
         if (weighted != 0 && weighted != parts.size()) {
             throw new ParseException("Give every block in '" + text + "' a weight (like '70% stone, 30% andesite') or none");
         }
-        return new Pattern(states, weights, text);
+        return new Pattern(states, weights, text, changes);
     }
 
+    /**
+     * Spec 029 (H3): «^stone_stairs» cambia el tipo y conserva las propiedades que el tipo nuevo acepta; «^[waterlogged=false]»
+     * cambia solo esas propiedades. Se valida al leer; el cambio se calcula sobre cada bloque al ponerlo.
+     */
+    private void change(String p, List<String> states, List<java.util.function.UnaryOperator<String>> changes) throws ParseException {
+        String body = p.substring(1).trim().toLowerCase(Locale.ROOT);
+        if (body.isEmpty()) throw new ParseException("'^' needs a block (like '^stone_stairs') or a state (like '^[waterlogged=false]')");
+        if (body.startsWith("[")) {
+            if (!body.endsWith("]")) throw new ParseException("'" + p + "': missing ']' at the end of the block state");
+            Map<String, String> wanted = dev.leo.worldcraft.block.StateTable.parseProperties("x" + body);
+            if (wanted.isEmpty()) throw new ParseException("'" + p + "': write the state to change, like '^[waterlogged=false]'");
+            states.add(null);
+            changes.add(current -> {
+                Map<String, String> props = new java.util.LinkedHashMap<>(dev.leo.worldcraft.block.StateTable.parseProperties(current));
+                for (String k : wanted.keySet()) if (!props.containsKey(k)) return null; // el bloque no tiene esa propiedad
+                props.putAll(wanted);
+                return canonicalOrNull(material(current), props);
+            });
+            return;
+        }
+        if (body.contains("[")) throw new ParseException("'" + p + "': write either '^block' (keeps the state) or '^[state]' (keeps the block)");
+        if (!ID.matcher(body).matches()) throw new ParseException("'" + p + "' is not a block name");
+        String id = withNs(body);
+        if (!blockNames.contains(id)) throw new ParseException(unknownBlock(body));
+        String def = registry.canonical(id);
+        Map<String, String> accepted = dev.leo.worldcraft.block.StateTable.parseProperties(def);
+        states.add(def);
+        changes.add(current -> {
+            Map<String, String> props = new java.util.LinkedHashMap<>(accepted);
+            for (Map.Entry<String, String> e : dev.leo.worldcraft.block.StateTable.parseProperties(current).entrySet()) {
+                if (!accepted.containsKey(e.getKey())) continue;
+                Map<String, String> one = new java.util.LinkedHashMap<>(props);
+                one.put(e.getKey(), e.getValue());
+                if (canonicalOrNull(id, one) != null) props = one; // un valor que el tipo nuevo no tiene se queda de fábrica
+            }
+            return canonicalOrNull(id, props);
+        });
+    }
+
+    private String canonicalOrNull(String id, Map<String, String> props) {
+        try {
+            return registry.canonical(dev.leo.worldcraft.block.StateTable.withProperties(id, props));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private static String material(String state) {
+        int b = state.indexOf('[');
+        return b < 0 ? state : state.substring(0, b);
+    }
+
+    /** Las palabras de máscara de la spec 029 (para el autocompletado y «did you mean»). */
+    public static final List<String> MASK_WORDS = List.of("above", "below", "exposed", "surface", "solid", "chance", "and", "not");
+
+    /** Las comandos donde una máscara puede mirar alrededor (para el mensaje de error). */
+    static final String NEAR_COMMANDS = "replace, replacenear, removenear, count, trim and copy/cut --mask";
+
+    /**
+     * Una máscara de bloques: solo el estado de cada bloque (terreno, pinceles, presets). Spec 029: lo que mira alrededor
+     * o al azar se rechaza aquí con dónde sí se puede usar.
+     */
     public Mask mask(String input) throws ParseException {
+        Mask m = maskNear(input);
+        if (m.positional()) {
+            throw new ParseException("'" + input.trim() + "' looks at the blocks around or picks at random: that works in "
+                    + NEAR_COMMANDS + ", not here");
+        }
+        return m;
+    }
+
+    /**
+     * Spec 029 (H2): una máscara que además puede mirar la posición: «stone above grass_block», «exposed and !leaves»,
+     * «30% chance». La coma es «o», «and» es «y», «!»/«not» niega el término entero.
+     */
+    public Mask maskNear(String input) throws ParseException {
         String text = input.trim();
         if (text.isEmpty()) throw new ParseException("Missing mask: write the blocks to change, like 'dirt, grass_block' or '!air'");
-        if (text.startsWith("$")) return new Mask(mask(preset(text, maskPresets, "mask")).terms(), text);
+        if (text.startsWith("$")) return new Mask(maskNear(preset(text, maskPresets, "mask")).terms(), text);
         if (text.equals("*")) return new Mask(List.of(), text);
         List<Mask.Term> terms = new ArrayList<>();
         for (String raw : split(text)) {
@@ -85,10 +166,128 @@ public final class Parser {
                 neg = true;
                 p = p.substring(4).trim();
             }
-            if (p.matches("^\\d.*%.*")) throw new ParseException("'" + raw.trim() + "': weights (%) work in patterns, not in masks");
-            terms.add(term(p, neg));
+            terms.add(combined(p, neg, raw.trim()));
         }
         return new Mask(terms, text);
+    }
+
+    private static final java.util.regex.Pattern AND = java.util.regex.Pattern.compile("(?:^|\\s+)and(?:\\s+|$)",java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern NEAR = java.util.regex.Pattern.compile("^(.*?)\\s*\\b(above|below)\\s+(.+)$", java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern CHANCE = java.util.regex.Pattern.compile("^(\\d+(?:\\.\\d+)?)\\s*%\\s*chance$", java.util.regex.Pattern.CASE_INSENSITIVE);
+
+    /** Un término con sus partes unidas por «and» (spec 029): los bloques se cruzan, lo de la posición se suma. */
+    private Mask.Term combined(String p, boolean neg, String raw) throws ParseException {
+        List<String> parts = new ArrayList<>();
+        for (String a : AND.split(p, -1)) {
+            String t = a.trim();
+            if (t.isEmpty()) throw new ParseException("'" + raw + "': 'and' needs something on both sides");
+            Matcher m = NEAR.matcher(t);
+            if (m.matches() && !t.startsWith("^")) {
+                String left = m.group(1).trim(), word = m.group(2).toLowerCase(Locale.ROOT) + " " + m.group(3).trim();
+                // F-01: «!above grass_block» niega el above, no es una parte vacía.
+                if (left.equals("!") || left.equalsIgnoreCase("not")) {
+                    parts.add("!" + word);
+                    continue;
+                }
+                if (!left.isBlank()) parts.add(left);
+                parts.add(word);
+            } else {
+                parts.add(t);
+            }
+        }
+        Set<String> materials = null;
+        Map<String, String> props = new java.util.LinkedHashMap<>();
+        List<Mask.Near> near = new ArrayList<>();
+        List<Mask.Term> not = new ArrayList<>();
+        for (String whole : parts) {
+            // F-01: una parte también se niega («stone and !surface», «#logs and not birch_log»).
+            String part = whole;
+            boolean partNeg = false;
+            if (part.startsWith("!")) {
+                partNeg = true;
+                part = part.substring(1).trim();
+            } else if (part.toLowerCase(Locale.ROOT).startsWith("not ")) {
+                partNeg = true;
+                part = part.substring(4).trim();
+            }
+            String lower = part.toLowerCase(Locale.ROOT);
+            // F-02: «stone above» sin nada después.
+            for (String w : List.of("above", "below")) {
+                if (lower.equals(w) || lower.endsWith(" " + w)) {
+                    throw new ParseException("'" + raw + "': after '" + w + "' write blocks, like '" + w + " grass_block' or '" + w + " #logs'");
+                }
+            }
+            Mask.Term t = partTerm(part, lower, raw, near);
+            if (partNeg) {
+                if (t == null) near.set(near.size() - 1, new Mask.Near.Not(near.get(near.size() - 1)));
+                else not.add(t);
+                continue;
+            }
+            if (t == null) continue;
+            if (t.materials() != null) {
+                if (materials == null) materials = new java.util.HashSet<>(t.materials());
+                else materials.retainAll(t.materials());
+            }
+            props.putAll(t.props());
+        }
+        if (materials != null && materials.isEmpty()) throw new ParseException("'" + raw + "' matches no block (the parts joined with 'and' have nothing in common)");
+        return new Mask.Term(materials == null ? null : Set.copyOf(materials), props, neg, near, not);
+    }
+
+    /**
+     * Una parte de un término: si mira la posición, la agrega a near y devuelve null; si es de estado, la devuelve como
+     * término (sin negar).
+     */
+    private Mask.Term partTerm(String part, String lower, String raw, List<Mask.Near> near) throws ParseException {
+        {
+            Matcher ch = CHANCE.matcher(lower);
+            if (ch.matches()) {
+                double v = Double.parseDouble(ch.group(1));
+                if (v <= 0 || v > 100) throw new ParseException("'" + part + "': the chance must be more than 0% and at most 100%");
+                near.add(new Mask.Near.Chance(v / 100.0));
+                return null;
+            }
+            if (lower.matches("^\\d.*%.*")) {
+                throw new ParseException("'" + raw + "': weights (%) work in patterns; in a mask write a chance, like '30% chance'");
+            }
+            if (lower.equals("exposed")) {
+                near.add(new Mask.Near.Exposed());
+                return null;
+            }
+            if (lower.equals("surface")) {
+                near.add(new Mask.Near.Surface());
+                return null;
+            }
+            if (lower.startsWith("above ") || lower.startsWith("below ")) {
+                String inner = part.substring(6).trim();
+                Mask of = maskNear(inner);
+                if (of.positional() || of.terms().size() != 1 || of.terms().get(0).negated()) {
+                    throw new ParseException("'" + part + "': after '" + lower.substring(0, 5) + "' write blocks, like '"
+                            + lower.substring(0, 5) + " grass_block' or '" + lower.substring(0, 5) + " #logs'");
+                }
+                near.add(new Mask.Near.Neighbor(lower.startsWith("above") ? -1 : 1, of));
+                return null;
+            }
+            return stateTerm(part);
+        }
+    }
+
+    /** Solo el estado: un bloque, tag, glob, «*», «solid» o «^[estado]» (cualquier bloque con ese estado, spec 029). */
+    private Mask.Term stateTerm(String p) throws ParseException {
+        String lower = p.toLowerCase(Locale.ROOT).trim();
+        if (lower.equals("solid")) {
+            Set<String> ids = new java.util.HashSet<>();
+            for (String b : blockNames) if (registry.solid(b)) ids.add(b);
+            return new Mask.Term(Set.copyOf(ids), Map.of(), false);
+        }
+        if (lower.startsWith("^[")) {
+            if (!lower.endsWith("]")) throw new ParseException("'" + p + "': missing ']' at the end of the block state");
+            Map<String, String> wanted = dev.leo.worldcraft.block.StateTable.parseProperties("x" + lower.substring(1));
+            if (wanted.isEmpty()) throw new ParseException("'" + p + "': write a state, like '^[waterlogged=true]'");
+            return new Mask.Term(null, wanted, false);
+        }
+        if (lower.startsWith("^")) throw new ParseException("'" + p + "': in a mask '^' takes only a state, like '^[waterlogged=true]'");
+        return term(p, false);
     }
 
     private String preset(String text, Map<String, String> presets, String kind) throws ParseException {
@@ -129,7 +328,12 @@ public final class Parser {
             if (ids.isEmpty()) throw new ParseException("'" + p + "' matches no block");
             return new Mask.Term(Set.copyOf(ids), wanted, neg);
         }
-        if (!blockNames.contains(id)) throw new ParseException(unknownBlock(lower));
+        if (!blockNames.contains(id)) {
+            // Spec 029: «exposd» se parece más a una palabra de máscara que a un bloque.
+            String word = Issues.closest(lower, List.of("exposed", "surface", "solid", "above", "below"));
+            if (word != null && !lower.contains(":")) throw new ParseException("Unknown block or word '" + lower + "' (did you mean '" + word + "'?)");
+            throw new ParseException(unknownBlock(lower));
+        }
         if (!wanted.isEmpty()) {
             try {
                 registry.canonical(id + props); // solo para validar las propiedades

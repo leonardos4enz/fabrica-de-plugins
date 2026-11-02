@@ -12,8 +12,12 @@
 - [x] T2 `OpsTest` en el mundo en memoria: `stack` (n copias, sin aire, `--air`), `move` (dos cajas lejanas, sin visitar lo
       de en medio, relleno), `hollow` (cáscara de 1 y de 2, lo abierto no se vacía), `line` (diagonal sin huecos), `center`
       (1, 2 u 8 bloques), `naturalize` (capas), `overlay` (sobre el suelo, no en un tronco) (H2).
+      **Corrección de la 029:** `center` no tenía prueba (`H2_CA6_line_y_center` solo prueba `line`); se agregó en la 029
+      (`Box.center`, `SelectionTest.H6_center_de_1_2_4_u_8_bloques`).
 - [x] T3 En `OpsTest`, en el mundo en memoria: `drain` (un lago, solo lo conectado, `--waterlogged`), `fixwater`,
       `fill` (pozo, no sube de los pies), `thaw`, `green`, `snow` (H3).
+      **Corrección de la 029:** `fixwater` y `fixlava` no tenían prueba (solo la compuerta 2); se agregaron en la 029
+      (`edit.Liquids`, `LiquidsTest`).
 - [x] T4 `SpotsTest` (lógica pura): buscar lugar libre arriba/abajo, atravesar, salir de dentro (H4).
 - [x] T5 `ConfigTest`/`CommandTest`: secciones `shapes` y `utilities` con rangos; ayuda y mensajes de cada comando.
 

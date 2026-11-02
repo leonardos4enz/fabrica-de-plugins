@@ -47,7 +47,7 @@ public final class SolidSource implements EditSource {
 
     @Override
     public int target(int x, int y, int z, int current) {
-        return pattern.apply(x, y, z, seed);
+        return pattern.apply(x, y, z, current, seed);
     }
 
     @Override

@@ -205,6 +205,20 @@ public final class HistoryStore {
         return removed;
     }
 
+    /**
+     * Spec 029 (clearhistory): borra todo el historial de un jugador menos lo que está en marcha (su diario se sigue
+     * escribiendo). Devuelve cuántas operaciones borró.
+     */
+    public int clear(UUID owner) {
+        Player p = players.get(owner);
+        if (p == null) return 0;
+        List<Integer> drop = new ArrayList<>();
+        for (Entry e : p.entries.values()) if (e.state() != State.RUNNING) drop.add(e.id());
+        for (int id : drop) drop(p, owner, id);
+        if (!drop.isEmpty()) save(owner);
+        return drop.size();
+    }
+
     private void drop(Player p, UUID owner, int id) {
         p.entries.remove(id);
         Path j = journal(owner, id);

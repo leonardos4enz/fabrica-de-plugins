@@ -44,6 +44,8 @@ import java.util.logging.Level;
  */
 public final class Schematics {
     public static final String PERM = "worldcraft.schematic", PERM_DELETE = "worldcraft.schematic.delete";
+    /** Spec 029 H5 CA2 (decisión del dueño): guardar e importar escriben en el disco, con su propio permiso. */
+    public static final String PERM_SAVE = "worldcraft.schematic.save";
     private static final int PAGE = 10;
 
     private final Worldcraft plugin;
@@ -321,6 +323,36 @@ public final class Schematics {
             busy.remove(owner);
             s.sendMessage(msg().get("schem-save-cancelled", "name", clean));
         }));
+    }
+
+    // ------------------------------------------------------------------ importar (spec 029 H5)
+
+    /** Copia los esquemas de WorldEdit y FAWE a la carpeta propia, en el hilo de disco, sin borrar los originales. */
+    public void importAll(CommandSender s, boolean overwrite) {
+        UUID owner = Edits.owner(s);
+        if (!begin(s, owner)) return;
+        SchemFiles files = files();
+        long max = settings().maxFileKb() * 1024L;
+        CompletableFuture.supplyAsync(() -> {
+            try {
+                return files.importAll(overwrite, max);
+            } catch (IOException e) {
+                throw new CompletionException(e);
+            }
+        }, thread).whenCompleteAsync((r, t) -> {
+            busy.remove(owner);
+            if (t != null) {
+                fail(s, "import", t);
+                return;
+            }
+            if (r.copied() + r.skipped() + r.tooBig() == 0) {
+                s.sendMessage(msg().get("schem-import-none"));
+                return;
+            }
+            s.sendMessage(msg().get("schem-imported", "copied", String.valueOf(r.copied()), "skipped", String.valueOf(r.skipped()),
+                    "big", String.valueOf(r.tooBig()), "max", String.valueOf(settings().maxFileKb())));
+            refreshNames(files);
+        }, main);
     }
 
     // ------------------------------------------------------------------ listar y borrar

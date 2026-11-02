@@ -7,6 +7,7 @@ import dev.leo.worldcraft.config.Messages;
 import dev.leo.worldcraft.edit.ColumnEdit;
 import dev.leo.worldcraft.edit.EditSource;
 import dev.leo.worldcraft.edit.Flood;
+import dev.leo.worldcraft.edit.Liquids;
 import dev.leo.worldcraft.edit.MoveSource;
 import dev.leo.worldcraft.edit.PointsSource;
 import dev.leo.worldcraft.edit.RegionSource;
@@ -203,7 +204,7 @@ final class BuildCommands {
 
     private List<Integer> states(Pattern p) {
         List<Integer> out = new ArrayList<>();
-        for (String st : p.states()) out.add(table().intern(st));
+        for (String st : p.placedStates()) out.add(table().intern(st));
         return out;
     }
 
@@ -464,7 +465,7 @@ final class BuildCommands {
         IntPredicate isAir = blocks()::isAir;
         edits().read(s, w, box, "hollow", snap, () -> compute(s, () -> Flood.interior(snap, isAir, t), inside ->
                 request(s, w, "hollow", "thickness " + t + (fillText.isBlank() ? "" : ", " + fill.text()),
-                        () -> new PointsSource(inside, (x, y, z, c) -> fc.apply(x, y, z, seed)), states(fill), args)));
+                        () -> new PointsSource(inside, (x, y, z, c) -> fc.apply(x, y, z, c, seed)), states(fill), args)));
     }
 
     private void center(CommandSender s, Args args) throws ParseException {
@@ -472,8 +473,7 @@ final class BuildCommands {
         Box b = selection(s);
         if (b == null) return;
         World w = selectionWorld(s);
-        Box c = new Box(b.minX() + (b.width() - 1) / 2, b.minY() + (b.height() - 1) / 2, b.minZ() + (b.depth() - 1) / 2,
-                b.maxX() - (b.width() - 1) / 2, b.maxY() - (b.height() - 1) / 2, b.maxZ() - (b.depth() - 1) / 2);
+        Box c = b.center();
         Pattern.Compiled pc = p.compile(table());
         long seed = ThreadLocalRandom.current().nextLong();
         edits().request(s, new Edits.Op("center", p.text(), w, c, c.volume(), () -> new RegionSource(c, Shape.FILL, null, pc, seed),
@@ -500,7 +500,7 @@ final class BuildCommands {
         long seed = ThreadLocalRandom.current().nextLong();
         int lo = w.getMinHeight(), hi = w.getMaxHeight() - 1;
         request(s, w, "line", p.text() + (r > 0 ? " thickness " + r : ""),
-                () -> new PointsSource(pts, (x, y, z, c) -> y < lo || y > hi ? EditSource.KEEP : pc.apply(x, y, z, seed)), states(p), args);
+                () -> new PointsSource(pts, (x, y, z, c) -> y < lo || y > hi ? EditSource.KEEP : pc.apply(x, y, z, c, seed)), states(p), args);
     }
 
     // ------------------------------------------------------------------ H3 utilidades
@@ -521,11 +521,6 @@ final class BuildCommands {
         return new Box(x - r, worldMin, z - r, x + r, Math.max(worldMin, y + r), z + r).clampY(worldMin, worldMax);
     }
 
-    private static Flood.Bound sphere(Place at, int r) {
-        double e = (r + 0.5) * (r + 0.5);
-        return (x, y, z) -> (double) (x - at.x) * (x - at.x) + (double) (y - at.y) * (y - at.y) + (double) (z - at.z) * (z - at.z) <= e;
-    }
-
     private void liquid(CommandSender s, String sub, Args args) {
         if (args.positional.isEmpty()) throw new WorldcraftCommand.Usage();
         int r = intArg(args, 0, 10);
@@ -534,59 +529,17 @@ final class BuildCommands {
         Box box = around(s, at, r);
         if (box == null) return;
         boolean waterlogged = args.flags.contains("waterlogged");
-        StateTable t = table();
-        IntPredicate water = st -> t.material(st).equals("minecraft:water");
-        IntPredicate lava = st -> t.material(st).equals("minecraft:lava");
-        IntPredicate wet = st -> "true".equals(t.properties(st).get("waterlogged"));
+        Liquids.Kind kind = Liquids.Kind.valueOf(sub.toUpperCase(java.util.Locale.ROOT));
+        // Spec 029 H6: la búsqueda y el cambio viven en Liquids (probados en LiquidsTest).
+        Liquids liquids = new Liquids(table(), air(), state("minecraft:water"), state("minecraft:lava"));
         Snapshot snap = new Snapshot(box);
-        Flood.Bound inSphere = sphere(at, r);
-        int air = air();
-        edits().read(s, at.world, box, sub, snap, () -> {
-            IntPredicate match = switch (sub) {
-                case "fixwater" -> water;
-                case "fixlava" -> lava;
-                default -> waterlogged ? water.or(lava).or(wet) : water.or(lava);
-            };
-            compute(s, () -> {
-                int[] start = Flood.nearest(snap, at.x, at.y, at.z, inSphere, match);
-                if (start == null) return new long[0];
-                IntPredicate through;
-                Flood.Bound bound = inSphere;
-                if (sub.equals("drain")) {
-                    int s0 = snap.get(start[0], start[1], start[2]);
-                    // El agua de la escalera anegada se cuenta como agua; la lava no se mezcla con el agua.
-                    through = lava.test(s0) ? lava : waterlogged ? water.or(wet) : water;
-                } else {
-                    through = sub.equals("fixwater") ? water : lava;
-                    int top = start[1];
-                    bound = (x, y, z) -> y <= top && inSphere.test(x, y, z);
-                }
-                return Flood.connected(snap, start[0], start[1], start[2], bound, through);
-            }, pts -> {
-                if (pts.length == 0) {
-                    s.sendMessage(msg().get("nothing-found", "kind", sub));
-                    return;
-                }
-                PointsSource.Pick pick = switch (sub) {
-                    case "drain" -> (x, y, z, c) -> water.test(c) || lava.test(c) ? air
-                            : wet.test(c) ? t.intern(StateTable.withProperties(t.material(c), with(t.properties(c), "waterlogged", "false")))
-                            : EditSource.KEEP;
-                    default -> {
-                        IntPredicate kind = sub.equals("fixwater") ? water : lava;
-                        int source = state(sub.equals("fixwater") ? "minecraft:water" : "minecraft:lava");
-                        yield (x, y, z, c) -> kind.test(c) && c != source ? source : EditSource.KEEP;
-                    }
-                };
-                List<Integer> placed = sub.equals("drain") ? List.of(air) : List.of(state(sub.equals("fixwater") ? "minecraft:water" : "minecraft:lava"));
-                request(s, at.world, sub, "radius " + r, () -> new PointsSource(pts, pick), placed, args);
-            });
-        });
-    }
-
-    private static Map<String, String> with(Map<String, String> props, String k, String v) {
-        Map<String, String> m = new java.util.LinkedHashMap<>(props);
-        m.put(k, v);
-        return m;
+        edits().read(s, at.world, box, sub, snap, () -> compute(s, () -> liquids.find(snap, kind, at.x, at.y, at.z, r, waterlogged), pts -> {
+            if (pts.length == 0) {
+                s.sendMessage(msg().get("nothing-found", "kind", sub));
+                return;
+            }
+            request(s, at.world, sub, "radius " + r, () -> new PointsSource(pts, liquids.pick(kind)), List.of(liquids.placed(kind)), args);
+        }));
     }
 
     private void fill(CommandSender s, Args args) throws ParseException {
@@ -613,7 +566,7 @@ final class BuildCommands {
                 return;
             }
             request(s, at.world, "fill", p.text() + " radius " + r, () -> new PointsSource(pts,
-                    (x, y, z, c) -> isAir.test(c) ? pc.apply(x, y, z, seed) : EditSource.KEEP), states(p), args);
+                    (x, y, z, c) -> isAir.test(c) ? pc.apply(x, y, z, c, seed) : EditSource.KEEP), states(p), args);
         }));
     }
 
@@ -645,7 +598,7 @@ final class BuildCommands {
                 p = Pattern.of("minecraft:air");
             }
         }
-        Mask mask = plugin.config().parser().mask(maskText);
+        Mask mask = plugin.config().parser().maskNear(maskText);
         Place at = place(s, args);
         if (at == null) return;
         Box box = around(s, at, r);
@@ -654,9 +607,16 @@ final class BuildCommands {
         Mask.Compiled mc = mask.compile(table());
         Pattern.Compiled pc = p.compile(table());
         long seed = ThreadLocalRandom.current().nextLong();
-        edits().request(s, new Edits.Op(sub, (sub.equals("replacenear") ? mask.text() + " -> " + p.text() : mask.text()) + " radius " + r,
-                at.world, box, box.volume(), () -> new RegionSource(box, Shape.FILL, mc, pc, seed), states(p), null),
-                args.flags.contains("preview"));
+        String detail = (sub.equals("replacenear") ? mask.text() + " -> " + p.text() : mask.text()) + " radius " + r;
+        boolean preview = args.flags.contains("preview");
+        if (mask.needsNeighbors()) {
+            // Spec 029 H2 CA2: lo de alrededor se decide con la foto de antes.
+            main.readAround(s, at.world, box, sub, snap -> edits().request(s, new Edits.Op(sub, detail, at.world, box, box.volume(),
+                    () -> new RegionSource(box, Shape.FILL, mc, pc, seed, snap::get), states(p), null), preview));
+            return;
+        }
+        edits().request(s, new Edits.Op(sub, detail, at.world, box, box.volume(),
+                () -> new RegionSource(box, Shape.FILL, mc, pc, seed), states(p), null), preview);
     }
 
     private void remove(CommandSender s, String sub, Args args) {

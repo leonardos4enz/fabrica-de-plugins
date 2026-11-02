@@ -118,4 +118,29 @@ class SchemFilesTest {
         assertTrue(e.getMessage().contains("outside"));
         assertEquals(List.of(), f.list(), "los enlaces no se listan");
     }
+
+    /** Spec 029 H5 CA1: import copia de WorldEdit y FAWE sin borrar los originales ni pisar lo propio. */
+    @Test
+    void spec029_H5_CA1_importar_sin_pisar() throws Exception {
+        SchemFiles f = files();
+        Path we = dir.resolve("plugins/WorldEdit/schematics"), fawe = dir.resolve("plugins/FastAsyncWorldEdit/schematics");
+        Files.createDirectories(we.resolve("castles"));
+        Files.createDirectories(fawe);
+        Files.write(we.resolve("castles/tower.schem"), new byte[]{1});
+        Files.write(we.resolve("house.schem"), new byte[]{2});
+        Files.write(we.resolve("big.schem"), new byte[50]);
+        Files.write(fawe.resolve("house.schem"), new byte[]{9}); // el mismo nombre en FAWE: vale el de WorldEdit
+        Files.write(fawe.resolve("tree.schem"), new byte[]{3});
+        f.write("tree", new byte[]{7}, false); // ya existe en la propia
+        SchemFiles.Imported r = f.importAll(false, 10);
+        assertEquals(new SchemFiles.Imported(2, 1, 1), r);
+        Path own = dir.resolve("plugins/Worldcraft/schematics");
+        assertArrayEquals(new byte[]{1}, Files.readAllBytes(own.resolve("castles/tower.schem")));
+        assertArrayEquals(new byte[]{2}, Files.readAllBytes(own.resolve("house.schem")));
+        assertArrayEquals(new byte[]{7}, Files.readAllBytes(own.resolve("tree.schem")), "no se pisa sin --overwrite");
+        assertTrue(Files.exists(we.resolve("house.schem")), "los originales quedan");
+        assertEquals(new SchemFiles.Imported(0, 3, 1), f.importAll(false, 10), "otra vez: nada nuevo");
+        assertEquals(3, f.importAll(true, 10).copied());
+        assertArrayEquals(new byte[]{3}, Files.readAllBytes(own.resolve("tree.schem")), "--overwrite sí pisa");
+    }
 }

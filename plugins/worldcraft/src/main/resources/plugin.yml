@@ -20,7 +20,10 @@ permissions:
     description: Reload, validate and selftest.
     default: op
   worldcraft.schematic:
-    description: List, load and save schematics (/wc schem list|load|save).
+    description: List and load schematics (/wc schem list|load). Saving needs worldcraft.schematic.save.
+    default: op
+  worldcraft.schematic.save:
+    description: Save your clipboard as a schematic and import WorldEdit's and FAWE's (/wc schem save|import).
     default: op
   worldcraft.schematic.delete:
     description: Delete schematics and replace them with save --overwrite.

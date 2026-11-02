@@ -15,6 +15,8 @@ public final class Session {
     public java.util.function.LongConsumer terrain;
     /** Leyendo el suelo o calculando: el pincel espera (H3 CA5). */
     public boolean terrainBusy;
+    /** Spec 029 H4: la máscara global (/wc gmask); solo en memoria, como el portapapeles. null = ninguna. */
+    public dev.leo.worldcraft.pattern.Mask gmask;
 
     /** La caja seleccionada o null si falta una esquina. */
     public Box box() {

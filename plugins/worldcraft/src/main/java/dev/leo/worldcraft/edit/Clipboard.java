@@ -17,8 +17,11 @@ public final class Clipboard {
     private final int[] states;
     private final Map<Integer, byte[]> tiles = new HashMap<>();
     private Transform transform = Transform.IDENTITY;
+    /** Spec 029 (paste --origin): dónde estaba quien copió; null si vino de un esquema. */
+    private int[] source;
 
     public Clipboard(Box box, int originX, int originY, int originZ) {
+        this.source = new int[]{originX, originY, originZ};
         long v = box.volume();
         if (v > Integer.MAX_VALUE - 8) throw new IllegalArgumentException("too big");
         w = box.width();
@@ -49,6 +52,11 @@ public final class Clipboard {
      */
     public static Clipboard of(int w, int h, int d, int offX, int offY, int offZ, int[] states, Map<Integer, byte[]> tiles) {
         return new Clipboard(w, h, d, offX, offY, offZ, states, tiles);
+    }
+
+    /** Spec 029: el lugar donde se copió (para pegar ahí mismo) o null si vino de un esquema. */
+    public int[] source() {
+        return source == null ? null : source.clone();
     }
 
     /**

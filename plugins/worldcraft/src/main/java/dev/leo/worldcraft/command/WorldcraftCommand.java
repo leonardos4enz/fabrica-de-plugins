@@ -64,6 +64,8 @@ public final class WorldcraftCommand implements TabExecutor {
         for (String s : BuildCommands.REGION) SUBS.put(s, USE);
         for (String s : BuildCommands.UTILITIES) SUBS.put(s, USE);
         for (String s : NavigationCommands.SUBS) SUBS.put(s, NavigationCommands.PERM);
+        // Spec 029: selección, información y máscara global (como cualquier edición).
+        for (String s : SelectionCommands.SUBS) SUBS.put(s, USE);
         for (String s : List.of("reload", "validate", "selftest")) SUBS.put(s, ADMIN);
     }
 
@@ -72,11 +74,13 @@ public final class WorldcraftCommand implements TabExecutor {
     private final Worldcraft plugin;
     private final BuildCommands build;
     private final NavigationCommands navigation;
+    private final SelectionCommands selection;
 
     public WorldcraftCommand(Worldcraft plugin) {
         this.plugin = plugin;
         this.build = new BuildCommands(plugin, this);
         this.navigation = new NavigationCommands(plugin);
+        this.selection = new SelectionCommands(plugin, this);
     }
 
     private Messages msg() {
@@ -132,6 +136,7 @@ public final class WorldcraftCommand implements TabExecutor {
                 case "schem", "schematic" -> schem(s, a);
                 default -> {
                     if (NavigationCommands.SUBS.contains(sub)) navigation.run(s, sub, a);
+                    else if (SelectionCommands.SUBS.contains(sub)) selection.run(s, sub, a);
                     else if (BuildCommands.SHAPES.contains(sub) || BuildCommands.REGION.contains(sub)
                             || BuildCommands.UTILITIES.contains(sub)) build.run(s, sub, a);
                     else help(s, a);
@@ -377,7 +382,7 @@ public final class WorldcraftCommand implements TabExecutor {
         Mask mask;
         try {
             pattern = plugin.config().parser().pattern(patternText);
-            mask = maskText == null ? null : plugin.config().parser().mask(maskText);
+            mask = maskText == null ? null : plugin.config().parser().maskNear(maskText);
         } catch (ParseException e) {
             s.sendMessage(msg().get("error", "message", e.getMessage()));
             return;
@@ -387,18 +392,54 @@ public final class WorldcraftCommand implements TabExecutor {
         Mask.Compiled mc = mask == null ? null : mask.compile(blocks.table());
         long seed = ThreadLocalRandom.current().nextLong();
         List<Integer> placed = new ArrayList<>();
-        for (String st : pattern.states()) placed.add(blocks.table().intern(st));
+        for (String st : pattern.placedStates()) placed.add(blocks.table().intern(st));
         String kind = replace ? "replace" : shape == Shape.FILL ? "set" : shape == Shape.WALLS ? "walls" : "faces";
         String detail = replace ? mask.text() + " -> " + pattern.text() : pattern.text();
+        boolean preview = args.flags.contains("preview");
+        if (mask != null && mask.needsNeighbors()) {
+            // Spec 029 H2 CA2: «above», «exposed»… se deciden con la foto de antes (la caja + 1), no con el mundo a medio hacer.
+            readAround(s, world, box, kind, snap -> edits().request(s, new Edits.Op(kind, detail, world, box, box.count(shape),
+                    () -> new RegionSource(box, shape, mc, pc, seed, snap::get), placed, null), preview));
+            return;
+        }
         edits().request(s, new Edits.Op(kind, detail, world, box, box.count(shape),
-                () -> new RegionSource(box, shape, mc, pc, seed), placed, null), args.flags.contains("preview"));
+                () -> new RegionSource(box, shape, mc, pc, seed), placed, null), preview);
+    }
+
+    /**
+     * Spec 029: lee la caja con un borde de un bloque (dentro del alto del mundo) y da la foto para las máscaras que miran
+     * alrededor. El tope de bloques del grupo se revisa antes de leer.
+     */
+    void readAround(CommandSender s, World world, Box box, String label, java.util.function.Consumer<dev.leo.worldcraft.edit.Snapshot> then) {
+        Box around = box.grow(1).clampY(world.getMinHeight(), world.getMaxHeight() - 1);
+        Limits.Resolved lim = edits().limits(s);
+        if (around.volume() > lim.maxBlocks() || around.volume() > Integer.MAX_VALUE - 8) {
+            s.sendMessage(msg().get("limit-blocks", "blocks", Edits.fmt(around.volume()), "max", Edits.fmt(lim.maxBlocks()),
+                    "groups", String.join(", ", lim.groups())));
+            return;
+        }
+        dev.leo.worldcraft.edit.Snapshot snap = new dev.leo.worldcraft.edit.Snapshot(around);
+        edits().read(s, world, around, label, snap, () -> then.accept(snap));
     }
 
     private void copy(CommandSender s, String[] a, boolean cut) {
-        Args args = Args.parse(a, 1, cut ? EDIT_FLAGS : Set.of());
+        Args args = Args.parse(a, 1, cut ? Set.of("preview", "mask") : Set.of("mask"));
         if (args.problem != null) {
             s.sendMessage(msg().get("error", "message", args.problem));
             return;
+        }
+        // Spec 029 H1 CA7: «--mask» toma todo lo demás (la máscara puede tener espacios: «stone above grass_block»).
+        Mask mask = null;
+        if (args.flags.contains("mask")) {
+            if (args.join(0).isBlank()) throw new Usage();
+            try {
+                mask = plugin.config().parser().maskNear(args.join(0));
+            } catch (ParseException e) {
+                s.sendMessage(msg().get("error", "message", e.getMessage()));
+                return;
+            }
+        } else if (!args.positional.isEmpty()) {
+            throw new Usage();
         }
         Session ses = edits().session(Edits.owner(s));
         Box box = selection(s, ses);
@@ -411,19 +452,43 @@ public final class WorldcraftCommand implements TabExecutor {
             return;
         }
         int[] o = origin(s, box);
-        if (!cut) {
+        if (mask == null && !cut) {
             edits().copy(s, world, box, o[0], o[1], o[2], () -> s.sendMessage(msg().get("copied",
                     "size", box.size(), "blocks", Edits.fmt(box.volume()))));
             return;
         }
         PaperBlocks blocks = edits().blocks();
-        Pattern.Compiled air = Pattern.of("minecraft:air").compile(blocks.table());
-        edits().request(s, new Edits.Op("cut", "", world, box, box.volume(),
-                () -> new RegionSource(box, Shape.FILL, null, air, 0), List.of(), () -> {
-            Clipboard clip = new Clipboard(box, o[0], o[1], o[2]);
-            ses.clipboard(clip, world.getName());
-            return (x, y, z, st, tile) -> clip.put(box, x, y, z, st, tile);
-        }), args.flags.contains("preview"));
+        Mask.Compiled mc = mask == null ? null : mask.compile(blocks.table());
+        long seed = ThreadLocalRandom.current().nextLong();
+        int air = blocks.air();
+        String detail = mask == null ? "" : "mask " + mask.text();
+        java.util.function.Consumer<Mask.Neighbors> go = near -> {
+            // Lo que no pasa la máscara queda como aire en el portapapeles (como -m de WorldEdit).
+            if (!cut) {
+                Clipboard clip = new Clipboard(box, o[0], o[1], o[2]);
+                edits().read(s, world, box, "copy", (x, y, z, st, tile) -> {
+                    boolean in = mc.test(x, y, z, st, near, seed);
+                    clip.put(box, x, y, z, in ? st : air, in ? tile : null);
+                }, () -> {
+                    ses.clipboard(clip, world.getName());
+                    s.sendMessage(msg().get("copied", "size", box.size(), "blocks", Edits.fmt(box.volume())));
+                });
+                return;
+            }
+            Pattern.Compiled airP = Pattern.of("minecraft:air").compile(blocks.table());
+            // cut --mask solo quita lo que pasa la máscara.
+            edits().request(s, new Edits.Op("cut", detail, world, box, box.volume(),
+                    () -> new RegionSource(box, Shape.FILL, mc, airP, seed, near), List.of(), () -> {
+                Clipboard clip = new Clipboard(box, o[0], o[1], o[2]);
+                ses.clipboard(clip, world.getName());
+                return (x, y, z, st, tile) -> {
+                    boolean in = mc == null || mc.test(x, y, z, st, near, seed);
+                    clip.put(box, x, y, z, in ? st : air, in ? tile : null);
+                };
+            }), args.flags.contains("preview"));
+        };
+        if (mask != null && mask.needsNeighbors()) readAround(s, world, box, cut ? "cut" : "copy", snap -> go.accept(snap::get));
+        else go.accept(null);
     }
 
     /** Dónde está quien copia o pega: el jugador; la consola usa la esquina 1. */
@@ -437,7 +502,7 @@ public final class WorldcraftCommand implements TabExecutor {
     }
 
     private void paste(CommandSender s, String[] a) {
-        Args args = Args.parse(a, 1, Set.of("preview", "air"));
+        Args args = Args.parse(a, 1, Set.of("preview", "air", "origin", "select", "only-select"));
         if (args.problem != null) {
             s.sendMessage(msg().get("error", "message", args.problem));
             return;
@@ -450,7 +515,15 @@ public final class WorldcraftCommand implements TabExecutor {
         }
         World world;
         int[] o;
-        if (s instanceof Player p) {
+        if (args.flags.contains("origin")) {
+            // Spec 029 H1 CA7: donde se copió (un esquema no lo sabe).
+            o = clip.source();
+            world = ses.clipboardWorld() == null ? null : Bukkit.getWorld(ses.clipboardWorld());
+            if (o == null || world == null) {
+                s.sendMessage(msg().get("paste-no-origin"));
+                return;
+            }
+        } else if (s instanceof Player p) {
             world = p.getWorld();
             o = origin(s, null);
         } else {
@@ -466,11 +539,18 @@ public final class WorldcraftCommand implements TabExecutor {
             s.sendMessage(msg().get("sel-outside"));
             return;
         }
+        if (args.flags.contains("only-select")) {
+            // Como -n de WorldEdit: solo selecciona dónde quedaría, sin pegar.
+            ses.selectBox(world.getName(), target);
+            s.sendMessage(msg().get("sel-changed", "size", target.size(), "blocks", Edits.fmt(target.volume())));
+            return;
+        }
         PaperBlocks blocks = edits().blocks();
         boolean air = args.flags.contains("air");
-        edits().request(s, new Edits.Op("paste", clip.size() + (air ? " with air" : ""), world, target, clip.volume(),
-                () -> new PasteSource(clip, o[0], o[1], o[2], air, blocks::isAir, blocks), clip.distinct(), null),
-                args.flags.contains("preview"));
+        Edits.Op op = new Edits.Op("paste", clip.size() + (air ? " with air" : ""), world, target, clip.volume(),
+                () -> new PasteSource(clip, o[0], o[1], o[2], air, blocks::isAir, blocks), clip.distinct(), null);
+        if (args.flags.contains("select")) op = op.then(() -> ses.selectBox(world.getName(), target));
+        edits().request(s, op, args.flags.contains("preview"));
     }
 
     private void rotate(CommandSender s, String[] a) {
@@ -783,10 +863,10 @@ public final class WorldcraftCommand implements TabExecutor {
         return s.matches("\\d+(\\.\\d+)?%?") || s.matches("\\.\\d+");
     }
 
-    /** /wc schem list|load|save|delete (spec 027). */
+    /** /wc schem list|load|save|delete (spec 027) e import (spec 029 H5). */
     private void schem(CommandSender s, String[] a) {
         String op = a.length < 2 ? "" : a[1].toLowerCase(Locale.ROOT);
-        Args args = Args.parse(a, 2, op.equals("save") ? Set.of("overwrite") : Set.of());
+        Args args = Args.parse(a, 2, op.equals("save") || op.equals("import") ? Set.of("overwrite") : Set.of());
         if (args.problem != null) {
             s.sendMessage(msg().get("error", "message", args.problem));
             return;
@@ -802,6 +882,19 @@ public final class WorldcraftCommand implements TabExecutor {
                 }
                 sch.list(s, page, filter);
             }
+            case "import" -> {
+                // Spec 029 H5: copia los de WorldEdit y FAWE a la carpeta propia; escribe en el disco como save.
+                if (!args.positional.isEmpty()) {
+                    s.sendMessage(msg().get("usage", "usage", msg().raw("help.schem.usage")));
+                    return;
+                }
+                boolean overwrite = args.flags.contains("overwrite");
+                if (!s.hasPermission(Schematics.PERM_SAVE) || overwrite && !s.hasPermission(Schematics.PERM_DELETE)) {
+                    s.sendMessage(msg().get("no-permission"));
+                    return;
+                }
+                sch.importAll(s, overwrite);
+            }
             case "load", "save", "delete" -> {
                 if (args.positional.size() != 1) {
                     s.sendMessage(msg().get("usage", "usage", msg().raw("help.schem.usage")));
@@ -809,12 +902,13 @@ public final class WorldcraftCommand implements TabExecutor {
                 }
                 String name = args.positional.get(0);
                 if (op.equals("load")) sch.load(s, name);
+                else if (op.equals("save") && !s.hasPermission(Schematics.PERM_SAVE)) s.sendMessage(msg().get("no-permission"));
                 else if (op.equals("save")) sch.save(s, name, args.flags.contains("overwrite"));
                 else if (!s.hasPermission(Schematics.PERM_DELETE)) s.sendMessage(msg().get("no-permission"));
                 else sch.delete(s, name);
             }
             default -> s.sendMessage(msg().get(op.isEmpty() ? "usage" : "schem-unknown", "usage", msg().raw("help.schem.usage"),
-                    "input", op, "hint", hintText(Issues.closest(op, List.of("list", "load", "save", "delete")))));
+                    "input", op, "hint", hintText(Issues.closest(op, List.of("list", "load", "save", "delete", "import")))));
         }
     }
 
@@ -868,16 +962,21 @@ public final class WorldcraftCommand implements TabExecutor {
         String last = a[a.length - 1];
         if (last.startsWith("--")) {
             Set<String> opts = switch (sub) {
-                case "set", "replace", "walls", "faces", "cut" -> Set.of("--preview");
-                case "paste" -> Set.of("--preview", "--air");
+                case "set", "replace", "walls", "faces" -> Set.of("--preview");
+                case "cut" -> Set.of("--preview", "--mask");
+                case "copy" -> Set.of("--mask");
+                case "paste" -> Set.of("--preview", "--air", "--origin", "--select", "--only-select");
+                case "chunk" -> Set.of("--expand", "--chunk-coords");
+                case "outset", "inset" -> Set.of("--horizontal", "--vertical");
+                case "distr" -> Set.of("--states", "--clipboard");
                 case "undo", "redo" -> Set.of("--player");
                 case "pos1", "pos2" -> Set.of("--world");
                 case "mountain", "island", "floating_island" -> Set.of("--now");
-                case "schem", "schematic" -> a.length > 1 && a[1].equalsIgnoreCase("save") && s.hasPermission(Schematics.PERM_DELETE)
+                case "schem", "schematic" -> a.length > 1 && (a[1].equalsIgnoreCase("save") || a[1].equalsIgnoreCase("import")) && s.hasPermission(Schematics.PERM_DELETE)
                         ? Set.of("--overwrite") : Set.of();
                 default -> {
                     Set<String> f = new HashSet<>();
-                    if (!NavigationCommands.SUBS.contains(sub)) for (String o : BuildCommands.flags(sub)) f.add("--" + o);
+                    if (!NavigationCommands.SUBS.contains(sub) && !SelectionCommands.SUBS.contains(sub)) for (String o : BuildCommands.flags(sub)) f.add("--" + o);
                     yield f;
                 }
             };
@@ -898,6 +997,11 @@ public final class WorldcraftCommand implements TabExecutor {
             case "island", "floating_island" -> terrainSuggestions(Options.Tool.ISLAND, last);
             case "brush" -> brushSuggestions(a, last);
             case "schem", "schematic" -> schemSuggestions(s, a, last);
+            // Spec 029
+            case "count", "trim" -> blockSuggestions(last, true);
+            case "copy", "cut" -> hasFlag(a, "--mask") ? blockSuggestions(last, true) : List.of();
+            case "gmask" -> a.length == 2 ? merge(filter(List.of("off"), last), blockSuggestions(last, true)) : blockSuggestions(last, true);
+            case "outset", "inset" -> a.length == 2 ? filter(List.of("1", "5", "10"), last) : List.of();
             default -> buildSuggestions(sub, a, last);
         };
     }
@@ -924,9 +1028,22 @@ public final class WorldcraftCommand implements TabExecutor {
         };
     }
 
+    private static boolean hasFlag(String[] a, String flag) {
+        for (int i = 1; i < a.length - 1; i++) if (a[i].equalsIgnoreCase(flag)) return true;
+        return false;
+    }
+
+    private static List<String> merge(List<String> a, List<String> b) {
+        List<String> out = new ArrayList<>(a);
+        out.addAll(b);
+        return out;
+    }
+
     private List<String> schemSuggestions(CommandSender s, String[] a, String last) {
         if (a.length == 2) {
-            List<String> ops = new ArrayList<>(List.of("list", "load", "save"));
+            List<String> ops = new ArrayList<>(List.of("list", "load"));
+            // Spec 029 H5: guardar e importar escriben en el disco: permiso aparte.
+            if (s.hasPermission(Schematics.PERM_SAVE)) ops.addAll(List.of("save", "import"));
             if (s.hasPermission(Schematics.PERM_DELETE)) ops.add("delete");
             return filter(ops, last);
         }
@@ -934,7 +1051,7 @@ public final class WorldcraftCommand implements TabExecutor {
         return switch (a[1].toLowerCase(Locale.ROOT)) {
             case "load" -> filter(plugin.schematics().names(false), last);
             case "delete" -> s.hasPermission(Schematics.PERM_DELETE) ? filter(plugin.schematics().names(true), last) : List.of();
-            case "save" -> filter(plugin.schematics().names(true), last);
+            case "save" -> s.hasPermission(Schematics.PERM_SAVE) ? filter(plugin.schematics().names(true), last) : List.of();
             default -> List.of();
         };
     }
@@ -965,6 +1082,9 @@ public final class WorldcraftCommand implements TabExecutor {
             return out;
         }
         Set<String> seen = new HashSet<>();
+        if (mask && !q.isEmpty()) {
+            for (String w : List.of("exposed", "surface", "solid", "above", "below")) if (w.startsWith(q)) out.add(head + neg + w);
+        }
         for (String b : edits().blocks().blocks()) {
             String n = b.replace("minecraft:", "");
             if (n.startsWith(q) && seen.add(n) && out.size() < 60) out.add(head + neg + n);

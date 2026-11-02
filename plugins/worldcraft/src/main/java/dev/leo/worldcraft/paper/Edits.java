@@ -11,6 +11,7 @@ import dev.leo.worldcraft.edit.UndoSource;
 import dev.leo.worldcraft.history.HistoryStore;
 import dev.leo.worldcraft.history.Journal;
 import dev.leo.worldcraft.history.JournalSink;
+import dev.leo.worldcraft.pattern.Mask;
 import dev.leo.worldcraft.region.Box;
 import dev.leo.worldcraft.region.ChunkOrder;
 import net.kyori.adventure.text.Component;
@@ -79,6 +80,8 @@ public final class Edits {
         long expires;
         PreviewSink preview;
         EditJob previewJob;
+        /** Spec 029: algo que no es una obra y también pide /wc confirm (clearhistory); op es null. */
+        Runnable action;
 
         Pending(Op op, String ownerName, long expires) {
             this.op = op;
@@ -151,10 +154,14 @@ public final class Edits {
     // ------------------------------------------------------------------ pedir, confirmar, cancelar
 
     /** Pide una operación: revisa límites y, según el tamaño o --preview, la corre o la deja esperando confirmación. */
-    public void request(CommandSender who, Op op, boolean preview) {
+    public void request(CommandSender who, Op requested, boolean preview) {
         UUID owner = owner(who);
         Limits.Resolved lim = limits(who);
         var msg = plugin.messages();
+        // Spec 029 H4: la máscara global deja fuera lo que no pasa, en la obra y en su vista previa; se dice siempre.
+        Mask gmask = session(owner).gmask;
+        Op op = gmask == null ? requested : masked(requested, gmask);
+        if (gmask != null) who.sendMessage(msg.get("gmask-applies", "mask", gmask.text()));
         if (!lim.world(op.world().getName())) {
             who.sendMessage(msg.get("limit-world", "world", op.world().getName()));
             return;
@@ -228,7 +235,31 @@ public final class Edits {
             return;
         }
         dropPending(ses);
+        if (p.op == null) {
+            p.action.run();
+            return;
+        }
         run(who, owner(who), p.ownerName, p.op);
+    }
+
+    /** Spec 029: algo que no es una obra espera /wc confirm (con el mismo plazo que una obra). */
+    public void ask(CommandSender who, Runnable action) {
+        Session ses = session(owner(who));
+        dropPending(ses);
+        Pending p = new Pending(null, who.getName(), System.currentTimeMillis() + settings().confirmSeconds() * 1000L);
+        p.action = action;
+        ses.pending = p;
+        ensureTask();
+    }
+
+    /** La misma obra con la máscara global: deja (KEEP) lo que no pasa; el azar usa una semilla fija por obra. */
+    private Op masked(Op op, Mask gmask) {
+        Mask.Compiled mc = gmask.compile(blocks.table());
+        long seed = java.util.concurrent.ThreadLocalRandom.current().nextLong();
+        java.util.function.Function<Supplier<EditSource>, Supplier<EditSource>> wrap = sup -> sup == null ? null
+                : () -> new dev.leo.worldcraft.edit.MaskedSource(sup.get(), mc, seed);
+        return new Op(op.kind(), op.detail() + " (gmask " + gmask.text() + ")", op.world(), op.bounds(), op.volume(),
+                wrap.apply(op.source()), op.placed(), op.capture(), wrap.apply(op.preview()), op.note(), op.rerollable(), op.after());
     }
 
     /** Cancela lo que espera confirmación o, si no hay, las operaciones en marcha de quien lo pide. */

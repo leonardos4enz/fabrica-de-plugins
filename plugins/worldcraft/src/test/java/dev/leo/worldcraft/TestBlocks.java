@@ -36,7 +36,7 @@ public final class TestBlocks {
                 "sandstone", "red_sandstone", "red_sand", "terracotta", "calcite", "dripstone_block", "end_stone",
                 "end_stone_bricks", "blackstone", "netherrack", "podzol", "coarse_dirt", "mud", "short_grass", "poppy",
                 "dandelion", "crimson_nylium", "warped_nylium", "coal_ore", "iron_ore", "copper_ore", "gold_ore",
-                "redstone_ore", "lapis_ore", "diamond_ore", "emerald_ore", "water", "hanging_roots", "oak_sapling")) {
+                "redstone_ore", "lapis_ore", "diamond_ore", "emerald_ore", "hanging_roots", "oak_sapling", "cobblestone")) {
             BLOCKS.put("minecraft:" + b, Map.of());
         }
         Map<String, List<String>> stairs = new LinkedHashMap<>();
@@ -45,6 +45,12 @@ public final class TestBlocks {
         stairs.put("shape", List.of("straight", "inner_left", "inner_right", "outer_left", "outer_right"));
         stairs.put("waterlogged", List.of("false", "true"));
         BLOCKS.put("minecraft:oak_stairs", stairs);
+        // spec 029: ^tipo entre escaleras; el agua y la lava con su nivel (fixwater, fixlava)
+        BLOCKS.put("minecraft:stone_stairs", stairs);
+        BLOCKS.put("minecraft:cobblestone_stairs", stairs);
+        List<String> levels = List.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15");
+        BLOCKS.put("minecraft:water", Map.of("level", levels));
+        BLOCKS.put("minecraft:lava", Map.of("level", levels));
         BLOCKS.put("minecraft:oak_log", Map.of("axis", List.of("y", "x", "z")));
         BLOCKS.put("minecraft:birch_log", Map.of("axis", List.of("y", "x", "z")));
         for (String b : List.of("spruce_log", "basalt", "deepslate")) BLOCKS.put("minecraft:" + b, Map.of("axis", List.of("y", "x", "z")));
@@ -117,6 +123,13 @@ public final class TestBlocks {
         @Override
         public Collection<String> tags() {
             return TAGS.keySet();
+        }
+
+        /** Spec 029: las plantas, la luz y los líquidos no son sólidos (como Material.isSolid). */
+        @Override
+        public boolean solid(String id) {
+            return BlockRegistry.super.solid(id) && !Set.of("minecraft:short_grass", "minecraft:poppy", "minecraft:dandelion",
+                    "minecraft:oak_sapling", "minecraft:hanging_roots", "minecraft:light").contains(id);
         }
     };
 

@@ -272,14 +272,20 @@ public final class TerrainConfig {
     static Pattern persistent(Pattern p) {
         if (p == null) return null;
         List<String> states = new ArrayList<>();
-        for (String st : p.states()) states.add(st.replace("persistent=false", "persistent=true"));
+        for (String st : p.placedStates()) states.add(st.replace("persistent=false", "persistent=true"));
         return new Pattern(states, p.weights(), p.text());
     }
 
     private static Pattern pattern(Parser parser, String text, String file, String path, Issues issues) {
         if (text == null) return null;
         try {
-            return parser.pattern(text);
+            Pattern p = parser.pattern(text);
+            if (p.changesCurrent()) {
+                // Spec 029: el terreno pone bloques nuevos; «^» cambia el bloque que ya hay y aquí no hay ninguno.
+                issues.error(file, path, "'" + text + "': '^' changes the block that is already there; a terrain style needs blocks");
+                return null;
+            }
+            return p;
         } catch (ParseException e) {
             issues.error(file, path, e.getMessage());
             return null;

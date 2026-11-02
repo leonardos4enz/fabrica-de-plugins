@@ -60,8 +60,8 @@ public record Style(String name, String description, double blend, Map<String, D
     /** Todos los estados que puede poner (para los bloques prohibidos del grupo). */
     public Set<String> states() {
         Set<String> out = new LinkedHashSet<>();
-        for (Layer l : layers) for (Rule r : l.rules) out.addAll(r.block.states());
-        for (Pattern p : new Pattern[]{hanging, log, leaves}) if (p != null) out.addAll(p.states());
+        for (Layer l : layers) for (Rule r : l.rules) out.addAll(r.block.placedStates());
+        for (Pattern p : new Pattern[]{hanging, log, leaves}) if (p != null) out.addAll(p.placedStates());
         return out;
     }
 
