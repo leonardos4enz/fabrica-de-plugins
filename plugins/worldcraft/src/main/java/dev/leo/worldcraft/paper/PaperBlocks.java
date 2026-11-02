@@ -102,6 +102,17 @@ public final class PaperBlocks implements BlockRegistry, StateOps {
         return blocks;
     }
 
+    /** Spec 031: los tipos de entidad que se pueden crear (sin el jugador ni «unknown»). */
+    @Override
+    public Collection<String> entityTypes() {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (org.bukkit.entity.EntityType t : org.bukkit.entity.EntityType.values()) {
+            if (t == org.bukkit.entity.EntityType.UNKNOWN || t == org.bukkit.entity.EntityType.PLAYER) continue;
+            out.add(t.getKey().toString());
+        }
+        return out;
+    }
+
     @Override
     public String canonical(String state) {
         int b = state.indexOf('[');

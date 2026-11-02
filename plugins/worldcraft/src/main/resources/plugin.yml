@@ -28,6 +28,12 @@ permissions:
   worldcraft.schematic.delete:
     description: Delete schematics and replace them with save --overwrite.
     default: op
+  worldcraft.butcher:
+    description: Remove the hostile mobs around you (/wc butcher); undo brings them back.
+    default: op
+  worldcraft.remove:
+    description: Remove entities of one type around you (/wc remove items, arrows, cow...); undo brings them back.
+    default: op
   worldcraft.navigate:
     description: Move around while building (/wc ascend, descend, ceil, thru, jumpto, unstuck, up).
     default: op

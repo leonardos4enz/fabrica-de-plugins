@@ -70,7 +70,13 @@ public final class SelfTest {
                     step(s, w, box, journal, true, after, "redo", () ->
                             step(s, w, box, journal, false, before, "undo again", () -> {
                                 edits.history().mark(entry, HistoryStore.State.UNDONE);
+                                String why = entities(w, box.minX(), box.minY(), box.minZ());
+                                if (why != null) {
+                                    fail(s, why);
+                                    return;
+                                }
                                 s.sendMessage(plugin.messages().get("selftest-ok", "changed", Edits.fmt(set.changed())));
+                                s.sendMessage(plugin.messages().get("selftest-entities-ok"));
                             })));
         });
         edits.submitJob(set);
@@ -111,6 +117,97 @@ public final class SelfTest {
             next.run();
         });
         plugin.edits().submitJob(j);
+    }
+
+    /**
+     * Spec 031 (compuerta 2): en la caja ya vacía, un soporte con casco y nombre, un marco con una manzana en una pared
+     * y un cerdo con una gallina encima. Copia cada uno con PaperEntities, lo crea girado 90° (el marco en otra pared)
+     * y pasando por un esquema, y mira que lleguen enteros. Todo se quita al final. null si salió bien.
+     */
+    private String entities(World w, int x, int y, int z) {
+        PaperEntities pe = new PaperEntities(plugin, w);
+        List<org.bukkit.entity.Entity> made = new ArrayList<>();
+        org.bukkit.block.data.BlockData air = org.bukkit.Material.AIR.createBlockData();
+        try {
+            w.getBlockAt(x + 1, y, z + 2).setType(org.bukkit.Material.STONE, false);
+            w.getBlockAt(x + 4, y, z + 1).setType(org.bukkit.Material.STONE, false);
+            org.bukkit.entity.ArmorStand stand = w.spawn(new Location(w, x + 0.5, y, z + 0.5), org.bukkit.entity.ArmorStand.class, a -> {
+                a.getEquipment().setHelmet(new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIAMOND_HELMET));
+                a.customName(net.kyori.adventure.text.Component.text("WC"));
+            });
+            made.add(stand);
+            org.bukkit.entity.ItemFrame frame = w.spawn(new Location(w, x + 1.5, y + 0.5, z + 1.5), org.bukkit.entity.ItemFrame.class, f -> {
+                f.setFacingDirection(org.bukkit.block.BlockFace.NORTH, true);
+                f.setItem(new org.bukkit.inventory.ItemStack(org.bukkit.Material.APPLE));
+            });
+            made.add(frame);
+            org.bukkit.entity.Pig pig = w.spawn(new Location(w, x + 2.5, y, z + 4.5), org.bukkit.entity.Pig.class, p -> p.setAI(false));
+            org.bukkit.entity.Chicken hen = w.spawn(pig.getLocation(), org.bukkit.entity.Chicken.class, c -> c.setAI(false));
+            pig.addPassenger(hen);
+            made.add(pig);
+            made.add(hen);
+            if (frame.getFacing() != org.bukkit.block.BlockFace.NORTH) return "entities: the test frame did not hang facing north";
+
+            dev.leo.worldcraft.entity.EntityCopy sc = pe.copy(stand.getUniqueId()), fc = pe.copy(frame.getUniqueId()),
+                    pc = pe.copy(pig.getUniqueId());
+            if (sc == null || fc == null || pc == null) return "entities: Paper could not copy an entity";
+            if (!pc.contains().contains("minecraft:chicken")) return "entities: the copy of the pig does not carry its rider";
+            var nbt = dev.leo.worldcraft.schem.Nbt.read(dev.leo.worldcraft.schem.Nbt.gunzip(sc.nbt(), 1 << 20)).tag();
+            if (!"minecraft:armor_stand".equals(nbt.get("id")) || !nbt.containsKey("DataVersion")) {
+                return "entities: the copied NBT is not what Worldcraft expects (" + nbt.keySet() + ")";
+            }
+            // El marco, girado 90° alrededor de su bloque y 3 bloques al este: la pared norte pasa a ser la este.
+            var rot = dev.leo.worldcraft.edit.Transform.IDENTITY.rotate90();
+            var fr = fc.shifted(-(x + 1), -y, -(z + 1)).transformed(rot).shifted(x + 5, y, z + 1);
+            java.util.UUID nf = pe.spawn(fr);
+            org.bukkit.entity.Entity f2 = nf == null ? null : org.bukkit.Bukkit.getEntity(nf);
+            if (f2 != null) made.add(f2);
+            if (!(f2 instanceof org.bukkit.entity.ItemFrame frame2)) return "entities: the turned frame was not created";
+            if (frame2.getFacing() != org.bukkit.block.BlockFace.EAST) return "entities: the turned frame faces " + frame2.getFacing() + ", not east";
+            if (frame2.getLocation().getBlockX() != x + 5 || frame2.getLocation().getBlockZ() != z + 1) {
+                return "entities: the turned frame is at " + frame2.getLocation().toVector() + ", not in block " + (x + 5) + " " + y + " " + (z + 1);
+            }
+            if (frame2.getItem().getType() != org.bukkit.Material.APPLE) return "entities: the turned frame lost its apple";
+            // El soporte, pasando por un esquema (NBT sin uuid, con DataVersion) y 2 bloques al sur.
+            var viaSchem = dev.leo.worldcraft.schem.SchemEntities.toCopy(dev.leo.worldcraft.schem.SchemEntities.fromCopy(
+                    sc.shifted(-x, -y, -z), new int[3]) instanceof java.util.Map<String, Object> m ? normalized(m) : null,
+                    new int[]{x, y, z + 2}, TileNbt.serverDataVersion(), TileNbt.serverDataVersion());
+            java.util.UUID ns = pe.spawn(viaSchem);
+            org.bukkit.entity.Entity s2 = ns == null ? null : org.bukkit.Bukkit.getEntity(ns);
+            if (s2 != null) made.add(s2);
+            if (!(s2 instanceof org.bukkit.entity.ArmorStand stand2)) return "entities: the armor stand did not come back from a schematic";
+            if (stand2.getEquipment().getHelmet().getType() != org.bukkit.Material.DIAMOND_HELMET) return "entities: the armor stand lost its helmet";
+            if (stand2.customName() == null) return "entities: the armor stand lost its name";
+            if (stand2.getUniqueId().equals(stand.getUniqueId())) return "entities: the copy has the same uuid";
+            // El cerdo con su gallina: una sola entidad que se crea con lo montado.
+            java.util.UUID np = pe.spawn(pc.shifted(3, 0, 0));
+            org.bukkit.entity.Entity p2 = np == null ? null : org.bukkit.Bukkit.getEntity(np);
+            if (p2 != null) {
+                made.add(p2);
+                made.addAll(p2.getPassengers());
+            }
+            if (p2 == null || p2.getPassengers().isEmpty()) return "entities: the pig came back without its chicken";
+            // Quitar con lo montado (como cut y butcher).
+            if (!pe.remove(p2.getUniqueId()) || p2.getPassengers().stream().anyMatch(org.bukkit.entity.Entity::isValid)) {
+                return "entities: removing the pig left its chicken";
+            }
+            return null;
+        } catch (java.io.IOException | RuntimeException e) {
+            plugin.getLogger().log(java.util.logging.Level.WARNING, "Selftest entities", e);
+            return "entities: " + e;
+        } finally {
+            for (org.bukkit.entity.Entity e : made) if (e.isValid()) e.remove();
+            w.getBlockAt(x + 1, y, z + 2).setBlockData(air, false);
+            w.getBlockAt(x + 4, y, z + 1).setBlockData(air, false);
+        }
+    }
+
+    /** Lo que da fromCopy, en la forma que lee toCopy (Pos como double[], como al leer un archivo). */
+    private static java.util.Map<String, Object> normalized(java.util.Map<String, Object> m) {
+        java.util.Map<String, Object> out = new java.util.LinkedHashMap<>(m);
+        var pos = (dev.leo.worldcraft.schem.Nbt.TagList) m.get("Pos");
+        out.put("Pos", new double[]{(Double) pos.items().get(0), (Double) pos.items().get(1), (Double) pos.items().get(2)});
+        return out;
     }
 
     private static List<String> read(World w, Box b) {

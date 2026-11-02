@@ -10,6 +10,7 @@ import dev.leo.worldcraft.edit.PasteSource;
 import dev.leo.worldcraft.edit.RegionSource;
 import dev.leo.worldcraft.history.HistoryStore;
 import dev.leo.worldcraft.paper.Edits;
+import dev.leo.worldcraft.entity.EntityStage;
 import dev.leo.worldcraft.paper.PaperBlocks;
 import dev.leo.worldcraft.paper.Schematics;
 import dev.leo.worldcraft.paper.SelfTest;
@@ -66,6 +67,9 @@ public final class WorldcraftCommand implements TabExecutor {
         for (String s : BuildCommands.REGION) SUBS.put(s, USE);
         for (String s : BuildCommands.UTILITIES) SUBS.put(s, USE);
         for (String s : NavigationCommands.SUBS) SUBS.put(s, NavigationCommands.PERM);
+        // Spec 031: quitar entidades, cada uno con su permiso (como worldedit.butcher y worldedit.remove).
+        SUBS.put("butcher", BuildCommands.PERM_BUTCHER);
+        SUBS.put("remove", BuildCommands.PERM_REMOVE);
         // Spec 029: selección, información y máscara global (como cualquier edición).
         for (String s : SelectionCommands.SUBS) SUBS.put(s, USE);
         for (String s : List.of("reload", "validate", "selftest")) SUBS.put(s, ADMIN);
@@ -143,7 +147,7 @@ public final class WorldcraftCommand implements TabExecutor {
                     if (NavigationCommands.SUBS.contains(sub)) navigation.run(s, sub, a);
                     else if (SelectionCommands.SUBS.contains(sub)) selection.run(s, sub, a);
                     else if (BuildCommands.SHAPES.contains(sub) || BuildCommands.REGION.contains(sub)
-                            || BuildCommands.UTILITIES.contains(sub)) build.run(s, sub, a);
+                            || BuildCommands.UTILITIES.contains(sub) || BuildCommands.ENTITIES.contains(sub)) build.run(s, sub, a);
                     else help(s, a);
                 }
             }
@@ -536,7 +540,7 @@ public final class WorldcraftCommand implements TabExecutor {
     }
 
     private void copy(CommandSender s, String[] a, boolean cut) {
-        Args args = Args.parse(a, 1, cut ? Set.of("preview", "mask") : Set.of("mask"));
+        Args args = Args.parse(a, 1, cut ? Set.of("preview", "mask", "entities") : Set.of("mask", "entities"));
         if (args.problem != null) {
             s.sendMessage(msg().get("error", "message", args.problem));
             return;
@@ -567,9 +571,13 @@ public final class WorldcraftCommand implements TabExecutor {
             return;
         }
         int[] o = origin(s, box);
+        // Spec 031 H1 CA1: entidades solo con --entities (como //copy -e de WorldEdit; decisión del dueño).
+        boolean entities = args.flags.contains("entities");
         if (mask == null && !cut) {
-            edits().copy(s, world, region, o[0], o[1], o[2], () -> s.sendMessage(msg().get("copied",
-                    "size", box.size(), "blocks", Edits.fmt(region.volume()))));
+            edits().copy(s, world, region, o[0], o[1], o[2], entities, clip -> {
+                s.sendMessage(msg().get("copied", "size", box.size(), "blocks", Edits.fmt(region.volume())));
+                if (entities) s.sendMessage(msg().get("copied-entities", "count", Edits.fmt(clip.entities().size())));
+            });
             return;
         }
         PaperBlocks blocks = edits().blocks();
@@ -581,26 +589,38 @@ public final class WorldcraftCommand implements TabExecutor {
             // Lo que no pasa la máscara queda como aire en el portapapeles (como -m de WorldEdit).
             if (!cut) {
                 Clipboard clip = new Clipboard(box, o[0], o[1], o[2]);
+                var scan = entities ? edits().scan(s, world, region) : null;
                 edits().read(s, world, region, "copy", (x, y, z, st, tile) -> {
                     boolean in = mc.test(x, y, z, st, near, seed);
                     clip.put(box, x, y, z, in ? st : air, in ? tile : null);
-                }, () -> {
+                }, scan, () -> {
+                    if (scan != null) clip.entities(Edits.relative(scan.result(), o[0], o[1], o[2]));
                     ses.clipboard(clip, world.getName());
                     s.sendMessage(msg().get("copied", "size", box.size(), "blocks", Edits.fmt(region.volume())));
+                    if (scan != null) s.sendMessage(msg().get("copied-entities", "count", Edits.fmt(clip.entities().size())));
                 });
                 return;
             }
             Pattern.Compiled airP = Pattern.of("minecraft:air").compile(blocks.table());
             // cut --mask solo quita lo que pasa la máscara.
-            edits().request(s, new Edits.Op("cut", detail, world, box, region.volume(),
+            Clipboard[] made = new Clipboard[1];
+            Edits.Op op = new Edits.Op("cut", detail + (entities ? (detail.isEmpty() ? "" : ", ") + "with entities" : ""), world, box, region.volume(),
                     () -> new RegionSource(region, Shape.FILL, mc, airP, seed, near), List.of(), () -> {
                 Clipboard clip = new Clipboard(box, o[0], o[1], o[2]);
+                made[0] = clip;
                 ses.clipboard(clip, world.getName());
                 return (x, y, z, st, tile) -> {
                     boolean in = mc == null || mc.test(x, y, z, st, near, seed);
                     clip.put(box, x, y, z, in ? st : air, in ? tile : null);
                 };
-            }), args.flags.contains("preview"));
+            });
+            // Spec 031 H1 CA2: cut --entities las quita antes que los bloques (un marco sin pared se cae) y las deja en el portapapeles.
+            if (entities) op = op.with(new Edits.EntityWork(
+                    (w, sink, max, b) -> new EntityStage.Scan(w, region, e -> true, true, max, sink),
+                    (w, sink, max, b) -> EntityStage.action(() -> made[0].entities(
+                            Edits.relative(((EntityStage.Scan) b).result(), o[0], o[1], o[2]))),
+                    0, Set.of(), msg().text("note-entities-cut")));
+            edits().request(s, op, args.flags.contains("preview"));
         };
         if (mask != null && mask.needsNeighbors()) readAround(s, world, box, cut ? "cut" : "copy", snap -> go.accept(snap::get));
         else go.accept(null);
@@ -617,7 +637,7 @@ public final class WorldcraftCommand implements TabExecutor {
     }
 
     private void paste(CommandSender s, String[] a) {
-        Args args = Args.parse(a, 1, Set.of("preview", "air", "origin", "select", "only-select"));
+        Args args = Args.parse(a, 1, Set.of("preview", "air", "origin", "select", "only-select", "no-entities", "remove-entities"));
         if (args.problem != null) {
             s.sendMessage(msg().get("error", "message", args.problem));
             return;
@@ -665,6 +685,18 @@ public final class WorldcraftCommand implements TabExecutor {
         Edits.Op op = new Edits.Op("paste", clip.size() + (air ? " with air" : ""), world, target, clip.volume(),
                 () -> new PasteSource(clip, o[0], o[1], o[2], air, blocks::isAir, blocks), clip.distinct(), null);
         if (args.flags.contains("select")) op = op.then(() -> ses.selectBox(world.getName(), target));
+        // Spec 031 H1 CA3–CA4: las entidades del portapapeles van después de los bloques; --remove-entities quita antes las de ahí.
+        List<dev.leo.worldcraft.entity.EntityCopy> ents = args.flags.contains("no-entities") ? List.of() : clip.entitiesAt(o[0], o[1], o[2]);
+        boolean clear = args.flags.contains("remove-entities");
+        if (!ents.isEmpty() || clear) {
+            List<EntityStage.Item> items = ents.stream().map(e -> new EntityStage.Item(null, e)).toList();
+            String note = (ents.isEmpty() ? "" : msg().text("note-entities-add", "count", Edits.fmt(ents.size())))
+                    + (clear ? (ents.isEmpty() ? "" : " ") + msg().text("note-entities-clear") : "");
+            op = op.with(new Edits.EntityWork(
+                    clear ? (w, sink, max, b) -> new EntityStage.Scan(w, target, e -> true, true, max, sink) : null,
+                    ents.isEmpty() ? null : (w, sink, max, b) -> new EntityStage.Spawn(w, () -> items, sink),
+                    ents.size(), ents.isEmpty() ? Set.of() : clip.entityTypes(), note));
+        }
         edits().request(s, op, args.flags.contains("preview"));
     }
 
@@ -829,6 +861,9 @@ public final class WorldcraftCommand implements TabExecutor {
                 "blocked", l.blocked().isEmpty() || l.blocked().contains(null) ? "none"
                         : l.blocked().size() == 1 ? l.blocked().get(0).text()
                         : "what all of these block: " + l.blocked().stream().map(Mask::text).reduce((x, y) -> x + " | " + y).orElse("")));
+        // Spec 031 H7.
+        s.sendMessage(msg().get("limits-entities", "max", Edits.fmt(l.maxEntities()), "blocked", l.blockedEntities().isEmpty() ? "none"
+                : String.join(", ", l.blockedEntities().stream().map(t -> t.replace("minecraft:", "")).sorted().toList())));
     }
 
     private void reload(CommandSender s) {
@@ -1078,9 +1113,9 @@ public final class WorldcraftCommand implements TabExecutor {
         if (last.startsWith("--")) {
             Set<String> opts = switch (sub) {
                 case "set", "replace", "walls", "faces" -> Set.of("--preview");
-                case "cut" -> Set.of("--preview", "--mask");
-                case "copy" -> Set.of("--mask");
-                case "paste" -> Set.of("--preview", "--air", "--origin", "--select", "--only-select");
+                case "cut" -> Set.of("--preview", "--mask", "--entities");
+                case "copy" -> Set.of("--mask", "--entities");
+                case "paste" -> Set.of("--preview", "--air", "--origin", "--select", "--only-select", "--no-entities", "--remove-entities");
                 case "chunk" -> Set.of("--expand", "--chunk-coords");
                 case "outset", "inset" -> Set.of("--horizontal", "--vertical");
                 case "distr" -> Set.of("--states", "--clipboard");
@@ -1137,7 +1172,9 @@ public final class WorldcraftCommand implements TabExecutor {
             case "removenear" -> a.length > 2 && number ? filter(RADII, last) : blockSuggestions(last, true);
             case "replacenear" -> a.length == 2 ? filter(RADII, last) : blockSuggestions(last, !hasWith(a));
             case "removeabove", "removebelow" -> a.length <= 3 ? filter(List.of("1", "3", "5"), last) : List.of();
-            case "drain", "fixwater", "fixlava", "extinguish", "snow", "thaw", "green" -> a.length == 2 ? filter(RADII, last) : List.of();
+            case "drain", "fixwater", "fixlava", "extinguish", "snow", "thaw", "green", "butcher" -> a.length == 2 ? filter(RADII, last) : List.of();
+            case "remove" -> a.length == 2 ? filter(dev.leo.worldcraft.entity.RemoveType.words(edits().blocks().entityTypes()), last)
+                    : a.length == 3 ? filter(RADII, last) : List.of();
             case "ascend", "descend", "up", "ceil" -> a.length == 2 ? filter(List.of("1", "2", "5", "10"), last) : List.of();
             default -> List.of();
         };

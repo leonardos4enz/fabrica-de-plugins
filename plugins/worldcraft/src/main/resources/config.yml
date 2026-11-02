@@ -40,6 +40,8 @@ history:
 #   max_jobs:       edits running or waiting at the same time
 #   worlds:         where the group may edit ("*" = everywhere)
 #   blocked_blocks: blocks the group may not place (mask syntax); [] = none
+#   max_entities:   entities one edit may create or remove (copy --entities, paste, butcher, remove...); 0 = none
+#   blocked_entities: entity types the group may not create (also checked on what rides them); [] = none
 limits:
   default:
     max_blocks: 50000
@@ -47,13 +49,18 @@ limits:
     worlds: ["*"]
     blocked_blocks: [bedrock, barrier, command_block, chain_command_block, repeating_command_block, structure_block,
                      jigsaw, end_portal_frame, end_portal, end_gateway, nether_portal, spawner, light]
+    max_entities: 200
+    blocked_entities: [command_block_minecart, spawner_minecart, tnt, tnt_minecart, falling_block, wither, ender_dragon]
   builder:
     max_blocks: 1000000
     max_jobs: 3
+    max_entities: 2000
   admin:
     max_blocks: 10000000
     max_jobs: 5
     blocked_blocks: []
+    max_entities: 20000
+    blocked_entities: []
 
 # Terrain tools (/wc mountain, /wc island, /wc brush). Styles and sizes are in terrain.yml.
 terrain:
@@ -88,3 +95,7 @@ shapes:
 # Around the player (/wc drain, fixwater, fill, removenear, snow...): the biggest radius.
 utilities:
   max_radius: 64
+# Entities (/wc butcher, /wc remove): the radius when none is given, and the biggest one.
+entities:
+  butcher_radius: 32
+  max_radius: 128

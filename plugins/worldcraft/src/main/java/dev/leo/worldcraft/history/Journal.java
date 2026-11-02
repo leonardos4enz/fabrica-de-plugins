@@ -15,6 +15,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+
+import dev.leo.worldcraft.entity.EntityCopy;
 
 /**
  * El diario de una operación (H6, plan 025 §4): solo se agrega. Por cada bloque cambiado guarda la posición, el estado
@@ -25,8 +28,14 @@ import java.util.Map;
 public final class Journal implements Closeable {
     private static final int MAGIC = 0x57434A31; // "WCJ1"
     private static final byte DICT = 1, BLOCK = 2, TILE_BEFORE = 3, TILE_AFTER = 4;
+    /** Spec 031: una entidad que la obra quitó, una que creó, y un uuid que deshacer o rehacer cambió al recrearla. */
+    private static final byte ENTITY_OUT = 5, ENTITY_IN = 6, REMAP = 7;
     /** Tope de los datos de un bloque: un cofre lleno de libros escritos cabe de sobra (constitución III.4). */
     public static final int MAX_TILE = 2 * 1024 * 1024;
+
+    /** Spec 031: una entidad quitada (out) o creada por la obra, con su uuid de entonces. */
+    public record EntityChange(boolean out, UUID id, EntityCopy copy) {
+    }
 
     /** Un cambio, listo para escribir. */
     public record Change(int x, int y, int z, String before, String after, byte[] tileBefore, byte[] tileAfter) {
@@ -46,6 +55,48 @@ public final class Journal implements Closeable {
         out.writeInt(MAGIC);
         out.flush();
         return new Journal(out);
+    }
+
+    /**
+     * Spec 031: abre un diario que ya existe para agregarle al final (los uuid nuevos al deshacer); si no existe, lo crea.
+     */
+    public static Journal reopen(Path file) throws IOException {
+        if (!Files.exists(file)) return create(file);
+        DataOutputStream out = new DataOutputStream(new BufferedOutputStream(Files.newOutputStream(file,
+                StandardOpenOption.APPEND, StandardOpenOption.WRITE), 1 << 12));
+        return new Journal(out);
+    }
+
+    public void appendEntities(List<EntityChange> changes) throws IOException {
+        for (EntityChange c : changes) {
+            EntityCopy e = c.copy();
+            if (e.nbt().length > MAX_TILE) continue;
+            out.writeByte(c.out() ? ENTITY_OUT : ENTITY_IN);
+            uuid(c.id());
+            out.writeDouble(e.x());
+            out.writeDouble(e.y());
+            out.writeDouble(e.z());
+            out.writeFloat(e.yaw());
+            out.writeFloat(e.pitch());
+            out.writeUTF(e.type());
+            out.writeShort(Math.min(e.contains().size(), 255));
+            for (int i = 0; i < Math.min(e.contains().size(), 255); i++) out.writeUTF(e.contains().get(i));
+            out.writeInt(e.nbt().length);
+            out.write(e.nbt());
+        }
+        out.flush();
+    }
+
+    public void appendRemap(UUID old, UUID now) throws IOException {
+        out.writeByte(REMAP);
+        uuid(old);
+        uuid(now);
+        out.flush();
+    }
+
+    private void uuid(UUID id) throws IOException {
+        out.writeLong(id.getMostSignificantBits());
+        out.writeLong(id.getLeastSignificantBits());
     }
 
     public void append(List<Change> changes) throws IOException {
@@ -92,6 +143,21 @@ public final class Journal implements Closeable {
         public int size;
         public int[] x = new int[256], y = new int[256], z = new int[256], before = new int[256], after = new int[256];
         public final Map<Integer, byte[]> tileBefore = new HashMap<>(), tileAfter = new HashMap<>();
+        /** Spec 031: las entidades que la obra quitó y las que creó, con el uuid de entonces. */
+        public final List<EntityChange> entitiesOut = new ArrayList<>(), entitiesIn = new ArrayList<>();
+        /** Spec 031: uuid de entonces → el de ahora (seguir la cadena con {@link #current}). */
+        public final Map<UUID, UUID> remap = new HashMap<>();
+
+        /** El uuid que tiene ahora la entidad que el diario conoce como id (tras deshacer y rehacer). */
+        public UUID current(UUID id) {
+            UUID u = id;
+            for (int i = 0; i < 10_000; i++) {
+                UUID n = remap.get(u);
+                if (n == null) return u;
+                u = n;
+            }
+            return u;
+        }
 
         void add(int px, int py, int pz, int b, int a) {
             if (size == x.length) {
@@ -136,6 +202,23 @@ public final class Journal implements Closeable {
                     byte[] data = in.readNBytes(n);
                     if (data.length < n) break;
                     (type == TILE_BEFORE ? d.tileBefore : d.tileAfter).put(d.size - 1, data);
+                } else if (type == ENTITY_OUT || type == ENTITY_IN) {
+                    UUID id = new UUID(in.readLong(), in.readLong());
+                    double x = in.readDouble(), y = in.readDouble(), z = in.readDouble();
+                    float yaw = in.readFloat(), pitch = in.readFloat();
+                    String t = in.readUTF();
+                    int nc = in.readUnsignedShort();
+                    List<String> contains = new ArrayList<>();
+                    for (int i = 0; i < nc; i++) contains.add(in.readUTF());
+                    int n = in.readInt();
+                    if (n < 0 || n > MAX_TILE) break;
+                    byte[] nbt = in.readNBytes(n);
+                    if (nbt.length < n) break;
+                    EntityChange c = new EntityChange(type == ENTITY_OUT, id, new EntityCopy(t, x, y, z, yaw, pitch, nbt, contains));
+                    (c.out() ? d.entitiesOut : d.entitiesIn).add(c);
+                } else if (type == REMAP) {
+                    UUID old = new UUID(in.readLong(), in.readLong()), now = new UUID(in.readLong(), in.readLong());
+                    d.remap.put(old, now);
                 } else {
                     break;
                 }

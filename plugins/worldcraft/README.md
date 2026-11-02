@@ -5,7 +5,8 @@ happens, undo even after a restart (without erasing what others built since), an
 you would say them. And terrain that is easy to make: a mountain or a floating island with one word, a terrain brush,
 and full control for experienced builders. Specs: [025](../../docs/sdd/specs/025-worldcraft-nucleo/spec.md) (core),
 [026](../../docs/sdd/specs/026-worldcraft-terreno-facil/spec.md) (terrain), [027](../../docs/sdd/specs/027-worldcraft-esquemas-schem/spec.md) (`.schem` schematics),
-[028](../../docs/sdd/specs/028-worldcraft-paridad-worldedit/spec.md) (the WorldEdit commands builders use most).
+[028](../../docs/sdd/specs/028-worldcraft-paridad-worldedit/spec.md) (the WorldEdit commands builders use most),
+[031](../../docs/sdd/specs/031-worldcraft-entidades/spec.md) (entities).
 
 ```
 /wc wand                                        left click = corner 1, right click = corner 2
@@ -17,6 +18,8 @@ and full control for experienced builders. Specs: [025](../../docs/sdd/specs/025
 /wc brush smooth                                a terrain brush: right click to use it, left click for the next mode
 /wc schem load castles/tower                     a WorldEdit .schem into your clipboard: then /wc paste --preview
 /wc sphere glass 8 --preview                    shapes, stack, move, smooth, drain, ascend... with WorldEdit's names
+/wc copy --entities                             the armor stands, item frames, paintings and mobs come too
+/wc butcher 30                                  remove the hostile mobs around you (pets and villagers are safe; undo works)
 ```
 
 ## Terrain: easy for beginners, precise for experts
@@ -152,8 +155,8 @@ for a left click and `/wc pos2` for a right click, also `hpos1`/`hpos2`) marks i
 | `/wc replace <mask> with <pattern>` | Change only what matches (without `with`, the first word is the mask) |
 | `/wc walls <pattern>` | The four side walls |
 | `/wc faces <pattern>` | Walls, floor and roof: a hollow box |
-| `/wc copy [--mask <mask>]`, `/wc cut [--mask <mask>]` | Copy (or copy and leave air), relative to where you stand. With a mask, only what matches is copied (and cut) |
-| `/wc paste [--air] [--origin] [--select] [--only-select]` | Paste relative to where you stand; copied air only with `--air`. `--origin`: where it was copied; `--select`: select what you pasted; `--only-select`: only select where it would go |
+| `/wc copy [--entities] [--mask <mask>]`, `/wc cut [--entities] [--mask <mask>]` | Copy (or copy and leave air), relative to where you stand. `--entities`: the entities inside too (see [Entities](#entities)). With a mask, only what matches is copied (and cut) |
+| `/wc paste [--air] [--origin] [--select] [--only-select] [--no-entities] [--remove-entities]` | Paste relative to where you stand; copied air only with `--air`. `--origin`: where it was copied; `--select`: select what you pasted; `--only-select`: only select where it would go. Copied entities come too unless `--no-entities`; `--remove-entities` first removes the entities already there |
 | `/wc clearclipboard`, `/wc clearhistory` | Empty your clipboard; delete your undo history from the disk (asks `/wc confirm`) |
 | `/wc gmask <mask>`, `/wc gmask off` | A global mask: until `off` (or until you leave) every edit only changes what matches, and says so |
 | `/wc rotate <90\|180\|270\|-90>`, `/wc flip [direction]` | Turn or mirror the clipboard (block states too) |
@@ -174,8 +177,8 @@ adds: `--preview`, the group limits, undo after a restart, no lag.
 | `/wc cyl <pattern> <radius>[,z] [height]`, `/wc hcyl …` | A cylinder from your feet up (negative height: down); the hollow one is only the round wall, like WorldEdit's |
 | `/wc pyramid <pattern> <size>`, `/wc hpyramid …`, `/wc cone <pattern> <radius> <height>` | A pyramid or a cone on your feet |
 | `--thickness <n>` | How thick a hollow shape is (1 by default) |
-| `/wc stack [copies] [direction] [--air] [--select]` | Repeat the selection where you look; copied air is skipped unless `--air`; chests keep their items |
-| `/wc move [blocks] [direction] [pattern] [--select]` | Move the selection's contents (far moves only touch the two places); what is left behind becomes air or the pattern |
+| `/wc stack [copies] [direction] [--air] [--select] [--entities]` | Repeat the selection where you look; copied air is skipped unless `--air`; chests keep their items; `--entities` repeats the entities too |
+| `/wc move [blocks] [direction] [pattern] [--select] [--entities]` | Move the selection's contents (far moves only touch the two places); what is left behind becomes air or the pattern; `--entities` moves the entities with it (the same ones, with everything they carry) |
 | `/wc overlay <pattern>` | A layer on top of the ground (never on a tree trunk; flowers are covered) |
 | `/wc naturalize` | Grass, 3 dirt, then stone, only on grass, dirt and stone |
 | `/wc smooth [passes]` | Smooth the natural ground of the selection; trees and builds are left alone (WorldEdit's melts them) |
@@ -191,6 +194,38 @@ adds: `--preview`, the group limits, undo after a restart, no lag.
 From the console, shapes and the commands around you take `--at x,y,z [--world <w>]`. The biggest radius is
 `shapes.max_radius` (200) and `utilities.max_radius` (64); your group's block limit always applies too.
 
+## Entities
+Armor stands, item frames, paintings, mobs, boats, minecarts and dropped items travel with your builds when you ask, and
+every change to them can be undone, also after a restart.
+```
+/wc copy --entities              the entities whose block is inside the selection (any shape), with everything they carry
+/wc paste                        they come with the blocks (rotated and flipped like them); --no-entities leaves them out
+/wc paste --remove-entities      first remove the entities already where you paste (FAWE's -x)
+/wc cut --entities               take them away too (nothing is dropped)
+/wc move 10 east --entities      the same entities move with the blocks
+/wc stack 3 up --entities        every copy gets its own
+/wc butcher [radius]             the hostile mobs around you; --pets --npcs --golems --animals --ambient --water --named --armorstands --friendly add others
+/wc remove <type> [radius]       items, arrows, projectiles, xp, boats, minecarts, tnt, falling, paintings, itemframes, armorstands, or a type like cow
+```
+- **Like WorldEdit:** `copy` and `cut` take no entities without `--entities` (WorldEdit's `-e`). You decide once, when you
+  copy: `paste` then puts what the clipboard has (WorldEdit asks for `-e` again).
+- **Whole entities:** an item frame keeps its item and hangs on the turned wall when you rotate; an armor stand keeps its
+  armor, pose and name; a mob keeps its health, name and what rides it (a rider travels with its mount, never twice).
+  Players are never copied, moved or removed.
+- **`butcher` is careful by default:** only hostile mobs (zombies, skeletons, slimes…). Pets, villagers, wandering traders
+  and Citizens NPCs, iron and snow golems, animals, bats, fish, anything with a name and armor stands are spared unless
+  you add their option; `--friendly` adds all the friendly ones (not fish nor armor stands). Nothing is dropped, and
+  `/wc undo` brings them back.
+- **Undo:** entities an edit added are removed and the ones it removed come back (with everything they had); one that is
+  gone already (killed, moved to another world) is skipped and counted.
+- **Limits:** each group has `max_entities` (default 200, builder 2 000, admin 20 000) and `blocked_entities`: by default a
+  player may not create command block minecarts, spawner minecarts, TNT and TNT minecarts, falling blocks, withers or
+  the ender dragon, also when they ride something inside a schematic. A paste over the limit is refused before
+  anything changes; `butcher` and `remove` stop at the limit and say so.
+- **No lag:** entities are copied, created and removed in the same 8 ms per tick as the blocks; what is removed goes
+  before the blocks change (an item frame never drops off its wall) and what is created goes after.
+- The preview shows blocks only (it says how many entities will be added or removed).
+
 ## Coming from WorldEdit
 | WorldEdit | Worldcraft |
 |---|---|
@@ -199,6 +234,8 @@ From the console, shapes and the commands around you take `--at x,y,z [--world <
 | `//hpos1`, `//hpos2`, `//chunk`, `//outset`, `//inset`, `//trim`, `//count`, `//distr` | `/wc hpos1`, … (`-h` is `--horizontal`, `-v` is `--vertical`, `-s` is `--expand`, `-d` is `--states`, `-c` is `--clipboard` or `--chunk-coords`) |
 | `/clearclipboard`, `/clearhistory`, `/gmask` | `/wc clearclipboard`, `/wc clearhistory` (asks to confirm), `/wc gmask` |
 | `//paste -o -s -n`, `//copy -m`, `//cut -m` | `/wc paste --origin --select --only-select`, `/wc copy --mask …`, `/wc cut --mask …` |
+| `//copy -e`, `//cut -e`, `//paste -e`, FAWE `//paste -x`, `//stack -e`, `//move -e` | `/wc copy --entities`, `/wc cut --entities`, `/wc paste` (pastes what was copied; `--no-entities` to leave them), `/wc paste --remove-entities`, `/wc stack --entities`, `/wc move --entities` |
+| `/butcher [radius] -p -n -g -a -b -t -f -r -w`, `/remove <type> <radius>` | `/wc butcher [radius] --pets --npcs --golems --animals --ambient --named --friendly --armorstands --water`, `/wc remove <type> [radius]` (both can be undone) |
 | `>grass_block`, `<grass_block`, `#exposed`, `#surface`, `#solid`, `%50`, `^[waterlogged=true]` (masks) | `above grass_block`, `below grass_block`, `exposed`, `surface`, `solid`, `50% chance`, `^[waterlogged=true]` |
 | `^stone_stairs`, `^[waterlogged=false]` (patterns) | the same |
 | `//set`, `//replace`, `//walls`, `//faces` | `/wc set`, `/wc replace <mask> with <pattern>`, `/wc walls`, `/wc faces` (all with `--preview`) |
@@ -212,7 +249,7 @@ From the console, shapes and the commands around you take `--at x,y,z [--world <
 | — | `/wc mountain`, `/wc island`, styles, `/wc confirm`, `/wc history` |
 
 Not yet (see the [command-by-command comparison](../../docs/investigacion/paridad-worldedit-fawe.md), checked
-against the WorldEdit 7.3.19 and FAWE 2.16.2 jars): FAWE's `//sel list`, entities, building brushes and
+against the WorldEdit 7.3.19 and FAWE 2.16.2 jars): FAWE's `//sel list`, building brushes and
 one-click tools, biomes, trees and game structures, `//generate` and other formulas, FAWE's caves, ores and images,
 `//regen`, snapshots, and an API for other plugins (in that order in the [roadmap](../../docs/sdd/roadmap.md)). **WorldGuard and PlotSquared need WorldEdit itself**: keep it
 installed next to Worldcraft (different command and wand, they work side by side).
@@ -267,7 +304,9 @@ without losing its schematics, and a schematic made here works on a server that 
   WorldEdit does.
 - **Chests, barrels, furnaces, hoppers, shulker boxes and signs keep their contents** (items from older game versions are
   upgraded by the game). Other block data (heads, banners, spawners…) is not pasted yet, but it is kept if you save the
-  schematic again; the message says how many. Entities and biomes are not loaded (the message counts the entities).
+  schematic again; the message says how many. **Entities come too** (spec 031): `save` writes the clipboard's entities
+  (copied with `--entities`) and `load` reads the ones of a v2 or v3 file (upgraded by the game if the file is older);
+  `/wc paste` puts them (`--no-entities` leaves them) and your group's entity limits apply. Biomes are not loaded.
 - **Old or unknown blocks:** renamed blocks are translated (`grass` → `short_grass`, `grass_path` → `dirt_path`,
   `chain` ↔ `iron_chain`), a property this server does not have is dropped, and a block it does not know (from a mod)
   becomes air, with the names in the message.
@@ -316,7 +355,10 @@ created on the next start and a `config.yml` without the `terrain` section uses 
 0.3.0: a `config.yml` without `shapes` and `utilities` uses the values above. **Updating from 0.4.0:** saving schematics now
 needs `worldcraft.schematic.save` (op by default): give it to whoever saved with `worldcraft.schematic` only. Updating
 from 0.5.0: a `config.yml` without `selection.max_points` and `selection.magic_radius` uses the values above; nothing
-else changes (the default shape is still the box).
+else changes (the default shape is still the box). Updating from 0.6.0: a `config.yml` without `entities` and without
+`max_entities`/`blocked_entities` in its groups uses the values above (200 entities and the blocked list for `default`);
+`/wc butcher` and `/wc remove` need `worldcraft.butcher` and `worldcraft.remove` (op by default). Undo histories
+written by older versions keep working.
 
 ## Permissions
 | Permission | Default | What it allows |
@@ -328,18 +370,20 @@ else changes (the default shape is still the box).
 | `worldcraft.schematic.save` | op | `/wc schem save` and `import` (they write to the disk) |
 | `worldcraft.schematic.delete` | op | `/wc schem delete`, `save --overwrite` and `import --overwrite` |
 | `worldcraft.navigate` | op | `/wc ascend`, `descend`, `ceil`, `thru`, `jumpto`, `unstuck`, `up` |
+| `worldcraft.butcher` | op | `/wc butcher` (like `worldedit.butcher`) |
+| `worldcraft.remove` | op | `/wc remove` (like `worldedit.remove`) |
 | `worldcraft.limit.<group>` | — | The limits of that group in `config.yml` |
 
 ## Compatibility
 | Server | Status | Evidence |
 |---|---|---|
-| Paper 1.21.4 (build 232, Java 24) | **Verified** (0.6.0) | 0.6.0 (2026-11-02): gate 2 updating from 0.5.0 with WorldEdit 7.3.19 (every shape from the console: sphere, cyl, poly, convex, extend and magic with set, walls, faces, count, outset, a sphere copied and pasted with --air without its corners, stack, move and undo); in-game suite 22/22 twice (a cylinder marked with the wand and its outline only for the editor, walls as a tube, a polygon, a magic selection that grows with a right click, a sphere copied, pasted, stacked and moved, a convex shape). 0.5.0 (2026-11-02): gate 2 updating from 0.4.0 with WorldEdit 7.3.19 (count, distr, masks that look around, `^stone_stairs`, `gmask`, outset/inset/trim/chunk, copy --mask and paste --origin/--select, clearhistory with confirm, schem import, from the console); in-game suite 20/20 twice (hpos at the block you look at, count, `^` keeps the stairs turned, `and !surface`, gmask, paste --select and --origin, clearhistory, import, and a player without `worldcraft.schematic.save` cannot save). 0.4.0 (2026-11-01): gate 2 updating from 0.3.0 (every shape, hollow, center, stack with a chest, move, line, drain and undo, fixwater, fill, removenear, snow, thaw, green, naturalize, overlay, extinguish, removebelow from the console: 31 checks); in-game suite 18/18 twice (a sphere previewed only for the editor, a pyramid and unstuck, stack and move with undo, drain, ascend, descend, thru, up with a glass block for a player who cannot fly). 0.3.0 (2026-11-01): 0.3.0 (2026-11-01): gate 2 updating from 0.2.0 (save, load and paste a rotated chest and sign from the console, damaged files and unsafe names refused); in-game suite 15/15 twice with WorldEdit 7.3.19 on the server (WorldEdit's v3 and v2 files loaded and pasted by Worldcraft, Worldcraft's loaded and pasted by WorldEdit). 0.2.0: gate 2 (2026-11-01): updating from 0.1.0, mountains (up to 811 675 blocks), an island and undo from the console. In-game suite 12/12 twice (2026-11-01), terrain included. 0.1.0: gate 2 with a 100 000-block edit and undo after a restart, suite 8/8 twice |
+| Paper 1.21.4 (build 232, Java 24) | **Verified** (0.7.0) | 0.7.0 (2026-11-02): gate 2 updating from 0.6.0 with WorldEdit 7.3.19 (selftest with real entities: an armor stand with a helmet and a name through a schematic, an item frame turned onto another wall with its apple, a pig with a chicken riding it; from the console: butcher spares a named husk and a cow, `--named` and `--friendly`, undo brings them back, remove cow, copy --entities, paste and paste --remove-entities, undo, a rotated schematic with entities saved, loaded and pasted); in-game suite 25/25 twice (copy --entities, rotate and paste: the frame hangs on the turned wall with its apple, the armor stand keeps its helmet; undo; cut --entities without dropping the frame and undo; --no-entities; move and stack --entities; paste --remove-entities; butcher spares a tamed wolf and a villager, --animals and undo; remove items; a schematic with entities pasted by WorldEdit with `//paste -e` and one from WorldEdit's `//copy -e` pasted by Worldcraft). 0.6.0 (2026-11-02): gate 2 updating from 0.5.0 with WorldEdit 7.3.19 (every shape from the console: sphere, cyl, poly, convex, extend and magic with set, walls, faces, count, outset, a sphere copied and pasted with --air without its corners, stack, move and undo); in-game suite 22/22 twice (a cylinder marked with the wand and its outline only for the editor, walls as a tube, a polygon, a magic selection that grows with a right click, a sphere copied, pasted, stacked and moved, a convex shape). 0.5.0 (2026-11-02): gate 2 updating from 0.4.0 with WorldEdit 7.3.19 (count, distr, masks that look around, `^stone_stairs`, `gmask`, outset/inset/trim/chunk, copy --mask and paste --origin/--select, clearhistory with confirm, schem import, from the console); in-game suite 20/20 twice (hpos at the block you look at, count, `^` keeps the stairs turned, `and !surface`, gmask, paste --select and --origin, clearhistory, import, and a player without `worldcraft.schematic.save` cannot save). 0.4.0 (2026-11-01): gate 2 updating from 0.3.0 (every shape, hollow, center, stack with a chest, move, line, drain and undo, fixwater, fill, removenear, snow, thaw, green, naturalize, overlay, extinguish, removebelow from the console: 31 checks); in-game suite 18/18 twice (a sphere previewed only for the editor, a pyramid and unstuck, stack and move with undo, drain, ascend, descend, thru, up with a glass block for a player who cannot fly). 0.3.0 (2026-11-01): 0.3.0 (2026-11-01): gate 2 updating from 0.2.0 (save, load and paste a rotated chest and sign from the console, damaged files and unsafe names refused); in-game suite 15/15 twice with WorldEdit 7.3.19 on the server (WorldEdit's v3 and v2 files loaded and pasted by Worldcraft, Worldcraft's loaded and pasted by WorldEdit). 0.2.0: gate 2 (2026-11-01): updating from 0.1.0, mountains (up to 811 675 blocks), an island and undo from the console. In-game suite 12/12 twice (2026-11-01), terrain included. 0.1.0: gate 2 with a 100 000-block edit and undo after a restart, suite 8/8 twice |
 | Paper 26.1.2 and other 1.21.x / 26.x | Not verified | |
 | Spigot, Folia | Not supported | |
 
 - **Java:** 21 or newer.
 - **Optional:** nothing. No network access, no server internals (only the Paper API).
-- **Not yet:** FAWE's `//sel list`, entities (also in schematics), biomes, building brushes, trees and structures,
+- **Not yet:** FAWE's `//sel list`, entities in the preview, biomes, building brushes, trees and structures,
   formulas, `.schematic` (MCEdit) and `.litematic` files, an API for other plugins, rivers, height maps from images, a
   brush menu, WorldGuard regions, rollback by area and time (ideas in the [roadmap](../../docs/sdd/roadmap.md)). Running next to WorldEdit works: different command and wand.
 

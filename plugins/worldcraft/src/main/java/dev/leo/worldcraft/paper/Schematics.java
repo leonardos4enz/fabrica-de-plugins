@@ -155,6 +155,7 @@ public final class Schematics {
         Settings.Schematics st = settings();
         long maxBytes = st.maxFileKb() * 1024L;
         s.sendMessage(msg().get("schem-loading", "name", clean));
+        int dv = TileNbt.serverDataVersion();
         CompletableFuture.supplyAsync(() -> {
             try {
                 SchemFiles.Entry e = files.find(clean, true);
@@ -178,7 +179,7 @@ public final class Schematics {
             Read r = (Read) o[0];
             @SuppressWarnings("unchecked")
             Set<Integer> air = (Set<Integer>) o[2];
-            SchemConvert.Loaded l = SchemConvert.toClipboard(r.schem, ((SchemBlocks.Result) o[1]).map(), air::contains);
+            SchemConvert.Loaded l = SchemConvert.toClipboard(r.schem, ((SchemBlocks.Result) o[1]).map(), air::contains, dv);
             return new Object[]{r, o[1], l};
         }, thread).whenCompleteAsync((o, t) -> {
             busy.remove(owner);
@@ -212,7 +213,11 @@ public final class Schematics {
         }
         if (res.adjusted() > 0) s.sendMessage(msg().get("schem-note-adjusted", "count", String.valueOf(res.adjusted())));
         if (res.renamed() > 0) s.sendMessage(msg().get("schem-note-renamed", "count", String.valueOf(res.renamed())));
-        if (sc.entities() > 0) s.sendMessage(msg().get("schem-note-entities", "count", String.valueOf(sc.entities())));
+        // Spec 031 H6 CA2: las entidades vienen con el esquema (se pegan con los bloques; --no-entities las deja).
+        if (!sc.entityList().isEmpty()) s.sendMessage(msg().get("schem-note-entities", "count", String.valueOf(sc.entityList().size())));
+        if (sc.entities() > sc.entityList().size()) {
+            s.sendMessage(msg().get("schem-note-entities-bad", "count", String.valueOf(sc.entities() - sc.entityList().size())));
+        }
         if (sc.badBlockEntities() > 0) s.sendMessage(msg().get("schem-note-bad", "count", String.valueOf(sc.badBlockEntities())));
         if (sc.dataVersion() > TileNbt.serverDataVersion()) {
             s.sendMessage(msg().get("schem-note-newer", "version", String.valueOf(sc.dataVersion()), "server", String.valueOf(TileNbt.serverDataVersion())));
@@ -286,6 +291,7 @@ public final class Schematics {
             try {
                 Clipboard c = Clipboard.of(clip.width(), clip.height(), clip.depth(), clip.offset()[0], clip.offset()[1],
                         clip.offset()[2], raw, std);
+                c.entities(clip.entities());
                 c.transform(transform);
                 Clipboard baked = c.baked(st -> turned.getOrDefault(st, st));
                 Schematic sc = SchemConvert.fromClipboard(baked, stateNames, "minecraft:air", dv, clean, author, System.currentTimeMillis());

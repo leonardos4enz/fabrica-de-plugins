@@ -34,6 +34,11 @@ public interface BlockRegistry {
         return !AIR.contains(id) && !id.equals("minecraft:water") && !id.equals("minecraft:lava");
     }
 
+    /** Spec 031: los ids de los tipos de entidad («minecraft:cow»…), para avisar nombres mal escritos; vacío = no se sabe. */
+    default Collection<String> entityTypes() {
+        return java.util.List.of();
+    }
+
     /** Los ids de aire (aire, aire de cueva, aire del vacío). */
     Set<String> AIR = Set.of("minecraft:air", "minecraft:cave_air", "minecraft:void_air");
 }

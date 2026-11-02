@@ -10,7 +10,8 @@ import java.util.Map;
 public record Settings(String wandItem, boolean showSelection, int showEveryTicks, int maxParticles,
                        int maxMsPerTick, int maxBlocksPerTick, boolean confirmEnabled, long confirmAbove, int confirmSeconds, int previewMaxBlocks,
                        int historyMaxPerPlayer, int historyKeepDays, Schematics schematics,
-                       int shapesMaxRadius, int utilitiesMaxRadius, int maxPoints, int magicRadius) {
+                       int shapesMaxRadius, int utilitiesMaxRadius, int maxPoints, int magicRadius,
+                       int butcherRadius, int entitiesMaxRadius) {
 
     /** Spec 027: la sección schematics (plan 027 §2). */
     public record Schematics(int maxFileKb, int maxBlocks, int trashDays, List<String> extraFolders) {
@@ -19,10 +20,10 @@ public record Settings(String wandItem, boolean showSelection, int showEveryTick
     }
 
     public static final Settings DEFAULTS = new Settings("minecraft:golden_axe", true, 10, 400,
-            8, 200_000, true, 50_000, 120, 50_000, 30, 7, Schematics.DEFAULTS, 200, 64, 64, 16);
+            8, 200_000, true, 50_000, 120, 50_000, 30, 7, Schematics.DEFAULTS, 200, 64, 64, 16, 32, 128);
 
-    private static final Map<String, List<String>> KEYS = Map.of(
-            "", List.of("wand", "selection", "performance", "confirm", "preview", "history", "limits", "terrain", "schematics", "shapes", "utilities"),
+    private static final Map<String, List<String>> KEYS = new java.util.HashMap<>(Map.of(
+            "", List.of("wand", "selection", "performance", "confirm", "preview", "history", "limits", "terrain", "schematics", "shapes", "utilities", "entities"),
             "wand", List.of("item"),
             "selection", List.of("show", "show_every_ticks", "max_particles", "max_points", "magic_radius"),
             "performance", List.of("max_ms_per_tick", "max_blocks_per_tick"),
@@ -31,7 +32,11 @@ public record Settings(String wandItem, boolean showSelection, int showEveryTick
             "history", List.of("max_per_player", "keep_days"),
             "schematics", List.of("max_file_kb", "max_blocks", "trash_days", "extra_folders"),
             "shapes", List.of("max_radius"),
-            "utilities", List.of("max_radius"));
+            "utilities", List.of("max_radius")));
+
+    static {
+        KEYS.put("entities", List.of("butcher_radius", "max_radius"));
+    }
 
     public static Settings load(ConfigurationSection c, String file, Issues issues) {
         for (Map.Entry<String, List<String>> e : KEYS.entrySet()) {
@@ -46,6 +51,7 @@ public record Settings(String wandItem, boolean showSelection, int showEveryTick
         }
         Settings d = DEFAULTS;
         Reader r = new Reader(c, file, issues);
+        int entitiesMax = r.integer("entities.max_radius", d.entitiesMaxRadius, 1, 512);
         return new Settings(
                 r.text("wand.item", d.wandItem),
                 r.bool("selection.show", d.showSelection),
@@ -69,8 +75,11 @@ public record Settings(String wandItem, boolean showSelection, int showEveryTick
                 r.integer("utilities.max_radius", d.utilitiesMaxRadius, 1, 256),
                 // Spec 030: selecciones que no son cajas.
                 r.integer("selection.max_points", d.maxPoints, 3, 256),
-                r.integer("selection.magic_radius", d.magicRadius, 1, 64));
+                r.integer("selection.magic_radius", d.magicRadius, 1, 64),
+                // Spec 031: butcher y remove.
+                Math.min(r.integer("entities.butcher_radius", d.butcherRadius, 1, 512), entitiesMax), entitiesMax);
     }
+
 
     record Reader(ConfigurationSection c, String file, Issues issues) {
         int integer(String path, int def, int lo, int hi) {

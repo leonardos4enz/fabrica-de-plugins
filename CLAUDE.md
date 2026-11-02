@@ -211,6 +211,16 @@ con `--release 21`.
   vértice a las 8 esquinas de su bloque y trabajar al doble con enteros (`long`); los vértices que caen sobre una arista la
   parten en tramos (para el contorno se mide el largo, no la cantidad de segmentos).
 
+- **Spec 031 (entidades de Worldcraft):** sin NMS, una entidad entera (con lo montado) sale de
+  `Bukkit.getUnsafe().serializeEntity(e, PASSENGERS)` (NBT con GZip y `DataVersion`, lo lee el `Nbt` de la 027) y vuelve con
+  `deserializeEntity(bytes, mundo, false, true)` + `spawnAt`; un colgante se gira con `setFacingDirection(cara, true)`.
+  En el Paper de prueba `spawn-monsters=false` borra hasta los monstruos invocados y `difficulty` desde la consola queda
+  **guardado en el mundo**: para probar `butcher` en la compuerta 2 se activa un momento y se devuelve; en la suite se usan
+  criaturas que no son hostiles. Matar una vaca suelta cuero y carne (ítems que la siguiente prueba cuenta): matar dos
+  veces. `data get entity` necesita `limit=1` aunque el selector tenga `dx=0`. En un `.schem`, WorldEdit pega un marco
+  con la diferencia entre `Data.Pos` y `TileX/Y/Z`: los dos coherentes (F-01, F-02); y WorldEdit 7.3.19 mismo hace que
+  Paper avise «Block-attached entity at invalid position» al pegar un marco a más de 16 bloques (ruido de terceros).
+
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.
 - **README del plugin** (`plugins/<nombre>/README.md`): cada capacidad nueva o cambiada con su ejemplo, y la sección

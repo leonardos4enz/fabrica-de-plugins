@@ -6,6 +6,12 @@ import dev.leo.worldcraft.config.Limits;
 import dev.leo.worldcraft.config.Messages;
 import dev.leo.worldcraft.edit.ColumnEdit;
 import dev.leo.worldcraft.edit.EditSource;
+import dev.leo.worldcraft.edit.EmptySource;
+import dev.leo.worldcraft.entity.Butcher;
+import dev.leo.worldcraft.entity.EntityCopy;
+import dev.leo.worldcraft.entity.EntityInfo;
+import dev.leo.worldcraft.entity.EntityStage;
+import dev.leo.worldcraft.entity.RemoveType;
 import dev.leo.worldcraft.edit.Flood;
 import dev.leo.worldcraft.edit.Liquids;
 import dev.leo.worldcraft.edit.MoveSource;
@@ -58,6 +64,9 @@ final class BuildCommands {
     static final List<String> REGION = List.of("stack", "move", "overlay", "naturalize", "smooth", "hollow", "center", "line");
     static final List<String> UTILITIES = List.of("drain", "fixwater", "fixlava", "fill", "removenear", "replacenear",
             "removeabove", "removebelow", "extinguish", "snow", "thaw", "green");
+    /** Spec 031: quitar entidades (cada uno con su permiso). */
+    static final List<String> ENTITIES = List.of("butcher", "remove");
+    static final String PERM_BUTCHER = "worldcraft.butcher", PERM_REMOVE = "worldcraft.remove";
 
     /** Las opciones de cada comando (para Args y el autocompletado). */
     static Set<String> flags(String sub) {
@@ -68,8 +77,14 @@ final class BuildCommands {
             return f;
         }
         return switch (sub) {
-            case "stack" -> Set.of("preview", "air", "select");
-            case "move" -> Set.of("preview", "select");
+            case "stack" -> Set.of("preview", "air", "select", "entities");
+            case "move" -> Set.of("preview", "select", "entities");
+            case "butcher" -> {
+                Set<String> f = new java.util.HashSet<>(Butcher.FLAGS);
+                f.addAll(Set.of("at", "world"));
+                yield f;
+            }
+            case "remove" -> Set.of("at", "world");
             case "drain" -> Set.of("preview", "at", "world", "waterlogged");
             default -> UTILITIES.contains(sub) ? Set.of("preview", "at", "world") : Set.of("preview");
         };
@@ -123,6 +138,8 @@ final class BuildCommands {
                 case "removeabove", "removebelow" -> remove(s, sub, args);
                 case "snow" -> snow(s, args);
                 case "thaw", "green" -> top(s, sub, args);
+                case "butcher" -> butcher(s, args);
+                case "remove" -> removeEntities(s, args);
                 default -> throw new WorldcraftCommand.Usage();
             }
         } catch (ParseException | IllegalArgumentException e) {
@@ -343,9 +360,24 @@ final class BuildCommands {
         UUID owner = Edits.owner(s);
         // Spec 030 H4 CA4: de una forma solo se lee lo de adentro; lo demás queda -1 en la foto y no se repite.
         Snapshot snap = new Snapshot(box);
-        edits().read(s, w, region, "stack", snap, () -> {
-            Edits.Op op = new Edits.Op("stack", n + " " + d.id() + (air ? " with air" : ""), w, all, region.volume() * n,
+        // Spec 031 H2 CA1: con --entities se copian las de la selección y se crean en cada copia, después de los bloques.
+        boolean entities = args.flags.contains("entities");
+        EntityStage.Scan scan = entities ? edits().scan(s, w, region) : null;
+        edits().read(s, w, region, "stack", snap, scan, () -> {
+            Edits.Op op = new Edits.Op("stack", n + " " + d.id() + (air ? " with air" : "") + (entities ? " with entities" : ""), w, all, region.volume() * n,
                     () -> new StackSource(snap, d, n, air, blocks()::isAir), snap.distinct(), null);
+            if (scan != null && !scan.result().isEmpty()) {
+                List<EntityStage.Item> items = new ArrayList<>();
+                Set<String> types = new java.util.TreeSet<>();
+                for (int k = 1; k <= n; k++) {
+                    for (EntityCopy e : scan.result()) {
+                        items.add(new EntityStage.Item(null, e.shifted(d.dx * box.width() * k, d.dy * box.height() * k, d.dz * box.depth() * k)));
+                    }
+                }
+                for (EntityCopy e : scan.result()) types.addAll(e.contains());
+                op = op.with(new Edits.EntityWork(null, (ew, sink, max, b) -> new EntityStage.Spawn(ew, () -> items, sink),
+                        items.size(), types, msg().text("note-entities-add", "count", Edits.fmt(items.size()))));
+            }
             Box last = StackSource.last(box, d, n);
             if (args.flags.contains("select")) op = op.then(() -> selectMoved(owner, w, last, last.minX() - box.minX(),
                     last.minY() - box.minY(), last.minZ() - box.minZ()));
@@ -388,8 +420,64 @@ final class BuildCommands {
             Edits.Op op = new Edits.Op("move", n + " " + d.id() + (fillText.isBlank() ? "" : ", leaving " + fill.text()), w,
                     probe.bounds(), probe.volume(), () -> new MoveSource(snap, d.dx * n, d.dy * n, d.dz * n, fc, seed), placed, null);
             if (args.flags.contains("select")) op = op.then(() -> selectMoved(owner, w, dest, d.dx * n, d.dy * n, d.dz * n));
+            // Spec 031 H2 CA2: --entities las quita antes de mover los bloques y las crea en el lugar nuevo después.
+            if (args.flags.contains("entities")) {
+                int mx = d.dx * n, my = d.dy * n, mz = d.dz * n;
+                op = op.with(new Edits.EntityWork(
+                        (ew, sink, max, b) -> new EntityStage.Scan(ew, region, e -> true, true, max, sink),
+                        (ew, sink, max, b) -> new EntityStage.Spawn(ew, () -> ((EntityStage.Scan) b).result().stream()
+                                .map(e -> new EntityStage.Item(null, e.shifted(mx, my, mz))).toList(), sink),
+                        0, Set.of(), msg().text("note-entities-move")));
+            }
             edits().request(s, op, args.flags.contains("preview"));
         });
+    }
+
+    // ------------------------------------------------------------------ spec 031: entidades
+
+    /** /wc butcher [radio] [--pets …]: las criaturas hostiles alrededor (como WorldEdit), con deshacer. */
+    private void butcher(CommandSender s, Args args) {
+        var set = plugin.config().settings();
+        int r = intArg(args, 0, set.butcherRadius());
+        if (args.positional.size() > 1) throw new WorldcraftCommand.Usage();
+        Butcher who = Butcher.of(args.flags);
+        Set<String> chosen = new java.util.TreeSet<>(args.flags);
+        chosen.retainAll(Butcher.FLAGS);
+        entities(s, args, "butcher", r + (chosen.isEmpty() ? "" : " --" + String.join(" --", chosen)), r, e -> who.kills(e.kinds()));
+    }
+
+    /** /wc remove <tipo> [radio]: un grupo de WorldEdit (items, arrows…) o un tipo de entidad, con deshacer. */
+    private void removeEntities(CommandSender s, Args args) {
+        if (args.positional.isEmpty() || args.positional.size() > 2) throw new WorldcraftCommand.Usage();
+        String text = args.positional.get(0);
+        RemoveType type = RemoveType.parse(text, blocks().entityTypes());
+        if (type == null) {
+            s.sendMessage(msg().get("unknown-entity-type", "input", text,
+                    "hint", hint(dev.leo.worldcraft.config.Issues.closest(text, RemoveType.words(blocks().entityTypes())))));
+            return;
+        }
+        int r = intArg(args, 1, plugin.config().settings().butcherRadius());
+        entities(s, args, "remove", type.name() + " " + r, r, type::matches);
+    }
+
+    /** Una obra sin bloques que quita las entidades que pasan el filtro en una esfera de radio r (spec 031 H4, H5). */
+    private void entities(CommandSender s, Args args, String kind, String detail, int r, java.util.function.Predicate<EntityInfo> which) {
+        if (!radiusOk(s, r, plugin.config().settings().entitiesMaxRadius())) return;
+        Place at = place(s, args);
+        if (at == null) return;
+        Box box = clampY(at.world, new Box(at.x - r, at.y - r, at.z - r, at.x + r, at.y + r, at.z + r));
+        if (box == null) {
+            s.sendMessage(msg().get("sel-outside"));
+            return;
+        }
+        double cx = at.x + 0.5, cy = at.y + 0.5, cz = at.z + 0.5, r2 = (r + 0.5) * (r + 0.5);
+        java.util.function.Predicate<EntityInfo> f = e -> {
+            double dx = e.x() - cx, dy = e.y() - cy, dz = e.z() - cz;
+            return dx * dx + dy * dy + dz * dz <= r2 && which.test(e);
+        };
+        Edits.Op op = new Edits.Op(kind, detail, at.world, box, 0, () -> new EmptySource(box), List.of(), null)
+                .with(new Edits.EntityWork((ew, sink, max, b) -> new EntityStage.Scan(ew, box, f, true, max, sink), null, 0, Set.of(), ""));
+        edits().request(s, op, false);
     }
 
     /** Lo que se salta para buscar la cima: aire, cobertura (plantas) salvo líquidos, y troncos y hojas. */

@@ -96,8 +96,9 @@ public final class SchemFormat {
         String name = meta == null ? null : Nbt.string(meta, "Name");
         String author = meta == null ? null : Nbt.string(meta, "Author");
         Long date = meta == null ? null : Nbt.integer(meta, "Date");
+        List<Map<String, Object>> entities = SchemEntities.read(ents, version, new int[1]);
         return new Schematic(version, dataVersion, w, h, l, offset, palette, blocks, tiles, ents == null ? 0 : ents.items().size(),
-                bad, name, author, date == null ? 0 : date);
+                bad, name, author, date == null ? 0 : date, entities);
     }
 
     private static int side(Map<String, Object> s, String key) throws Nbt.NbtException {
@@ -168,6 +169,16 @@ public final class SchemFormat {
         });
         blocks.put("BlockEntities", new Nbt.TagList(Nbt.COMPOUND, bes));
         sc.put("Blocks", blocks);
+        // Spec 031 H6 CA1: las entidades, con Pos relativa a la esquina mínima (lo de un archivo leído viene como double[]).
+        if (!s.entityList().isEmpty()) {
+            List<Object> ents = new ArrayList<>();
+            for (Map<String, Object> e : s.entityList()) {
+                Map<String, Object> out = new LinkedHashMap<>(e);
+                if (out.get("Pos") instanceof double[] p) out.put("Pos", new Nbt.TagList(Nbt.DOUBLE, List.of(p[0], p[1], p[2])));
+                ents.add(out);
+            }
+            sc.put("Entities", new Nbt.TagList(Nbt.COMPOUND, ents));
+        }
         Map<String, Object> root = new LinkedHashMap<>();
         root.put("Schematic", sc);
         return Nbt.gzip(Nbt.write("", root));

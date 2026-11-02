@@ -111,6 +111,37 @@ class ConfigTest {
         assertTrue(all.contains("utilities.max_radios: unknown setting (did you mean 'max_radius'?)"), all);
     }
 
+    /** Spec 031: entities.* y, por grupo, max_entities y blocked_entities (prohibido si lo prohíben todos). */
+    @Test
+    void spec031_entidades_en_la_configuracion_y_los_limites() throws Exception {
+        Settings old = load("history: { keep_days: 3 }\n", "").settings();
+        assertEquals(32, old.butcherRadius());
+        assertEquals(128, old.entitiesMaxRadius());
+        LoadedConfig c = load("""
+                entities: { butcher_radius: 400, max_radius: 64 }
+                limits:
+                  default: { max_entities: 10, blocked_entities: [tnt, wither] }
+                  builder: { max_entities: 500, blocked_entities: [wither, Minecraft:Ender_Dragon] }
+                  bad: { max_entities: -1 }
+                """, "");
+        assertEquals(64, c.settings().butcherRadius(), "no más que max_radius");
+        Limits.Resolved none = c.limits().resolve(p -> false);
+        assertEquals(10, none.maxEntities());
+        assertTrue(none.isEntityBlocked("minecraft:tnt"));
+        Limits.Resolved b = c.limits().resolve(p -> p.equals("worldcraft.limit.builder"));
+        assertEquals(500, b.maxEntities());
+        assertFalse(b.isEntityBlocked("minecraft:tnt"), "builder no la prohíbe");
+        assertTrue(b.isEntityBlocked("minecraft:wither"));
+        assertTrue(b.isEntityBlocked("minecraft:ender_dragon"), "la lista del grupo reemplaza la de default (como los bloques)");
+        Limits.Resolved two = c.limits().resolve(p -> p.equals("worldcraft.limit.builder") || p.equals("worldcraft.limit.bad"));
+        assertTrue(two.isEntityBlocked("minecraft:wither"), "bad hereda la de default y builder también la prohíbe");
+        assertFalse(two.isEntityBlocked("minecraft:ender_dragon"), "default (heredada por bad) no lo prohíbe");
+        assertTrue(c.issues().all().toString().contains("limits.bad.max_entities"), c.issues().all().toString());
+        Limits.Resolved d = load("history: { keep_days: 3 }\n", "").limits().resolve(p -> false);
+        assertEquals(200, d.maxEntities(), "de fábrica");
+        assertTrue(d.isEntityBlocked("minecraft:command_block_minecart"));
+    }
+
     @Test
     void H8_CA2_un_archivo_roto_conserva_lo_anterior() throws Exception {
         LoadedConfig first = load("performance: { max_ms_per_tick: 4 }\n", "patterns: { a: stone }\n");

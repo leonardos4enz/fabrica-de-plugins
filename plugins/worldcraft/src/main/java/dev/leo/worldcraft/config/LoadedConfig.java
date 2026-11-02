@@ -71,7 +71,7 @@ public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<
         }
         Parser parser = new Parser(registry, Map.copyOf(pat), Map.copyOf(msk));
         Limits limits = config == null && previous != null ? previous.limits
-                : Limits.load(config == null ? null : config.getConfigurationSection("limits"), parser, "config.yml", issues);
+                : Limits.load(config == null ? null : config.getConfigurationSection("limits"), parser, "config.yml", issues, registry.entityTypes());
         // Spec 026: un terrain.yml ilegible conserva el anterior; una sección terrain mala, sus valores de fábrica.
         TerrainSettings terrain = terrainFile == null && previous != null ? previous.terrain
                 : TerrainConfig.load(config == null ? null : config.getConfigurationSection("terrain"), terrainFile, parser, issues);

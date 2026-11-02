@@ -113,6 +113,34 @@ async function esperarArchivo (archivo, timeoutMs = 20000) {
   throw new Error(`no apareció ${archivo}`)
 }
 
+// ---------------------------------------------------------------- entidades (spec 031)
+/** Un selector de consola de las entidades de un tipo en un bloque (su caja toca ese bloque). */
+const en = (tipo, x, y, z) => `@e[type=${tipo},x=${x},y=${y},z=${z},dx=0,dy=0,dz=0]`
+const en1 = (tipo, x, y, z) => `@e[type=${tipo},x=${x},y=${y},z=${z},dx=0,dy=0,dz=0,limit=1]`
+
+/** Cuántas entidades de un tipo hay en una caja (por la consola). */
+async function cuantas (srv, tipo, [x0, x1], [y0, y1], [z0, z1]) {
+  const r = await srv.consola(`execute if entity @e[type=${tipo},x=${x0},y=${y0},z=${z0},dx=${x1 - x0},dy=${y1 - y0},dz=${z1 - z0}]`,
+    { espera: /Test passed|Test failed/ })
+  const m = (r.texto ?? String(r)).match(/[Cc]ount: (\d+)/)
+  return m ? Number(m[1]) : 0
+}
+
+/** Un soporte con casco, un marco con una manzana colgado de una pared al norte de la piedra y una vaca, en X+2..4, Z+2..4. */
+async function construirSala (srv, dx = 0) {
+  await srv.consola(`setblock ${X + 3 + dx} -60 ${Z + 4} stone`)
+  await srv.consola(`summon item_frame ${X + 3 + dx} -60 ${Z + 3} {Facing:2b,Item:{id:"minecraft:apple",count:1}}`)
+  await srv.consola(`summon armor_stand ${X + 2.5 + dx} -60 ${Z + 2.5} {NoGravity:1b,ArmorItems:[{},{},{},{id:"minecraft:diamond_helmet",count:1}]}`)
+  await srv.consola(`summon cow ${X + 4.5 + dx} -60 ${Z + 2.5} {NoAI:1b}`)
+  await srv.sincronizar()
+}
+
+/** Quita las entidades del área de trabajo; la segunda vez, lo que soltaron (la vaca suelta cuero y carne). */
+async function borrarEntidades (srv) {
+  for (let i = 0; i < 2; i++) await srv.consola(`kill @e[type=!player,x=${X - 30},y=-62,z=${Z - 30},dx=100,dy=30,dz=100]`)
+  await srv.sincronizar()
+}
+
 export default {
   jar: /^Worldcraft-.*\.jar$/,
   // La configuración tal como está en el código fuente; el historial de corridas anteriores se borra (cada corrida
@@ -126,7 +154,9 @@ export default {
   pluginsExtra: /^worldedit/i, // no FastAsyncWorldEdit (spec 029)
   puerto: 25599,
   versionPorDefecto: '1.21.4',
-  ruidoDelServidor: [/No key layers/],
+  // Spec 031: WorldEdit 7.3.19 carga el NBT de un marco antes de moverlo a donde pega: a más de 16 bloques Paper avisa
+  // «Block-attached entity at invalid position» (también con un esquema hecho por WorldEdit; el marco queda bien).
+  ruidoDelServidor: [/No key layers/, /Block-attached entity at invalid position/],
   erroresDelPlugin: [/\[Worldcraft\] (Could not|Edit #\d+ stopped by an error|The undo history did not)/],
   preparar: [
     'gamerule doDaylightCycle false', 'gamerule doWeatherCycle false', 'gamerule doMobSpawning false',
@@ -1051,6 +1081,167 @@ export default {
         } finally {
           await pide(ana, 'wc sel cuboid', /Selecting a cuboid/)
           await srv.consola(`fill ${X} -60 ${Z + 9} ${X + 26} -50 ${Z + 28} air`)
+        }
+      }
+    },
+    {
+      id: '031 H1 CA1 · H1 CA2 · H1 CA3 · H3 CA1 · H3 CA3',
+      nombre: 'copy --entities trae el soporte con su casco, el marco con su manzana y la vaca; girado, el marco cuelga de la otra pared; undo y cut --entities',
+      timeoutMs: 120000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        try {
+          await borrarEntidades(srv)
+          await construirSala(srv)
+          await seleccionar(ana, [X + 2, -60, Z + 2], [X + 4, -59, Z + 4])
+          // Sin --entities no se copia ninguna (como //copy de WorldEdit).
+          const m0 = ana.marca()
+          await pide(ana, 'wc copy', /Copied 3×2×3 \(18 blocks\)/)
+          await ana.nunca('chat', /entity\(ies\)/, { desde: m0, ms: 800 })
+          await pide(ana, 'wc copy --entities', /\.\.\. and 3 entity\(ies\)/)
+          await pide(ana, 'wc rotate 90', /Clipboard turned 90°/)
+          await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 20.5}`)
+          await ana.hasta('llegar', b => Math.abs(b.entity.position.z - (Z + 20.5)) < 0.6)
+          // (dx, dz) desde Ana gira a (-dz, dx): el marco (3, 3) va a (X-3, Z+23) con la pared (3, 4) en (X-4, Z+23).
+          await pide(ana, 'wc paste', /Entities: 3 added, 0 removed/)
+          await comprobar(srv, `block ${X - 4} -60 ${Z + 23} stone`)
+          await comprobar(srv, `entity ${en('item_frame', X - 3, -60, Z + 23)}`)
+          await srv.consola(`data get entity ${en1('item_frame', X - 3, -60, Z + 23)} Facing`, { espera: /entity data: 5b/ })
+          await srv.consola(`data get entity ${en1('item_frame', X - 3, -60, Z + 23)} Item.id`, { espera: /minecraft:apple/ })
+          await comprobar(srv, `entity ${en('armor_stand', X - 2, -60, Z + 22)}`)
+          await srv.consola(`data get entity ${en1('armor_stand', X - 2, -60, Z + 22)} ArmorItems[3].id`, { espera: /minecraft:diamond_helmet/ })
+          await comprobar(srv, `entity ${en('cow', X - 2, -60, Z + 24)}`)
+          // Deshacer quita las tres pegadas (las de la sala siguen).
+          await pide(ana, 'wc undo', /Entities: 0 back, 3 removed/)
+          if (await cuantas(srv, 'item_frame', [X - 6, X], [-61, -58], [Z + 19, Z + 26]) !== 0) throw new Error('quedó el marco pegado')
+          if (await cuantas(srv, 'item_frame', [X + 2, X + 4], [-61, -58], [Z + 2, Z + 4]) !== 1) throw new Error('falta el marco de la sala')
+          // cut --entities las quita (antes que la pared: el marco no se cae como ítem) y undo las devuelve.
+          await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 0.5}`)
+          await pide(ana, 'wc cut --entities', /Entities: 0 added, 3 removed/)
+          if (await cuantas(srv, 'cow', [X + 2, X + 4], [-61, -58], [Z + 2, Z + 4]) !== 0) throw new Error('la vaca sigue')
+          if (await cuantas(srv, 'item', [X - 5, X + 10], [-62, -55], [Z - 5, Z + 10]) !== 0) throw new Error('el marco se cayó como ítem')
+          await pide(ana, 'wc undo', /Entities: 3 back, 0 removed/)
+          await srv.consola(`data get entity ${en1('item_frame', X + 3, -60, Z + 3)} Item.id`, { espera: /minecraft:apple/ })
+          await comprobar(srv, `entity ${en('cow', X + 4, -60, Z + 2)}`)
+          // --no-entities pega solo los bloques.
+          await pide(ana, 'wc copy --entities', /and 3 entity/)
+          await srv.consola(`tp ${ANA} ${X + 10.5} -60 ${Z + 0.5}`)
+          await ana.hasta('llegar', b => Math.abs(b.entity.position.x - (X + 10.5)) < 0.6)
+          const p = await obra(ana, 'wc paste --no-entities')
+          if (p.cambiados !== 1) throw new Error(`paste --no-entities cambió ${p.cambiados}`)
+          if (await cuantas(srv, 'cow', [X + 12, X + 14], [-61, -58], [Z + 2, Z + 4]) !== 0) throw new Error('--no-entities pegó la vaca')
+          await pide(ana, 'wc undo', /Undone/)
+        } finally {
+          await borrarEntidades(srv)
+          await srv.consola(`fill ${X - 6} -60 ${Z} ${X + 16} -58 ${Z + 26} air`)
+        }
+      }
+    },
+    {
+      id: '031 H1 CA4 · H2 CA1 · H2 CA2 · H4 CA1 · H4 CA2 · H4 CA3 · H5 CA1 · H5 CA2',
+      nombre: 'move y stack con --entities; paste --remove-entities; butcher salva al lobo de alguien y al aldeano, --animals se lleva la vaca y undo la devuelve; remove items',
+      timeoutMs: 120000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        try {
+          await borrarEntidades(srv)
+          await srv.consola(`summon armor_stand ${X + 2.5} -60 ${Z + 2.5} {NoGravity:1b,CustomName:'"Pepe"'}`)
+          await srv.sincronizar()
+          await seleccionar(ana, [X + 2, -60, Z + 2], [X + 2, -60, Z + 2])
+          // move --entities lleva el soporte (el mismo, con su nombre) 3 al este; stack --entities lo repite.
+          await pide(ana, 'wc move 3 east --entities --select', /Entities: 1 added, 1 removed/)
+          await srv.consola(`data get entity ${en1('armor_stand', X + 5, -60, Z + 2)} CustomName`, { espera: /Pepe/ })
+          if (await cuantas(srv, 'armor_stand', [X + 2, X + 2], [-61, -59], [Z + 2, Z + 2]) !== 0) throw new Error('quedó el soporte atrás')
+          await pide(ana, 'wc stack 2 east --entities', /Entities: 2 added, 0 removed/)
+          if (await cuantas(srv, 'armor_stand', [X + 5, X + 7], [-61, -59], [Z + 2, Z + 2]) !== 3) throw new Error('stack no repitió el soporte')
+          // paste --remove-entities: pegar un bloque vacío encima quita los soportes de ahí.
+          await seleccionar(ana, [X + 20, -60, Z + 20], [X + 22, -60, Z + 22])
+          await pide(ana, 'wc copy', /Copied/)
+          await srv.consola(`tp ${ANA} ${X - 14.5} -60 ${Z - 17.5}`)
+          await ana.hasta('llegar', b => Math.abs(b.entity.position.x - (X - 14.5)) < 0.6)
+          await pide(ana, 'wc paste --remove-entities', /Entities: 0 added, 3 removed \(3 armor_stand\)/)
+          await pide(ana, 'wc undo 3', /Undone/)
+          await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 0.5}`)
+          await ana.hasta('volver', b => Math.abs(b.entity.position.x - (X + 0.5)) < 0.6)
+          await srv.sincronizar()
+          // butcher: el lobo de alguien (mascota), el aldeano y la vaca no son hostiles: de fábrica no quita nada.
+          await srv.consola(`summon wolf ${X + 3.5} -60 ${Z + 5.5} {NoAI:1b,Owner:[I;1,2,3,4]}`)
+          await srv.consola(`summon villager ${X + 4.5} -60 ${Z + 5.5} {NoAI:1b}`)
+          await srv.consola(`summon cow ${X + 5.5} -60 ${Z + 5.5} {NoAI:1b}`)
+          await srv.consola(`summon item ${X + 6.5} -60 ${Z + 5.5} {Item:{id:"minecraft:stick",count:1},PickupDelay:32767}`)
+          await srv.sincronizar()
+          const m = ana.marca()
+          await pide(ana, 'wc butcher 10', /Done: butcher/)
+          await ana.nunca('chat', /Entities:/, { desde: m, ms: 800 })
+          await pide(ana, 'wc butcher 10 --animals', /Entities: 0 added, 1 removed \(1 cow\)/)
+          if (await cuantas(srv, 'wolf', [X, X + 8], [-61, -58], [Z + 4, Z + 7]) !== 1) throw new Error('--animals mató al lobo de alguien')
+          await pide(ana, 'wc undo', /Undone #\d+ \(butcher 10 --animals\)/)
+          if (await cuantas(srv, 'cow', [X, X + 8], [-61, -58], [Z + 4, Z + 7]) !== 1) throw new Error('undo no devolvió la vaca')
+          await pide(ana, 'wc remove itms 10', /did you mean 'items'/)
+          await pide(ana, 'wc remove items 10', /Entities: 0 added, 1 removed \(1 item\)/)
+          // Beto no tiene worldcraft.butcher.
+          await pide(bots[BETO], 'wc butcher', /You don't have permission/)
+          const sug = (await ana.bot.tabComplete('/wc butcher 10 --fr')).map(x => x.match ?? x)
+          if (!sug.includes('--friendly')) throw new Error(`no sugiere --friendly: ${sug}`)
+        } finally {
+          await borrarEntidades(srv)
+          await srv.consola(`fill ${X - 20} -60 ${Z - 20} ${X + 25} -58 ${Z + 25} air`)
+        }
+      }
+    },
+    {
+      id: '031 H6 CA1 · H6 CA2',
+      nombre: 'un esquema con entidades guardado por Worldcraft lo pega WorldEdit con //paste -e, y uno de WorldEdit (//copy -e) lo pega Worldcraft',
+      timeoutMs: 150000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        const we = carpetaWE(srv)
+        try {
+          await borrarEntidades(srv)
+          await construirSala(srv)
+          await seleccionar(ana, [X + 2, -60, Z + 2], [X + 4, -59, Z + 4])
+          await pide(ana, 'wc copy --entities', /and 3 entity/)
+          await pide(ana, 'wc schem save e2e_ent --overwrite', /Saved e2e_ent/)
+          fs.mkdirSync(we, { recursive: true })
+          fs.copyFileSync(path.join(srv.run, 'plugins', 'Worldcraft', 'schematics', 'e2e_ent.schem'), path.join(we, 'e2e_ent.schem'))
+          // WorldEdit lo pega 20 al sur (relativo a Ana, como Worldcraft): la vaca y el soporte donde corresponde.
+          await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 20.5}`)
+          await ana.hasta('llegar', b => Math.abs(b.entity.position.z - (Z + 20.5)) < 0.6)
+          await pide(ana, '/schem load e2e_ent', /loaded/i, 30000)
+          await pide(ana, '/paste -e', /pasted/i, 30000)
+          await comprobar(srv, `entity ${en('cow', X + 4, -60, Z + 22)}`)
+          await comprobar(srv, `entity ${en('armor_stand', X + 2, -60, Z + 22)}`)
+          await srv.consola(`data get entity ${en1('armor_stand', X + 2, -60, Z + 22)} ArmorItems[3].id`, { espera: /minecraft:diamond_helmet/ })
+          await pide(ana, '/undo', /Undo successful|undid|undone/i)
+          await borrarEntidades(srv)
+          // Al revés: WorldEdit copia con -e y guarda; Worldcraft lo carga y lo pega con las entidades.
+          await construirSala(srv)
+          await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 0.5}`)
+          await ana.hasta('volver', b => Math.abs(b.entity.position.z - (Z + 0.5)) < 0.6)
+          fs.rmSync(path.join(we, 'e2e_ent_we.schem'), { force: true })
+          await pide(ana, `/pos1 ${X + 2},-60,${Z + 2}`, /First position set/)
+          await pide(ana, `/pos2 ${X + 4},-59,${Z + 4}`, /Second position set/)
+          await pide(ana, '/copy -e', /were copied|blocks affected/)
+          await pide(ana, '/schem save e2e_ent_we', /saved/i, 30000)
+          await esperarArchivo(path.join(we, 'e2e_ent_we.schem'))
+          await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 30.5}`)
+          await ana.hasta('llegar', b => Math.abs(b.entity.position.z - (Z + 30.5)) < 0.6)
+          await pide(ana, 'wc schem load e2e_ent_we', /Loaded e2e_ent_we \[WorldEdit\]/)
+          await pide(ana, 'wc paste', /Entities: 3 added, 0 removed/)
+          await comprobar(srv, `entity ${en('cow', X + 4, -60, Z + 32)}`)
+          await comprobar(srv, `entity ${en('item_frame', X + 3, -60, Z + 33)}`)
+          await srv.consola(`data get entity ${en1('item_frame', X + 3, -60, Z + 33)} Item.id`, { espera: /minecraft:apple/ })
+          await pide(ana, 'wc undo', /Entities: 0 back, 3 removed/)
+        } finally {
+          for (const n of ['e2e_ent', 'e2e_ent_we']) fs.rmSync(path.join(we, `${n}.schem`), { force: true })
+          await borrarEntidades(srv)
+          await srv.consola(`fill ${X - 2} -60 ${Z} ${X + 8} -58 ${Z + 36} air`)
         }
       }
     }

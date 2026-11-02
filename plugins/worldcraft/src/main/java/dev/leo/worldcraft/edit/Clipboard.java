@@ -19,6 +19,8 @@ public final class Clipboard {
     private Transform transform = Transform.IDENTITY;
     /** Spec 029 (paste --origin): dónde estaba quien copió; null si vino de un esquema. */
     private int[] source;
+    /** Spec 031: las entidades copiadas (con --entities o de un esquema), relativas a quien copió y sin transformar. */
+    private java.util.List<dev.leo.worldcraft.entity.EntityCopy> entities = java.util.List.of();
 
     public Clipboard(Box box, int originX, int originY, int originZ) {
         this.source = new int[]{originX, originY, originZ};
@@ -82,7 +84,30 @@ public final class Clipboard {
                 }
             }
         }
-        return new Clipboard(nw, nh, nd, t.minX(), t.minY(), t.minZ(), out, nt);
+        Clipboard c = new Clipboard(nw, nh, nd, t.minX(), t.minY(), t.minZ(), out, nt);
+        c.entities = entities.stream().map(e -> e.transformed(transform)).toList();
+        return c;
+    }
+
+    /** Spec 031: las entidades sin transformar, relativas a quien copió. */
+    public java.util.List<dev.leo.worldcraft.entity.EntityCopy> entities() {
+        return entities;
+    }
+
+    public void entities(java.util.List<dev.leo.worldcraft.entity.EntityCopy> list) {
+        this.entities = java.util.List.copyOf(list);
+    }
+
+    /** Spec 031: las entidades donde quedan al pegar con el jugador en (px, py, pz), ya giradas. */
+    public java.util.List<dev.leo.worldcraft.entity.EntityCopy> entitiesAt(int px, int py, int pz) {
+        return entities.stream().map(e -> e.transformed(transform).shifted(px, py, pz)).toList();
+    }
+
+    /** Spec 031: los tipos que llevan sus entidades (para los prohibidos). */
+    public java.util.Set<String> entityTypes() {
+        java.util.Set<String> out = new java.util.TreeSet<>();
+        for (var e : entities) out.addAll(e.contains());
+        return out;
     }
 
     public int width() {

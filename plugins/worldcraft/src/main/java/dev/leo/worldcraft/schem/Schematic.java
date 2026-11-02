@@ -1,5 +1,6 @@
 package dev.leo.worldcraft.schem;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -9,12 +10,19 @@ import java.util.Map;
  *
  * @param version          1, 2 o 3 (al escribir, 3)
  * @param dataVersion      la versión de datos del juego que lo escribió (-1 si el archivo no la dice)
- * @param entities         cuántas entidades traía (no se cargan: roadmap)
+ * @param entities         cuántas entidades traía el archivo
+ * @param entityList       spec 031: las que se pudieron leer, en la forma de v3 ({Pos double[3], Id, Data}; ver SchemEntities)
  * @param badBlockEntities datos de bloque que no se pudieron leer (posición fuera o mal formada)
  */
 public record Schematic(int version, int dataVersion, int width, int height, int length, int[] offset, String[] palette,
                         int[] blocks, Map<Integer, Map<String, Object>> blockEntities, int entities, int badBlockEntities,
-                        String name, String author, long date) {
+                        String name, String author, long date, List<Map<String, Object>> entityList) {
+    public Schematic(int version, int dataVersion, int width, int height, int length, int[] offset, String[] palette,
+                     int[] blocks, Map<Integer, Map<String, Object>> blockEntities, int entities, int badBlockEntities,
+                     String name, String author, long date) {
+        this(version, dataVersion, width, height, length, offset, palette, blocks, blockEntities, entities, badBlockEntities,
+                name, author, date, List.of());
+    }
 
     public long volume() {
         return (long) width * height * length;

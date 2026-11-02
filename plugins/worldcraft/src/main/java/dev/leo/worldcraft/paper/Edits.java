@@ -11,6 +11,12 @@ import dev.leo.worldcraft.edit.UndoSource;
 import dev.leo.worldcraft.history.HistoryStore;
 import dev.leo.worldcraft.history.Journal;
 import dev.leo.worldcraft.history.JournalSink;
+import dev.leo.worldcraft.history.RemapSink;
+import dev.leo.worldcraft.entity.EntityCopy;
+import dev.leo.worldcraft.entity.EntitySink;
+import dev.leo.worldcraft.entity.EntityStage;
+import dev.leo.worldcraft.entity.EntityWorld;
+import dev.leo.worldcraft.entity.UndoEntities;
 import dev.leo.worldcraft.pattern.Mask;
 import dev.leo.worldcraft.region.Box;
 import dev.leo.worldcraft.region.ChunkOrder;
@@ -55,7 +61,13 @@ public final class Edits {
      */
     public record Op(String kind, String detail, World world, Box bounds, long volume, Supplier<EditSource> source,
                      Collection<Integer> placed, Supplier<EditJob.Capture> capture, Supplier<EditSource> preview,
-                     String note, boolean rerollable, Runnable after) {
+                     String note, boolean rerollable, Runnable after, EntityWork entities) {
+        public Op(String kind, String detail, World world, Box bounds, long volume, Supplier<EditSource> source,
+                  Collection<Integer> placed, Supplier<EditJob.Capture> capture, Supplier<EditSource> preview,
+                  String note, boolean rerollable, Runnable after) {
+            this(kind, detail, world, bounds, volume, source, placed, capture, preview, note, rerollable, after, null);
+        }
+
         public Op(String kind, String detail, World world, Box bounds, long volume, Supplier<EditSource> source,
                   Collection<Integer> placed, Supplier<EditJob.Capture> capture, Supplier<EditSource> preview,
                   String note, boolean rerollable) {
@@ -69,8 +81,28 @@ public final class Edits {
 
         /** La misma operación con algo que hacer al terminar. */
         public Op then(Runnable r) {
-            return new Op(kind, detail, world, bounds, volume, source, placed, capture, preview, note, rerollable, r);
+            return new Op(kind, detail, world, bounds, volume, source, placed, capture, preview, note, rerollable, r, entities);
         }
+
+        /** Spec 031: la misma operación con entidades. */
+        public Op with(EntityWork w) {
+            return new Op(kind, detail, world, bounds, volume, source, placed, capture, preview, note, rerollable, after, w);
+        }
+    }
+
+    /** Spec 031: arma una etapa de entidades con el mundo, el diario, el tope del grupo y la etapa anterior (o null). */
+    public interface StageMaker {
+        EntityStage make(EntityWorld world, EntitySink sink, int max, EntityStage before);
+    }
+
+    /**
+     * Spec 031: lo que una obra hace con las entidades (plan §1.3).
+     *
+     * @param creates cuántas va a crear (para max_entities); las que quita se cortan en el tope
+     * @param types   los tipos que va a crear, con lo montado (para blocked_entities)
+     * @param note    lo que se dice en la vista previa («3 entities will be added»), o vacío
+     */
+    public record EntityWork(StageMaker before, StageMaker after, int creates, java.util.Set<String> types, String note) {
     }
 
     /** Una operación esperando /wc confirm, quizá con su vista previa. */
@@ -177,6 +209,7 @@ public final class Edits {
                 return;
             }
         }
+        if (op.entities() != null && !entitiesAllowed(who, lim, op.entities().creates(), op.entities().types())) return;
         if (busy(owner) >= lim.maxJobs()) {
             who.sendMessage(msg.get("limit-jobs", "max", String.valueOf(lim.maxJobs())));
             return;
@@ -214,6 +247,7 @@ public final class Edits {
             jobs.put(pj.id(), pj);
             submit(pj);
             who.sendMessage(msg.get("preview-start", "kind", op.kind(), "blocks", fmt(op.volume())));
+            if (op.entities() != null && !op.entities().note().isEmpty()) who.sendMessage(msg.get("preview-entities", "note", op.entities().note()));
             return;
         }
         // El dueño puede apagar la confirmación (confirm.enabled); --preview sigue esperando su confirm.
@@ -225,6 +259,27 @@ public final class Edits {
             return;
         }
         run(who, owner, name, op);
+    }
+
+    /**
+     * Spec 031 H7: el tope de entidades que se crean y los tipos prohibidos (también lo montado y el bloque de un
+     * falling_block, que pasa por blocked_blocks). Lo dice y devuelve false si no se puede.
+     */
+    public boolean entitiesAllowed(CommandSender who, Limits.Resolved lim, int creates, Collection<String> types) {
+        var msg = plugin.messages();
+        if (creates > lim.maxEntities()) {
+            who.sendMessage(msg.get("limit-entities", "count", fmt(creates), "max", fmt(lim.maxEntities()),
+                    "groups", String.join(", ", lim.groups())));
+            return false;
+        }
+        for (String t : types) {
+            boolean blocked = t.startsWith("block:") ? lim.isBlocked(t.substring(6), Map.of()) : lim.isEntityBlocked(t);
+            if (blocked) {
+                who.sendMessage(msg.get("limit-entity-blocked", "entity", t.replace("block:", "").replace("minecraft:", "")));
+                return false;
+            }
+        }
+        return true;
     }
 
     public void confirm(CommandSender who) {
@@ -259,7 +314,7 @@ public final class Edits {
         java.util.function.Function<Supplier<EditSource>, Supplier<EditSource>> wrap = sup -> sup == null ? null
                 : () -> new dev.leo.worldcraft.edit.MaskedSource(sup.get(), mc, seed);
         return new Op(op.kind(), op.detail() + " (gmask " + gmask.text() + ")", op.world(), op.bounds(), op.volume(),
-                wrap.apply(op.source()), op.placed(), op.capture(), wrap.apply(op.preview()), op.note(), op.rerollable(), op.after());
+                wrap.apply(op.source()), op.placed(), op.capture(), wrap.apply(op.preview()), op.note(), op.rerollable(), op.after(), op.entities());
     }
 
     /** Cancela lo que espera confirmación o, si no hay, las operaciones en marcha de quien lo pide. */
@@ -309,6 +364,13 @@ public final class Edits {
                 e -> plugin.getLogger().log(Level.SEVERE, "Could not write the undo history of edit #" + entry.id(), e));
         EditJob job = new EditJob(nextJob++, owner, op.kind(), w, src, EditJob.Mode.APPLY, sink,
                 op.capture() == null ? null : op.capture().get(), Long.MAX_VALUE, System::nanoTime);
+        if (op.entities() != null) {
+            PaperEntities ew = new PaperEntities(plugin, op.world());
+            int max = limits(who).maxEntities();
+            EntityStage b = op.entities().before() == null ? null : op.entities().before().make(ew, sink, max, null);
+            EntityStage a = op.entities().after() == null ? null : op.entities().after().make(ew, sink, max, b);
+            job.stages(b, a);
+        }
         long started = System.nanoTime();
         job.onEnd(() -> {
             w.close();
@@ -317,12 +379,17 @@ public final class Edits {
             history.finish(entry, job.changed(), ok);
             learn(job);
             String secs = seconds((System.nanoTime() - started) / 1e9);
+            // Spec 031: una obra solo de entidades (butcher, remove) no habla de bloques.
+            String doneKey = op.volume() == 0 && op.entities() != null ? "edit-done-entities" : "edit-done";
             Component m = ok
-                    ? msg.get("edit-done", "kind", op.kind(), "changed", fmt(job.changed()), "time", secs, "id", String.valueOf(entry.id()))
+                    ? msg.get(doneKey, "kind", op.kind(), "changed", fmt(job.changed()), "time", secs, "id", String.valueOf(entry.id()))
                     : msg.get("edit-cancelled", "kind", op.kind(), "changed", fmt(job.changed()));
             tell(owner, who, m);
+            Component em = entityNote(job, sink.added(), sink.removed());
+            if (em != null) tell(owner, who, em);
             if (owner.equals(CONSOLE) || owner.equals(SELFTEST)) {
                 plugin.getLogger().info(net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(m));
+                if (em != null) plugin.getLogger().info(net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(em));
             }
             if (ok && op.after() != null) op.after().run();
         });
@@ -333,16 +400,55 @@ public final class Edits {
                 "time", seconds(estimateSeconds(op.volume()))));
     }
 
+    /** Spec 031: «3 entities added, 5 removed (3 zombie, 2 skeleton)» y si se cortó en el tope; null si no tocó ninguna. */
+    private Component entityNote(EditJob job, int added, int removed) {
+        EntityStage.Scan scan = job.before() instanceof EntityStage.Scan s ? s : null;
+        if (added == 0 && removed == 0 && (scan == null || !scan.truncated())) return null;
+        String types = scan == null || scan.types().isEmpty() ? "" : " (" + typeList(scan.types()) + ")";
+        String key = scan != null && scan.truncated() ? "edit-entities-limit" : "edit-entities";
+        return plugin.messages().get(key, "added", fmt(added), "removed", fmt(removed), "types", types,
+                "max", fmt(scan == null ? 0 : scan.done()));
+    }
+
+    /** «3 zombie, 2 skeleton», los más primero. */
+    public static String typeList(Map<String, Integer> types) {
+        return types.entrySet().stream().sorted((a, b) -> b.getValue() - a.getValue()).limit(6)
+                .map(e -> e.getValue() + " " + e.getKey()).collect(java.util.stream.Collectors.joining(", "))
+                + (types.size() > 6 ? ", …" : "");
+    }
+
     /** Lee una caja al portapapeles (copy): sin historial; el portapapeles queda al terminar. */
     public void copy(CommandSender who, World world, dev.leo.worldcraft.region.Region region, int ox, int oy, int oz, Runnable done) {
+        copy(who, world, region, ox, oy, oz, false, c -> done.run());
+    }
+
+    /** Spec 031: con entities, también las entidades de la región (relativas a quien copió); done recibe el portapapeles. */
+    public void copy(CommandSender who, World world, dev.leo.worldcraft.region.Region region, int ox, int oy, int oz,
+                     boolean entities, java.util.function.Consumer<Clipboard> done) {
         UUID owner = owner(who);
         // Spec 030: de una forma solo se leen sus bloques; lo de afuera queda «sin leer» y paste lo salta.
         Box box = region.bounds();
         Clipboard clip = new Clipboard(box, ox, oy, oz);
-        read(who, world, region, "copy", (x, y, z, s, tile) -> clip.put(box, x, y, z, s, tile), () -> {
+        EntityStage.Scan scan = entities ? scan(who, world, region) : null;
+        read(who, world, region, "copy", (x, y, z, s, tile) -> clip.put(box, x, y, z, s, tile), scan, () -> {
+            if (scan != null) {
+                clip.entities(relative(scan.result(), ox, oy, oz));
+                if (scan.truncated()) who.sendMessage(plugin.messages().get("copy-entities-limit", "max", fmt(scan.done())));
+            }
             session(owner).clipboard(clip, world.getName());
-            done.run();
+            done.accept(clip);
         });
+    }
+
+    /** Spec 031: una búsqueda de entidades (sin quitar) para copiar, hasta el tope del grupo. */
+    public EntityStage.Scan scan(CommandSender who, World world, dev.leo.worldcraft.region.Region region) {
+        return new EntityStage.Scan(new PaperEntities(plugin, world), region, e -> true, false,
+                limits(who).maxEntities(), EntitySink.NONE);
+    }
+
+    /** Spec 031: de posiciones del mundo a relativas a quien copió. */
+    public static List<EntityCopy> relative(List<EntityCopy> list, int ox, int oy, int oz) {
+        return list.stream().map(e -> e.shifted(-ox, -oy, -oz)).toList();
     }
 
     /**
@@ -350,12 +456,23 @@ public final class Edits {
      * hilo principal si terminó; si se canceló, se avisa.
      */
     public void read(CommandSender who, World world, dev.leo.worldcraft.region.Region box, String label, EditJob.Capture into, Runnable done) {
+        read(who, world, box, label, into, null, done);
+    }
+
+    /** Spec 031: la misma lectura y, antes, una búsqueda de entidades (o null). */
+    public void read(CommandSender who, World world, dev.leo.worldcraft.region.Region box, String label, EditJob.Capture into,
+                     EntityStage.Scan scan, Runnable done) {
         EditSource src = new dev.leo.worldcraft.edit.RegionSource(box, dev.leo.worldcraft.region.Shape.FILL, null, null, 0);
-        readWith(who, world, src, label, into, done);
+        readWith(who, world, src, label, into, scan, done);
     }
 
     /** Lo mismo con una fuente de lectura propia (spec 028: la cima de cada columna). */
     public void readWith(CommandSender who, World world, EditSource src, String label, EditJob.Capture into, Runnable done) {
+        readWith(who, world, src, label, into, null, done);
+    }
+
+    private void readWith(CommandSender who, World world, EditSource src, String label, EditJob.Capture into,
+                          EntityStage.Scan scan, Runnable done) {
         UUID owner = owner(who);
         PaperWorld w = world(world, src);
         EditJob job = new EditJob(nextJob++, owner, label, w, src, EditJob.Mode.READ, new EditJob.Sink() {
@@ -363,6 +480,7 @@ public final class Edits {
             public void changed(int x, int y, int z, int b, int a, byte[] tb, byte[] ta) {
             }
         }, into, Long.MAX_VALUE, System::nanoTime);
+        if (scan != null) job.stages(scan, null);
         job.onEnd(() -> {
             w.close();
             jobs.remove(job.id());
@@ -445,12 +563,14 @@ public final class Edits {
             UndoSource src = new UndoSource(data, blocks.table(), redo, e.bounds());
             long[] order = e.bounds() == null ? new long[0] : ChunkOrder.chunks(e.bounds());
             PaperWorld w = new PaperWorld(plugin, world, blocks, order);
+            // Spec 031 (plan §1.4): deshacer quita lo que la obra creó, devuelve los bloques y recrea lo que quitó;
+            // rehacer, al revés. Los uuid nuevos van al final del mismo diario.
+            RemapSink remaps = new RemapSink(path, io,
+                    ex -> plugin.getLogger().log(Level.SEVERE, "Could not write the undo history of edit #" + e.id(), ex));
+            EntityStage.Kill kill = UndoEntities.kill(new PaperEntities(plugin, world), data, redo);
+            EntityStage.Spawn spawn = UndoEntities.spawn(new PaperEntities(plugin, world), data, redo, remaps);
             EditJob job = new EditJob(nextJob++, owner(who).equals(target) ? target : owner(who), redo ? "redo" : "undo",
-                    w, src, EditJob.Mode.APPLY, new EditJob.Sink() {
-                @Override
-                public void changed(int x, int y, int z, int b, int a, byte[] tb, byte[] ta) {
-                }
-            }, null, Long.MAX_VALUE, System::nanoTime);
+                    w, src, EditJob.Mode.APPLY, remaps, null, Long.MAX_VALUE, System::nanoTime).stages(kill, spawn);
             job.onEnd(() -> {
                 w.close();
                 jobs.remove(job.id());
@@ -459,10 +579,17 @@ public final class Edits {
                     return;
                 }
                 history.mark(e, redo ? HistoryStore.State.DONE : HistoryStore.State.UNDONE);
-                Component m = msg.get(redo ? "redo-done" : "undo-done", "id", String.valueOf(e.id()), "kind", e.kind(),
+                // Spec 031: una obra solo de entidades (butcher, remove) no habla de bloques.
+                boolean onlyEntities = job.changed() == 0 && kill.done() + spawn.done() > 0;
+                String key = onlyEntities ? (redo ? "redo-done-entities" : "undo-done-entities") : (redo ? "redo-done" : "undo-done");
+                Component m = msg.get(key, "id", String.valueOf(e.id()), "kind", e.kind(),
                         "detail", e.detail(), "changed", fmt(job.changed()), "player", targetName);
                 tell(owner(who), who, m);
                 if (job.skipped() > 0) tell(owner(who), who, msg.get("undo-skipped", "skipped", fmt(job.skipped())));
+                if (kill.done() + spawn.done() > 0) tell(owner(who), who, msg.get("undo-entities",
+                        "back", fmt(spawn.done()), "removed", fmt(kill.done())));
+                if (kill.skipped() + spawn.skipped() > 0) tell(owner(who), who, msg.get("undo-entities-skipped",
+                        "skipped", fmt(kill.skipped() + spawn.skipped())));
             });
             jobs.put(job.id(), job);
             submit(job);

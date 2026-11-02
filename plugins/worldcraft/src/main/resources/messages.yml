@@ -27,9 +27,9 @@ help:
   replace: { usage: "/wc replace <mask> with <pattern> [--preview]", text: "Change only the blocks that match the mask.", example: "/wc replace dirt, grass_block with stone" }
   walls: { usage: "/wc walls <pattern> [--preview]", text: "The four side walls of the selection.", example: "/wc walls stone_bricks" }
   faces: { usage: "/wc faces <pattern> [--preview]", text: "Walls, floor and roof: a hollow box.", example: "/wc faces glass" }
-  copy: { usage: "/wc copy [--mask <mask>]", text: "Copy the selection, relative to where you stand. With --mask, what does not match is copied as air.", example: "/wc copy --mask !air" }
-  cut: { usage: "/wc cut [--mask <mask>] [--preview]", text: "Copy the selection and leave air. With --mask, only what matches is cut.", example: "/wc cut --mask #logs" }
-  paste: { usage: "/wc paste [--air] [--origin] [--select] [--only-select] [--preview]", text: "Paste what you copied, relative to where you stand (--origin: where it was copied). Copied air is skipped unless --air. --select selects what you pasted; --only-select only selects where it would go.", example: "/wc paste --preview" }
+  copy: { usage: "/wc copy [--entities] [--mask <mask>]", text: "Copy the selection, relative to where you stand. --entities also copies the armor stands, item frames, paintings and mobs inside. With --mask, what does not match is copied as air.", example: "/wc copy --entities" }
+  cut: { usage: "/wc cut [--entities] [--mask <mask>] [--preview]", text: "Copy the selection and leave air. --entities also takes the entities inside. With --mask, only what matches is cut.", example: "/wc cut --entities" }
+  paste: { usage: "/wc paste [--air] [--origin] [--select] [--only-select] [--no-entities] [--remove-entities] [--preview]", text: "Paste what you copied, relative to where you stand (--origin: where it was copied). Copied air is skipped unless --air. Copied entities come too (--no-entities leaves them); --remove-entities first removes the entities already there. --select selects what you pasted; --only-select only selects where it would go.", example: "/wc paste --preview" }
   rotate: { usage: "/wc rotate <90|180|270|-90>", text: "Turn what you copied (clockwise seen from above), stairs and logs included.", example: "/wc rotate 90" }
   flip: { usage: "/wc flip [direction]", text: "Mirror what you copied towards where you look (or a direction).", example: "/wc flip up" }
   undo: { usage: "/wc undo [count] [--player <name>]", text: "Undo your last edits, also after a restart. Blocks someone changed since are left alone.", example: "/wc undo 3" }
@@ -56,8 +56,10 @@ help:
   pyramid: { usage: "/wc pyramid <pattern> <size> [--preview]", text: "A pyramid on your feet: size blocks tall, 2×size−1 wide.", example: "/wc pyramid sandstone 10" }
   hpyramid: { usage: "/wc hpyramid <pattern> <size> [--thickness <n>] [--preview]", text: "A hollow pyramid.", example: "/wc hpyramid sandstone 12" }
   cone: { usage: "/wc cone <pattern> <radius> <height> [--preview]", text: "A cone on your feet (a negative height points down).", example: "/wc cone 70% stone, 30% andesite 6 14" }
-  stack: { usage: "/wc stack [copies] [direction] [--air] [--select] [--preview]", text: "Repeat the selection where you look (or up, north...). Copied air is skipped unless --air; --select selects the last copy.", example: "/wc stack 5 up" }
-  move: { usage: "/wc move [blocks] [direction] [pattern] [--select] [--preview]", text: "Move what is in the selection; what is left behind becomes air (or the pattern).", example: "/wc move 10 east" }
+  stack: { usage: "/wc stack [copies] [direction] [--air] [--entities] [--select] [--preview]", text: "Repeat the selection where you look (or up, north...). Copied air is skipped unless --air; --entities repeats the entities too; --select selects the last copy.", example: "/wc stack 5 up" }
+  move: { usage: "/wc move [blocks] [direction] [pattern] [--entities] [--select] [--preview]", text: "Move what is in the selection; what is left behind becomes air (or the pattern). --entities moves the entities with it.", example: "/wc move 10 east --entities" }
+  butcher: { usage: "/wc butcher [radius] [--pets] [--npcs] [--golems] [--animals] [--ambient] [--water] [--named] [--armorstands] [--friendly]", text: "Remove the hostile mobs around you (nothing is dropped; /wc undo brings them back). Pets, villagers, golems, animals, bats, fish, named mobs and armor stands are spared unless you add their option; --friendly adds all the friendly ones. Never players.", example: "/wc butcher 30" }
+  remove: { usage: "/wc remove <type> [radius]", text: "Remove entities of one type around you: items, arrows, projectiles, xp, boats, minecarts, tnt, falling, paintings, itemframes, armorstands, or an entity like cow. /wc undo brings them back.", example: "/wc remove items 20" }
   overlay: { usage: "/wc overlay <pattern> [--preview]", text: "A layer on top of the ground in the selection (not on trees).", example: "/wc overlay snow" }
   naturalize: { usage: "/wc naturalize [--preview]", text: "Grass on top, 3 dirt below and stone under that, only on grass, dirt and stone.", example: "/wc naturalize" }
   smooth: { usage: "/wc smooth [passes] [--preview]", text: "Smooth the natural ground of the selection; trees and builds are left alone.", example: "/wc smooth 3 --preview" }
@@ -131,6 +133,21 @@ edit-cancelled: "{prefix}<yellow>{kind} stopped after {changed} blocks: /wc undo
 progress: "<gold>{kind}</gold> <white>{percent}%</white> <gray>· {done} of {total} blocks"
 
 copied: "{prefix}<green>Copied {size} ({blocks} blocks).</green> <gray>/wc paste puts it relative to where you stand."
+copied-entities: "{prefix}<green>... and {count} entity(ies).</green>"
+copy-entities-limit: "{prefix}<yellow>Only the first {max} entities were copied: that is your group's limit (max_entities)."
+limit-entities: "{prefix}<red>That would create {count} entities; your limit is {max} (groups: {groups}). Use --no-entities, or select less."
+limit-entity-blocked: "{prefix}<red>You may not create {entity} (blocked for your group: see /wc limits). Use --no-entities to leave the entities out."
+preview-entities: "{prefix}<gray>The preview shows blocks only: {note}"
+note-entities-add: "{count} entity(ies) will be added after the blocks."
+note-entities-clear: "The entities already there will be removed first."
+note-entities-cut: "the entities inside will be cut too."
+note-entities-move: "the entities inside will move too."
+edit-done-entities: "{prefix}<green>Done: {kind} in {time}.</green> <gray>/wc undo to undo it (#{id})."
+edit-entities: "{prefix}<green>Entities: {added} added, {removed} removed{types}.</green>"
+edit-entities-limit: "{prefix}<yellow>Entities: {added} added, {removed} removed{types}. Stopped at your limit of {max} (max_entities): run it again for the rest."
+undo-entities: "{prefix}<green>Entities: {back} back, {removed} removed.</green>"
+undo-entities-skipped: "{prefix}<yellow>{skipped} entity(ies) were left alone: they are gone or could not be created."
+unknown-entity-type: "{prefix}<red>'{input}' is not something /wc remove knows{hint}: items, arrows, projectiles, xp, boats, minecarts, tnt, falling, paintings, itemframes, armorstands, or an entity like cow."
 copy-cancelled: "{prefix}<yellow>The copy stopped before the end: the clipboard did not change."
 no-clipboard: "{prefix}<red>Your clipboard is empty: /wc copy first."
 rotated: "{prefix}Clipboard turned {degrees}°: now {size}."
@@ -139,6 +156,8 @@ flipped: "{prefix}Clipboard flipped {direction}."
 
 undo-done: "{prefix}<green>Undone #{id} ({kind} {detail}): {changed} blocks back as they were."
 redo-done: "{prefix}<green>Redone #{id} ({kind} {detail}): {changed} blocks."
+undo-done-entities: "{prefix}<green>Undone #{id} ({kind} {detail})."
+redo-done-entities: "{prefix}<green>Redone #{id} ({kind} {detail})."
 undo-skipped: "{prefix}<yellow>{skipped} block(s) were left alone: someone changed them after the edit."
 undo-cancelled: "{prefix}<yellow>Undo of #{id} stopped before the end: run it again to finish."
 undo-busy: "{prefix}<red>Wait for your running edit to finish (or /wc cancel) before undoing."
@@ -156,6 +175,7 @@ jobs-line: " <white>#{id}</white> {kind} by {owner}: {percent}% <dark_gray>({sta
 job-cancelled: "{prefix}Edit #{id} stopped."
 no-such-job: "{prefix}<red>There is no running edit #{id}."
 limits: "{prefix}Groups: <white>{groups}</white> · biggest edit {max} blocks · {jobs} at once · worlds: {worlds} · blocked: {blocked}"
+limits-entities: "{prefix}Entities: up to {max} per edit · may not create: {blocked}"
 
 reloaded: "{prefix}Reloaded: {errors} error(s), {warnings} warning(s). /wc validate lists them."
 validate-ok: "{prefix}<green>Configuration OK."
@@ -164,6 +184,7 @@ validate-warning: "<yellow>• {issue}"
 selftest-start: "{prefix}Selftest in a 6×6×6 box at {box}..."
 selftest-ok: "{prefix}<green>Selftest passed: set {changed} blocks, undo, redo and undo; the terrain is as before."
 selftest-failed: "{prefix}<red>Selftest failed: {reason}"
+selftest-entities-ok: "{prefix}<green>Selftest entities passed: an armor stand, an item frame (turned) and a pig with a rider were copied and created again whole."
 
 # Terrain (/wc mountain, /wc island, /wc brush)
 terrain-reading: "{prefix}<gray>Reading the ground for your {kind}..."
@@ -196,7 +217,8 @@ schem-note-kept: " <yellow>• {count} other block data ({kinds}) is not pasted,
 schem-note-unknown: " <yellow>• {count} block(s) this server does not know were loaded as air: {kinds}."
 schem-note-adjusted: " <gray>• {count} block state(s) lost a property this server does not have."
 schem-note-renamed: " <gray>• {count} block(s) renamed since that version of the game were translated."
-schem-note-entities: " <yellow>• {count} entity(ies) in the file are not loaded (only blocks)."
+schem-note-entities: " <green>• {count} entity(ies) come with it: /wc paste puts them too (--no-entities leaves them)."
+schem-note-entities-bad: " <yellow>• {count} entity(ies) in the file could not be read and are left out."
 schem-note-bad: " <yellow>• {count} block data entry(ies) in the file were damaged and skipped."
 schem-note-newer: " <yellow>• The file is from a newer version of the game (data version {version}; this server: {server}): some blocks may be missing."
 schem-note-tiles-failed: "{prefix}<yellow>{count} block data entry(ies) could not be saved (see the server log)."

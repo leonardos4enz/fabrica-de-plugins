@@ -2,8 +2,10 @@ package dev.leo.worldcraft.schem;
 
 import dev.leo.worldcraft.edit.Clipboard;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.function.IntPredicate;
@@ -27,6 +29,11 @@ public final class SchemConvert {
 
     /** map: de índice de la paleta a número de estado (SchemBlocks); isAir: para soltar datos de un bloque que quedó aire. */
     public static Loaded toClipboard(Schematic s, int[] map, IntPredicate isAir) {
+        return toClipboard(s, map, isAir, s.dataVersion());
+    }
+
+    /** Spec 031: fallbackDataVersion es la del servidor, para las entidades de un esquema que no dice la suya. */
+    public static Loaded toClipboard(Schematic s, int[] map, IntPredicate isAir, int fallbackDataVersion) {
         int[] blocks = s.blocks();
         int[] states = new int[blocks.length];
         for (int i = 0; i < blocks.length; i++) states[i] = map[blocks[i]];
@@ -43,7 +50,11 @@ public final class SchemConvert {
             tiles.put(e.getKey(), t.encode());
         }
         int[] o = s.offset();
-        return new Loaded(Clipboard.of(s.width(), s.height(), s.length(), o[0], o[1], o[2], states, tiles), placeable, kept);
+        Clipboard clip = Clipboard.of(s.width(), s.height(), s.length(), o[0], o[1], o[2], states, tiles);
+        List<dev.leo.worldcraft.entity.EntityCopy> ents = new ArrayList<>();
+        for (Map<String, Object> e : s.entityList()) ents.add(SchemEntities.toCopy(e, o, s.dataVersion(), fallbackDataVersion));
+        clip.entities(ents);
+        return new Loaded(clip, placeable, kept);
     }
 
     /**
@@ -83,6 +94,15 @@ public final class SchemConvert {
                 // datos dañados: el bloque se guarda sin ellos
             }
         }
-        return new Schematic(3, dataVersion, c.width(), c.height(), c.depth(), c.offset(), pal, blocks, bes, 0, 0, name, author, date);
+        List<Map<String, Object>> ents = new ArrayList<>();
+        for (dev.leo.worldcraft.entity.EntityCopy e : c.entities()) {
+            try {
+                ents.add(SchemEntities.fromCopy(e, c.offset()));
+            } catch (Nbt.NbtException ex) {
+                // una entidad dañada no se guarda; el resto sí
+            }
+        }
+        return new Schematic(3, dataVersion, c.width(), c.height(), c.depth(), c.offset(), pal, blocks, bes, ents.size(), 0,
+                name, author, date, ents);
     }
 }

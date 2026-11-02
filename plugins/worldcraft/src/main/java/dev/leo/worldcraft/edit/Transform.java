@@ -70,6 +70,27 @@ public final class Transform {
         out[2] = m[6] * x + m[7] * y + m[8] * z;
     }
 
+    /** Spec 031: lo mismo con decimales (la posición y la mirada de una entidad). */
+    public void apply(double x, double y, double z, double[] out) {
+        out[0] = m[0] * x + m[1] * y + m[2] * z;
+        out[1] = m[3] * x + m[4] * y + m[5] * z;
+        out[2] = m[6] * x + m[7] * y + m[8] * z;
+    }
+
+    /** Spec 031: esta transformación y después la otra (sus pasos, en orden). */
+    public Transform then(Transform next) {
+        Transform t = this;
+        for (Step s : next.steps) {
+            t = switch (s) {
+                case ROTATE_90 -> t.rotate90();
+                case FLIP_X -> t.flip('x');
+                case FLIP_Y -> t.flip('y');
+                case FLIP_Z -> t.flip('z');
+            };
+        }
+        return t;
+    }
+
     /** v = Mᵀ·v' en out (la inversa). */
     public void inverse(int x, int y, int z, int[] out) {
         out[0] = m[0] * x + m[3] * y + m[6] * z;

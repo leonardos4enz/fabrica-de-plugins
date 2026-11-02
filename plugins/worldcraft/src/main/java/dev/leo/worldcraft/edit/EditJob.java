@@ -52,6 +52,9 @@ public final class EditJob implements Scheduler.Job {
     private long visited, changed, nanos, maxStepNanos;
     private boolean truncated;
     private State state = State.WAITING;
+    /** Spec 031: lo que se hace con las entidades antes de los bloques (quitar) y después (crear); o null. */
+    private dev.leo.worldcraft.entity.EntityStage before, after;
+    private boolean beforeDone, blocksDone;
     private Runnable onEnd = () -> {
     };
 
@@ -70,6 +73,24 @@ public final class EditJob implements Scheduler.Job {
         this.capture = capture;
         this.maxChanges = maxChanges;
         this.clock = clock;
+    }
+
+    /**
+     * Spec 031 (plan §1.3): las etapas de entidades. Lo que se quita va antes de tocar los bloques (un marco sin pared se
+     * cae) y lo que se crea, después (ya tiene pared). La vista previa no las usa.
+     */
+    public EditJob stages(dev.leo.worldcraft.entity.EntityStage before, dev.leo.worldcraft.entity.EntityStage after) {
+        this.before = before;
+        this.after = after;
+        return this;
+    }
+
+    public dev.leo.worldcraft.entity.EntityStage before() {
+        return before;
+    }
+
+    public dev.leo.worldcraft.entity.EntityStage after() {
+        return after;
     }
 
     /** Se llama una vez al terminar o cancelarse (en el hilo principal). */
@@ -104,12 +125,19 @@ public final class EditJob implements Scheduler.Job {
         if (state == State.DONE || state == State.CANCELLED) return true;
         state = State.RUNNING;
         if (!source.ready()) return false;
+        if (before != null && !beforeDone) {
+            if (!before.step(deadlineNanos, clock)) {
+                sink.flush();
+                return false;
+            }
+            beforeDone = true;
+        }
         int n = 0;
-        while (n < maxBlocks) {
+        while (!blocksDone && n < maxBlocks) {
             if (!pending) {
                 if (!source.next(p)) {
-                    end(State.DONE, true);
-                    return true;
+                    blocksDone = true;
+                    break;
                 }
                 pending = true;
             }
@@ -135,6 +163,10 @@ public final class EditJob implements Scheduler.Job {
             // F-01: el reloj se mira en cada bloque (cuesta unos 25 ns; poner uno, microsegundos). Mirarlo cada 64
             // dejaba pasar el plazo por decenas de milisegundos cuando los bloques eran lentos.
             if (clock.getAsLong() >= deadlineNanos) break;
+        }
+        if (blocksDone && (after == null || after.step(deadlineNanos, clock))) {
+            end(State.DONE, true);
+            return true;
         }
         sink.flush();
         return false;
