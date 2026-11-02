@@ -108,19 +108,19 @@ public final class Schematics {
     }
 
     private void fail(CommandSender s, String name, Throwable t) {
+        s.sendMessage(failure(name, t));
+    }
+
+    private net.kyori.adventure.text.Component failure(String name, Throwable t) {
         Throwable e = t instanceof CompletionException && t.getCause() != null ? t.getCause() : t;
-        if (e instanceof FileAlreadyExistsException) {
-            s.sendMessage(msg().get("schem-exists", "name", name));
-        } else if (e instanceof NotFound) {
-            s.sendMessage(msg().get("schem-not-found", "name", name, "hint", hint(name)));
-        } else if (e instanceof SchemFiles.SchemFileException || e instanceof Nbt.NbtException) {
-            s.sendMessage(msg().get("schem-bad", "name", name, "reason", e.getMessage()));
-        } else if (e instanceof IOException) {
-            s.sendMessage(msg().get("schem-io", "name", name, "reason", String.valueOf(e.getMessage())));
-        } else {
-            plugin.getLogger().log(Level.WARNING, "Could not handle the schematic '" + name + "'", e);
-            s.sendMessage(msg().get("schem-error", "name", name));
+        if (e instanceof FileAlreadyExistsException) return msg().get("schem-exists", "name", name);
+        if (e instanceof NotFound) return msg().get("schem-not-found", "name", name, "hint", hint(name));
+        if (e instanceof SchemFiles.SchemFileException || e instanceof Nbt.NbtException) {
+            return msg().get("schem-bad", "name", name, "reason", e.getMessage());
         }
+        if (e instanceof IOException) return msg().get("schem-io", "name", name, "reason", String.valueOf(e.getMessage()));
+        plugin.getLogger().log(Level.WARNING, "Could not handle the schematic '" + name + "'", e);
+        return msg().get("schem-error", "name", name);
     }
 
     private String hint(String name) {
@@ -152,11 +152,53 @@ public final class Schematics {
         UUID owner = Edits.owner(s);
         if (!begin(s, owner)) return;
         SchemFiles files = files();
+        s.sendMessage(msg().get("schem-loading", "name", clean));
+        read(clean).whenCompleteAsync((o, t) -> {
+            busy.remove(owner);
+            if (t != null) {
+                fail(s, clean, t);
+                return;
+            }
+            Read r = (Read) o[0];
+            SchemBlocks.Result res = (SchemBlocks.Result) o[1];
+            SchemConvert.Loaded l = (SchemConvert.Loaded) o[2];
+            Session ses = plugin.edits().session(owner);
+            ses.clipboard(l.clipboard(), s instanceof Player p ? p.getWorld().getName() : null);
+            Schematic sc = r.schem;
+            s.sendMessage(msg().get("schem-loaded", "name", clean, "folder", r.entry.folder() == null ? "" : " [" + r.entry.folder() + "]",
+                    "version", String.valueOf(sc.version()), "size", sc.width() + "×" + sc.height() + "×" + sc.length(), "blocks", Edits.fmt(sc.volume())));
+            notes(s, sc, res, l);
+            refreshNames(files);
+        }, main);
+    }
+
+    /**
+     * Spec 037: un esquema leído a un portapapeles nuevo (no el de nadie), para la API. Un nombre que no sirve, que no
+     * está o un archivo roto falla con IllegalArgumentException y el mismo texto que /wc schem load.
+     */
+    public CompletableFuture<Clipboard> loadClipboard(String name) {
+        String clean;
+        try {
+            clean = SchemFiles.clean(name);
+        } catch (SchemFiles.SchemFileException e) {
+            return CompletableFuture.failedFuture(new IllegalArgumentException(e.getMessage()));
+        }
+        CompletableFuture<Clipboard> out = new CompletableFuture<>();
+        read(clean).whenCompleteAsync((o, t) -> {
+            if (t != null) out.completeExceptionally(new IllegalArgumentException(
+                    net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(failure(clean, t))));
+            else out.complete(((SchemConvert.Loaded) o[2]).clipboard());
+        }, main);
+        return out;
+    }
+
+    /** El disco y el NBT en el hilo de esquemas, la paleta en el principal: {Read, SchemBlocks.Result, SchemConvert.Loaded}. */
+    private CompletableFuture<Object[]> read(String clean) {
+        SchemFiles files = files();
         Settings.Schematics st = settings();
         long maxBytes = st.maxFileKb() * 1024L;
-        s.sendMessage(msg().get("schem-loading", "name", clean));
         int dv = TileNbt.serverDataVersion();
-        CompletableFuture.supplyAsync(() -> {
+        return CompletableFuture.supplyAsync(() -> {
             try {
                 SchemFiles.Entry e = files.find(clean, true);
                 if (e == null) throw new NotFound();
@@ -184,23 +226,7 @@ public final class Schematics {
             Set<String> biomes = (Set<String>) o[3];
             SchemConvert.Loaded l = SchemConvert.toClipboard(r.schem, ((SchemBlocks.Result) o[1]).map(), air::contains, dv, biomes::contains);
             return new Object[]{r, o[1], l};
-        }, thread).whenCompleteAsync((o, t) -> {
-            busy.remove(owner);
-            if (t != null) {
-                fail(s, clean, t);
-                return;
-            }
-            Read r = (Read) o[0];
-            SchemBlocks.Result res = (SchemBlocks.Result) o[1];
-            SchemConvert.Loaded l = (SchemConvert.Loaded) o[2];
-            Session ses = plugin.edits().session(owner);
-            ses.clipboard(l.clipboard(), s instanceof Player p ? p.getWorld().getName() : null);
-            Schematic sc = r.schem;
-            s.sendMessage(msg().get("schem-loaded", "name", clean, "folder", r.entry.folder() == null ? "" : " [" + r.entry.folder() + "]",
-                    "version", String.valueOf(sc.version()), "size", sc.width() + "×" + sc.height() + "×" + sc.length(), "blocks", Edits.fmt(sc.volume())));
-            notes(s, sc, res, l);
-            refreshNames(files);
-        }, main);
+        }, thread);
     }
 
     private void notes(CommandSender s, Schematic sc, SchemBlocks.Result res, SchemConvert.Loaded l) {

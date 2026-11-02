@@ -3,6 +3,9 @@ package dev.leo.worldcraft.paper;
 import dev.leo.worldcraft.Worldcraft;
 import dev.leo.worldcraft.config.Limits;
 import dev.leo.worldcraft.config.Settings;
+import dev.leo.worldcraft.api.EditResult;
+import dev.leo.worldcraft.api.event.WorldcraftEditDoneEvent;
+import dev.leo.worldcraft.api.event.WorldcraftEditEvent;
 import dev.leo.worldcraft.edit.Clipboard;
 import dev.leo.worldcraft.edit.EditJob;
 import dev.leo.worldcraft.edit.EditSource;
@@ -218,24 +221,15 @@ public final class Edits {
         Mask gmask = session(owner).gmask;
         Op op = gmask == null ? requested : masked(requested, gmask);
         if (gmask != null) who.sendMessage(msg.get("gmask-applies", "mask", gmask.text()));
-        if (!lim.world(op.world().getName())) {
-            who.sendMessage(msg.get("limit-world", "world", op.world().getName()));
+        Component refused = refusal(op, lim, owner);
+        if (refused != null) {
+            who.sendMessage(refused);
             return;
         }
-        if (op.volume() > lim.maxBlocks()) {
-            who.sendMessage(msg.get("limit-blocks", "blocks", fmt(op.volume()), "max", fmt(lim.maxBlocks()),
-                    "groups", String.join(", ", lim.groups())));
-            return;
-        }
-        for (int s : op.placed()) {
-            if (lim.isBlocked(blocks.table().material(s), blocks.table().properties(s))) {
-                who.sendMessage(msg.get("limit-blocked", "block", blocks.table().material(s).replace("minecraft:", "")));
-                return;
-            }
-        }
-        if (op.entities() != null && !entitiesAllowed(who, lim, op.entities().creates(), op.entities().types())) return;
-        if (busy(owner) >= lim.maxJobs()) {
-            who.sendMessage(msg.get("limit-jobs", "max", String.valueOf(lim.maxJobs())));
+        // Spec 037 H4 CA1: otro plugin puede detenerla, después de los límites y antes de la vista previa.
+        WorldcraftEditEvent ev = fire(who, owner, who.getName(), null, op.kind(), op.detail(), op.world(), op.bounds(), op.volume());
+        if (ev.isCancelled()) {
+            who.sendMessage(stopped(ev));
             return;
         }
         Session ses = session(owner);
@@ -283,7 +277,103 @@ public final class Edits {
             ensureTask();
             return;
         }
-        run(who, owner, name, op);
+        run(who, owner, name, op, lim, null, null);
+    }
+
+    /**
+     * Spec 037: quién pide una obra por la API. who recibe los mensajes (el jugador de as(), o null: un plugin a su
+     * nombre no habla en el chat); limits ya resueltos (los del jugador o los de api.plugin_groups).
+     */
+    public record Caller(UUID owner, String name, CommandSender who, Limits.Resolved limits, org.bukkit.plugin.Plugin plugin) {
+    }
+
+    /**
+     * Spec 037 H3: una obra de la API. Las mismas revisiones y el mismo evento que un comando, sin vista previa ni
+     * confirmación (la pidió un plugin); el resultado llega a done al terminar (o al rechazarla).
+     */
+    public void submit(Caller c, Op op, java.util.function.Consumer<EditResult> done) {
+        Component refused = refusal(op, c.limits(), c.owner());
+        if (refused != null) {
+            if (c.who() != null) c.who().sendMessage(refused);
+            done.accept(EditResult.refused(op.kind(), plain(refused)));
+            return;
+        }
+        WorldcraftEditEvent ev = fire(c.who(), c.owner(), c.name(), c.plugin(), op.kind(), op.detail(), op.world(), op.bounds(), op.volume());
+        if (ev.isCancelled()) {
+            Component m = stopped(ev);
+            if (c.who() != null) c.who().sendMessage(m);
+            done.accept(EditResult.refused(op.kind(), plain(m)));
+            return;
+        }
+        run(c.who(), c.owner(), c.name(), op, c.limits(), c.plugin(), done);
+    }
+
+    /** Los límites del grupo (mundo, tope, bloques y entidades prohibidos, obras a la vez): el mensaje, o null si pasa. */
+    private Component refusal(Op op, Limits.Resolved lim, UUID owner) {
+        var msg = plugin.messages();
+        if (!lim.world(op.world().getName())) return msg.get("limit-world", "world", op.world().getName());
+        if (op.volume() > lim.maxBlocks()) {
+            return msg.get("limit-blocks", "blocks", fmt(op.volume()), "max", fmt(lim.maxBlocks()), "groups", String.join(", ", lim.groups()));
+        }
+        for (int s : op.placed()) {
+            if (lim.isBlocked(blocks.table().material(s), blocks.table().properties(s))) {
+                return msg.get("limit-blocked", "block", blocks.table().material(s).replace("minecraft:", ""));
+            }
+        }
+        if (op.entities() != null) {
+            Component e = entityRefusal(lim, op.entities().creates(), op.entities().types());
+            if (e != null) return e;
+        }
+        if (busy(owner) >= lim.maxJobs()) return msg.get("limit-jobs", "max", String.valueOf(lim.maxJobs()));
+        return null;
+    }
+
+    /** Spec 037 H4 CA1: WorldcraftEditEvent con lo que la obra puede tocar (box null = sin bloques: una caja vacía en 0). */
+    private WorldcraftEditEvent fire(CommandSender who, UUID owner, String name, org.bukkit.plugin.Plugin from, String kind, String detail,
+                                     World world, Box box, long volume) {
+        WorldcraftEditEvent ev = new WorldcraftEditEvent(who, owner, name, from, kind, detail, world, min(box), max(box), volume);
+        Bukkit.getPluginManager().callEvent(ev);
+        return ev;
+    }
+
+    private void fireDone(CommandSender who, UUID owner, String name, org.bukkit.plugin.Plugin from, String kind, String detail,
+                          World world, Box box, long volume, int id, long changed, boolean ok) {
+        Bukkit.getPluginManager().callEvent(new WorldcraftEditDoneEvent(who, owner, name, from, kind, detail, world, min(box), max(box),
+                volume, id, changed, ok));
+    }
+
+    private static int[] min(Box b) {
+        return b == null ? new int[3] : new int[]{b.minX(), b.minY(), b.minZ()};
+    }
+
+    private static int[] max(Box b) {
+        return b == null ? new int[3] : new int[]{b.maxX(), b.maxY(), b.maxZ()};
+    }
+
+    private Component stopped(WorldcraftEditEvent ev) {
+        String r = ev.getCancelReason();
+        return plugin.messages().get("edit-stopped", "reason", r.isBlank() ? "" : ": " + r);
+    }
+
+    /** El texto de un mensaje sin el prefijo «Worldcraft »» (el motivo de un rechazo de la API). */
+    private String plain(Component c) {
+        var ser = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText();
+        String s = ser.serialize(c), pre = ser.serialize(plugin.messages().get("prefix"));
+        return !pre.isEmpty() && s.startsWith(pre) ? s.substring(pre.length()) : s;
+    }
+
+    /**
+     * Spec 037 F-01: el fin de una obra (evento y resultado de la API) va al tick siguiente. onEnd corre dentro del paso
+     * del planificador, con la obra todavía en su cola: un plugin que pedía otra obra o un undo al recibir el resultado
+     * recibía «Wait for your running edit to finish» (y contaba para max_jobs).
+     */
+    private void later(Runnable r) {
+        if (plugin.isEnabled()) Bukkit.getScheduler().runTask(plugin, r);
+        else r.run();
+    }
+
+    private static void say(CommandSender who, Component m) {
+        if (who != null) who.sendMessage(m);
     }
 
     /**
@@ -291,20 +381,21 @@ public final class Edits {
      * falling_block, que pasa por blocked_blocks). Lo dice y devuelve false si no se puede.
      */
     public boolean entitiesAllowed(CommandSender who, Limits.Resolved lim, int creates, Collection<String> types) {
+        Component m = entityRefusal(lim, creates, types);
+        if (m != null) who.sendMessage(m);
+        return m == null;
+    }
+
+    private Component entityRefusal(Limits.Resolved lim, int creates, Collection<String> types) {
         var msg = plugin.messages();
         if (creates > lim.maxEntities()) {
-            who.sendMessage(msg.get("limit-entities", "count", fmt(creates), "max", fmt(lim.maxEntities()),
-                    "groups", String.join(", ", lim.groups())));
-            return false;
+            return msg.get("limit-entities", "count", fmt(creates), "max", fmt(lim.maxEntities()), "groups", String.join(", ", lim.groups()));
         }
         for (String t : types) {
             boolean blocked = t.startsWith("block:") ? lim.isBlocked(t.substring(6), Map.of()) : lim.isEntityBlocked(t);
-            if (blocked) {
-                who.sendMessage(msg.get("limit-entity-blocked", "entity", t.replace("block:", "").replace("minecraft:", "")));
-                return false;
-            }
+            if (blocked) return msg.get("limit-entity-blocked", "entity", t.replace("block:", "").replace("minecraft:", ""));
         }
-        return true;
+        return null;
     }
 
     public void confirm(CommandSender who) {
@@ -319,7 +410,7 @@ public final class Edits {
             p.action.run();
             return;
         }
-        run(who, owner(who), p.ownerName, p.op);
+        run(who, owner(who), p.ownerName, p.op, limits(who), null, null);
     }
 
     /** Spec 029: algo que no es una obra espera /wc confirm (con el mismo plazo que una obra). */
@@ -379,7 +470,12 @@ public final class Edits {
 
     // ------------------------------------------------------------------ correr
 
-    private void run(CommandSender who, UUID owner, String ownerName, Op op) {
+    /**
+     * Corre la obra. who recibe los mensajes (null = nadie: un plugin a su nombre); from es el plugin que la pidió por la
+     * API (o null) y done recibe el resultado al terminar (o null).
+     */
+    private void run(CommandSender who, UUID owner, String ownerName, Op op, Limits.Resolved lim, org.bukkit.plugin.Plugin from,
+                     java.util.function.Consumer<EditResult> done) {
         var msg = plugin.messages();
         HistoryStore.Entry entry = history.begin(owner, ownerName, op.kind(), op.detail(), op.world().getName(), op.bounds(),
                 System.currentTimeMillis());
@@ -392,7 +488,7 @@ public final class Edits {
         EntityStage b = null, a = null;
         if (op.entities() != null) {
             PaperEntities ew = new PaperEntities(plugin, op.world());
-            int max = limits(who).maxEntities();
+            int max = lim.maxEntities();
             b = op.entities().before() == null ? null : op.entities().before().make(ew, sink, max, null);
             a = op.entities().after() == null ? null : op.entities().after().make(ew, sink, max, b);
         }
@@ -430,9 +526,16 @@ public final class Edits {
                 if (em != null) plugin.getLogger().info(net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(em));
             }
             if (ok && op.after() != null) op.after().run();
+            // Spec 037 H4 CA2 y H3 CA2: el evento de fin y el resultado de la API, ya fuera de la cola (F-01).
+            long changed = job.changed();
+            later(() -> {
+                fireDone(who, owner, ownerName, from, op.kind(), op.detail(), op.world(), op.bounds(), op.volume(), entry.id(), changed, ok);
+                if (done != null) done.accept(new EditResult(entry.id(), op.kind(), changed, ok ? EditResult.Status.DONE : EditResult.Status.CANCELLED, ""));
+            });
         });
         jobs.put(job.id(), job);
         submit(job);
+        if (who == null) return;
         if (scheduler.of(owner).size() > 1) who.sendMessage(msg.get("edit-queued", "kind", op.kind()));
         else who.sendMessage(msg.get("edit-start", "kind", op.kind(), "blocks", fmt(op.volume()),
                 "time", seconds(estimateSeconds(op.volume()))));
@@ -642,9 +745,22 @@ public final class Edits {
 
     /** Deshace (o rehace) las últimas n operaciones de target; quien lo pide puede ser otro (con permiso). */
     public void undo(CommandSender who, UUID target, String targetName, int n, boolean redo) {
+        undo(who, owner(who), who.getName(), target, targetName, n, redo, null, null);
+    }
+
+    /**
+     * Spec 037: deshacer con quien lo pide aparte (actor; who recibe los mensajes o es null) y el resultado en done: los
+     * bloques de todas, el número de la última. Antes se dispara WorldcraftEditEvent por cada obra: si otro plugin
+     * cancela una, no se deshace ninguna.
+     */
+    public void undo(CommandSender who, UUID actor, String actorName, UUID target, String targetName, int n, boolean redo,
+                     org.bukkit.plugin.Plugin from, java.util.function.Consumer<EditResult> done) {
         var msg = plugin.messages();
-        if (!scheduler.of(target).isEmpty() && target.equals(owner(who))) {
-            who.sendMessage(msg.get("undo-busy"));
+        String kind = redo ? "redo" : "undo";
+        if (!scheduler.of(target).isEmpty() && target.equals(actor)) {
+            Component m = msg.get("undo-busy");
+            say(who, m);
+            if (done != null) done.accept(EditResult.refused(kind, plain(m)));
             return;
         }
         List<HistoryStore.Entry> picks = new ArrayList<>();
@@ -660,15 +776,34 @@ public final class Edits {
             }
         }
         if (picks.isEmpty()) {
-            who.sendMessage(msg.get(redo ? "nothing-to-redo" : "nothing-to-undo", "player", targetName));
+            Component m = msg.get(redo ? "nothing-to-redo" : "nothing-to-undo", "player", targetName);
+            say(who, m);
+            if (done != null) done.accept(EditResult.refused(kind, plain(m)));
             return;
         }
         for (HistoryStore.Entry e : picks) {
             World world = Bukkit.getWorld(e.world());
             if (world == null) {
-                who.sendMessage(msg.get("undo-no-world", "id", String.valueOf(e.id()), "world", e.world()));
+                Component m = msg.get("undo-no-world", "id", String.valueOf(e.id()), "world", e.world());
+                say(who, m);
+                if (done != null) done.accept(EditResult.refused(kind, plain(m)));
                 return;
             }
+            // Spec 037 H4 CA1: deshacer también es una obra que un plugin de protección puede detener.
+            WorldcraftEditEvent ev = fire(who, actor, actorName, from, kind, "#" + e.id() + " " + e.kind() + " " + e.detail(), world,
+                    e.bounds(), e.bounds() == null ? 0 : e.bounds().volume());
+            if (ev.isCancelled()) {
+                Component m = stopped(ev);
+                say(who, m);
+                if (done != null) done.accept(EditResult.refused(kind, plain(m)));
+                return;
+            }
+        }
+        long[] total = new long[1];
+        int[] left = {picks.size()};
+        boolean[] allOk = {true};
+        for (HistoryStore.Entry e : picks) {
+            World world = Bukkit.getWorld(e.world());
             var path = history.journal(target, e.id());
             CompletableFuture<Journal.Data> data = CompletableFuture.supplyAsync(() -> {
                 try {
@@ -690,14 +825,24 @@ public final class Edits {
             PaperBiomes bw = new PaperBiomes(plugin, world);
             dev.leo.worldcraft.biome.BiomeStage biomes = dev.leo.worldcraft.biome.BiomeStage.undo(bw,
                     () -> data.isDone() && !data.isCompletedExceptionally() ? data.join() : null, redo);
-            EditJob job = new EditJob(nextJob++, owner(who).equals(target) ? target : owner(who), redo ? "redo" : "undo",
+            EditJob job = new EditJob(nextJob++, actor.equals(target) ? target : actor, redo ? "redo" : "undo",
                     w, src, EditJob.Mode.APPLY, remaps, null, Long.MAX_VALUE, System::nanoTime).stages(kill, EntityStage.chain(spawn, biomes));
             job.onEnd(() -> {
                 w.close();
                 bw.close();
                 jobs.remove(job.id());
-                if (job.state() != EditJob.State.DONE) {
-                    tell(owner(who), who, msg.get("undo-cancelled", "id", String.valueOf(e.id())));
+                boolean ok = job.state() == EditJob.State.DONE;
+                long changed = job.changed();
+                later(() -> { // F-01: fuera de la cola del planificador
+                    fireDone(who, actor, actorName, from, kind, "#" + e.id() + " " + e.kind() + " " + e.detail(), world, e.bounds(),
+                            e.bounds() == null ? 0 : e.bounds().volume(), e.id(), changed, ok);
+                    total[0] += changed;
+                    allOk[0] &= ok;
+                    if (--left[0] == 0 && done != null) done.accept(new EditResult(e.id(), kind, total[0],
+                            allOk[0] ? EditResult.Status.DONE : EditResult.Status.CANCELLED, ""));
+                });
+                if (!ok) {
+                    tell(actor, who, msg.get("undo-cancelled", "id", String.valueOf(e.id())));
                     return;
                 }
                 history.mark(e, redo ? HistoryStore.State.DONE : HistoryStore.State.UNDONE);
@@ -708,14 +853,14 @@ public final class Edits {
                         : onlyBiomes ? (redo ? "redo-done-biomes" : "undo-done-biomes") : (redo ? "redo-done" : "undo-done");
                 Component m = msg.get(key, "id", String.valueOf(e.id()), "kind", e.kind(),
                         "detail", e.detail(), "changed", fmt(job.changed()), "player", targetName);
-                tell(owner(who), who, m);
-                if (job.skipped() > 0) tell(owner(who), who, msg.get("undo-skipped", "skipped", fmt(job.skipped())));
-                if (kill.done() + spawn.done() > 0) tell(owner(who), who, msg.get("undo-entities",
+                tell(actor, who, m);
+                if (job.skipped() > 0) tell(actor, who, msg.get("undo-skipped", "skipped", fmt(job.skipped())));
+                if (kill.done() + spawn.done() > 0) tell(actor, who, msg.get("undo-entities",
                         "back", fmt(spawn.done()), "removed", fmt(kill.done())));
-                if (kill.skipped() + spawn.skipped() > 0) tell(owner(who), who, msg.get("undo-entities-skipped",
+                if (kill.skipped() + spawn.skipped() > 0) tell(actor, who, msg.get("undo-entities-skipped",
                         "skipped", fmt(kill.skipped() + spawn.skipped())));
-                if (biomes.done() > 0 && !onlyBiomes) tell(owner(who), who, msg.get("undo-biomes", "cells", fmt(biomes.done())));
-                if (biomes.skipped() > 0) tell(owner(who), who, msg.get("undo-biomes-skipped", "skipped", fmt(biomes.skipped())));
+                if (biomes.done() > 0 && !onlyBiomes) tell(actor, who, msg.get("undo-biomes", "cells", fmt(biomes.done())));
+                if (biomes.skipped() > 0) tell(actor, who, msg.get("undo-biomes-skipped", "skipped", fmt(biomes.skipped())));
             });
             jobs.put(job.id(), job);
             submit(job);

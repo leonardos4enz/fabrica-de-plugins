@@ -133,6 +133,9 @@ public final class Worldcraft extends JavaPlugin {
         });
         regen = new dev.leo.worldcraft.paper.Regen(this);
         regen.cleanLeftovers();
+        // Spec 037: la API para otros plugins (Bukkit la quita sola al deshabilitar).
+        getServer().getServicesManager().register(dev.leo.worldcraft.api.WorldcraftApi.class, new dev.leo.worldcraft.paper.Api(this), this,
+                org.bukkit.plugin.ServicePriority.Normal);
         command = new WorldcraftCommand(this);
         PluginCommand cmd = getCommand("worldcraft");
         if (cmd != null) {

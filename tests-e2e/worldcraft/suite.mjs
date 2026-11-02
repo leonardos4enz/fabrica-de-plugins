@@ -206,8 +206,12 @@ export default {
   // La configuración tal como está en el código fuente; el historial de corridas anteriores se borra (cada corrida
   // empieza sin obras).
   copiar: [
-    { de: 'plugins/worldcraft/src/main/resources', a: 'plugins/Worldcraft' }
+    { de: 'plugins/worldcraft/src/main/resources', a: 'plugins/Worldcraft' },
+    // Spec 037: el plugin de ejemplo de la API con una zona protegida de la suite.
+    { de: 'tests-e2e/worldcraft/api-example', a: 'plugins/WorldcraftApiExample' }
   ],
+  // Spec 037: el plugin de ejemplo de la API (se arma con :worldcraft:dist).
+  jarsExtra: [/^WorldcraftApiExample-.*\.jar$/],
   datosDeJugador: [],
   bots: [ANA, BETO],
   // Spec 027: WorldEdit 7.3.19 en el servidor de prueba (aprobado en la 012) para comprobar que los dos leen los .schem del otro.
@@ -2237,6 +2241,108 @@ export default {
           await srv.consola('wc reload')
           fs.rmSync(copias, { recursive: true, force: true })
           await srv.consola(`fill ${A} -55 ${Z} ${A + 4} -52 ${Z + 4} air`)
+        }
+      }
+    },
+    {
+      id: '037 H1 CA1 · H2 CA1 · H2 CA2 · H3 CA1 · H3 CA2 · H3 CA3 · H3 CA4 · H4 CA2 · H1 CA3',
+      nombre: 'el plugin de ejemplo lee y pone la selección de Ana, rellena como Ana (su undo la deshace) y como el plugin (box, paste de un esquema, undo); un patrón mal escrito, el tope de default y la API apagada',
+      timeoutMs: 120000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        const B = X + 30
+        const config = path.join(srv.run, 'plugins', 'Worldcraft', 'config.yml')
+        const antes = fs.readFileSync(config, 'utf8')
+        try {
+          // La selección por la API: la ve /wc sel y vuelve igual por la API.
+          await pide(ana, `wcx select ${B} -55 ${Z} ${B + 2} -53 ${Z + 2}`, /API selected/)
+          await pide(ana, 'wc sel', new RegExp(`Selection 3×3×3 \\(27 blocks\\) in world, from ${B} -55 ${Z} to ${B + 2} -53 ${Z + 2}`))
+          await pide(ana, 'wcx selection', new RegExp(`API selection: cuboid in world, ${B} -55 ${Z} to ${B + 2} -53 ${Z + 2}, 27 blocks`))
+          // Como Ana: sus mensajes, su historial y su undo.
+          const m = ana.marca()
+          ana.comando('wcx fill 50% stone, 50% andesite')
+          await ana.esperar('chat', /Done: set changed 27 blocks/, { desde: m })
+          await ana.esperar('chat', /API set #\d+ done: 27 blocks/, { desde: m })
+          await pide(ana, 'wc count stone, andesite', /\b27 of 27 blocks match/)
+          await pide(ana, 'wc undo', /Undone #\d+ \(set 50% stone, 50% andesite\): 27 blocks back/)
+          await pide(ana, 'wc count stone, andesite', /\b0 of 27 blocks match/)
+          await pide(ana, 'wcx fill stnoe', /API error: .*'stnoe'.*did you mean 'stone'/)
+          // Como el plugin, desde la consola: su historial (#WorldcraftApiExample) y el registro del evento de fin.
+          const ml = srv.marca()
+          await srv.consola(`wcx box world ${B} -55 ${Z} ${B + 2} -53 ${Z + 2} glass`, { espera: /API set #\d+ done: 27 blocks/, timeoutMs: 20000 })
+          await srv.esperarLog(/Edit #\d+ by #WorldcraftApiExample: set glass, 27 blocks changed, asked by WorldcraftApiExample/, { desde: ml })
+          await comprobar(srv, `block ${B + 1} -54 ${Z + 1} glass`)
+          await srv.consola('wcx undo', { espera: /API undo #\d+ done: 27 blocks/, timeoutMs: 20000 })
+          await comprobar(srv, `block ${B + 1} -54 ${Z + 1} air`)
+          // El tope del grupo default (50 000) vale para un plugin a su nombre (api.plugin_groups vacío).
+          await srv.consola(`wcx box world ${B} -60 ${Z} ${B + 100} -51 ${Z + 100} stone`, { espera: /API refused set: That is 102,010 blocks; your limit is 50,000 \(groups: default\)/ })
+          // Pegar un esquema como el plugin: el origen del esquema va donde se dice (Ana copió parada en X, -60, Z).
+          await srv.consola(`fill ${B} -55 ${Z} ${B + 2} -53 ${Z + 2} glass`)
+          await srv.sincronizar()
+          await seleccionar(ana, [B, -55, Z], [B + 2, -53, Z + 2])
+          await pide(ana, 'wc copy', /Copied 3×3×3 \(27 blocks\)/)
+          await pide(ana, 'wc schem save e2e_api --overwrite', /Saved e2e_api: 3×3×3 \(27 blocks\)/)
+          await srv.consola(`fill ${B} -55 ${Z} ${B + 2} -53 ${Z + 2} air`)
+          await srv.consola(`wcx paste e2e_api ${X} -60 ${Z + 10}`, { espera: /API paste #\d+ done: 27 blocks/, timeoutMs: 20000 })
+          await comprobar(srv, `block ${B} -55 ${Z + 10} glass`)
+          await comprobar(srv, `block ${B + 2} -53 ${Z + 12} glass`)
+          await srv.consola('wcx paste e2e_ap 0 0 0', { espera: /API error: .*e2e_ap.*did you mean 'e2e_api'/ })
+          await srv.consola('wcx undo', { espera: /API undo #\d+ done: 27 blocks/, timeoutMs: 20000 })
+          await comprobar(srv, `block ${B} -55 ${Z + 10} air`)
+          // Apagada por el dueño: un rechazo con el motivo.
+          fs.writeFileSync(config, antes.replace('  enabled: true ', '  enabled: false '))
+          await srv.consola('wc reload', { espera: /Reloaded: 0 error\(s\)/ })
+          await srv.consola(`wcx box world ${B} -55 ${Z} ${B} -55 ${Z} stone`, { espera: /API refused set: The server owner turned Worldcraft's API off/ })
+        } finally {
+          fs.writeFileSync(config, antes)
+          await srv.consola('wc reload')
+          await srv.consola(`fill ${B} -55 ${Z} ${B + 2} -53 ${Z + 12} air`)
+        }
+      }
+    },
+    {
+      id: '037 H4 CA1 · H5 CA2',
+      nombre: 'una zona protegida por el plugin de ejemplo detiene /wc set (también con --preview), a otro plugin y el undo de una obra que quedó adentro; afuera todo sigue',
+      timeoutMs: 90000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        const B = X + 30
+        const ejemplo = path.join(srv.run, 'plugins', 'WorldcraftApiExample', 'config.yml')
+        const antes = fs.readFileSync(ejemplo, 'utf8')
+        try {
+          // La zona e2e (x, z 1000–1010, todo el alto): ni comandos, ni vista previa, ni otro plugin.
+          await pide(ana, 'wcx select 1000 -50 1000 1002 -48 1002', /API selected/)
+          let m = ana.marca()
+          ana.comando('wc set stone')
+          await ana.esperar('chat', /Another plugin stopped this edit: This area is protected by WorldcraftApiExample \(e2e\)/, { desde: m })
+          await ana.nunca('chat', /Done: set|edit of/, { desde: m, ms: 1500 })
+          m = ana.marca()
+          ana.comando('wc set stone --preview')
+          await ana.esperar('chat', /Another plugin stopped this edit/, { desde: m })
+          await ana.nunca('chat', /Preview/, { desde: m, ms: 1500 })
+          await srv.consola('wcx box world 1005 0 1005 1006 1 1006 stone', { espera: /API refused set: Another plugin stopped this edit: This area is protected by WorldcraftApiExample \(e2e\)/ })
+          // Afuera, lo mismo funciona.
+          await seleccionar(ana, [B, -55, Z], [B + 1, -55, Z + 1])
+          const o = await obra(ana, 'wc set stone')
+          if (o.cambiados !== 4) throw new Error(`set afuera cambió ${o.cambiados}`)
+          // Si la zona pasa a cubrir esa obra, deshacerla también se detiene; al quitarla, se deshace.
+          fs.writeFileSync(ejemplo, antes.replace('from: [1000, -64, 1000]', `from: [${B}, -64, ${Z}]`))
+          await pide(ana, 'wcx reload', /reloaded: 1 protected area/)
+          m = ana.marca()
+          ana.comando('wc undo')
+          await ana.esperar('chat', /Another plugin stopped this edit: This area is protected/, { desde: m })
+          await comprobar(srv, `block ${B} -55 ${Z} stone`)
+          fs.writeFileSync(ejemplo, antes)
+          await pide(ana, 'wcx reload', /reloaded: 1 protected area/)
+          await pide(ana, 'wc undo', new RegExp(`Undone #${o.id} \\(set stone\\): 4 blocks back`))
+        } finally {
+          fs.writeFileSync(ejemplo, antes)
+          await srv.consola('wcx reload')
+          await srv.consola(`fill ${B} -55 ${Z} ${B + 1} -55 ${Z + 1} air`)
         }
       }
     }

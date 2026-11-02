@@ -182,3 +182,9 @@ snapshots:
   # Empty = off. Relative to the server folder (or a full path).
   folder: ""
   max_chunks: 1024        # most chunks one restore may read (1..16384)
+
+# Other plugins (minigames, islands, protection) can use Worldcraft's API. Their edits go through the same limits,
+# history and undo as yours, and events let a protection plugin stop any edit (yours too).
+api:
+  enabled: true           # false = other plugins cannot edit through Worldcraft (the events still fire)
+  plugin_groups: []       # limit groups for edits a plugin makes on its own (not as a player); "default" always applies

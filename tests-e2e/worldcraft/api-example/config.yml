@@ -1,0 +1,8 @@
+# Spec 037: la configuración del plugin de ejemplo en la suite (la copia correr.mjs en cada corrida).
+# Una zona protegida lejos de todo lo demás: ninguna obra de Worldcraft puede tocarla.
+protected:
+  e2e:
+    world: world
+    from: [1000, -64, 1000]
+    to: [1010, 319, 1010]
+log_edits: true

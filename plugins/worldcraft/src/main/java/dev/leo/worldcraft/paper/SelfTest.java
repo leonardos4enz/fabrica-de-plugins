@@ -100,6 +100,7 @@ public final class SelfTest {
                                 }
                                 String restore = restore(s, w);
                                 if (restore != null) fail(s, restore);
+                                else api(s, w, box);
                             })));
         });
         edits.submitJob(set);
@@ -415,6 +416,54 @@ public final class SelfTest {
         return null;
     }
 
+
+    /**
+     * Spec 037 (compuerta 2): la API registrada; una obra a nombre de Worldcraft hecha y deshecha; otra detenida por un
+     * oyente que no cambia nada. En una caja de 3×3×3 de la caja del selftest (ya deshecha: aire).
+     */
+    private void api(CommandSender s, World w, Box box) {
+        dev.leo.worldcraft.api.WorldcraftApi api;
+        try {
+            api = dev.leo.worldcraft.api.WorldcraftApi.get();
+        } catch (IllegalStateException e) {
+            fail(s, "api: " + e.getMessage());
+            return;
+        }
+        org.bukkit.util.BlockVector a = new org.bukkit.util.BlockVector(box.minX(), box.minY(), box.minZ());
+        org.bukkit.util.BlockVector b = new org.bukkit.util.BlockVector(box.minX() + 2, box.minY() + 2, box.minZ() + 2);
+        Box small = Box.of(box.minX(), box.minY(), box.minZ(), box.minX() + 2, box.minY() + 2, box.minZ() + 2);
+        List<String> before = read(w, small);
+        org.bukkit.event.Listener stop = new org.bukkit.event.Listener() {
+            @org.bukkit.event.EventHandler
+            public void on(dev.leo.worldcraft.api.event.WorldcraftEditEvent ev) {
+                if (ev.getPlugin() == plugin && ev.getKind().equals("replace")) ev.setCancelReason("selftest");
+            }
+        };
+        plugin.getServer().getPluginManager().registerEvents(stop, plugin);
+        Runnable done = () -> org.bukkit.event.HandlerList.unregisterAll(stop);
+        api.edit(plugin).in(w, a, b).set("glass").thenCompose(r -> {
+            if (!r.done() || r.changed() != 27) throw new IllegalStateException("a set of 27 blocks gave " + r);
+            for (String x : read(w, small)) if (!x.equals("minecraft:glass")) throw new IllegalStateException("after the API set there is " + x);
+            return api.edit(plugin).in(w, a, b).replace("glass", "stone");
+        }).thenCompose(r -> {
+            if (r.status() != dev.leo.worldcraft.api.EditResult.Status.REFUSED || !r.reason().contains("selftest")) {
+                throw new IllegalStateException("the edit a listener stopped gave " + r);
+            }
+            for (String x : read(w, small)) if (!x.equals("minecraft:glass")) throw new IllegalStateException("a stopped edit changed a block to " + x);
+            return api.edit(plugin).undo(1);
+        }).whenComplete((r, t) -> {
+            done.run();
+            if (t != null) {
+                fail(s, "api: " + (t.getCause() != null ? t.getCause().getMessage() : t.getMessage()));
+                return;
+            }
+            if (!r.done() || r.changed() != 27 || !read(w, small).equals(before)) {
+                fail(s, "api: the undo gave " + r);
+                return;
+            }
+            s.sendMessage(plugin.messages().get("selftest-api-ok", "version", String.valueOf(api.apiVersion()), "blocks", "27"));
+        });
+    }
     /** Lo que da fromCopy, en la forma que lee toCopy (Pos como double[], como al leer un archivo). */
     private static java.util.Map<String, Object> normalized(java.util.Map<String, Object> m) {
         java.util.Map<String, Object> out = new java.util.LinkedHashMap<>(m);

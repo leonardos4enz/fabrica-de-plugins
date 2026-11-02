@@ -71,7 +71,7 @@ Cantidades del bytecode (§0). «FAWE agrega» es la diferencia con WorldEdit en
 | Biomas, chunks, snapshots, scripts | 14 | — | 4 (033: `biomelist`, `biomeinfo`, `setbiome`; 034: `generatebiome`) + snapshots y `restore` (036) | las entidades de una copia (`-e`); `delchunks` y scripts, no |
 | Ajustes generales y administración | 19 | 5 | `reload`, `validate`, `selftest`, `jobs`, `limits` | `gmask`, `//limit` personal, `toggleplace` |
 | Máscaras y patrones | ~20 | ~60 | listas con %, estados, tags, `not`, presets: **mejor legibilidad** | ruido, `#clipboard`, ángulo (029: `above/below`, `exposed`, `^tipo`, superficie; 033: `$bioma`; 034: `=fórmula`) |
-| API para otros plugins | sí (WorldGuard, PlotSquared, CoreProtect dependen) | la misma | ninguna | API, eventos y puente de selección |
+| API para otros plugins | sí (WorldGuard, PlotSquared, CoreProtect dependen) | la misma | desde la 037: API Java propia (selección, `set`, `replace`, `paste` de un esquema, `undo`) y eventos `WorldcraftEditEvent` (cancelable) y `WorldcraftEditDoneEvent` | puente de selección con WorldEdit y CoreProtect: **no se harán** (decisión del dueño) |
 
 **Respuesta corta para el dueño:** Worldcraft todavía no tiene todos los comandos. Con la 0.4.0 cubre cerca del
 **40 %** del inventario de WorldEdit (unos 70 de 171): selección, relleno, copia, esquemas, deshacer, formas, las
@@ -292,16 +292,15 @@ WorldEdit**, aunque los constructores usen Worldcraft (§3).
 | Plugins de protección (GriefPrevention, Towny, Residence, GriefDefender, PlotSquared) | FAWE los consulta para limitar las ediciones a donde el jugador puede construir | La puerta única `EditWorld.set` de la 025 está lista para eso; falta la integración (roadmap: «respetar regiones») |
 | Otros (minijuegos, islas, generadores de estructuras) | Pegar esquemas y editar con `EditSession` | Solo si Worldcraft ofrece su propia API (Java) |
 
-**Lo que le falta a Worldcraft:**
-1. **API Java propia** (`Worldcraft.api()`): leer la selección de un jugador, encolar una obra (rellenar, pegar un
-   esquema) por el motor de tandas, con límites y deshacer, y **eventos** (`WorldcraftEditEvent`, cancelable antes de
-   empezar, con jugador, mundo, caja y cantidad de bloques) para que un plugin de protección pueda negar.
-2. **Registro en CoreProtect** (opcional, si está instalado).
-3. **Puente de selección con WorldEdit** (opcional, si está instalado): para no enlazar con la API GPL, Worldcraft puede
-   mandar las esquinas como comandos de WorldEdit en nombre del jugador (`//pos1 x,y,z`), sin compilar contra su API. Hay
-   que decidirlo en un ADR (riesgo de licencia frente a hacerlo con su API).
+**Hecho en la [037](../sdd/specs/037-worldcraft-api/spec.md)** (Worldcraft 0.13.0, [ADR 0008](../adr/0008-api-de-worldcraft.md)): API Java
+propia (`WorldcraftApi.get()`: leer y poner la selección de un jugador; `set`, `replace`, `paste` de un esquema y `undo` por
+el motor, a nombre de un jugador o del plugin, con límites y deshacer) y eventos (`WorldcraftEditEvent`, cancelable antes
+de toda obra, también los comandos y `undo`; `WorldcraftEditDoneEvent` al terminar), con un plugin de ejemplo que protege
+zonas. **No se harán** (decisión del dueño, 2026-11-02): el puente de selección con WorldEdit («no quiero que la gente
+tenga WorldEdit también») y el registro en CoreProtect. Quedan: respetar regiones de WorldGuard u otros (un plugin de
+protección lo puede hacer con el evento).
 
-Mientras no haya API: **Worldcraft convive con WorldEdit**. Comandos y varitas distintos, ya probado en la suite de la
+Por eso: **Worldcraft convive con WorldEdit**. Comandos y varitas distintos, ya probado en la suite de la
 027. No reemplaza a WorldEdit en un servidor con WorldGuard o PlotSquared.
 
 ## 4. Lo que da más valor
@@ -326,7 +325,7 @@ Costo: **B** horas · **M** una spec normal · **A** más de una spec o con ries
 | ~~034~~ (hecha) | Fórmulas | `generate`, `generatebiome`, `deform`, máscara y patrón `=fórmula`, `calculate`, `brush deform`, `timeout` | A | Hecha en la 0.10.0 con un lenguaje propio como el de WorldEdit ([ADR 0006](../adr/0006-formulas-de-worldcraft.md)); queda `query()` (leer bloques desde la fórmula), `gmegabuf`, `closest()` y `switch` (B) |
 | ~~035~~ (hecha) | Lo de FAWE para crear | `caves`, `ore`/`ores`, `img` desde la carpeta o un link (red segura de SkinStatues 023, [ADR 0007](../adr/0007-red-segura-copiada.md)), patrones por color (tabla de colores de SkinStatues) | M–A | Hecha en la 0.11.0 ([035](../sdd/specs/035-worldcraft-creacion-fawe/spec.md)); queda `#anglecolor`, tramado de la imagen, pinceles de imagen y `//blob` como comando (B c/u) |
 | ~~036~~ (hecha) | `regen` y snapshots | Volver al terreno original (mundo temporal con la misma semilla, porque `regenerateChunk` no está soportado) y restaurar desde una copia de seguridad (lector de `.mca` con el NBT de la 027) | A | Hecha en la 0.12.0 ([036](../sdd/specs/036-worldcraft-regen-snapshots/spec.md)); queda: las entidades de una copia (`-e`, B), LZ4 y copias de antes de 1.18 |
-| final | API para otros plugins | API Java, `WorldcraftEditEvent`, CoreProtect, puente con WorldGuard (§3) | M | Decisión del dueño (028): al final |
+| ~~final~~ (037, hecha) | API para otros plugins | API Java y eventos (§3); CoreProtect y el puente con WorldEdit, fuera por decisión del dueño | M | Hecha en la 0.13.0 ([037](../sdd/specs/037-worldcraft-api/spec.md)) |
 
 Fuera de esta partición (se anotan en el roadmap, el dueño no los pidió ahora): rollback por zona y tiempo e
 `inspect` (M), multi-portapapeles y pegar al azar (B), `curve` (M), `snowsmooth`, `fall`, `fixblocks`, `update`,

@@ -64,6 +64,13 @@ async function principal () {
   const jar = jarMasNuevo(path.join(RAIZ, 'dist'), suite.jar)
   if (!jar) throw new Error(`No hay ${suite.jar} en dist/: compila con gradlew :${o.plugin}:dist`)
   fs.copyFileSync(path.join(RAIZ, 'dist', jar), path.join(pluginsDir, jar))
+  // Spec 037: otros jars de la fábrica que la suite necesita (el plugin de ejemplo de la API), el más nuevo de cada uno.
+  for (const extra of suite.jarsExtra ?? []) {
+    for (const f of fs.readdirSync(pluginsDir)) if (extra.test(f)) fs.rmSync(path.join(pluginsDir, f))
+    const otro = jarMasNuevo(path.join(RAIZ, 'dist'), extra)
+    if (!otro) throw new Error(`No hay ${extra} en dist/: compila con gradlew :${o.plugin}:dist`)
+    fs.copyFileSync(path.join(RAIZ, 'dist', otro), path.join(pluginsDir, otro))
+  }
   // Spec 012: plugins de terceros de las integraciones (Vault, EssentialsX, WorldEdit, WorldGuard, Citizens).
   // Spec 027: una expresión (/worldedit/i) instala solo esos jars (Worldcraft prueba los .schem con WorldEdit).
   if (suite.pluginsExtra instanceof RegExp) {

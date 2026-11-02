@@ -741,23 +741,9 @@ public final class WorldcraftCommand implements TabExecutor {
             s.sendMessage(msg().get("sel-changed", "size", target.size(), "blocks", Edits.fmt(target.volume())));
             return;
         }
-        PaperBlocks blocks = edits().blocks();
-        boolean air = args.flags.contains("air");
-        Edits.Op op = new Edits.Op("paste", clip.size() + (air ? " with air" : ""), world, target, clip.volume(),
-                () -> new PasteSource(clip, o[0], o[1], o[2], air, blocks::isAir, blocks), clip.distinct(), null);
+        Edits.Op op = dev.leo.worldcraft.paper.PasteOp.of(plugin, world, clip, o, target, args.flags.contains("air"),
+                !args.flags.contains("no-entities"), args.flags.contains("remove-entities"));
         if (args.flags.contains("select")) op = op.then(() -> ses.selectBox(world.getName(), target));
-        // Spec 031 H1 CA3–CA4: las entidades del portapapeles van después de los bloques; --remove-entities quita antes las de ahí.
-        List<dev.leo.worldcraft.entity.EntityCopy> ents = args.flags.contains("no-entities") ? List.of() : clip.entitiesAt(o[0], o[1], o[2]);
-        boolean clear = args.flags.contains("remove-entities");
-        if (!ents.isEmpty() || clear) {
-            List<EntityStage.Item> items = ents.stream().map(e -> new EntityStage.Item(null, e)).toList();
-            String note = (ents.isEmpty() ? "" : msg().text("note-entities-add", "count", Edits.fmt(ents.size())))
-                    + (clear ? (ents.isEmpty() ? "" : " ") + msg().text("note-entities-clear") : "");
-            op = op.with(new Edits.EntityWork(
-                    clear ? (w, sink, max, b) -> new EntityStage.Scan(w, target, e -> true, true, max, sink) : null,
-                    ents.isEmpty() ? null : (w, sink, max, b) -> new EntityStage.Spawn(w, () -> items, sink),
-                    ents.size(), ents.isEmpty() ? Set.of() : clip.entityTypes(), note));
-        }
         // Spec 033 H4 CA2: los biomas del portapapeles (girados con él), cada celda por el bloque de su centro.
         if (args.flags.contains("biomes")) {
             if (!clip.hasBiomes()) {

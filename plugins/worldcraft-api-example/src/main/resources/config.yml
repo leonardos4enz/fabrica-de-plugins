@@ -1,0 +1,12 @@
+# WorldcraftApiExample - an example of Worldcraft's API.
+
+# Areas where no Worldcraft edit may happen (commands, brushes, tools, other plugins, undo).
+# Each one: world, from and to (two corners, any order).
+protected: {}
+#  spawn:
+#    world: world
+#    from: [-50, -64, -50]
+#    to: [50, 319, 50]
+
+# Write every finished Worldcraft edit to the console.
+log_edits: true

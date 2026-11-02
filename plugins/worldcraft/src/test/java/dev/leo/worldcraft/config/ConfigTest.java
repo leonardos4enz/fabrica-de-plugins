@@ -335,4 +335,28 @@ class ConfigTest {
         }
         assertTrue(all.contains("keep_seconds"), "did you mean: " + all);
     }
+
+    @Test
+    void spec037_H6_CA1_seccion_api() throws Exception {
+        LoadedConfig old = load("history: { keep_days: 3 }\n", "");
+        assertEquals("[]", old.issues().all().stream().filter(i -> i.file().equals("config.yml")).toList().toString(), "un config.yml de la 0.12.0 carga sin avisos");
+        assertEquals(ApiSettings.DEFAULTS, old.api());
+        assertTrue(old.api().enabled(), "la API viene prendida");
+        LoadedConfig c = load("""
+                limits:
+                  default: { max_blocks: 100 }
+                  builder: { max_blocks: 900 }
+                api:
+                  enabled: maybe
+                  plugin_groups: [buidler, default, builder]
+                  plugins_groups: []
+                """, "");
+        assertTrue(c.api().enabled(), "un valor que no es true ni false: el de fábrica");
+        assertEquals(java.util.List.of("builder"), c.api().pluginGroups(), "el mal escrito se salta; default ya va siempre");
+        String all = c.issues().all().toString();
+        for (String path : new String[]{"api.enabled", "api.plugin_groups", "api.plugins_groups"}) assertTrue(all.contains(path), path + " en " + all);
+        assertTrue(all.contains("did you mean 'builder'"), all);
+        assertTrue(all.contains("did you mean 'plugin_groups'"), all);
+        assertEquals(900, c.api().limits(c.limits()).maxBlocks());
+    }
 }

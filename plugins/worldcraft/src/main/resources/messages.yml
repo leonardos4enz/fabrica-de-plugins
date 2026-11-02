@@ -137,6 +137,7 @@ limit-world: "{prefix}<red>You may not edit in {world}."
 limit-blocks: "{prefix}<red>That is {blocks} blocks; your limit is {max} (groups: {groups}). Select less, or ask for a bigger group."
 limit-blocked: "{prefix}<red>You may not place {block} (blocked for your group: see /wc limits)."
 limit-jobs: "{prefix}<red>You already have {max} edit(s) running or waiting. Wait, or /wc cancel."
+edit-stopped: "{prefix}<red>Another plugin stopped this edit{reason}."
 
 confirm-needed: "{prefix}<yellow>This {kind} changes up to <white>{blocks}</white> blocks (about {time}). <white>/wc confirm</white> to go ahead, or run it again with <white>--preview</white> to see it first. It waits {seconds} s."
 terrain-confirm-needed: "{prefix}<yellow>This {kind} changes up to <white>{blocks}</white> blocks (about {time}). <white>/wc confirm</white> to go ahead (without --now it shows a preview first). It waits {seconds} s."
@@ -241,6 +242,7 @@ selftest-ok: "{prefix}<green>Selftest passed: set {changed} blocks, undo, redo a
 selftest-failed: "{prefix}<red>Selftest failed: {reason}"
 selftest-entities-ok: "{prefix}<green>Selftest entities passed: an armor stand, an item frame (turned) and a pig with a rider were copied and created again whole."
 selftest-restore-ok: "{prefix}<green>Selftest backups passed: the spawn chunk read from the region file is the world, block by block ({blocks} blocks, {tiles} with data, {biomes} biome(s)); a temporary world for regen was made in {ms} ms with the same bottom layer, and deleted."
+selftest-api-ok: "{prefix}<green>Selftest API passed: the service is registered (API {version}), a plugin edit of {blocks} blocks was made and undone, and one stopped by a listener changed nothing."
 selftest-tools-ok: "{prefix}<green>Selftest tools passed: the cycler finds every facing, half and shape of a stair on this server."
 
 # Terrain (/wc mountain, /wc island, /wc brush)

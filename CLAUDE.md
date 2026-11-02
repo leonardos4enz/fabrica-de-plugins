@@ -262,6 +262,14 @@ con `--release 21`.
   la 022). Un heredoc del Bash con `node` perdió las barras invertidas de una regex: los scripts, con la herramienta de
   escritura, y las regex de la suite, con la de edición. La suite de Worldcraft ahora repara la capa de pasto al empezar
   (`antes`, F-02): el desgaste de escenarios viejos ya no tumba la 033 en la corrida siguiente.
+- **Spec 037 (API de Worldcraft):** el `onEnd` de una obra corre **dentro del paso del planificador**, con la obra todavía
+  en su cola: lo que se avisa desde ahí (un futuro, un evento) y pide otra obra o un `undo` recibe «Wait for your running
+  edit» (F-01). El fin de la obra para otros va al tick siguiente (`Edits.later`). Un selftest que falla a la mitad deja
+  bloques en su caja y tumba la corrida siguiente: limpiar la caja (`fill … air`) antes de repetir. **`perl -CSD -e`
+  con acentos en el reemplazo los codifica dos veces** (el código del `-e` no se lee como UTF-8): textos en español, con
+  la herramienta de edición o un script de Node en un archivo. Un plugin que no es producto (el ejemplo de la API) va
+  en `plugins/` con un nombre de jar que no empiece como el del plugin (`WorldcraftApiExample-`, no `Worldcraft-…`):
+  la suite y la compuerta 2 eligen el jar por ese prefijo; la suite lo instala con `jarsExtra`.
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

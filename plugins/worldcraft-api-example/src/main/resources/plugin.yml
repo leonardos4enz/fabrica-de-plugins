@@ -1,0 +1,15 @@
+name: WorldcraftApiExample
+version: '${version}'
+main: dev.leo.wcexample.WorldcraftApiExample
+api-version: '1.21'
+author: Leo
+description: An example of Worldcraft's API - edits from another plugin, and protected areas that stop Worldcraft edits.
+depend: [Worldcraft]
+commands:
+  wcx:
+    description: Try Worldcraft's API.
+    usage: /wcx selection|select|fill|box|paste|undo|reload
+permissions:
+  worldcraftexample.use:
+    description: Use /wcx.
+    default: op
