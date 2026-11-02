@@ -270,6 +270,14 @@ con `--release 21`.
   la herramienta de edición o un script de Node en un archivo. Un plugin que no es producto (el ejemplo de la API) va
   en `plugins/` con un nombre de jar que no empiece como el del plugin (`WorldcraftApiExample-`, no `Worldcraft-…`):
   la suite y la compuerta 2 eligen el jar por ese prefijo; la suite lo instala con `jarsExtra`.
+- **Spec 038 (publicar Worldcraft):** un número de marketing se ata al código con una prueba (`PresentacionTest` exige el 102
+  de la ayuda) y el inventario ajeno se saca del bytecode (`javap -v`, `@Command` por clase *Commands*). Sobre
+  `confirm.above_blocks` también la **consola** tiene que mandar `wc confirm`, aunque la obra lleve `--now`. En las capturas,
+  una obra grande mirada en vivo deja al visor con secciones a medio actualizar (montaña en tajadas, isla invisible) y un
+  `undo` deja bloques viejos: la cámara se va lejos mientras se construye y vuelve después, y cada escena va en su propia
+  corrida (`--solo`). **Nada pesado en paralelo con la suite:** con unas unitarias de gradle al mismo tiempo, la obra de
+  36 000 bloques midió 12,2 ms en un tick y falló el escenario del presupuesto (8 ms). El navegador integrado no tiene
+  las sesiones de Modrinth, Hangar ni SpigotMC (la 024 usó el Chrome del dueño).
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

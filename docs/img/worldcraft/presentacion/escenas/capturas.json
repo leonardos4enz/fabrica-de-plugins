@@ -1,0 +1,11 @@
+{
+  "image": {
+    "alt": "The Worldcraft logo built with blocks by /wc image, standing in front of the player like a wall."
+  },
+  "shapes": {
+    "alt": "Shapes made with one command each: a sphere, a hollow cylinder, a pyramid and a cone, on the grass."
+  },
+  "terrain": {
+    "alt": "A mountain with snowy peaks and a floating island with trees, each made with one command, over a generated plain."
+  }
+}

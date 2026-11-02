@@ -1,0 +1,105 @@
+[CENTER][IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/worldcraft/presentacion/1-header.png[/IMG][IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/worldcraft/presentacion/2-terrain.png[/IMG][IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/worldcraft/presentacion/3-shapes-pictures.png[/IMG][IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/worldcraft/presentacion/4-compared.png[/IMG][IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/worldcraft/presentacion/5-commands.png[/IMG][IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/worldcraft/presentacion/6-features.png[/IMG][IMG]https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/worldcraft/presentacion/7-how-to-start.png[/IMG]
+
+[SIZE=5][B]World editing for Paper that never lags the server[/B][/SIZE]
+Every edit, from ten blocks to ten million, runs in small batches inside a time budget shared by the whole plugin. Preview it before it happens, undo it even after a restart (without erasing what others built since), write patterns the way you would say them, and make a mountain or a floating island with one word. You do not need WorldEdit: Worldcraft has its own engine, its own .schem reader and writer, and [B]102 commands[/B] under /wc.[/CENTER]
+
+[I]Worldcraft is not affiliated with or endorsed by EngineHub (WorldEdit), IntellectualSites (FastAsyncWorldEdit) or Mojang.[/I]
+
+[SIZE=5][B]How it compares[/B][/SIZE]
+Counted from the @Command annotations inside the WorldEdit 7.3.19 and FAWE 2.16.2 jars (sub-commands included), and counting only what Worldcraft does the same or better:
+[LIST]
+[*][B]WorldEdit 7.3.19:[/B] 171 commands. Worldcraft has [B]129[/B] (75 %), 5 more in part.
+[*][B]FastAsyncWorldEdit 2.16.2:[/B] 244 commands. Worldcraft has [B]142[/B] (58 %), 12 more in part.
+[*][B]Worldcraft 0.13.0:[/B] [B]102[/B] under /wc (140 counted like WorldEdit counts its own).
+[/LIST]
+Every command, one by one, with its Worldcraft equivalent: [URL='https://github.com/leonardos4enz/fabrica-de-plugins/blob/main/docs/worldcraft/presentacion/commands.md']commands.md[/URL].
+
+[LIST]
+[*][B]Big edits never lag the server:[/B] Worldcraft yes (8 ms per tick, shared) · WorldEdit no (main thread) · FAWE yes (async, server internals)
+[*][B]See the result before it changes:[/B] Worldcraft yes ([FONT=Courier New]--preview[/FONT], only you) · WorldEdit no · FAWE no
+[*][B]See the selection without a client mod:[/B] Worldcraft yes (particles) · WorldEdit and FAWE need the CUI mod
+[*][B]Undo after a restart:[/B] Worldcraft yes (on disk) · WorldEdit no · FAWE yes
+[*][B]Undo leaves what others built since:[/B] Worldcraft yes · WorldEdit no · FAWE no
+[*][B]Safe limits out of the box:[/B] Worldcraft yes (50 000 blocks by default) · WorldEdit no limit · FAWE per group
+[*][B]Mountains and floating islands in one word:[/B] only Worldcraft
+[*][B]Patterns in plain words, "did you mean":[/B] Worldcraft yes · WorldEdit and FAWE in part
+[*][B]Shapes, brushes, tools, formulas, biomes, regen, snapshots:[/B] all three
+[*][B]WorldEdit .schem files (v1, v2, v3):[/B] all three (Worldcraft reads and writes them)
+[*][B]Caves, ores, pictures (from FAWE):[/B] Worldcraft and FAWE
+[*][B]Only the Paper API (no server internals):[/B] Worldcraft and WorldEdit
+[*][B]Used by WorldGuard and PlotSquared:[/B] WorldEdit and FAWE (keep WorldEdit for them)
+[/LIST]
+
+[SIZE=5][B]Commands (102)[/B][/SIZE]
+Everything is [FONT=Courier New]/wc <command>[/FONT] (or [FONT=Courier New]/worldcraft[/FONT]); [FONT=Courier New]/wc help <command>[/FONT] shows how to use each one with an example.
+[LIST]
+[*][B]Select (15):[/B] [FONT=Courier New]/wc wand, pos1, pos2, hpos1, hpos2, sel[/FONT] (cuboid, extend, poly, ellipsoid, sphere, cyl, convex, magic), [FONT=Courier New]expand, contract, shift, outset, inset, trim, chunk, count, distr[/FONT]
+[*][B]Edit a selection (13):[/B] [FONT=Courier New]set, replace, walls, faces, stack, move, overlay, naturalize, smooth, hollow, center, line, gmask[/FONT]
+[*][B]Preview, undo and jobs (8):[/B] [FONT=Courier New]confirm, cancel, undo, redo, history, clearhistory, jobs, limits[/FONT]
+[*][B]Copy and schematics (8):[/B] [FONT=Courier New]copy, cut, paste, rotate, flip, clearclipboard, schem[/FONT] (save, load, list, delete, import), [FONT=Courier New]structure[/FONT] (the game's own templates)
+[*][B]Shapes (7):[/B] [FONT=Courier New]sphere, hsphere, cyl, hcyl, pyramid, hpyramid, cone[/FONT]
+[*][B]Terrain (4):[/B] [FONT=Courier New]mountain, island, reroll, styles[/FONT]
+[*][B]Biomes, trees and plants (7):[/B] [FONT=Courier New]biomelist, biomeinfo, setbiome, forest, forestgen, flora, pumpkins[/FONT]
+[*][B]Formulas (5):[/B] [FONT=Courier New]generate, generatebiome, deform, calc, timeout[/FONT]
+[*][B]Caves, ores and pictures (4):[/B] [FONT=Courier New]caves, ore, ores, image[/FONT]
+[*][B]Fixes around you (12):[/B] [FONT=Courier New]drain, fixwater, fixlava, fill, removenear, replacenear, removeabove, removebelow, extinguish, snow, thaw, green[/FONT]
+[*][B]Entities (2):[/B] [FONT=Courier New]butcher, remove[/FONT]
+[*][B]Brushes and tools (3):[/B] [FONT=Courier New]brush[/FONT] (19: sphere, cyl, set, clipboard, splatter, scatter, rock, gravity, extinguish, butcher, forest, deform, and the terrain brush: raise, lower, smooth, flatten, erode, paint), [FONT=Courier New]tool[/FONT] (10: repl, floodfill, info, cycler, deltree, farwand, lrbuild, navwand, tree, none), [FONT=Courier New]superpickaxe[/FONT] (single, area, recursive)
+[*][B]Moving around (7):[/B] [FONT=Courier New]unstuck, ascend, descend, ceil, thru, jumpto, up[/FONT]
+[*][B]Back to the original (3):[/B] [FONT=Courier New]regen, snapshot, restore[/FONT]
+[*][B]Admin (4):[/B] [FONT=Courier New]help, reload, validate, selftest[/FONT]
+[/LIST]
+[CODE]/wc wand                                     left click = corner 1, right click = corner 2
+/wc set 70% stone, 30% andesite --preview    see it first (only you), then /wc confirm
+/wc replace dirt, grass_block with stone
+/wc undo                                     works after a restart; leaves alone what others changed since
+/wc mountain                                 a mountain where you look: [Build] [Another] [Cancel]
+/wc schem load castles/tower                 a WorldEdit .schem into your clipboard, then /wc paste --preview
+/wc generate stone x^2+y^2+z^2<1             a shape from a formula, written like in WorldEdit[/CODE]
+
+[SIZE=5][B]What it does better[/B][/SIZE]
+[LIST]
+[*][B]No lag, ever.[/B] 8 ms of each 50 ms tick for the whole plugin ([FONT=Courier New]performance.max_ms_per_tick[/FONT]); the clock is checked on every block. Two players' edits share the time in turns. Unloaded chunks load in the background.
+[*][B]See before you change.[/B] [FONT=Courier New]--preview[/FONT] shows fake blocks only you see; [FONT=Courier New]/wc confirm[/FONT] then does exactly that. Edits over 50 000 blocks ask first.
+[*][B]Undo that is not lost.[/B] Each player's history is on disk: undo after a restart or a crash. Blocks somebody changed after your edit are left alone, and you are told how many. Chests and signs come back with their contents.
+[*][B]Plain words.[/B] [FONT=Courier New]70% stone, 30% andesite[/FONT], [FONT=Courier New]*_wool, !red_wool[/FONT], [FONT=Courier New]replace dirt with stone[/FONT]. Mistakes are found before anything changes, with "did you mean".
+[*][B]Safe limits.[/B] Per permission group: biggest edit, edits at once, worlds and blocked blocks (bedrock, barriers, command blocks and portals are blocked by default except for [FONT=Courier New]admin[/FONT]).
+[*][B]For other plugins.[/B] A Java API ([FONT=Courier New]WorldcraftApi.get()[/FONT]: selections, set, replace, paste, undo through the same engine) and a cancellable [FONT=Courier New]WorldcraftEditEvent[/FONT] before every edit, commands included.
+[/LIST]
+
+[SIZE=5][B]Permissions[/B][/SIZE]
+All [B]op[/B] by default: [FONT=Courier New]worldcraft.use[/FONT] (the wand and every edit on your own selection), [FONT=Courier New]worldcraft.moderate[/FONT] (see and undo other players' edits), [FONT=Courier New]worldcraft.admin[/FONT], [FONT=Courier New]worldcraft.schematic[/FONT], [FONT=Courier New]worldcraft.schematic.save[/FONT], [FONT=Courier New]worldcraft.schematic.delete[/FONT], [FONT=Courier New]worldcraft.butcher[/FONT], [FONT=Courier New]worldcraft.remove[/FONT], [FONT=Courier New]worldcraft.navigate[/FONT], [FONT=Courier New]worldcraft.superpickaxe[/FONT], [FONT=Courier New]worldcraft.image.link[/FONT], [FONT=Courier New]worldcraft.regen[/FONT], [FONT=Courier New]worldcraft.snapshot[/FONT], and [FONT=Courier New]worldcraft.limit.<group>[/FONT] for the limits of a group in config.yml.
+
+[SIZE=5][B]Compatibility[/B][/SIZE]
+[LIST]
+[*][B]Paper 1.21.4:[/B] verified (unit tests, a real server and an in-game test suite with bots). Other Paper 1.21.x and 26.x: not verified yet.
+[*][B]Java 21+.[/B] [B]Paper only:[/B] not Spigot/CraftBukkit, not Folia.
+[*][B]No dependencies.[/B] It can run next to WorldEdit (different command and wand). WorldGuard and PlotSquared use WorldEdit's own API, so keep WorldEdit installed if you use them.
+[*]No network access, unless you turn on picture links ([FONT=Courier New]images.links[/FONT], off by default).
+[/LIST]
+
+[SIZE=5][B]Links[/B][/SIZE]
+[LIST]
+[*][URL='https://github.com/leonardos4enz/fabrica-de-plugins/blob/main/plugins/worldcraft/README.md']Documentation[/URL]
+[*][URL='https://github.com/leonardos4enz/fabrica-de-plugins/blob/main/docs/worldcraft/presentacion/commands.md']Every command compared with WorldEdit and FAWE[/URL]
+[*][URL='https://github.com/leonardos4enz/fabrica-de-plugins']Source code (MIT)[/URL]
+[*][URL='https://github.com/leonardos4enz/fabrica-de-plugins/issues']Bug reports[/URL]
+[/LIST]
+
+Code and documentation were written with the help of an AI coding assistant (Claude), directed and reviewed by the author and verified with an automated in-game test suite.
+
+[SPOILER="Image transcription"]
+[B]Header.[/B] Worldcraft. Edit the world. Never freeze the server. WorldEdit's commands under /wc, run in small batches that never lag. Preview every edit, undo it after a restart, and make a mountain with one word. Paper 1.21.4 · 102 commands · No WorldEdit needed · Reads .schem.
+
+[B]A mountain in one word.[/B] /wc mountain large and /wc island large: a mountain with snowy peaks and a floating island with trees over a generated plain. Shown first: [Build] [Another] [Cancel].
+
+[B]Shapes, pictures, formulas.[/B] The commands builders already know, with --preview: only you see it until /wc confirm. /wc sphere orange_concrete 9, /wc hcyl light_blue_concrete 8 16: a sphere, a hollow cylinder, a pyramid and a cone. /wc image logo.png 48, /wc generate stone x^2+y^2+z^2<1: the Worldcraft logo built with blocks.
+
+[B]Worldcraft vs WorldEdit vs FAWE.[/B] The same comparison as the list above. Worldcraft 0.13.0, WorldEdit 7.3.19, FAWE 2.16.2 (November 2026).
+
+[B]How many commands?[/B] 102 commands under /wc (140 counted like WorldEdit counts its own). 129 of WorldEdit's 171: the same or better (75 %), 5 more in part. 142 of FAWE's 244: the same or better (58 %), 12 more in part. Then the command names by group, as in the list above.
+
+[B]What it does better.[/B] No lag, ever: every edit runs in batches inside 8 ms of each tick, for the whole plugin; two players share it in turns. Preview, then confirm: --preview shows fake blocks only you see; edits over 50 000 blocks ask first. Undo that is not lost: history on disk, undo after a restart or a crash; what others built since is left alone. Plain words: replace dirt with 70% stone, 30% andesite; typos get "did you mean", before anything changes. Safe by default: limits per permission group; nobody places bedrock or command blocks unless you allow it. For other plugins: a Java API and a cancellable WorldcraftEditEvent before every edit.
+
+[B]How to start.[/B] 1. Drop the jar in plugins/ (Paper 1.21.4, Java 21). 2. /wc wand, then click two corners. 3. /wc set stone --preview and /wc confirm. 4. /wc undo, even after a restart.
+[/SPOILER]

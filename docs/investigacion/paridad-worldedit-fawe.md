@@ -333,3 +333,24 @@ Fuera de esta partición (se anotan en el roadmap, el dueño no los pidió ahora
 `toggleplace` (B).
 No se hará: luz directa (NMS), `delchunks`, CraftScripts, macros, pinceles que corren comandos, `//test`, subir a sitios
 externos sin permiso del dueño, `AnvilCommands` (FAWE no los registra).
+
+## 5. Recuento con la 0.13.0 (spec 038)
+Para la página de presentación, el dueño pidió «toda la cantidad de comandos y comparativa con WorldEdit y FAWE». La
+tabla de §2 quedó escrita con la 0.8.0 y por filas (una fila junta varios comandos), así que en la
+[038](../sdd/specs/038-worldcraft-publicacion/spec.md) se volvió a sacar el inventario del **bytecode** (`javap -v` sobre las
+clases `*Commands` de cada jar: 171 en WorldEdit 7.3.19; 265 en FAWE 2.16.2, de los que 21 son `AnvilCommands` sin
+registrar, **244**, como en §0) y se marcó **cada comando** frente a Worldcraft 0.13.0:
+
+| | Total | Lo tiene (igual o mejor) | En parte | Falta | No se hará | No hace falta |
+|---|---|---|---|---|---|---|
+| WorldEdit 7.3.19 | 171 | **129** (75 %) | 5 | 28 | 4 | 5 |
+| FAWE 2.16.2 | 244 | **142** (58 %) | 12 | 68 | 14 | 8 |
+| FAWE, solo lo que agrega a WorldEdit | 79 | 14 | 8 | 44 | 10 | 3 |
+
+Worldcraft tiene **102** comandos de `/wc` (140 contados como WorldEdit cuenta los suyos: cada pincel, herramienta y
+subcomando aparte). La tabla comando por comando, en inglés y con el equivalente de cada uno, es
+[`docs/worldcraft/presentacion/commands.md`](../worldcraft/presentacion/commands.md); las filas de §2 que todavía dicen
+«falta» y ya están hechas (029–037) se leen ahí. Lo que más falta de WorldEdit: `//curve`, `//snowsmooth`, `//update`,
+`/tool stacker`, `/brush snow|snowsmooth|biome|feature|heightmap|morph|dilate`, `//feature`, `/chunkinfo`,
+`/listchunks`, `/tracemask`, `/range`, `//fillr`, `/toggleplace`, `/schem formats` y los de diagnóstico de
+`/worldedit` (`version`, `report`, `trace`, `tz`).

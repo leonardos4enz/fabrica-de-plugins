@@ -1,6 +1,6 @@
 // Página de presentación (specs 020 y 024): saca el logo y las franjas del HTML de cada plugin con Chrome sin interfaz y
 // arma los GIF con ffmpeg a partir de los cuadros de las escenas (npm run capturas -- --escenas presentacion). No
-// necesita servidor. Uso: npm --prefix tests-e2e run presentacion [-- --plugin skinstatues]   (sin --plugin: OmniEvents)
+// necesita servidor. Uso: npm --prefix tests-e2e run presentacion [-- --plugin skinstatues|worldcraft]   (sin --plugin: OmniEvents)
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
@@ -19,6 +19,7 @@ function plugins () {
   const assets = path.join(RAIZ, 'docs/site/pages/assets')
   const oe = path.join(assets, 'presentacion')
   const ss = path.join(RAIZ, 'docs/img/skinstatues/presentacion')
+  const wc = path.join(RAIZ, 'docs/img/worldcraft/presentacion')
   return {
     omnievents: {
       fuente: path.join(RAIZ, 'docs/site/assets-src/presentacion.html'),
@@ -49,6 +50,22 @@ function plugins () {
         { id: 'franja-5', archivo: path.join(ss, '5-name-or-link.png') },
         { id: 'franja-6', archivo: path.join(ss, '6-features.png') },
         { id: 'franja-7', archivo: path.join(ss, '7-how-to-start.png') }
+      ]
+    },
+    // Spec 038: sin GIF; las fotos son las escenas de tests-e2e/worldcraft/presentacion.mjs (terrain, shapes, image).
+    worldcraft: {
+      fuente: path.join(RAIZ, 'docs/site/assets-src/worldcraft.html'),
+      salida: wc,
+      marcadores: true,
+      piezas: [
+        { id: 'logo', archivo: path.join(wc, 'logo.png'), transparente: true },
+        { id: 'franja-1', archivo: path.join(wc, '1-header.png') },
+        { id: 'franja-2', archivo: path.join(wc, '2-terrain.png') },
+        { id: 'franja-3', archivo: path.join(wc, '3-shapes-pictures.png') },
+        { id: 'franja-4', archivo: path.join(wc, '4-compared.png') },
+        { id: 'franja-5', archivo: path.join(wc, '5-commands.png') },
+        { id: 'franja-6', archivo: path.join(wc, '6-features.png') },
+        { id: 'franja-7', archivo: path.join(wc, '7-how-to-start.png') }
       ]
     }
   }
