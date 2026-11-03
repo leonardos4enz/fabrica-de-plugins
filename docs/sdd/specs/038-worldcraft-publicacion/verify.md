@@ -1,8 +1,8 @@
 # Verify 038 — Página de presentación y publicación de Worldcraft
 
 **Fecha:** 2026-11-02 · **Resultado:** Verificado (compuertas 1, 2 y 3a) en Paper 1.21.4; Worldcraft 0.13.0 sin cambios
-de código. **La subida a SpigotMC, Modrinth y Hangar queda pendiente:** el navegador integrado de la sesión no tiene
-la sesión del dueño en esos sitios (ver «Publicación»).
+de código. **Publicado** con el Chrome del dueño (su permiso, como en la 024): SpigotMC y Hangar públicos; Modrinth
+completo como borrador, falta el clic «Submit for review» (ver «Publicación»).
 
 ## Compuertas
 | Compuerta | Resultado |
@@ -22,7 +22,7 @@ la sesión del dueño en esos sitios (ver «Publicación»).
 | H2 CA1–CA3 | `docs/site/assets-src/worldcraft.html` → `docs/img/worldcraft/presentacion/` (logo de 512 px y 7 franjas): bloque de pasto con un bloque de oro que sale de la selección y la varita, dibujado en el HTML; franjas 4 (comparación) y 5 (cantidades) |
 | H3 CA1–CA2 | `tests-e2e/worldcraft/presentacion.mjs`: `terrain` (`mountain large` y `island large` desde la consola), `shapes` (esfera, cilindro hueco, pirámide, cono), `image` (el logo con `/wc image` del bot); `plugins/worldcraft/run-capturas/` (puerto 25597), mundo nuevo en cada corrida, obras deshechas al terminar |
 | H4 CA1–CA3 | `spigotmc.bbcode`, `modrinth-hangar.md`, `publicar.md`; solo 1.21.4 marcada |
-| H4 CA4 | Pendiente: ver «Publicación» |
+| H4 CA4 | Subido con la sesión del dueño en su Chrome, sin escribir credenciales: ver «Publicación» |
 
 ## Hallazgos
 | ID | Sev. | Hallazgo | Resolución |
@@ -32,11 +32,21 @@ la sesión del dueño en esos sitios (ver «Publicación»).
 | F-03 | Baja (arnés) | El visor de las capturas, mirando una obra grande en vivo, quedó con secciones a medio actualizar (montaña en tajadas, isla invisible); y tras el `undo` de una escena, la siguiente veía bloques viejos en el cielo (el servidor sí los deshizo: «33,956 blocks back as they were») | La cámara se va lejos mientras se construye y vuelve; cada escena en su propia corrida con `--solo` |
 
 ## Publicación
-El dueño pidió subirlo («Sube el plugin… a spigot, modrinth y hangar») y se fue. El navegador integrado de esta sesión
-abre Modrinth en «Inicia sesión»: no tiene la sesión del dueño (en la 024 se usó su Chrome con su permiso). La IA no
-escribe credenciales, así que todo queda listo en `docs/worldcraft/presentacion/` (y el push hecho, para que las
-imágenes de `raw.githubusercontent.com` existan) hasta que el dueño inicie sesión en el navegador integrado o autorice
-otra vez su Chrome. `publicar.md` tiene el paso a paso.
+El dueño pidió subirlo («Sube el plugin… a spigot, modrinth y hangar»). El navegador integrado no tenía su sesión; al
+volver, eligió «Use my Chrome» y se subió con sus sesiones abiertas, sin escribir credenciales. En los tres: solo
+`Worldcraft-0.13.0.jar`, solo Paper 1.21.4 (SpigotMC: 1.21), MIT, el logo y las descripciones de `docs/worldcraft/presentacion/`.
+
+| Sitio | Enlace | Estado |
+|---|---|---|
+| SpigotMC | https://www.spigotmc.org/resources/worldcraft.140223/ | Público (Spigot → World Management, ícono de 96 px) |
+| Hangar | https://hangar.papermc.io/leonardos4enz/Worldcraft | Público (World Management; palabras clave sin «WorldEdit») |
+| Modrinth | https://modrinth.com/plugin/worldcraft-editor | **Borrador completo** (versión 0.13.0 para Paper 1.21.4, utility y worldgen, MIT, enlaces, galería con las 3 escenas y la comparación, declaración de IA: código, recursos y texto). Falta que el dueño pulse **Submit for review** en *Settings*: a las 22:00 la API de Modrinth tardaba ~10 s por consulta y el envío (`PATCH /v3/project`) se cortó por tiempo dos veces |
+
+| ID | Sev. | Hallazgo | Resolución |
+|---|---|---|---|
+| F-04 | Baja (publicación) | En Modrinth, el slug `worldcraft` estaba tomado (no lo devuelve la API pública: es de un proyecto que no se ve) | Se usó `worldcraft-editor`, el de reserva de `publicar.md` |
+| F-05 | Baja (publicación) | Modrinth no dejaba enviar a revisión: «Your … link could not be verified» para cada enlace a GitHub, que sí responden 200. Su lista revisa los enlaces **desde el navegador** con la API de GitHub sin autenticar (60 consultas por hora por IP), y la IP del dueño ya las había gastado (`api.github.com/rate_limit`: 0 restantes) | Esperar a que se renueve el límite y volver a cargar la página (después de las 21:52 los enlaces pasaron); lección en `CLAUDE.md` y `publicar.md` |
+| F-06 | Baja (publicación) | Con los enlaces ya verificados, el botón esperaba la respuesta de `GET /v3/project/…/validate` (más de 30 s) y el envío a revisión terminó en «TimeoutError»: la API de Modrinth estaba lenta | Queda para el dueño: un clic en *Submit for review* cuando Modrinth responda |
 
 ## README
 Plugin: el póster, las cifras y el enlace a `commands.md` arriba; la compatibilidad dice que la 0.13.0 se volvió a

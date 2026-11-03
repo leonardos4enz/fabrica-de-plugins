@@ -16,7 +16,9 @@ and full control for experienced builders. Specs: [025](../../docs/sdd/specs/025
 
 **102 commands** under `/wc`. Counted from the WorldEdit 7.3.19 and FAWE 2.16.2 jars, Worldcraft has **129 of
 WorldEdit's 171 commands** and **142 of FAWE's 244**, the same or better: every command, one by one, in
-[commands.md](../../docs/worldcraft/presentacion/commands.md). The public page (SpigotMC, Modrinth, Hangar) is in
+[commands.md](../../docs/worldcraft/presentacion/commands.md). Download it from
+[SpigotMC](https://www.spigotmc.org/resources/worldcraft.140223/) or [Hangar](https://hangar.papermc.io/leonardos4enz/Worldcraft)
+([Modrinth](https://modrinth.com/plugin/worldcraft-editor) is coming soon); the page sources are in
 [docs/worldcraft/presentacion](../../docs/worldcraft/presentacion/).
 
 ```

@@ -8,4 +8,4 @@
 - [x] T6 `spigotmc.bbcode`, `modrinth-hangar.md`, `publicar.md`.
 - [x] T7 Compuertas: 1 (`./gradlew build`), 2 (`compuerta-servidor.sh worldcraft`), 3a dos veces.
 - [x] T8 README del plugin y raíz, roadmap, `verify.md`, commit y push.
-- [ ] T9 Publicar en Modrinth, Hangar y SpigotMC con la sesión del dueño.
+- [ ] T9 Publicar en Modrinth, Hangar y SpigotMC con la sesión del dueño (en su Chrome). Falta solo el clic «Submit for review» de Modrinth (su API se cortaba por tiempo).

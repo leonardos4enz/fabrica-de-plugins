@@ -146,6 +146,9 @@ npm --prefix tests-e2e run presentacion -- --plugin worldcraft      # otra vez, 
 ```
 - Servidor `plugins/worldcraft/run-capturas/` (puerto 25597, mundo nuevo en cada corrida); las obras van desde la consola y
   se deshacen al terminar cada escena. `PresentacionTest` de Worldcraft además exige que el 102 sea el del código.
+- Publicado en [SpigotMC](https://www.spigotmc.org/resources/worldcraft.140223/) y
+  [Hangar](https://hangar.papermc.io/leonardos4enz/Worldcraft); en [Modrinth](https://modrinth.com/plugin/worldcraft-editor)
+  el borrador está completo y falta enviarlo a revisión.
 
 ## Licencia
 [MIT](LICENSE). OmniEvents se publica en [Hangar](https://hangar.papermc.io/leonardos4enz/OmniEvents).

@@ -277,7 +277,12 @@ con `--release 21`.
   `undo` deja bloques viejos: la cámara se va lejos mientras se construye y vuelve después, y cada escena va en su propia
   corrida (`--solo`). **Nada pesado en paralelo con la suite:** con unas unitarias de gradle al mismo tiempo, la obra de
   36 000 bloques midió 12,2 ms en un tick y falló el escenario del presupuesto (8 ms). El navegador integrado no tiene
-  las sesiones de Modrinth, Hangar ni SpigotMC (la 024 usó el Chrome del dueño).
+  las sesiones de Modrinth, Hangar ni SpigotMC: se publica en el Chrome del dueño, con su permiso. **Modrinth revisa los
+  enlaces desde el navegador con la API de GitHub sin autenticar** (60 por hora por IP): si dice «link could not be
+  verified» para enlaces que responden 200, mirar `api.github.com/rate_limit` y esperar al `reset` (F-05). Los editores:
+  Modrinth es CodeMirror 6 (pegar con un `ClipboardEvent('paste')` en `.cm-content`), Hangar CodeMirror 5
+  (`.CodeMirror.CodeMirror.setValue`) y SpigotMC pasa a BBCode con `redactor_btn_switchmode`; en SpigotMC el ícono se sube
+  **después** de guardar (la casilla «Upload resource icon»); el otro `input[type=file]` es de adjuntos de la descripción.
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

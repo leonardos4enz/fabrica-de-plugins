@@ -29,7 +29,8 @@ affiliated» y que la cantidad de comandos (102) sea la del código.
 | Campo | Valor |
 |---|---|
 | Nombre | Worldcraft |
-| Slug | `worldcraft` (Modrinth y Hangar; si está tomado: `worldcraft-editor`) |
+| Slug | Hangar `Worldcraft`; Modrinth `worldcraft-editor` (`worldcraft` estaba tomado) |
+| Publicado (spec 038) | [SpigotMC](https://www.spigotmc.org/resources/worldcraft.140223/) · [Hangar](https://hangar.papermc.io/leonardos4enz/Worldcraft) · [Modrinth](https://modrinth.com/plugin/worldcraft-editor) |
 | Resumen (Modrinth y Hangar, 73 caracteres) | `Lag-free world editing: preview, undo after restarts, terrain in one word.` |
 | Tag line (SpigotMC) | El mismo resumen |
 | Versión | `0.13.0` (canal **Release**: verificada con las compuertas de la 025–037) |
@@ -81,6 +82,9 @@ Para pegar en la versión 0.13.0 (en inglés, como el plugin). Es la primera pub
 6. **Versions → Create version:** `Worldcraft-0.13.0.jar`, `0.13.0`, Release, loader **Paper** (quitar Purpur/Folia/
    Bukkit si los propone), Minecraft **1.21.4**, sin dependencias, changelog de arriba.
 7. Declaración de contenido hecho con IA, como en SkinStatues (código, recursos y texto). **Submit for review.**
+   Si la lista dice «link could not be verified» con enlaces a GitHub que sí abren: Modrinth los revisa desde tu
+   navegador con la API de GitHub (60 consultas por hora); esperar la hora que da `https://api.github.com/rate_limit`
+   (`reset`) y recargar (verify 038 F-05).
 
 ### Hangar (https://hangar.papermc.io)
 1. **New project** → dueño: tu usuario, nombre `Worldcraft`, resumen, categoría **World Management**, licencia MIT,
@@ -94,4 +98,5 @@ Para pegar en la versión 0.13.0 (en inglés, como el plugin). Es la primera pub
 3. **Description:** pegar `spigotmc.bbcode` en modo **BBCode** (botón `[ ]`). Las 7 `[IMG]` van en **una sola línea**
    (020 F-05).
 4. **Native Minecraft version / Tested:** **1.21**.
-5. **Source code:** GitHub. **File:** `Worldcraft-0.13.0.jar`. **Icon:** `logo.png` (SpigotMC pide uno chico: 96 px).
+5. **Source code:** GitHub. **File:** `Worldcraft-0.13.0.jar`. **Icon:** marcar «Upload resource icon»: se pide
+   **después** de guardar; `logo.png` reducido a 96 px.
