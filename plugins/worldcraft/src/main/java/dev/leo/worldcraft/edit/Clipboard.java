@@ -268,6 +268,21 @@ public final class Clipboard {
         this.transform = t;
     }
 
+    /**
+     * Spec 041: el mismo portapapeles (comparte los bloques) con otra transformación: //place (sin la del jugador), el
+     * barrido y los pinceles que giran cada copia. El de quien copió no cambia.
+     */
+    public Clipboard withTransform(Transform t) {
+        Clipboard c = new Clipboard(w, h, d, offX, offY, offZ, states, tiles);
+        c.transform = t;
+        c.source = source;
+        c.entities = entities;
+        c.biomes = biomes;
+        c.biomeNames.addAll(biomeNames);
+        c.biomeIndex.putAll(biomeIndex);
+        return c;
+    }
+
     /** La caja que ocupa al pegarla con el jugador en (px, py, pz), ya transformada. */
     public Box target(int px, int py, int pz) {
         int[] a = new int[3], b = new int[3];

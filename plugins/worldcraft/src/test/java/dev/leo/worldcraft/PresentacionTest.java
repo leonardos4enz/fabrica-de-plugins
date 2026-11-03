@@ -170,7 +170,7 @@ class PresentacionTest {
     @Test
     void H1_CA5_la_cantidad_de_comandos_anunciada_es_la_del_codigo() throws Exception {
         int n = comandos().size();
-        assertEquals(119, n, "cambió la cantidad de comandos de /wc: actualizar las descripciones, commands.md y el póster");
+        assertEquals(138, n, "cambió la cantidad de comandos de /wc: actualizar las descripciones, commands.md y el póster");
         for (String d : List.of("spigotmc.bbcode", "modrinth-hangar.md", "commands.md")) {
             assertTrue(leer(d).contains(n + " commands"), d + " no dice «" + n + " commands»");
         }

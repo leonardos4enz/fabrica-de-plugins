@@ -131,11 +131,29 @@ public final class Structures {
      * paletas (una casa de aldea tiene una; un barco hundido, varias).
      */
     public void load(CommandSender s, String name, int palette) {
+        Loaded t = template(s, name, palette);
+        if (t == null) return;
+        var msg = plugin.messages();
+        Clipboard clip = t.clip();
+        String worldName = s instanceof Player p ? p.getWorld().getName() : Bukkit.getWorlds().get(0).getName();
+        plugin.edits().session(Edits.owner(s)).clipboard(clip, worldName);
+        s.sendMessage(msg.get("structure-loaded", "name", t.key().replace("minecraft:", ""), "size", clip.width() + "×" + clip.height() + "×" + clip.depth(),
+                "blocks", Edits.fmt(t.blocks()), "palette", t.palettes() > 1 ? " (palette " + palette + " of " + t.palettes() + ")" : ""));
+        if (t.loot() > 0) s.sendMessage(msg.get("structure-loot", "count", String.valueOf(t.loot())));
+        if (t.entities() > 0) s.sendMessage(msg.get("structure-entities", "count", String.valueOf(t.entities())));
+    }
+
+    /** Una plantilla leída: su portapapeles y lo que se dice de ella. */
+    public record Loaded(String key, Clipboard clip, int blocks, int palettes, int loot, int entities) {
+    }
+
+    /** Spec 041: la plantilla como portapapeles nuevo (para /wc tool structureplacer), o null (y se dice por qué). */
+    public Loaded template(CommandSender s, String name, int palette) {
         var msg = plugin.messages();
         String key = Templates.key(name);
         if (key == null) {
             s.sendMessage(msg.get("structure-bad-name", "name", name));
-            return;
+            return null;
         }
         Structure st;
         try {
@@ -145,16 +163,16 @@ public final class Structures {
         }
         if (st == null) {
             s.sendMessage(msg.get("structure-unknown", "name", key.replace("minecraft:", ""), "hint", Templates.hint(name, all())));
-            return;
+            return null;
         }
         List<Palette> palettes = st.getPalettes();
         if (palettes.isEmpty()) {
             s.sendMessage(msg.get("structure-empty", "name", key.replace("minecraft:", "")));
-            return;
+            return null;
         }
         if (palette < 0 || palette >= palettes.size()) {
             s.sendMessage(msg.get("structure-palette", "count", String.valueOf(palettes.size())));
-            return;
+            return null;
         }
         BlockVector size = st.getSize();
         int w = size.getBlockX(), h = size.getBlockY(), d = size.getBlockZ();
@@ -176,11 +194,6 @@ public final class Structures {
             list.add(new Templates.Block(bs.getX(), bs.getY(), bs.getZ(), blocks.id(bs.getBlockData()), tile));
         }
         Clipboard clip = Templates.toClipboard(w, h, d, list, id -> id == jigsaw || id == marker, blocks.air());
-        String worldName = s instanceof Player p ? p.getWorld().getName() : Bukkit.getWorlds().get(0).getName();
-        plugin.edits().session(Edits.owner(s)).clipboard(clip, worldName);
-        s.sendMessage(msg.get("structure-loaded", "name", key.replace("minecraft:", ""), "size", w + "×" + h + "×" + d,
-                "blocks", Edits.fmt(list.size()), "palette", palettes.size() > 1 ? " (palette " + palette + " of " + palettes.size() + ")" : ""));
-        if (loot > 0) s.sendMessage(msg.get("structure-loot", "count", String.valueOf(loot)));
-        if (st.getEntityCount() > 0) s.sendMessage(msg.get("structure-entities", "count", String.valueOf(st.getEntityCount())));
+        return new Loaded(key, clip, list.size(), palettes.size(), loot, st.getEntityCount());
     }
 }

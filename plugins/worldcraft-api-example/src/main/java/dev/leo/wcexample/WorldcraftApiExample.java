@@ -3,6 +3,7 @@ package dev.leo.wcexample;
 import dev.leo.worldcraft.api.EditResult;
 import dev.leo.worldcraft.api.Selection;
 import dev.leo.worldcraft.api.WorldcraftApi;
+import dev.leo.worldcraft.api.event.WorldcraftAllowedRegionEvent;
 import dev.leo.worldcraft.api.event.WorldcraftEditDoneEvent;
 import dev.leo.worldcraft.api.event.WorldcraftEditEvent;
 import org.bukkit.Bukkit;
@@ -31,7 +32,7 @@ public final class WorldcraftApiExample extends JavaPlugin implements Listener {
     }
 
     private WorldcraftApi wc;
-    private List<Area> areas = List.of();
+    private List<Area> areas = List.of(), buildAreas = List.of();
 
     @Override
     public void onEnable() {
@@ -44,21 +45,26 @@ public final class WorldcraftApiExample extends JavaPlugin implements Listener {
 
     private void load() {
         reloadConfig();
+        areas = read("protected");
+        buildAreas = read("build_areas");
+    }
+
+    private List<Area> read(String key) {
         List<Area> out = new ArrayList<>();
-        ConfigurationSection sec = getConfig().getConfigurationSection("protected");
+        ConfigurationSection sec = getConfig().getConfigurationSection(key);
         if (sec != null) {
             for (String name : sec.getKeys(false)) {
                 ConfigurationSection a = sec.getConfigurationSection(name);
                 List<Integer> f = a == null ? List.of() : a.getIntegerList("from"), t = a == null ? List.of() : a.getIntegerList("to");
                 if (a == null || f.size() != 3 || t.size() != 3) {
-                    getLogger().warning("protected." + name + " needs world, from: [x, y, z] and to: [x, y, z]: skipped");
+                    getLogger().warning(key + "." + name + " needs world, from: [x, y, z] and to: [x, y, z]: skipped");
                     continue;
                 }
                 out.add(new Area(name, a.getString("world", "world"), new BlockVector(f.get(0), f.get(1), f.get(2)),
                         new BlockVector(t.get(0), t.get(1), t.get(2))));
             }
         }
-        areas = List.copyOf(out);
+        return List.copyOf(out);
     }
 
     // ------------------------------------------------------------------ events
@@ -70,6 +76,21 @@ public final class WorldcraftApiExample extends JavaPlugin implements Listener {
             World w = Bukkit.getWorld(a.world());
             if (ev.overlaps(w, a.from(), a.to())) {
                 ev.setCancelReason("This area is protected by WorldcraftApiExample (" + a.name() + ")");
+                return;
+            }
+        }
+    }
+
+    /** Since Worldcraft 0.16.0: //wer selects the build area the player stands in. */
+    @EventHandler
+    public void onAllowedRegion(WorldcraftAllowedRegionEvent ev) {
+        var l = ev.getLocation();
+        for (Area a : buildAreas) {
+            if (!a.world().equals(l.getWorld().getName())) continue;
+            int[] lo = {Math.min(a.from().getBlockX(), a.to().getBlockX()), Math.min(a.from().getBlockY(), a.to().getBlockY()), Math.min(a.from().getBlockZ(), a.to().getBlockZ())};
+            int[] hi = {Math.max(a.from().getBlockX(), a.to().getBlockX()), Math.max(a.from().getBlockY(), a.to().getBlockY()), Math.max(a.from().getBlockZ(), a.to().getBlockZ())};
+            if (l.getBlockX() >= lo[0] && l.getBlockX() <= hi[0] && l.getBlockY() >= lo[1] && l.getBlockY() <= hi[1] && l.getBlockZ() >= lo[2] && l.getBlockZ() <= hi[2]) {
+                ev.setRegion(this, lo, hi, a.name());
                 return;
             }
         }
@@ -127,7 +148,7 @@ public final class WorldcraftApiExample extends JavaPlugin implements Listener {
                 case "undo" -> reply(s, wc.edit(this).undo(1));
                 case "reload" -> {
                     load();
-                    s.sendMessage("WorldcraftApiExample reloaded: " + areas.size() + " protected area(s)");
+                    s.sendMessage("WorldcraftApiExample reloaded: " + areas.size() + " protected area(s), " + buildAreas.size() + " build area(s)");
                 }
                 default -> {
                     return false;

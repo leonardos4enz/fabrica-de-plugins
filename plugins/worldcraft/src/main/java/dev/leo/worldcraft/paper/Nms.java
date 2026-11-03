@@ -108,6 +108,116 @@ public final class Nms {
         return problem == null;
     }
 
+    // ------------------------------------------------------------------ spec 041: la luz y el NBT de un bloque
+
+    private String lightProblem;
+    private Method getLightEngine, relightChunks, getBlockEntity, saveFull;
+    private Constructor<?> newChunkPos;
+    private Object registryAccess;
+    private boolean extrasLoaded;
+
+    /**
+     * Lo de la 041, aparte: si falta, solo //fixlighting y //nbtinfo se apagan (los *features* y //update siguen).
+     * ThreadedLevelLightEngine.relightChunks es el de /paper fixlight: pide recalcular, no pone bloques.
+     */
+    private synchronized void loadExtras() {
+        if (extrasLoaded) return;
+        extrasLoaded = true;
+        if (problem != null) {
+            lightProblem = problem;
+            return;
+        }
+        try {
+            ClassLoader cl = Bukkit.getServer().getClass().getClassLoader();
+            getLightEngine = getChunkSource.getReturnType().getMethod("getLightEngine");
+            Class<?> chunkPos = Class.forName("net.minecraft.world.level.ChunkPos", false, cl);
+            newChunkPos = chunkPos.getConstructor(int.class, int.class);
+            // F-01: getLightEngine() se declara con el tipo de arriba; el de /paper fixlight está en ThreadedLevelLightEngine.
+            Class<?> threaded = Class.forName("net.minecraft.server.level.ThreadedLevelLightEngine", false, cl);
+            // En 1.21.4 (Moonrise/Starlight) se llama starlight$serverRelightChunks(Collection, Consumer, IntConsumer).
+            try {
+                relightChunks = find(threaded, "starlight$serverRelightChunks", 3);
+            } catch (NoSuchMethodException e) {
+                relightChunks = find(threaded, "relightChunks", 3);
+            }
+            Class<?> level = Class.forName("net.minecraft.world.level.Level", false, cl);
+            getBlockEntity = level.getMethod("getBlockEntity", blockPos);
+            Class<?> be = Class.forName("net.minecraft.world.level.block.entity.BlockEntity", false, cl);
+            Class<?> provider = Class.forName("net.minecraft.core.HolderLookup$Provider", false, cl);
+            saveFull = be.getMethod("saveWithFullMetadata", provider);
+            Object server = Bukkit.getServer().getClass().getMethod("getServer").invoke(Bukkit.getServer());
+            registryAccess = server.getClass().getMethod("registryAccess").invoke(server);
+        } catch (Throwable t) {
+            lightProblem = t.getClass().getSimpleName() + ": " + t.getMessage();
+        }
+    }
+
+    /** El método con ese nombre y cantidad de parámetros, público o no, en la clase o sus padres. */
+    private static Method find(Class<?> c, String name, int params) throws NoSuchMethodException {
+        for (Class<?> k = c; k != null; k = k.getSuperclass()) {
+            for (Method m : k.getDeclaredMethods()) {
+                if (m.getName().equals(name) && m.getParameterCount() == params) {
+                    m.setAccessible(true);
+                    return m;
+                }
+            }
+        }
+        List<String> names = new ArrayList<>();
+        for (Method m : c.getDeclaredMethods()) if (m.getName().toLowerCase(java.util.Locale.ROOT).contains("light")) names.add(m.getName());
+        throw new NoSuchMethodException(c.getName() + "." + name + " (has: " + String.join(", ", names) + ")");
+    }
+
+    /** ¿Están //fixlighting y //nbtinfo? */
+    public boolean lightAvailable() {
+        loadExtras();
+        return lightProblem == null;
+    }
+
+    public String lightProblem() {
+        loadExtras();
+        return lightProblem;
+    }
+
+    /**
+     * H5 CA1: le pide al motor de luz del juego que recalcule esos chunks (cargados); done recibe cuántos, en el hilo
+     * principal. Nunca cambia un bloque.
+     */
+    public void relight(World world, Collection<long[]> chunks, java.util.function.IntConsumer done) {
+        loadExtras();
+        if (lightProblem != null) throw new IllegalStateException(lightProblem);
+        try {
+            Object level = getHandle.invoke(world);
+            Object engine = getLightEngine.invoke(getChunkSource.invoke(level));
+            java.util.Set<Object> set = new java.util.HashSet<>();
+            for (long[] c : chunks) set.add(newChunkPos.newInstance((int) c[0], (int) c[1]));
+            java.util.function.Consumer<Object> each = pos -> {
+            };
+            java.util.function.IntConsumer end = n -> Bukkit.getScheduler().runTask(dev.leo.worldcraft.Worldcraft.getPlugin(dev.leo.worldcraft.Worldcraft.class),
+                    () -> done.accept(n));
+            relightChunks.invoke(engine, set, each, end);
+        } catch (InvocationTargetException e) {
+            throw new IllegalStateException(e.getCause());
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /** H4 CA4: el NBT del bloque con datos en (x, y, z) como texto (SNBT, el de /data get block), o null si no tiene. */
+    public String blockNbt(World world, int x, int y, int z) {
+        loadExtras();
+        if (lightProblem != null) throw new IllegalStateException(lightProblem);
+        try {
+            Object level = getHandle.invoke(world);
+            Object be = getBlockEntity.invoke(level, newPos.newInstance(x, y, z));
+            if (be == null) return null;
+            return String.valueOf(saveFull.invoke(be, registryAccess));
+        } catch (InvocationTargetException e) {
+            throw new IllegalStateException(e.getCause());
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     /** Por qué no está (null si está). */
     public String problem() {
         return problem;

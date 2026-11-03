@@ -99,6 +99,26 @@ commands:
   tracemask: {}
   superpickaxe: { aliases: ["pickaxe", "sp"] }
   "/": { to: superpickaxe }
+  # Spec 041: what FAWE adds
+  "/gtexture": { to: gtexture }
+  "/gsmask": { to: gsmask, aliases: ["/globalsourcemask", "globalsourcemask"] }
+  "/gtransform": { to: gtransform }
+  smask: { aliases: ["/smask", "/sourcemask", "sourcemask"] }
+  transform: { aliases: ["/transform"] }
+  target: { aliases: ["/target", "/tar", "tar"] }
+  targetoffset: { aliases: ["/targetoffset"] }
+  scroll: { aliases: ["/scroll"] }
+  primary: { aliases: ["/primary"] }
+  secondary: { aliases: ["/secondary"] }
+  "/place": { defaults: [air, no-entities],
+              flags: { a: "!air", o: origin, s: select, n: only-select, e: "!no-entities", b: biomes, x: remove-entities } }
+  "/fall": { flags: { m: inside } }
+  "/fixblocks": { aliases: ["/updateblocks", "/fixconnect"] }
+  "/nbtinfo": { aliases: ["/nbt"] }
+  "/wea": { to: wea, aliases: ["wea", "/worldeditanywhere", "worldeditanywhere", "/weanywhere"] }
+  "/wer": { to: wer, aliases: ["wer", "/worldeditregion", "worldeditregion", "/select"] }
+  "/registry": { to: registry }
+  "/fixlighting": { to: fixlighting }
   # Backups
   snapshot: { aliases: ["snap"] }
   restore: {}

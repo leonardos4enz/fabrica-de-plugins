@@ -164,12 +164,108 @@ public final class Schematics {
             SchemConvert.Loaded l = (SchemConvert.Loaded) o[2];
             Session ses = plugin.edits().session(owner);
             ses.clipboard(l.clipboard(), s instanceof Player p ? p.getWorld().getName() : null);
+            // Spec 041: un esquema solo deja de lado los de loadall; schem move mueve este archivo.
+            ses.clipboards = List.of();
+            ses.loadedFile = r.entry.folder() == null ? r.entry.path() : null;
             Schematic sc = r.schem;
             s.sendMessage(msg().get("schem-loaded", "name", clean, "folder", r.entry.folder() == null ? "" : " [" + r.entry.folder() + "]",
                     "version", String.valueOf(sc.version()), "size", sc.width() + "×" + sc.height() + "×" + sc.length(), "blocks", Edits.fmt(sc.volume())));
             notes(s, sc, res, l);
             refreshNames(files);
         }, main);
+    }
+
+    /** Spec 041 H4 CA8: los máximos esquemas de un loadall. */
+    public static final int MAX_LOADALL = 50;
+
+    /**
+     * Spec 041 H4 CA8: /wc schem loadall: cada nombre, o cada esquema de una carpeta («trees/»), a la lista de la sesión;
+     * paste pega uno al azar. El primero queda también como el portapapeles.
+     */
+    public void loadAll(CommandSender s, List<String> inputs) {
+        List<String> names = new ArrayList<>();
+        List<String> known = names(false);
+        for (String in : inputs) {
+            String prefix = in.endsWith("/") ? in : in + "/";
+            List<String> inFolder = new ArrayList<>();
+            for (String n : known) if (n.startsWith(prefix)) inFolder.add(n);
+            if (inFolder.isEmpty()) names.add(in);
+            else names.addAll(inFolder);
+        }
+        if (names.size() > MAX_LOADALL) {
+            s.sendMessage(msg().get("schem-loadall-too-many", "count", String.valueOf(names.size()), "max", String.valueOf(MAX_LOADALL)));
+            return;
+        }
+        UUID owner = Edits.owner(s);
+        if (!begin(s, owner)) return;
+        s.sendMessage(msg().get("schem-loading", "name", names.size() + " schematics"));
+        List<CompletableFuture<Clipboard>> loads = new ArrayList<>();
+        for (String n : names) loads.add(loadClipboard(n));
+        CompletableFuture.allOf(loads.toArray(new CompletableFuture[0])).whenCompleteAsync((v, t) -> {
+            busy.remove(owner);
+            List<Clipboard> clips = new ArrayList<>();
+            List<String> failed = new ArrayList<>();
+            for (int i = 0; i < loads.size(); i++) {
+                if (loads.get(i).isCompletedExceptionally()) failed.add(names.get(i));
+                else clips.add(loads.get(i).join());
+            }
+            if (clips.isEmpty()) {
+                fail(s, String.join(", ", failed), t == null ? new IllegalArgumentException("nothing loaded") : t.getCause() == null ? t : t.getCause());
+                return;
+            }
+            Session ses = plugin.edits().session(owner);
+            ses.clipboard(clips.get(0), s instanceof Player p ? p.getWorld().getName() : null);
+            ses.clipboards = List.copyOf(clips);
+            ses.loadedFile = null;
+            s.sendMessage(msg().get("schem-loadall-done", "count", String.valueOf(clips.size()),
+                    "failed", failed.isEmpty() ? "" : " (could not load: " + String.join(", ", failed) + ")"));
+        }, main);
+    }
+
+    /** Spec 041 H4 CA8: /wc schem move &lt;carpeta&gt;: el último esquema cargado (de la carpeta propia) a otra carpeta. */
+    public void move(CommandSender s, String folder) {
+        Session ses = plugin.edits().session(Edits.owner(s));
+        Path from = ses.loadedFile;
+        if (from == null) {
+            s.sendMessage(msg().get("schem-move-nothing"));
+            return;
+        }
+        if (!folder.matches("[A-Za-z0-9_-]{1,32}(/[A-Za-z0-9_-]{1,32}){0,4}/?")) {
+            s.sendMessage(msg().get("error", "message", "A folder is letters, numbers, - and _, with / between folders (like trees/oak)"));
+            return;
+        }
+        Path own = files().own().normalize();
+        Path to = own.resolve(folder.replaceAll("/$", "")).resolve(from.getFileName()).normalize();
+        if (!to.startsWith(own)) {
+            s.sendMessage(msg().get("error", "message", "That folder leaves the schematics folder"));
+            return;
+        }
+        thread.execute(() -> {
+            String result;
+            try {
+                if (Files.exists(to)) throw new java.nio.file.FileAlreadyExistsException(own.relativize(to).toString());
+                Files.createDirectories(to.getParent());
+                Files.move(from, to);
+                result = null;
+            } catch (java.nio.file.FileAlreadyExistsException e) {
+                result = "exists";
+            } catch (IOException e) {
+                result = e.getMessage();
+            }
+            String r = result;
+            main.execute(() -> {
+                String a = own.relativize(from.normalize()).toString().replace('\\', '/'), b = own.relativize(to).toString().replace('\\', '/');
+                if (r == null) {
+                    ses.loadedFile = to;
+                    s.sendMessage(msg().get("schem-moved", "from", a, "to", b));
+                } else if (r.equals("exists")) {
+                    s.sendMessage(msg().get("schem-move-exists", "to", b));
+                } else {
+                    s.sendMessage(msg().get("error", "message", "Could not move " + a + ": " + r));
+                }
+                refreshNames(files());
+            });
+        });
     }
 
     /**

@@ -168,6 +168,13 @@ public final class HistoryStore {
         return new ArrayList<>(p.entries.descendingMap().values());
     }
 
+    /** Spec 041 H4 CA9 (/wc tool inspect): las operaciones de todos, en el orden de cada uno. */
+    public List<Entry> all() {
+        List<Entry> out = new ArrayList<>();
+        for (Player p : players.values()) out.addAll(p.entries.values());
+        return out;
+    }
+
     public Optional<UUID> ownerByName(String name) {
         String n = name.toLowerCase(Locale.ROOT);
         return players.entrySet().stream().filter(e -> e.getValue().name.toLowerCase(Locale.ROOT).equals(n))

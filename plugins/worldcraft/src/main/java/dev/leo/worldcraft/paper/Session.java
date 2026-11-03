@@ -31,6 +31,18 @@ public final class Session {
     public java.time.ZoneId zone;
     /** Spec 040 H4 CA5: tras cada obra propia, sus números (/wc trace). */
     public boolean trace;
+    /** Spec 041 H3 CA2: la máscara global de origen (/wc gsmask); null = ninguna. */
+    public dev.leo.worldcraft.pattern.Mask gsmask;
+    /** Spec 041 H3 CA3: la transformación global (/wc gtransform); null = ninguna. */
+    public dev.leo.worldcraft.edit.Transforms gtransform;
+    /** Spec 041 H3 CA1: los bloques de los patrones por color (/wc gtexture) y lo que dice; null = la tabla entera. */
+    public dev.leo.worldcraft.color.BlockColors texture;
+    public String textureText;
+    /** Spec 041 H4 CA5: saltarse las protecciones (/wc wea). */
+    public boolean bypass;
+    /** Spec 041 H4 CA8: los esquemas de /wc schem loadall (paste elige uno al azar) y el último archivo cargado. */
+    public java.util.List<Clipboard> clipboards = java.util.List.of();
+    public java.nio.file.Path loadedFile;
 
     /** La caja seleccionada o null si falta una esquina o la forma no es una caja (spec 030: ver region()). */
     public Box box() {
@@ -101,5 +113,7 @@ public final class Session {
     public void clipboard(Clipboard c, String worldName) {
         clipboard = c;
         clipboardWorld = worldName;
+        // Spec 041: un portapapeles nuevo (copy, load, clearclipboard) deja de lado los de schem loadall.
+        clipboards = java.util.List.of();
     }
 }

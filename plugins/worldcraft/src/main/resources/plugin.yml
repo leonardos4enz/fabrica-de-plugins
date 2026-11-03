@@ -31,6 +31,9 @@ permissions:
   worldcraft.butcher:
     description: Remove the hostile mobs around you (/wc butcher); undo brings them back.
     default: op
+  worldcraft.bypass:
+    description: Go past protection plugins with /wc wea (an edit another plugin would stop still goes ahead; it is logged).
+    default: op
   worldcraft.remove:
     description: Remove entities of one type around you (/wc remove items, arrows, cow...); undo brings them back.
     default: op

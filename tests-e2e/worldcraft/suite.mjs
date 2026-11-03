@@ -2551,7 +2551,7 @@ export default {
         const { srv, bots } = ctx
         await preparar(ctx)
         const ana = bots[ANA]
-        await pide(ana, 'wc version', /Worldcraft 0\.15\.0 .* game features: available \(\d+ features\)/)
+        await pide(ana, 'wc version', /Worldcraft 0\.16\.0 .* game features: available \(\d+ features\)/)
         await pide(ana, `wc feature amethist_geode --at ${X + 20},-48,${Z + 20}`, /There is no feature 'amethist_geode' \(did you mean 'amethyst_geode'\?\)/)
         await pide(ana, `wc feature ore_diamond_small --at ${X + 20},-62,${Z + 20}`, /writes straight into the world|doesn't fit there/)
         // Un hongo rojo gigante del juego sobre un bloque de tierra en el aire (el juego pide tierra debajo; en el aire
@@ -2736,7 +2736,7 @@ export default {
         const archivo = path.join(srv.run, 'plugins', 'Worldcraft', 'reports', nombre)
         await esperarArchivo(archivo)
         const texto = fs.readFileSync(archivo, 'utf8')
-        if (!/Worldcraft: 0\.15\.0/.test(texto) || !/Plugins:/.test(texto) || !/config\.yml:/.test(texto)) throw new Error(`informe: ${texto.slice(0, 300)}`)
+        if (!/Worldcraft: 0\.16\.0/.test(texto) || !/Plugins:/.test(texto) || !/config\.yml:/.test(texto)) throw new Error(`informe: ${texto.slice(0, 300)}`)
         fs.rmSync(archivo, { force: true })
         // trace: tras la obra, sus números.
         await pide(ana, 'wc trace on', /Trace on/)
@@ -2752,6 +2752,367 @@ export default {
         await pide(ana, 'wc tz Amerca/Bogota', /There is no time zone 'Amerca\/Bogota' \(did you mean 'America\/Bogota'\?\)/)
         await pide(ana, 'wc tz server', /Time zone for backups/)
       }
+    },
+    // ---------------------------------------------------------------- spec 041: lo que FAWE le agrega a WorldEdit
+    {
+      id: '041 H1 CA1 · CA2 · CA4 · CA5 · CA6 · CA7 · H2 CA1',
+      nombre: 'pinceles de FAWE sobre el piso de vidrio: line con dos clics, spline cierra con el mismo bloque, catenary cuelga, circle, pull estira una punta hacia Ana, recursive pinta lo conectado, shatter parte el vidrio; undo',
+      timeoutMs: 180000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        try {
+          await mirarVidrio(ctx)
+          // line: el primer clic marca (X, Z + 8), el segundo, girada 20°, (X + 3, Z + 7).
+          await pide(ana, 'wc brush line stone', /brush \(line · stone · radius 0\)/)
+          await punto(ana, /Point at/)
+          await mirar(ctx, -20)
+          let n = await clic(ana, 'brush line')
+          if (n < 4) throw new Error(`line puso ${n}`)
+          await comprobar(srv, `block ${X} -51 ${Z + 8} stone`)
+          await comprobar(srv, `block ${X + 3} -51 ${Z + 7} stone`)
+          await pide(ana, 'wc undo', /Undone .*brush line/)
+          // spline: dos puntos y el último otra vez.
+          await mirar(ctx, 0)
+          await pide(ana, 'wc brush spline white_wool', /spline · white_wool/)
+          await punto(ana, /Point 1/)
+          await mirar(ctx, -20)
+          await punto(ana, /Point 2/)
+          n = await clic(ana, 'brush spline')
+          await comprobar(srv, `block ${X + 3} -51 ${Z + 7} white_wool`)
+          await pide(ana, 'wc undo', /Undone .*brush spline/)
+          // catenary: más bloques que la recta, porque cuelga.
+          await mirar(ctx, 0)
+          await pide(ana, 'wc brush catenary stone 1.5', /catenary · stone · radius 0 · length 1\.5/)
+          await punto(ana, /Point at/)
+          await mirar(ctx, -20)
+          n = await clic(ana, 'brush catenary')
+          if (n <= 4) throw new Error(`catenary puso ${n}: no cuelga`)
+          await pide(ana, 'wc undo', /Undone .*brush catenary/)
+          await pide(ana, 'wc brush catenary stone 0.5', /length is 1 to 4 times/)
+          // circle: un anillo de frente a Ana.
+          await mirar(ctx, 0)
+          await pide(ana, 'wc brush circle stone 2', /circle · stone · radius 2/)
+          n = await clic(ana, 'brush circle')
+          if (n < 8) throw new Error(`circle puso ${n}`)
+          await pide(ana, 'wc undo', /Undone .*brush circle/)
+          // pull: una piedra detrás (más lejos de Ana) se estira un bloque hacia ella.
+          await srv.consola(`setblock ${X} -50 ${Z + 9} stone`)
+          await pide(ana, 'wc brush pull 2', /pull · radius 2 · 1 passes/)
+          await clic(ana, 'brush pull')
+          await comprobar(srv, `block ${X} -50 ${Z + 8} stone`)
+          await pide(ana, 'wc undo', /Undone .*brush pull/)
+          await comprobar(srv, `block ${X} -50 ${Z + 8} air`)
+          await srv.consola(`setblock ${X} -50 ${Z + 9} air`)
+          // recursive: el vidrio conectado dentro de la esfera.
+          await pide(ana, 'wc brush recursive white_wool 2', /recursive · white_wool · radius 2/)
+          n = await clic(ana, 'brush recursive')
+          if (n < 10) throw new Error(`recursive puso ${n}`)
+          await comprobar(srv, `block ${X} -51 ${Z + 8} white_wool`)
+          await comprobar(srv, `block ${X + 4} -51 ${Z + 8} glass`)
+          await pide(ana, 'wc undo', /Undone .*brush recursive/)
+          // shatter: líneas de aire entre pedazos del vidrio.
+          await pide(ana, 'wc brush partition air 3 4', /shatter · air · radius 3 · 4 pieces/)
+          n = await clic(ana, 'brush shatter')
+          if (n < 1) throw new Error('shatter no partió nada')
+          await pide(ana, 'wc undo', /Undone .*brush shatter/)
+          await pide(ana, 'wc brush none', /normal item/)
+        } finally {
+          await srv.consola(`clear ${ANA}`)
+          await srv.consola(`fill ${X - 6} -53 ${Z - 2} ${X + 6} -46 ${Z + 14} air`)
+        }
+      }
+    },
+    {
+      id: '041 H2 CA2 · CA3 · CA4 · CA5 · CA6 · CA7',
+      nombre: 'stencil pinta el centro del cono, image pone la lana del color, height sube el cono; copypaste copia con el clic izquierdo y pega con el derecho; savebrush, listbrush y loadbrush; populateschematic esparce un esquema',
+      timeoutMs: 180000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        const imagenes = path.join(srv.run, 'plugins', 'Worldcraft', 'images')
+        const pinceles = path.join(srv.run, 'plugins', 'Worldcraft', 'brushes')
+        const esquema = path.join(srv.run, 'plugins', 'Worldcraft', 'schematics', 'e2e_pop.schem')
+        fs.mkdirSync(imagenes, { recursive: true })
+        fs.writeFileSync(path.join(imagenes, 'e2e-roja.png'), png(1, 1, () => LANA.roja))
+        try {
+          await mirarVidrio(ctx)
+          // stencil sin imagen: un cono de 5 × 5 pinta solo el centro.
+          await pide(ana, 'wc brush stencil white_wool 2', /stencil · white_wool · cone · radius 2/)
+          let n = await clic(ana, 'brush stencil')
+          if (n !== 1) throw new Error(`stencil pintó ${n} (solo el centro)`)
+          await comprobar(srv, `block ${X} -51 ${Z + 8} white_wool`)
+          await pide(ana, 'wc undo', /Undone .*brush stencil/)
+          // image: el rojo de la imagen es la lana roja.
+          await pide(ana, 'wc brush image e2e-roja.png 1', /image · e2e-roja\.png · radius 1/)
+          n = await clic(ana, 'brush image')
+          if (n !== 9) throw new Error(`image pintó ${n} (el círculo de radio 1: 3 × 3)`)
+          await comprobar(srv, `block ${X} -51 ${Z + 8} red_wool`)
+          await pide(ana, 'wc undo', /Undone .*brush image/)
+          await pide(ana, 'wc brush image nada.png 1', /There is no image 'nada\.png'/)
+          // height: el cono sube 2 en el centro.
+          await pide(ana, 'wc brush height 2', /height · cone · radius 2 · scale 1/)
+          await clic(ana, 'brush height')
+          await comprobar(srv, `block ${X} -49 ${Z + 8} glass`)
+          await pide(ana, 'wc undo', /Undone .*brush height/)
+          await comprobar(srv, `block ${X} -49 ${Z + 8} air`)
+          // copypaste: el clic izquierdo (al aire, el vidrio está lejos) copia la cruz de vidrio; el derecho la pega encima.
+          await pide(ana, 'wc brush copypaste 1', /copypaste · radius 1/)
+          let m = ana.marca()
+          ana.bot.swingArm()
+          await ana.esperar('actionbar', /Copied 9 blocks \(3×1×3\)/, { desde: m })
+          n = await clic(ana, 'brush copypaste')
+          if (n !== 9) throw new Error(`copypaste pegó ${n}`)
+          await comprobar(srv, `block ${X} -50 ${Z + 8} glass`)
+          await comprobar(srv, `block ${X + 1} -50 ${Z + 8} glass`)
+          await pide(ana, 'wc undo', /Undone .*brush copypaste/)
+          // savebrush, listbrush, loadbrush.
+          await pide(ana, 'wc brush savebrush e2e_cp', /Saved the brush as e2e_cp \(for you\)/)
+          await pide(ana, 'wc brush listbrush', /e2e_cp/)
+          await pide(ana, 'wc brush none', /normal item/)
+          await pide(ana, 'wc brush loadbrush e2e_cp', /Loaded e2e_cp: copypaste · radius 1/)
+          await pide(ana, 'wc brush loadbrush e2e_cq', /no saved brush 'e2e_cq' \(did you mean 'e2e_cp'\?\)/)
+          await pide(ana, 'wc brush savebrush ../x', /A brush name is 1 to 32/)
+          // populateschematic: un esquema de una piedra sobre el vidrio del círculo.
+          await seleccionar(ana, [X + 3, -55, Z + 3], [X + 3, -55, Z + 3])
+          await obra(ana, 'wc set stone')
+          await pide(ana, 'wc copy', /Copied/)
+          await pide(ana, 'wc schem save e2e_pop --overwrite', /Saved e2e_pop/)
+          await pide(ana, 'wc undo', /Undone/)
+          await pide(ana, 'wc brush populateschematic glass e2e_pop 2 100', /populateschematic · e2e_pop on glass · radius 2 · density 100%/)
+          n = await clic(ana, 'brush populateschematic')
+          if (n < 3) throw new Error(`populateschematic puso ${n}`)
+          await pide(ana, 'wc undo', /Undone .*brush populateschematic/)
+          await pide(ana, 'wc brush none', /normal item/)
+        } finally {
+          fs.rmSync(path.join(imagenes, 'e2e-roja.png'), { force: true })
+          fs.rmSync(pinceles, { recursive: true, force: true })
+          fs.rmSync(esquema, { force: true })
+          await srv.consola(`clear ${ANA}`)
+          await srv.consola(`fill ${X - 6} -53 ${Z - 2} ${X + 6} -46 ${Z + 14} air`)
+        }
+      }
+    },
+    {
+      id: '041 H3 CA1 · CA2 · CA3 · CA4 · CA5 · CA6 · CA7',
+      nombre: 'gtransform corre el set, gsmask deja lo que no cumple, gtexture elige el color entre pocos; el pincel con target face, targetoffset, smask, transform, secondary con el clic izquierdo y scroll con la rueda',
+      timeoutMs: 180000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        try {
+          // gtransform: un set de un bloque cae 3 más arriba; off lo quita.
+          await seleccionar(ana, [X + 3, -55, Z + 3], [X + 3, -55, Z + 3])
+          await pide(ana, 'wc gtransform #offset[0][3][0]', /Global transform #offset\[0\]\[3\]\[0\]/)
+          let r = await obra(ana, 'wc set glass')
+          await comprobar(srv, `block ${X + 3} -52 ${Z + 3} glass`)
+          await comprobar(srv, `block ${X + 3} -55 ${Z + 3} air`)
+          await pide(ana, 'wc undo', new RegExp(`Undone #${r.id}`))
+          await pide(ana, '/gtransform off', /Global transform removed/)
+          await pide(ana, 'wc gtransform #rotat[90]', /Unknown transform '#rotat' \(did you mean '#rotate'\?\)/)
+          // gsmask: con stone, un set de vidrio no pone nada.
+          await pide(ana, '/globalsourcemask stone', /Global source mask stone/)
+          r = await obra(ana, 'wc set glass')
+          if (r.cambiados !== 0) throw new Error(`con gsmask stone, set glass cambió ${r.cambiados}`)
+          await pide(ana, 'wc gsmask off', /Global source mask removed/)
+          // gtexture: con solo la blanca y la roja, el negro cae en la roja; sin textura, la negra.
+          await pide(ana, '/gtexture white_wool, red_wool', /pick from 2 blocks/)
+          r = await obra(ana, 'wc set #color[#141519]')
+          await comprobar(srv, `block ${X + 3} -55 ${Z + 3} red_wool`)
+          await pide(ana, 'wc undo', new RegExp(`Undone #${r.id}`))
+          await pide(ana, 'wc gtexture off', /whole color table again/)
+          r = await obra(ana, 'wc set #color[#141519]')
+          await comprobar(srv, `block ${X + 3} -55 ${Z + 3} black_wool`)
+          await pide(ana, 'wc undo', new RegExp(`Undone #${r.id}`))
+          // El pincel de la mano.
+          await mirarVidrio(ctx)
+          await pide(ana, 'wc brush sphere stone 0', /sphere · stone · radius 0/)
+          await pide(ana, 'wc target face', /target face/)
+          await clic(ana, 'brush sphere')
+          await comprobar(srv, `block ${X} -50 ${Z + 8} stone`)
+          await pide(ana, 'wc undo', /Undone .*brush sphere/)
+          await pide(ana, '/tar block', /radius 0(?! · target)/)
+          await pide(ana, 'wc targetoffset 2', /offset 2/)
+          await clic(ana, 'brush sphere')
+          await comprobar(srv, `block ${X} -49 ${Z + 8} stone`)
+          await pide(ana, 'wc undo', /Undone .*brush sphere/)
+          await pide(ana, 'wc targetoffset 0', /radius 0(?! · offset)/)
+          await pide(ana, 'wc target fase', /'fase' is not a target mode \(did you mean 'face'\?\)/)
+          // transform del pincel: 4 más arriba; smask: un pincel de vidrio con !glass no pone nada.
+          await pide(ana, 'wc transform #offset[0][4][0]', /#offset\[0\]\[4\]\[0\]/)
+          await clic(ana, 'brush sphere')
+          await comprobar(srv, `block ${X} -47 ${Z + 8} stone`)
+          await pide(ana, 'wc undo', /Undone .*brush sphere/)
+          await pide(ana, 'wc transform off', /radius 0(?! · #offset)/)
+          await pide(ana, 'wc brush sphere glass 0', /sphere · glass · radius 0/)
+          await pide(ana, '/smask !glass', /places only !glass/)
+          const n0 = await clic(ana, 'brush sphere')
+          if (n0 !== 0) throw new Error(`con smask !glass el pincel puso ${n0}`)
+          // secondary: el clic izquierdo (al aire: el vidrio está lejos) usa el otro pincel.
+          await pide(ana, 'wc primary sphere stone 0', /Right click: sphere · stone · radius 0/)
+          await pide(ana, 'wc secondary sphere white_wool 0', /Left click: sphere · white_wool · radius 0/)
+          let m = ana.marca()
+          ana.bot.swingArm()
+          await ana.esperar('chat', /Done: brush sphere changed 1 blocks?/, { desde: m })
+          await comprobar(srv, `block ${X} -51 ${Z + 8} white_wool`)
+          await pide(ana, 'wc undo', /Undone .*brush sphere/)
+          await clic(ana, 'brush sphere')
+          await comprobar(srv, `block ${X} -51 ${Z + 8} stone`)
+          await pide(ana, 'wc undo', /Undone .*brush sphere/)
+          // scroll size: pasar a la casilla de al lado sube el radio y el ítem sigue en la mano.
+          await pide(ana, 'wc scroll size', /scroll size/)
+          const casilla = ana.bot.quickBarSlot
+          m = ana.marca()
+          ana.bot.setQuickBarSlot((casilla + 1) % 9)
+          await ana.esperar('actionbar', /sphere · stone · radius 1/, { desde: m })
+          await pide(ana, 'wc scroll none', /radius 1(?! · scroll)/)
+          await pide(ana, 'wc scroll sise', /'sise' is not a scroll action \(did you mean 'size'\?\)/)
+          await pide(ana, 'wc brush none', /normal item/)
+          await pide(ana, 'wc smask !air', /Hold a brush first/)
+        } finally {
+          await srv.consola(`clear ${ANA}`)
+          for (const c of ['wc gtransform off', 'wc gsmask off', 'wc gtexture off']) ana.comando(c)
+          await srv.consola(`fill ${X - 6} -56 ${Z - 2} ${X + 6} -46 ${Z + 14} air`)
+        }
+      }
+    },
+    {
+      id: '041 H4 CA1 · CA2 · CA3 · CA4 · CA5 · CA6 · CA7 · CA8 · CA9 · CA10 · H5 CA1',
+      nombre: 'place pega sin el giro; fall --inside baja la piedra; fixblocks une vallas; nbtinfo lee el cofre; wea pasa la zona protegida y wer selecciona la parcela; registry; schem loadall y move; tool inspect dice quién; featureplacer; fixlighting',
+      timeoutMs: 240000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        const esquemas = path.join(srv.run, 'plugins', 'Worldcraft', 'schematics')
+        try {
+          // place: piedra y vidrio en fila; copiados, girados 90° y puestos con --origin vuelven sin girar.
+          await srv.consola(`setblock ${X + 3} -55 ${Z + 3} stone`)
+          await srv.consola(`setblock ${X + 4} -55 ${Z + 3} glass`)
+          await srv.sincronizar()
+          await seleccionar(ana, [X + 3, -55, Z + 3], [X + 4, -55, Z + 3])
+          await pide(ana, 'wc copy', /Copied/)
+          await srv.consola(`fill ${X + 3} -55 ${Z + 3} ${X + 4} -55 ${Z + 3} air`)
+          await pide(ana, 'wc rotate 90', /Clipboard turned 90/)
+          let r = await obra(ana, 'wc place --origin')
+          await comprobar(srv, `block ${X + 3} -55 ${Z + 3} stone`)
+          await comprobar(srv, `block ${X + 4} -55 ${Z + 3} glass`)
+          await pide(ana, 'wc undo', new RegExp(`Undone #${r.id}`))
+          // fall --inside: la piedra baja hasta el fondo de la selección (no toca el pasto).
+          await srv.consola(`setblock ${X + 3} -55 ${Z + 3} stone`)
+          await srv.consola(`setblock ${X + 3} -59 ${Z + 3} glass`)
+          await seleccionar(ana, [X + 3, -58, Z + 3], [X + 3, -55, Z + 3])
+          r = await obra(ana, '/fall -m')
+          await comprobar(srv, `block ${X + 3} -58 ${Z + 3} stone`)
+          await comprobar(srv, `block ${X + 3} -55 ${Z + 3} air`)
+          await pide(ana, 'wc undo', new RegExp(`Undone #${r.id}`))
+          await srv.consola(`fill ${X + 3} -59 ${Z + 3} ${X + 3} -55 ${Z + 3} air`)
+          // fixblocks: tres vallas puestas sin física (por el motor) se unen.
+          await seleccionar(ana, [X + 3, -55, Z + 5], [X + 5, -55, Z + 5])
+          await obra(ana, 'wc set oak_fence')
+          r = await obra(ana, '/fixconnect')
+          if (r.cambiados !== 3) throw new Error(`fixblocks cambió ${r.cambiados}`)
+          await pide(ana, 'wc undo 2', /Undone/)
+          // nbtinfo: el cofre con diamantes que mira Ana.
+          await srv.consola(`setblock ${X + 2} -60 ${Z + 2} chest{Items:[{Slot:0b,id:"minecraft:diamond",count:3}]}`)
+          // Con yaw y pitch (mineflayer no sigue el «facing» del tp, lección 029): de los ojos al centro del cofre.
+          await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 0.5} -45 21`)
+          await srv.sincronizar()
+          await ana.hasta('mirar el cofre', b => Math.abs(Math.abs(b.entity.pitch) - 21 * Math.PI / 180) < 0.05)
+          await dormir(400)
+          await pide(ana, '/nbt', /minecraft:diamond/)
+          await srv.consola(`setblock ${X + 2} -60 ${Z + 2} air`)
+          // registry
+          await pide(ana, 'wc registry biome cherry', /cherry_grove/)
+          await pide(ana, 'wc registry biom', /'biom' is not a registry \(did you mean 'biome'\?\)/)
+          // wea: la zona protegida del ejemplo detiene el set; con wea sigue y dice quién la habría detenido.
+          // Una corrida cortada puede haber dejado la piedra (su undo lo detenía la zona): se quita desde la consola.
+          await srv.consola('forceload add 1000 1000')
+          await srv.consola('setblock 1000 -50 1000 air')
+          await pide(ana, 'wcx select 1000 -50 1000 1000 -50 1000', /API selected/)
+          let m = ana.marca()
+          ana.comando('wc set stone')
+          await ana.esperar('chat', /Another plugin stopped this edit/, { desde: m })
+          await pide(ana, '/wea', /Bypass on/)
+          m = ana.marca()
+          ana.comando('wc set stone')
+          await ana.esperar('chat', /would have stopped this edit: This area is protected by WorldcraftApiExample \(e2e\)/, { desde: m })
+          await ana.esperar('chat', /Done: set changed 1 blocks?/, { desde: m })
+          await pide(ana, 'wc undo', /Undone/)
+          await pide(ana, 'wc wea', /Bypass off/)
+          // wer: Ana está en la parcela del ejemplo (x, z de 36 a 44).
+          await pide(ana, '/wer', /Selected the area where you may build e2e-plot \(WorldcraftApiExample\): 9×25×9/)
+          await srv.consola(`tp ${ANA} ${X + 20.5} -60 ${Z + 0.5}`)
+          await srv.sincronizar()
+          await ana.hasta('salir de la parcela', b => b.entity.position.x > X + 19)
+          await pide(ana, 'wc wer', /No protection plugin says where you may build here/)
+          await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 0.5}`)
+          await srv.sincronizar()
+          // schem loadall y move.
+          await seleccionar(ana, [X + 3, -55, Z + 3], [X + 3, -55, Z + 3])
+          await obra(ana, 'wc set stone')
+          await pide(ana, 'wc copy', /Copied/)
+          await pide(ana, 'wc schem save e2e_a --overwrite', /Saved e2e_a/)
+          await pide(ana, 'wc schem save e2e_b --overwrite', /Saved e2e_b/)
+          await pide(ana, 'wc undo', /Undone/)
+          await pide(ana, 'wc schem loadall e2e_a e2e_b', /Loaded 2 schematics/, 20000)
+          await pide(ana, 'wc schem load e2e_a', /Loaded e2e_a/, 20000)
+          await pide(ana, 'wc schem move e2e_dir', /Moved e2e_a\.schem to e2e_dir\/e2e_a\.schem/)
+          if (!fs.existsSync(path.join(esquemas, 'e2e_dir', 'e2e_a.schem'))) throw new Error('schem move no movió el archivo')
+          await pide(ana, 'wc clearclipboard', /Clipboard emptied/)
+          // tool inspect: Ana cambió el vidrio que mira con un pincel; la herramienta lo dice.
+          await mirarVidrio(ctx)
+          await pide(ana, 'wc brush sphere stone 0', /sphere · stone · radius 0/)
+          await clic(ana, 'brush sphere')
+          await pide(ana, 'wc tool inspect', /inspect/)
+          m = ana.marca()
+          ana.bot.activateItem()
+          await ana.esperar('chat', new RegExp(`Changes at ${X} -51 ${Z + 8}`), { desde: m })
+          await ana.esperar('chat', /Ana_e2e changed glass to stone \d+s ago \(brush sphere\)/, { desde: m })
+          await pide(ana, 'wc tool none', /normal item/)
+          await pide(ana, 'wc undo', /Undone .*brush sphere/)
+          // featureplacer: un hongo gigante sobre la tierra.
+          await srv.consola(`setblock ${X} -51 ${Z + 8} dirt`)
+          await pide(ana, 'wc tool featuretool huge_red_mushroom', /featureplacer · huge_red_mushroom/)
+          r = await clic(ana, 'feature')
+          if (r < 10) throw new Error(`featureplacer puso ${r}`)
+          await pide(ana, 'wc undo', /Undone/)
+          await pide(ana, 'wc tool none', /normal item/)
+          // fixlighting: los chunks de la selección.
+          await seleccionar(ana, [X, -60, Z], [X + 20, -55, Z])
+          m = ana.marca()
+          ana.comando('/fixlighting')
+          await ana.esperar('chat', /Light worked out again in 2 chunks/, { desde: m })
+        } finally {
+          await srv.consola(`clear ${ANA}`)
+          ana.comando('wc wea off')
+          await srv.consola('setblock 1000 -50 1000 air')
+          await srv.consola('forceload remove 1000 1000')
+          await srv.sincronizar()
+          for (const f of ['e2e_a.schem', 'e2e_b.schem']) fs.rmSync(path.join(esquemas, f), { force: true })
+          fs.rmSync(path.join(esquemas, 'e2e_dir'), { recursive: true, force: true })
+          await srv.consola(`fill ${X - 6} -60 ${Z - 2} ${X + 20} -46 ${Z + 14} air`)
+        }
+      }
     }
   ]
+}
+
+/** Spec 041: un clic derecho que solo marca un punto (los pinceles de líneas) y su aviso en la barra de acción. */
+async function punto (jugador, patron) {
+  const m = jugador.marca()
+  jugador.bot.activateItem()
+  await jugador.esperar('actionbar', patron, { desde: m })
+}
+
+/** Spec 041: Ana en el punto de mirarVidrio, girada yaw grados (−20: unos 3 bloques hacia +x). */
+async function mirar ({ srv, bots }, yaw) {
+  await srv.consola(`tp ${ANA} ${X + 0.5} -50 ${Z + 0.5} ${yaw} 12`)
+  await srv.sincronizar()
+  await bots[ANA].hasta('mirar el vidrio', b => Math.abs(b.entity.position.y + 50) < 0.1 && b.entity.onGround &&
+    Math.abs(Math.abs(b.entity.pitch) - 12 * Math.PI / 180) < 0.05)
+  await dormir(400)
 }

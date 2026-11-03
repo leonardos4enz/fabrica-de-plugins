@@ -36,6 +36,23 @@ class ColorPatternTest {
     }
 
     @Test
+    void spec041_H3_CA1_con_la_textura_del_jugador_elige_solo_entre_esos_bloques() throws ParseException {
+        var all = parser.allColors();
+        Map<String, Integer> two = new java.util.LinkedHashMap<>();
+        two.put("minecraft:white_wool", all.colorOf("minecraft:white_wool"));
+        two.put("minecraft:black_wool", all.colorOf("minecraft:black_wool"));
+        Parser.TEXTURE.set(new dev.leo.worldcraft.color.BlockColors(two));
+        try {
+            String red = apply("#color[red]", "stone");
+            assertTrue(red.equals("white_wool") || red.equals("black_wool"), "con la textura, rojo no está: " + red);
+            assertEquals(all.size(), parser.allColors().size(), "allColors no mira la textura");
+        } finally {
+            Parser.TEXTURE.remove();
+        }
+        assertEquals("red_wool", apply("#color[red]", "stone"), "sin textura, toda la tabla otra vez");
+    }
+
+    @Test
     void H1_CA2_cambios_sobre_el_bloque_que_ya_esta() throws ParseException {
         var colors = parser.colors();
         String dark = apply("#darken", "light_gray_wool"), light = apply("#lighten", "gray_wool");

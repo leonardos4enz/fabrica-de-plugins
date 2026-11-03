@@ -114,6 +114,9 @@ tools:
   tree_blocks: "#logs, #leaves, vine, cocoa, bee_nest, mangrove_roots"   # what deltree removes (mask syntax)
   # Blocks the super pickaxe never breaks (mask syntax).
   never_break: "bedrock, barrier, end_portal_frame, end_portal, end_gateway, nether_portal, command_block, chain_command_block, repeating_command_block, structure_block, jigsaw"
+  max_target_offset: 16            # how far /wc targetoffset can move where a brush lands (0..64)
+  max_spline_points: 64            # points a line, spline or sweep brush keeps (2..256)
+  fixlighting_max_chunks: 64       # chunks /wc fixlighting relights at once (1..1024)
 
 # Trees, plants and pumpkins (/wc forest, forestgen, flora, pumpkins, /wc tool tree, /wc brush forest).
 # The trees are the game's own (the same that grow from a sapling) and go through the editor: preview, limits and undo.

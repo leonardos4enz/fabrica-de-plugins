@@ -45,6 +45,19 @@ public final class ToolParser {
             case FEATURE -> List.of("feature", "radius", "density");
             case APPLY -> List.of("shape", "radius", "density", "item");
             case STACKER -> List.of("range", "mask");
+            // Spec 041
+            case LINE, SPLINE, SURFACESPLINE, CIRCLE, RECURSIVE -> List.of("pattern", "radius");
+            case CATENARY -> List.of("pattern", "length", "radius");
+            case SWEEP -> List.of("copies");
+            case PULL -> List.of("radius", "iterations");
+            case SHATTER -> List.of("pattern", "radius", "count");
+            case STENCIL -> List.of("pattern", "radius", "image");
+            case IMAGE -> List.of("image", "radius");
+            case HEIGHT -> List.of("radius", "image", "scale");
+            case POPULATE -> List.of("on", "schem", "radius", "density");
+            case COPYPASTE -> List.of("radius");
+            case FEATUREPLACER -> List.of("feature");
+            case STRUCTUREPLACER -> List.of("structure");
             default -> List.<String>of();
         });
         if (k.placesBlocks()) out.add("mask");
@@ -62,8 +75,23 @@ public final class ToolParser {
             case DEFORM -> List.of("raw", "offset");
             case SNOW -> List.of("stack");
             case HEIGHTMAP -> List.of("erase", "flatten");
+            // Spec 041 (las banderas de FAWE, con nombre largo)
+            case LINE -> List.of("shell", "select", "flat");
+            case CATENARY -> List.of("shell", "select", "facing");
+            case CIRCLE -> List.of("fill");
+            case RECURSIVE -> List.of("depth-first");
+            case STENCIL -> List.of("white", "random-rotate");
+            case IMAGE -> List.of("alpha", "fade");
+            case HEIGHT -> List.of("random-rotate");
+            case POPULATE -> List.of("rotate");
+            case COPYPASTE -> List.of("random-rotate", "auto-rotate");
             default -> List.of();
         };
+    }
+
+    /** Spec 041: una palabra que es una imagen de la carpeta images/ (stencil, image, height). */
+    static boolean isImage(String w) {
+        return w.toLowerCase(Locale.ROOT).matches(".+\\.(png|jpe?g|gif|bmp)");
     }
 
     /** Los números del final, en orden (radio, alto…). */
@@ -81,6 +109,10 @@ public final class ToolParser {
             case DILATE -> List.of("radius", "dilate_faces", "dilate");
             case HEIGHTMAP -> List.of("radius", "height");
             case FEATURE -> List.of("radius", "density");
+            case LINE, SPLINE, SURFACESPLINE, CIRCLE, RECURSIVE, COPYPASTE -> List.of("radius");
+            case SWEEP -> List.of("copies");
+            case PULL -> List.of("radius", "iterations");
+            case SHATTER -> List.of("radius", "count");
             default -> List.of();
         };
     }
@@ -199,6 +231,67 @@ public final class ToolParser {
                 if (!rest.isEmpty()) o.put("mask", String.join(" ", rest));
                 rest = new ArrayList<>();
             }
+            // Spec 041: los de FAWE que no son «patrón y números».
+            case CATENARY -> {
+                // «catenary <patrón> [largo] [grosor]», como FAWE (el largo con decimales, de fábrica 1,2).
+                int n = 0;
+                while (n < rest.size() && n < 2 && rest.get(rest.size() - 1 - n).matches("-?\\d+(\\.\\d+)?")) n++;
+                List<String> tail = new ArrayList<>(rest.subList(rest.size() - n, rest.size()));
+                rest = new ArrayList<>(rest.subList(0, rest.size() - n));
+                if (!tail.isEmpty()) o.put("length", tail.get(0));
+                if (tail.size() > 1) o.put("radius", tail.get(1));
+                if (kv.containsKey("length")) o.put("length", kv.get("length"));
+                String len = o.get("length");
+                if (len != null) {
+                    double v;
+                    try {
+                        v = Double.parseDouble(len);
+                    } catch (NumberFormatException e) {
+                        throw new IllegalArgumentException("'length=" + len + "' needs a number, like 1.2");
+                    }
+                    if (v < 1 || v > 4) throw new IllegalArgumentException("The length is 1 to 4 times the distance (1 = straight, 1.2 hangs a little)");
+                }
+            }
+            case STENCIL, IMAGE, HEIGHT -> {
+                // «stencil <patrón> [radio] [imagen]», «image <imagen> [radio]», «height [radio] [imagen] [escala]».
+                String image = kv.get("image");
+                List<String> keep = new ArrayList<>();
+                for (String w : rest) {
+                    if (image == null && isImage(w)) image = w;
+                    else keep.add(w);
+                }
+                if (kind == ToolKind.IMAGE && image == null && !keep.isEmpty() && !keep.get(0).matches("-?\\d+")) image = keep.remove(0);
+                if (kind == ToolKind.IMAGE && image == null) throw new IllegalArgumentException("image needs a picture from the images folder: " + example(kind));
+                if (image != null) o.put("image", image);
+                List<String> nums = kind == ToolKind.HEIGHT ? List.of("radius", "scale") : List.of("radius");
+                int n = 0;
+                while (n < keep.size() && keep.get(keep.size() - 1 - n).matches("-?\\d+")) n++;
+                if (n > nums.size()) throw new IllegalArgumentException(kind.id() + " takes at most " + nums.size() + " numbers (" + String.join(", ", nums) + ")");
+                List<String> tail = new ArrayList<>(keep.subList(keep.size() - n, keep.size()));
+                for (int i = 0; i < tail.size(); i++) o.put(nums.get(i), tail.get(i));
+                rest = new ArrayList<>(keep.subList(0, keep.size() - n));
+            }
+            case POPULATE -> {
+                // «populateschematic <máscara> <esquema|carpeta> [radio] [densidad]».
+                String on = kv.containsKey("on") ? kv.get("on") : rest.isEmpty() ? null : rest.remove(0);
+                String schem = kv.containsKey("schem") ? kv.get("schem") : rest.isEmpty() ? null : rest.remove(0);
+                if (on == null || schem == null) throw new IllegalArgumentException("populateschematic takes what to put them on and a schematic or folder: " + example(kind));
+                o.put("on", on);
+                o.put("schem", schem);
+                List<String> nums = List.of("radius", "density");
+                if (rest.size() > 2 || !rest.stream().allMatch(w -> w.matches("\\d+"))) {
+                    throw new IllegalArgumentException("populateschematic takes radius and density after the schematic: " + example(kind));
+                }
+                for (int i = 0; i < rest.size(); i++) o.put(nums.get(i), rest.get(i));
+                rest = new ArrayList<>();
+            }
+            case FEATUREPLACER, STRUCTUREPLACER -> {
+                String key = kind == ToolKind.FEATUREPLACER ? "feature" : "structure";
+                String name = kv.containsKey(key) ? kv.get(key) : rest.size() == 1 ? rest.get(0) : null;
+                if (name == null) throw new IllegalArgumentException(kind.id() + " needs one " + key + ": " + example(kind));
+                o.put(key, kind == ToolKind.FEATUREPLACER ? name.toLowerCase(Locale.ROOT).replace("minecraft:", "") : name);
+                rest = new ArrayList<>();
+            }
             case TREE, FOREST -> {
                 // Spec 033: el tipo de árbol en vez de bloques («forest birch 6 10», «tree cherry»).
                 List<String> nums = numbers(kind);
@@ -257,6 +350,9 @@ public final class ToolParser {
         range(o, "dilate", 0, 10);
         range(o, "erode_faces", 1, 6);
         range(o, "dilate_faces", 1, 6);
+        range(o, "count", 1, 64);
+        range(o, "copies", 0, 256);
+        range(o, "scale", -64, 64);
         if (kv.containsKey("mask")) {
             String m = kv.get("mask");
             if (!m.isBlank() && !m.equals("*")) o.put("mask", m);
@@ -338,6 +434,23 @@ public final class ToolParser {
             case FEATURE -> "/wc brush feature mossy_rock 8 5";
             case APPLY -> "/wc brush apply sphere 4 item iron_hoe";
             case STACKER -> "/wc tool stacker 10 air";
+            case LINE -> "/wc brush line stone 1 --select";
+            case SPLINE -> "/wc brush spline oak_planks 1";
+            case SURFACESPLINE -> "/wc brush surfacespline dirt_path 1";
+            case SWEEP -> "/wc brush sweep 5";
+            case CATENARY -> "/wc brush catenary chain 1.2";
+            case CIRCLE -> "/wc brush circle glass 6 --fill";
+            case PULL -> "/wc brush pull 5 1";
+            case RECURSIVE -> "/wc brush recursive gold_block 6";
+            case SHATTER -> "/wc brush shatter air 10 10";
+            case STENCIL -> "/wc brush stencil moss_block 6 spots.png";
+            case IMAGE -> "/wc brush image logo.png 8";
+            case HEIGHT -> "/wc brush height 6 hill.png 5";
+            case POPULATE -> "/wc brush populateschematic grass_block trees/ 12 10 --rotate";
+            case COPYPASTE -> "/wc brush copypaste 6 --auto-rotate";
+            case INSPECT -> "/wc tool inspect";
+            case FEATUREPLACER -> "/wc tool featureplacer mossy_rock";
+            case STRUCTUREPLACER -> "/wc tool structureplacer igloo/top";
         };
     }
 }

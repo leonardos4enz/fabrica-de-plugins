@@ -32,3 +32,13 @@ La 3, con estas reglas (que son la excepción a VI.2):
 - Un Minecraft nuevo puede apagar `feature`, `brush feature` y `update` hasta que se actualice `Nms`: es lo único
   dependiente de la versión.
 - Otros plugins de la fábrica siguen sin NMS; esta excepción es solo para Worldcraft y solo para lo que Paper no da.
+
+## Ampliación (spec 041, 2026-11-03)
+El dueño pidió `//fixlighting` por este puente (y que `//removelighting`, `//setblocklight` y `//setskylight` sigan fuera).
+Recalcular la luz no pasa por el motor (la luz no es un bloque ni tiene deshacer), así que la regla «nunca escribe en el
+mundo» queda así: **el puente nunca pone, quita ni cambia un bloque**; lo único que puede pedir es que el juego vuelva a
+calcular la luz de unos chunks cargados, con el mismo método que `/paper fixlight`
+(`ThreadedLevelLightEngine.starlight$serverRelightChunks` en 1.21.4, Moonrise/Starlight; `relightChunks` si una versión lo
+llama así). También lee el NBT de un bloque (`BlockEntity.saveWithFullMetadata`) para `//nbtinfo`. Las dos cosas se apagan
+aparte (`Nms.lightAvailable()`): si faltan, los *features* y `//update` siguen. El selftest comprueba que recalcular la luz
+deja la zona igual bloque por bloque.

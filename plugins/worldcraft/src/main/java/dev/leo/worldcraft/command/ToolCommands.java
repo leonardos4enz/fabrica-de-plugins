@@ -74,6 +74,23 @@ final class ToolCommands {
             none(p);
             return true;
         }
+        // Spec 041 H2 CA7: guardar, listar y cargar pinceles.
+        switch (first) {
+            case "savebrush", "save" -> {
+                saveBrush(p, a);
+                return true;
+            }
+            case "listbrush", "list" -> {
+                listBrush(p, a);
+                return true;
+            }
+            case "loadbrush", "load" -> {
+                loadBrush(p, a);
+                return true;
+            }
+            default -> {
+            }
+        }
         ToolSpec held = tools().spec(p.getInventory().getItemInMainHand());
         if (ToolKind.parse(first, true) == null) {
             // radius= o mask= sobre el pincel de construcción de la mano (H1 CA5).
@@ -155,7 +172,15 @@ final class ToolCommands {
                     throw new IllegalArgumentException("There is no biome '" + s.text("biome") + "'" + Issues.hint(s.text("biome"), names) + "; see /wc biomelist");
                 }
             }
-            case FEATURE -> {
+            // Spec 041
+            case STENCIL, IMAGE, HEIGHT -> {
+                String img = s.text("image");
+                if (img != null && !plugin.images().files().contains(img)) {
+                    throw new IllegalArgumentException("There is no image '" + img + "' in plugins/Worldcraft/images/" + Issues.hint(img, plugin.images().files()));
+                }
+            }
+            case POPULATE -> parser.mask(s.text("on"));
+            case FEATURE, FEATUREPLACER -> {
                 var nms = dev.leo.worldcraft.paper.Nms.get();
                 if (!nms.available()) throw new IllegalArgumentException("The game's features are not available on this server version: " + nms.problem());
                 if (!nms.hasFeature(s.text("feature"))) {
@@ -173,6 +198,153 @@ final class ToolCommands {
             default -> {
             }
         }
+    }
+
+    /**
+     * Spec 041 H3 CA7: un pincel escrito como tras /wc brush (a[from] es el tipo), ya revisado; null si no sirve (y se
+     * dice por qué).
+     */
+    ToolSpec parseBrush(Player p, String[] a, int from) {
+        if (a.length <= from) {
+            p.sendMessage(msg().get("error", "message", "Write a brush, like 'sphere stone 3'"));
+            return null;
+        }
+        ToolKind kind = ToolKind.parse(a[from], true);
+        Tokens t = Tokens.of(a, from + 1, kind);
+        try {
+            ToolSpec spec = ToolParser.parse(true, a[from], t.words(), t.flags(), t.kv(), plugin.config().tools().caps());
+            if (spec.kind() == ToolKind.BUTCHER && !p.hasPermission(BuildCommands.PERM_BUTCHER)) {
+                p.sendMessage(msg().get("no-permission"));
+                return null;
+            }
+            check(spec);
+            return spec;
+        } catch (IllegalArgumentException | ParseException e) {
+            p.sendMessage(msg().get("error", "message", e.getMessage()));
+            return null;
+        }
+    }
+
+    private java.nio.file.Path brushes() {
+        return plugin.getDataFolder().toPath().resolve("brushes");
+    }
+
+    /** /wc brush savebrush &lt;nombre&gt; [--global]: el pincel de la mano a un archivo de texto. */
+    private void saveBrush(Player p, String[] a) {
+        boolean global = java.util.Arrays.asList(a).contains("--global") || java.util.Arrays.asList(a).contains("-g");
+        List<String> words = new ArrayList<>();
+        for (int i = 2; i < a.length; i++) if (!a[i].startsWith("-")) words.add(a[i]);
+        ToolSpec held = tools().spec(p.getInventory().getItemInMainHand());
+        if (held == null || !held.kind().brush) {
+            p.sendMessage(msg().get("brush-hold"));
+            return;
+        }
+        if (words.size() != 1) throw new WorldcraftCommand.Usage();
+        if (global && !p.hasPermission(WorldcraftCommand.ADMIN)) {
+            p.sendMessage(msg().get("no-permission"));
+            return;
+        }
+        java.nio.file.Path file;
+        try {
+            file = dev.leo.worldcraft.tool.Brushes.file(brushes(), global ? null : p.getUniqueId().toString(), words.get(0));
+        } catch (IllegalArgumentException e) {
+            p.sendMessage(msg().get("error", "message", e.getMessage()));
+            return;
+        }
+        String text = held.encode();
+        String name = words.get(0);
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                java.nio.file.Files.createDirectories(file.getParent());
+                java.nio.file.Files.writeString(file, text + "\n", java.nio.charset.StandardCharsets.UTF_8);
+            } catch (java.io.IOException e) {
+                throw new java.io.UncheckedIOException(e);
+            }
+        }, plugin.io()).whenComplete((v, err) -> org.bukkit.Bukkit.getScheduler().runTask(plugin, () ->
+                p.sendMessage(err == null ? msg().get("brush-saved", "name", name, "where", global ? "for everyone" : "for you")
+                        : msg().get("error", "message", "Could not save the brush: " + err.getMessage()))));
+    }
+
+    /** Los nombres guardados: los del jugador y los de todos. */
+    private List<String[]> savedBrushes(Player p) {
+        List<String[]> out = new ArrayList<>();
+        for (java.nio.file.Path dir : List.of(brushes().resolve(p.getUniqueId().toString()), brushes())) {
+            if (!java.nio.file.Files.isDirectory(dir)) continue;
+            try (var st = java.nio.file.Files.list(dir)) {
+                st.filter(f -> f.getFileName().toString().endsWith(".txt")).sorted().forEach(f -> {
+                    String n = f.getFileName().toString();
+                    out.add(new String[]{n.substring(0, n.length() - 4), dir.equals(brushes()) ? "everyone" : "you"});
+                });
+            } catch (java.io.IOException ignored) {
+                // una carpeta que no se lee no se lista
+            }
+        }
+        return out;
+    }
+
+    /** /wc brush listbrush [página]. */
+    private void listBrush(Player p, String[] a) {
+        int page = 1;
+        if (a.length > 2) {
+            try {
+                page = Math.max(1, Integer.parseInt(a[2]));
+            } catch (NumberFormatException e) {
+                throw new WorldcraftCommand.Usage();
+            }
+        }
+        List<String[]> all = savedBrushes(p);
+        if (all.isEmpty()) {
+            p.sendMessage(msg().get("brush-list-empty"));
+            return;
+        }
+        int pages = (all.size() + 9) / 10;
+        page = Math.min(page, pages);
+        p.sendMessage(msg().get("brush-list-header", "count", String.valueOf(all.size()), "page", String.valueOf(page), "pages", String.valueOf(pages)));
+        for (String[] b : all.subList((page - 1) * 10, Math.min(all.size(), page * 10))) {
+            p.sendMessage(msg().get("brush-list-line", "name", b[0], "who", b[1]));
+        }
+    }
+
+    /** /wc brush loadbrush &lt;nombre&gt;: el guardado (primero el propio) a la mano, revisado como si se escribiera. */
+    private void loadBrush(Player p, String[] a) {
+        if (a.length != 3) throw new WorldcraftCommand.Usage();
+        java.nio.file.Path file;
+        try {
+            file = dev.leo.worldcraft.tool.Brushes.file(brushes(), p.getUniqueId().toString(), a[2]);
+            if (!java.nio.file.Files.isRegularFile(file)) file = dev.leo.worldcraft.tool.Brushes.file(brushes(), null, a[2]);
+        } catch (IllegalArgumentException e) {
+            p.sendMessage(msg().get("error", "message", e.getMessage()));
+            return;
+        }
+        ToolSpec spec;
+        try {
+            spec = java.nio.file.Files.isRegularFile(file) ? ToolSpec.decode(java.nio.file.Files.readString(file).trim(), plugin.config().tools().caps()) : null;
+        } catch (java.io.IOException e) {
+            spec = null;
+        }
+        if (spec == null || !spec.kind().brush) {
+            List<String> names = new ArrayList<>();
+            for (String[] b : savedBrushes(p)) names.add(b[0]);
+            p.sendMessage(msg().get("brush-not-saved", "name", a[2], "hint", hint(Issues.closest(a[2], names))));
+            return;
+        }
+        try {
+            if (spec.kind() == ToolKind.BUTCHER && !p.hasPermission(BuildCommands.PERM_BUTCHER)) {
+                p.sendMessage(msg().get("no-permission"));
+                return;
+            }
+            check(spec);
+        } catch (IllegalArgumentException | ParseException e) {
+            p.sendMessage(msg().get("error", "message", e.getMessage()));
+            return;
+        }
+        Tools.Bound b = tools().bind(p, spec);
+        if (b == Tools.Bound.WAND) p.sendMessage(msg().get("tool-not-on-wand", "what", "brush"));
+        else p.sendMessage(msg().get("brush-loaded", "name", a[2], "tool", spec.describe()));
+    }
+
+    private static String hint(String c) {
+        return c == null ? "" : " (did you mean '" + c + "'?)";
     }
 
     private void update(Player p, ToolSpec held, Map<String, String> kv) {

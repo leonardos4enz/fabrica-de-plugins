@@ -15,9 +15,16 @@ public enum ToolKind {
     // Spec 040: los pinceles de WorldEdit que faltaban (paint … item es APPLY: /wc brush paint sin item es del terreno).
     SNOW(true, "snow"), SNOWSMOOTH(true, "snowsmooth"), BIOME(true, "biome"), MORPH(true, "morph"), DILATE(true, "dilate"),
     HEIGHTMAP(true, "heightmap"), FEATURE(true, "feature"), APPLY(true, "apply"),
+    // Spec 041: los pinceles de FAWE (líneas y curvas, avanzados) y sus herramientas.
+    LINE(true, "line", "l"), SPLINE(true, "spline", "spl", "curve"), SURFACESPLINE(true, "surfacespline", "sspline", "sspl"),
+    SWEEP(true, "sweep", "sw", "vaesweep"), CATENARY(true, "catenary", "cat", "gravityline", "saggedline"), CIRCLE(true, "circle"),
+    PULL(true, "pull"), RECURSIVE(true, "recursive", "recurse", "r"), SHATTER(true, "shatter", "partition", "split"),
+    STENCIL(true, "stencil"), IMAGE(true, "image"), HEIGHT(true, "height"),
+    POPULATE(true, "populateschematic", "populateschem", "popschem", "pschem", "ps"), COPYPASTE(true, "copypaste", "cp", "copypasta"),
     REPL(false, "repl"), FLOODFILL(false, "floodfill", "flood"), INFO(false, "info"), CYCLER(false, "cycler"),
     DELTREE(false, "deltree"), FARWAND(false, "farwand"), LRBUILD(false, "lrbuild"), NAVWAND(false, "navwand"), TREE(false, "tree"),
-    STACKER(false, "stacker");
+    STACKER(false, "stacker"), INSPECT(false, "inspect"), FEATUREPLACER(false, "featureplacer", "featuretool"),
+    STRUCTUREPLACER(false, "structureplacer", "structuretool");
 
     public final boolean brush;
     private final String[] names;
@@ -33,12 +40,13 @@ public enum ToolKind {
 
     /** ¿Tiene radio? (para el círculo de partículas y radius=) */
     public boolean hasRadius() {
-        return brush && this != CLIPBOARD;
+        return brush && this != CLIPBOARD && this != SWEEP;
     }
 
     /** ¿Pone bloques de un patrón? (para mask=) */
     public boolean placesBlocks() {
-        return brush && this != BUTCHER && this != GRAVITY && this != EXTINGUISH && this != FOREST && this != BIOME && this != FEATURE;
+        return brush && this != BUTCHER && this != GRAVITY && this != EXTINGUISH && this != FOREST && this != BIOME && this != FEATURE
+                && this != SWEEP;
     }
 
     public static ToolKind parse(String s, boolean brush) {

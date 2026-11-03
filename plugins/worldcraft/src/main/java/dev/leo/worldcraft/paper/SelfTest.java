@@ -543,6 +543,36 @@ public final class SelfTest {
         plugin.getLogger().info("Selftest game features passed: " + nms.features().size() + " features; captured without touching the world: "
                 + String.join(", ", got) + "; ore_diamond_small " + ore + "; " + fence);
         s.sendMessage(plugin.messages().get("selftest-game-ok", "count", String.valueOf(nms.features().size())));
+        light(s, w, x, z, around);
+    }
+
+    /**
+     * Spec 041 (compuerta 2, ADR 0009 ampliado): //fixlighting le pide al juego recalcular la luz de un chunk y ningún
+     * bloque cambia; //nbtinfo lee sin error (un bloque sin datos da nada).
+     */
+    private void light(CommandSender s, World w, int x, int z, Box around) {
+        Nms nms = Nms.get();
+        if (!nms.lightAvailable()) {
+            s.sendMessage(plugin.messages().get("selftest-light-off", "reason", nms.lightProblem()));
+            return;
+        }
+        String nbt;
+        try {
+            nbt = nms.blockNbt(w, x, w.getMinHeight(), z);
+        } catch (RuntimeException e) {
+            fail(s, "//nbtinfo: " + e.getMessage());
+            return;
+        }
+        List<String> before = read(w, around);
+        String nbtNote = nbt == null ? "no data at the bottom, as expected" : "data: " + nbt.length() + " characters";
+        nms.relight(w, List.of(new long[]{x >> 4, z >> 4}), n -> {
+            if (!before.equals(read(w, around))) {
+                fail(s, "//fixlighting changed blocks");
+                return;
+            }
+            plugin.getLogger().info("Selftest light passed: " + n + " chunk(s) relit, blocks unchanged; //nbtinfo " + nbtNote);
+            s.sendMessage(plugin.messages().get("selftest-light-ok", "chunks", String.valueOf(n)));
+        });
     }
 
     /** Lo que da fromCopy, en la forma que lee toCopy (Pos como double[], como al leer un archivo). */

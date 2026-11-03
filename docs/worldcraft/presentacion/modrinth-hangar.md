@@ -3,11 +3,11 @@
      Mismas imágenes y en el mismo orden que spigotmc.bbcode, y la misma cantidad de comandos que el código (lo exige
      PresentacionTest). Si el póster cambia, cambiar también la transcripción de los dos archivos (una sección por imagen). -->
 <p align="center">
-<img src="https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/worldcraft/presentacion/1-header.png" alt="Worldcraft: edit the world, never freeze the server. Paper 1.21.4, 119 commands, no WorldEdit needed, reads .schem." width="100%"><br>
+<img src="https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/worldcraft/presentacion/1-header.png" alt="Worldcraft: edit the world, never freeze the server. Paper 1.21.4, 138 commands, no WorldEdit needed, reads .schem." width="100%"><br>
 <img src="https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/worldcraft/presentacion/2-terrain.png" alt="A mountain in one word: a mountain and a floating island over a generated plain" width="100%"><br>
 <img src="https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/worldcraft/presentacion/3-shapes-pictures.png" alt="Shapes, pictures, formulas: a sphere, a hollow cylinder, a pyramid and a cone, and a picture built with blocks" width="100%"><br>
 <img src="https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/worldcraft/presentacion/4-compared.png" alt="Worldcraft vs WorldEdit vs FAWE, feature by feature" width="100%"><br>
-<img src="https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/worldcraft/presentacion/5-commands.png" alt="119 commands under /wc; 157 of WorldEdit's 171 and 166 of FAWE's 244" width="100%"><br>
+<img src="https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/worldcraft/presentacion/5-commands.png" alt="138 commands under /wc; 157 of WorldEdit's 171 and 205 of FAWE's 244" width="100%"><br>
 <img src="https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/worldcraft/presentacion/6-features.png" alt="What it does better: no lag, preview, undo on disk, plain words, safe limits, an API" width="100%"><br>
 <img src="https://raw.githubusercontent.com/leonardos4enz/fabrica-de-plugins/main/docs/img/worldcraft/presentacion/7-how-to-start.png" alt="How to start: install, /wc wand, /wc set stone --preview and /wc confirm, /wc undo" width="100%">
 </p>
@@ -16,7 +16,7 @@
 batches inside a time budget shared by the whole plugin. Preview it before it happens, undo it even after a restart
 (without erasing what others built since), write patterns the way you would say them, and make a mountain or a
 floating island with one word. You do not need WorldEdit: Worldcraft has its own engine, its own `.schem` reader and
-writer, and **119 commands** under `/wc`, which also work the WorldEdit way: `//set`, `//copy -e`, `/brush`,
+writer, and **138 commands** under `/wc`, which also work the WorldEdit way: `//set`, `//copy -e`, `/brush`,
 `//undo`.
 
 *Worldcraft is not affiliated with or endorsed by EngineHub (WorldEdit), IntellectualSites (FastAsyncWorldEdit) or Mojang.*
@@ -28,8 +28,8 @@ counting only what Worldcraft does the same or better:
 | | Commands | Worldcraft has |
 |---|---|---|
 | WorldEdit 7.3.19 | 171 | **157** (92 %), 5 more in part |
-| FastAsyncWorldEdit 2.16.2 | 244 | **166** (68 %), 12 more in part |
-| Worldcraft 0.15.0 | **119** under `/wc` (168 counted like WorldEdit counts its own) | |
+| FastAsyncWorldEdit 2.16.2 | 244 | **205** (84 %), 13 more in part |
+| Worldcraft 0.16.0 | **138** under `/wc` (212 counted like WorldEdit counts its own) | |
 
 Every command, one by one, with its Worldcraft equivalent:
 [commands.md](https://github.com/leonardos4enz/fabrica-de-plugins/blob/main/docs/worldcraft/presentacion/commands.md).
@@ -50,33 +50,31 @@ Every command, one by one, with its Worldcraft equivalent:
 | Only the Paper API (no server internals) | yes | yes | no |
 | Used by WorldGuard and PlotSquared | no: keep WorldEdit for them | yes | yes |
 
-## Commands (119)
+## Commands (138)
 Everything is `/wc <command>` (or `/worldcraft`); `/wc help <command>` shows how to use each one with an example.
-- **Select (15):** `/wc wand`, `pos1`, `pos2`, `hpos1`, `hpos2`, `sel` (cuboid, extend, poly, ellipsoid, sphere, cyl,
-  convex, magic), `expand`, `contract`, `shift`, `outset`, `inset`, `trim`, `chunk`, `count`, `distr`.
-- **Edit a selection (16):** `set`, `replace`, `walls`, `faces`, `stack`, `move`, `overlay`, `naturalize`, `smooth`,
-  `hollow`, `center`, `line`, `curve`, `snowsmooth`, `update`, `gmask`.
+- **Select (16):** `/wc wand`, `pos1`, `pos2`, `hpos1`, `hpos2`, `sel` (cuboid, extend, poly, ellipsoid, sphere, cyl,
+  convex, magic), `expand`, `contract`, `shift`, `outset`, `inset`, `trim`, `chunk`, `count`, `distr`, `wer`.
+- **Edit a selection (21):** `set`, `replace`, `walls`, `faces`, `stack`, `move`, `overlay`, `naturalize`, `smooth`,
+  `hollow`, `center`, `line`, `curve`, `snowsmooth`, `update`, `fixblocks`, `fall`, `gmask`, `gsmask`, `gtransform`, `gtexture`.
 - **Preview, undo and jobs (8):** `confirm`, `cancel`, `undo`, `redo`, `history`, `clearhistory`, `jobs`, `limits`.
-- **Copy and schematics (8):** `copy`, `cut`, `paste`, `rotate`, `flip`, `clearclipboard`, `schem`
-  (save, load, list, delete, import, formats), `structure` (the game's own templates).
+- **Copy and schematics (9):** `copy`, `cut`, `paste`, `place`, `rotate`, `flip`, `clearclipboard`, `schem`
+  (save, load, loadall, move, list, delete, import, formats), `structure` (the game's own templates).
 - **Shapes (7):** `sphere`, `hsphere`, `cyl`, `hcyl`, `pyramid`, `hpyramid`, `cone`.
 - **Terrain (4):** `mountain`, `island`, `reroll`, `styles`.
 - **Biomes, trees, plants and the game's features (8):** `biomelist`, `biomeinfo`, `setbiome`, `forest`, `forestgen`,
   `flora`, `pumpkins`, `feature`.
 - **Formulas (5):** `generate`, `generatebiome`, `deform`, `calc`, `timeout`.
 - **Caves, ores and pictures (4):** `caves`, `ore`, `ores`, `image`.
-- **Fixes around you (13):** `drain`, `fixwater`, `fixlava`, `fill`, `fillr`, `removenear`, `replacenear`, `removeabove`,
-  `removebelow`, `extinguish`, `snow`, `thaw`, `green`.
+- **Fixes around you (14):** `drain`, `fixwater`, `fixlava`, `fill`, `fillr`, `removenear`, `replacenear`, `removeabove`,
+  `removebelow`, `extinguish`, `snow`, `thaw`, `green`, `fixlighting`.
 - **Entities (2):** `butcher`, `remove`.
-- **Brushes and tools (5):** `brush` (28: sphere, cyl, set, clipboard, splatter, scatter, rock, gravity, extinguish,
-  butcher, forest, deform, snow, snowsmooth, biome, morph, dilate, heightmap, feature, apply … item, paint … item, and
-  the terrain brush: raise, lower, smooth, flatten, erode, paint), `tool` (11: repl, floodfill, info, cycler, deltree,
-  farwand, lrbuild, navwand, tree, stacker, none), `superpickaxe` (single, area, recursive), `range`, `tracemask`.
+- **Brushes and tools (12):** `brush` (48: sphere, cyl, set, clipboard, splatter, scatter, rock, gravity, extinguish,
+  butcher, forest, deform, snow, snowsmooth, biome, morph, dilate, heightmap, feature, apply … item, paint … item, line, spline, surfacespline, sweep, catenary, circle, pull, recursive, shatter, stencil, image, height, populateschematic, copypaste, savebrush, listbrush, loadbrush, and the terrain brush: raise, lower, smooth, flatten, erode, paint), `tool` (14: repl, floodfill, info, cycler, deltree, farwand, lrbuild, navwand, tree, stacker, inspect, featureplacer, structureplacer, none), `superpickaxe` (single, area, recursive), `range`, `tracemask`, `target`, `targetoffset`, `scroll`, `smask`, `transform`, `primary`, `secondary`.
 - **Where things go (3):** `placement`, `toggleplace`, `toggleeditwand`.
 - **Moving around (7):** `unstuck`, `ascend`, `descend`, `ceil`, `thru`, `jumpto`, `up`.
 - **Back to the original (3):** `regen`, `snapshot`, `restore`.
-- **Information (7):** `chunkinfo`, `listchunks`, `searchitem`, `version`, `report`, `trace`, `tz`.
-- **Admin (4):** `help`, `reload`, `validate`, `selftest`.
+- **Information (10):** `chunkinfo`, `listchunks`, `searchitem`, `version`, `report`, `trace`, `tz`, `nbtinfo`, `registry`, `debugpaste`.
+- **Admin (5):** `help`, `reload`, `validate`, `selftest`, `wea`.
 
 ```
 /wc wand                                     left click = corner 1, right click = corner 2
@@ -130,7 +128,7 @@ and verified with an automated in-game test suite.
 <summary>Image transcription</summary>
 
 **Header.** Worldcraft. Edit the world. Never freeze the server. WorldEdit's commands under `/wc`, run in small batches
-that never lag. Preview every edit, undo it after a restart, and make a mountain with one word. Paper 1.21.4 · 119
+that never lag. Preview every edit, undo it after a restart, and make a mountain with one word. Paper 1.21.4 · 138
 commands · No WorldEdit needed · Reads .schem.
 
 **A mountain in one word.** `/wc mountain large` and `/wc island large`: a mountain with snowy peaks and a floating
@@ -140,11 +138,11 @@ island with trees over a generated plain. Shown first: [Build] [Another] [Cancel
 `/wc confirm`. `/wc sphere orange_concrete 9`, `/wc hcyl light_blue_concrete 8 16`: a sphere, a hollow cylinder, a
 pyramid and a cone. `/wc image logo.png 48`, `/wc generate stone x^2+y^2+z^2<1`: the Worldcraft logo built with blocks.
 
-**Worldcraft vs WorldEdit vs FAWE.** The same table as above. Worldcraft 0.15.0, WorldEdit 7.3.19, FAWE 2.16.2
+**Worldcraft vs WorldEdit vs FAWE.** The same table as above. Worldcraft 0.16.0, WorldEdit 7.3.19, FAWE 2.16.2
 (November 2026).
 
-**How many commands?** 119 commands under `/wc` (168 counted like WorldEdit counts its own). 157 of WorldEdit's 171:
-the same or better (92 %), 5 more in part. 166 of FAWE's 244: the same or better (68 %), 12 more in part. Then the
+**How many commands?** 138 commands under `/wc` (212 counted like WorldEdit counts its own). 157 of WorldEdit's 171:
+the same or better (92 %), 5 more in part. 205 of FAWE's 244: the same or better (84 %), 13 more in part. Then the
 command names by group, as in the list above.
 
 **What it does better.** No lag, ever: every edit runs in batches inside 8 ms of each tick, for the whole plugin; two

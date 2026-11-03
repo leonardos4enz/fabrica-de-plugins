@@ -4,7 +4,7 @@
      pizarra, roca madre) en franjas de 1280 px que apiladas se leen como un solo póster. tests-e2e/presentacion.mjs
      (--plugin worldcraft) saca cada pieza (#id). Las fotos son las escenas de tests-e2e/worldcraft/presentacion.mjs; si
      una todavía no existe se dibuja un marcador gris con su nombre. Las cantidades de comandos salen del recuento de la
-     038 (docs/worldcraft/presentacion/commands.md; PresentacionTest exige el 119 y las cifras frente a WorldEdit y FAWE (spec 040)). Texturas, logo e íconos dibujados
+     038 (docs/worldcraft/presentacion/commands.md; PresentacionTest exige el 138 y las cifras frente a WorldEdit y FAWE (spec 040, 041)). Texturas, logo e íconos dibujados
      aquí (ruido con semilla): nada de Mojang, WorldEdit ni FAWE. -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@600;800;900&display=block">
 <style>
@@ -161,7 +161,7 @@ document.getElementById('todo').innerHTML=`
  <div class="t" style="font-size:60px">Worldcraft</div>
  <p class="xyz" style="font-size:31px">Edit the <i>world</i>. Never <i>freeze</i> the server.</p>
  <p class="sub" style="font-size:20px">WorldEdit's commands under <code>/wc</code>, run in small batches that never lag.<br>Preview every edit, undo it after a restart, and make a mountain with one word.</p>
- <span class="pill">Paper 1.21.4</span><span class="pill">119 commands</span><span class="pill">No WorldEdit needed</span><span class="pill">Reads .schem</span></div></div>
+ <span class="pill">Paper 1.21.4</span><span class="pill">138 commands</span><span class="pill">No WorldEdit needed</span><span class="pill">Reads .schem</span></div></div>
  ${edge('grass',5)}</section>
 <section id="franja-2" class="pieza strip" data-tex="grass" style="padding:44px 60px 70px">
  <div class="center"><span class="sign">A mountain in one word</span><p class="lead">Snowy peaks, rock on the slopes, a foot that blends into the ground. Trees and builds are left alone.</p></div>
@@ -196,19 +196,19 @@ document.getElementById('todo').innerHTML=`
 <section id="franja-5" class="pieza strip" data-tex="stone" style="padding:50px 60px 100px">
  <div class="center"><span class="sign">How many commands?</span></div>
  <div class="big">
-  <div><b>119</b><span>commands under /wc</span><small>168 counted like WorldEdit counts its own</small></div>
+  <div><b>138</b><span>commands under /wc</span><small>212 counted like WorldEdit counts its own</small></div>
   <div><b>157</b><span>of WorldEdit's 171</span><small>the same or better (92 %); 5 more in part</small></div>
-  <div><b>166</b><span>of FAWE's 244</span><small>the same or better (68 %); 12 more in part</small></div></div>
+  <div><b>205</b><span>of FAWE's 244</span><small>the same or better (84 %); 13 more in part</small></div></div>
  <div class="groups">
   <p><b>Select</b> wand, pos1, pos2, hpos, sel (box, poly, sphere, cyl, convex, magic), expand, outset, trim, chunk, count, distr</p>
-  <p><b>Edit</b> set, replace, walls, faces, stack, move, overlay, naturalize, smooth, hollow, center, line, curve, snowsmooth, update, gmask</p>
+  <p><b>Edit</b> set, replace, walls, faces, stack, move, overlay, naturalize, smooth, hollow, center, line, curve, snowsmooth, update, fixblocks, fall, gmask, gsmask, gtransform, gtexture</p>
   <p><b>Undo</b> undo, redo, history, clearhistory, confirm, cancel, jobs, limits</p>
-  <p><b>Copy</b> copy, cut, paste, rotate, flip, schem save/load/list/delete/import/formats, structure</p>
+  <p><b>Copy</b> copy, cut, paste, place, rotate, flip, schem save/load/loadall/move/list/delete/import/formats, structure</p>
   <p><b>Shapes</b> sphere, hsphere, cyl, hcyl, pyramid, hpyramid, cone · <b>Terrain</b> mountain, island, reroll, styles</p>
   <p><b>Nature</b> biomelist, biomeinfo, setbiome, forest, forestgen, flora, pumpkins, feature (the game's)</p>
   <p><b>Formulas</b> generate, generatebiome, deform, calc, timeout · <b>FAWE's</b> caves, ore, ores, image</p>
-  <p><b>Around you</b> drain, fixwater, fixlava, fill, removenear, replacenear, removeabove, removebelow, extinguish, snow, thaw, green, fillr, butcher, remove</p>
-  <p><b>28 brushes, 11 tools</b>, super pickaxe, range, tracemask, placement · <b>Info</b> chunkinfo, listchunks, searchitem, version, report, trace, tz</p>
+  <p><b>Around you</b> drain, fixwater, fixlava, fill, removenear, replacenear, removeabove, removebelow, extinguish, snow, thaw, green, fillr, fixlighting, butcher, remove</p>
+  <p><b>48 brushes, 14 tools</b>, super pickaxe, range, tracemask, target, scroll, primary, secondary, placement · <b>Info</b> chunkinfo, listchunks, searchitem, nbtinfo, registry, version, report, trace, tz</p>
   <p> <b>Moving</b> ascend, descend, ceil, thru, jumpto, unstuck, up · <b>Backups</b> regen, snapshot, restore</p>
  </div>
  ${edge('deep',17)}</section>

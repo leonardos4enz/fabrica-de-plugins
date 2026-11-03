@@ -187,11 +187,55 @@ public final class Tools implements Listener {
         e.setCancelled(true);
         // H7 CA1: los permisos y los límites son los de quien hace clic, en cada clic.
         if (!p.hasPermission(WorldcraftCommand.USE)) return;
-        if (s.kind().brush) {
-            if (right) actions.brush(p, s);
-        } else {
-            actions.tool(p, it, s, right);
+        // Spec 041 H3 CA1: la textura del jugador mientras se leen los patrones del pincel.
+        dev.leo.worldcraft.pattern.Parser.TEXTURE.set(plugin.edits().session(p.getUniqueId()).texture);
+        try {
+            if (s.kind().brush) {
+                if (right) actions.brush(p, s);
+                else if (s.kind() == ToolKind.COPYPASTE) actions.copy(p, s);
+                else {
+                    // Spec 041 H3 CA7: el pincel del clic izquierdo (/wc secondary).
+                    ToolSpec left = s.secondary(plugin.config().tools().caps());
+                    if (left != null) actions.brush(p, left);
+                }
+            } else {
+                actions.tool(p, it, s, right);
+            }
+        } finally {
+            dev.leo.worldcraft.pattern.Parser.TEXTURE.remove();
         }
+    }
+
+    /**
+     * Spec 041 H3 CA6: con /wc scroll, pasar a la casilla de al lado con el pincel en la mano cambia su valor en vez de
+     * cambiar de ítem (saltar con los números sigue cambiando).
+     */
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void onScroll(org.bukkit.event.player.PlayerItemHeldEvent e) {
+        Player p = e.getPlayer();
+        ItemStack it = p.getInventory().getItem(e.getPreviousSlot());
+        ToolSpec s = spec(it);
+        if (s == null || s.text("scroll") == null || s.text("scroll").equals("none") || !p.hasPermission(WorldcraftCommand.USE)) return;
+        int d = dev.leo.worldcraft.tool.Scroll.delta(e.getPreviousSlot(), e.getNewSlot());
+        if (d == 0) return;
+        e.setCancelled(true);
+        if (s.text("scroll").equals("clipboard")) {
+            Session ses = plugin.edits().session(p.getUniqueId());
+            if (ses.clipboards.isEmpty()) {
+                p.sendActionBar(plugin.messages().get("scroll-no-clipboards"));
+                return;
+            }
+            int i = Math.floorMod(s.number("scroll_i") + d, ses.clipboards.size());
+            List<dev.leo.worldcraft.edit.Clipboard> all = ses.clipboards;
+            ses.clipboard(all.get(i), p.getWorld().getName());
+            ses.clipboards = all;
+            write(it, s.with("scroll_i", String.valueOf(i)));
+            p.sendActionBar(plugin.messages().get("scroll-changed", "brush", "clipboard " + (i + 1) + " of " + ses.clipboards.size()));
+            return;
+        }
+        ToolSpec next = dev.leo.worldcraft.tool.Scroll.apply(s, d, plugin.config().tools().caps());
+        write(it, next);
+        p.sendActionBar(plugin.messages().get("scroll-changed", "brush", next.describe()));
     }
 
     /** H1 CA6: con un pincel o herramienta (o el superpico) nunca se rompe un bloque a mano. */

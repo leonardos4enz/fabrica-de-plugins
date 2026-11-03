@@ -15,13 +15,20 @@ import java.util.TreeSet;
  */
 public record ToolSpec(ToolKind kind, Map<String, String> opts) {
     /** Los topes del momento (config.yml): un ítem armado a mano no pasa de aquí (plan 032 §3). */
-    public record Caps(int brushMaxRadius, int maxRange, int maxReach) {
-        public static final Caps DEFAULTS = new Caps(16, 32, 200);
+    public record Caps(int brushMaxRadius, int maxRange, int maxReach, int maxTargetOffset) {
+        public static final Caps DEFAULTS = new Caps(16, 32, 200, 16);
+
+        public Caps(int brushMaxRadius, int maxRange, int maxReach) {
+            this(brushMaxRadius, maxRange, maxReach, 16);
+        }
 
         public Caps(int brushMaxRadius, int maxRange) {
-            this(brushMaxRadius, maxRange, DEFAULTS.maxReach);
+            this(brushMaxRadius, maxRange, 200, 16);
         }
     }
+
+    /** Spec 041 H3 CA5: a dónde apunta el pincel (/wc target), en el orden en que los recorre la rueda. */
+    public static final java.util.List<String> TARGETS = java.util.List.of("block", "forward", "height", "face");
 
     /** Las opciones de butcher que acepta el pincel (las de /wc butcher, spec 031). */
     public static final Set<String> BUTCHER_FLAGS = Set.of("pets", "npcs", "golems", "animals", "ambient", "water", "named",
@@ -67,6 +74,48 @@ public record ToolSpec(ToolKind kind, Map<String, String> opts) {
         }
     }
 
+    /** Spec 041: un texto guardado en Base64 (smask, transform, secondary, scroll_values), o null. */
+    public String decodedText(String key) {
+        String v = opts.get(key);
+        if (v == null) return null;
+        try {
+            return new String(java.util.Base64.getUrlDecoder().decode(v), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /** Spec 041: lo mismo que with, pero el valor viaja en Base64 (puede tener «;» o «=»); null lo quita. */
+    public ToolSpec withText(String key, String value) {
+        return with(key, value == null ? null : encodeText(value));
+    }
+
+    /** Spec 041 H3 CA7: el pincel del clic izquierdo (/wc secondary), o null. */
+    public ToolSpec secondary(Caps caps) {
+        String s = decodedText("secondary");
+        ToolSpec t = s == null ? null : decode(s, caps);
+        return t != null && t.kind().brush ? t : null;
+    }
+
+    /** Spec 041 H3 CA5: block (de fábrica), forward, height o face. */
+    public String target() {
+        String t = opts.get("target");
+        return t != null && TARGETS.contains(t) ? t : "block";
+    }
+
+    /** Un número con decimales (el largo de catenary), o el de fábrica. */
+    public double decimal(String key) {
+        String v = opts.get(key);
+        if (v != null) {
+            try {
+                return Double.parseDouble(v);
+            } catch (NumberFormatException ignored) {
+                // el de fábrica
+            }
+        }
+        return key.equals("length") ? 1.2 : 0;
+    }
+
     public String pattern() {
         return opts.get("pattern");
     }
@@ -99,7 +148,9 @@ public record ToolSpec(ToolKind kind, Map<String, String> opts) {
         return switch (key) {
             case "radius" -> switch (kind) {
                 case SPHERE, CYL, SET, SPLATTER -> 2;
-                case ROCK -> 10;
+                case ROCK, SHATTER, POPULATE -> 10;
+                // Spec 041: en las líneas el radio es el grosor (0 = un bloque), como FAWE.
+                case LINE, SPLINE, SURFACESPLINE, CATENARY -> 0;
                 default -> 5;
             };
             // Spec 040: morph y dilate como WorldEdit; heightmap sube 5 de fábrica.
@@ -114,7 +165,9 @@ public record ToolSpec(ToolKind kind, Map<String, String> opts) {
             case "frequency" -> 30;
             case "amplitude" -> 50;
             case "range" -> kind == ToolKind.STACKER ? 10 : 5;
-            case "density" -> kind == ToolKind.APPLY ? 100 : 5;
+            case "density" -> kind == ToolKind.APPLY ? 100 : kind == ToolKind.POPULATE ? 10 : 5;
+            case "count" -> 10;
+            case "scale" -> 1;
             default -> 0;
         };
     }
@@ -172,6 +225,19 @@ public record ToolSpec(ToolKind kind, Map<String, String> opts) {
         clamp(opts, "dilate", 0, 10);
         clamp(opts, "erode_faces", 1, 6);
         clamp(opts, "dilate_faces", 1, 6);
+        // Spec 041
+        clamp(opts, "count", 1, 64);
+        clamp(opts, "copies", 0, 256);
+        clamp(opts, "scale", -64, 64);
+        clamp(opts, "toffset", -caps.maxTargetOffset(), caps.maxTargetOffset());
+        String len = opts.get("length");
+        if (len != null) {
+            try {
+                opts.put("length", String.valueOf(Math.max(1.0, Math.min(4.0, Double.parseDouble(len)))));
+            } catch (NumberFormatException e) {
+                opts.remove("length");
+            }
+        }
         return new ToolSpec(kind, opts);
     }
 
@@ -212,6 +278,12 @@ public record ToolSpec(ToolKind kind, Map<String, String> opts) {
             case HEIGHTMAP -> sb.append(" · ").append(opts.get("image"));
             case APPLY -> sb.append(" · ").append(opts.getOrDefault("shape", "sphere")).append(" · item ").append(opts.get("item"));
             case DEFORM -> sb.append(" · ").append(formula());
+            // Spec 041
+            case IMAGE, HEIGHT -> sb.append(" · ").append(opts.getOrDefault("image", "cone"));
+            case STENCIL -> sb.append(" · ").append(pattern()).append(" · ").append(opts.getOrDefault("image", "cone"));
+            case POPULATE -> sb.append(" · ").append(opts.get("schem")).append(" on ").append(opts.get("on"));
+            case FEATUREPLACER -> sb.append(" · ").append(opts.get("feature"));
+            case STRUCTUREPLACER -> sb.append(" · ").append(opts.get("structure"));
             default -> {
                 if (pattern() != null) sb.append(" · ").append(pattern());
             }
@@ -233,10 +305,17 @@ public record ToolSpec(ToolKind kind, Map<String, String> opts) {
                     .append(" · dilate ").append(number("dilate_faces")).append(" faces x").append(number("dilate"));
             case HEIGHTMAP -> sb.append(" · height ").append(number("height"));
             case STACKER -> sb.append(" · range ").append(number("range"));
+            case CATENARY -> sb.append(" · length ").append(decimal("length"));
+            case SHATTER -> sb.append(" · ").append(number("count")).append(" pieces");
+            case SWEEP -> sb.append(number("copies") > 0 ? " · " + number("copies") + " copies" : " · one after another");
+            case PULL -> sb.append(" · ").append(number("iterations")).append(" passes");
+            case HEIGHT -> sb.append(" · scale ").append(number("scale"));
+            case POPULATE -> sb.append(" · density ").append(number("density")).append("%");
             default -> {
             }
         }
-        for (String f : new String[]{"hollow", "air", "origin", "overlay", "full", "raw", "offset", "stack", "erase", "flatten"}) {
+        for (String f : new String[]{"hollow", "air", "origin", "overlay", "full", "raw", "offset", "stack", "erase", "flatten",
+                "shell", "select", "flat", "facing", "fill", "depth-first", "white", "random-rotate", "alpha", "fade", "rotate", "auto-rotate"}) {
             if (flag(f)) sb.append(" · ").append(f.equals("full") ? "to the top" : f.equals("air") ? "with air" : f);
         }
         if (kind == ToolKind.BUTCHER && !butcherFlags().isEmpty()) sb.append(" · ").append(String.join(", ", butcherFlags()));
@@ -244,6 +323,14 @@ public record ToolSpec(ToolKind kind, Map<String, String> opts) {
         // Spec 040 H3 CA3, CA4: /wc range y /wc tracemask.
         if (opts.containsKey("reach")) sb.append(" · reach ").append(number("reach"));
         if (trace() != null) sb.append(" · aims at ").append(trace());
+        // Spec 041 H3
+        if (!target().equals("block")) sb.append(" · target ").append(target());
+        if (number("toffset") != 0) sb.append(" · offset ").append(number("toffset"));
+        if (decodedText("smask") != null) sb.append(" · places only ").append(decodedText("smask"));
+        if (decodedText("transform") != null) sb.append(" · ").append(decodedText("transform"));
+        if (opts.containsKey("scroll")) sb.append(" · scroll ").append(opts.get("scroll"));
+        String sec = decodedText("secondary");
+        if (sec != null) sb.append(" · left click: ").append(sec.replaceAll(";.*", "").replace("kind=", ""));
         return sb.toString();
     }
 }

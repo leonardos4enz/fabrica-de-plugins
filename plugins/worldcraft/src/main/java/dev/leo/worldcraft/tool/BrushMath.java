@@ -327,6 +327,214 @@ public final class BrushMath {
         return out;
     }
 
+    // ------------------------------------------------------------------ spec 041
+
+    /**
+     * pull (H1 CA6): tira del terreno hacia el jugador. dir es el eje que va del blanco hacia el jugador; en cada pasada,
+     * el aire de la esfera que tiene detrás (del otro lado del jugador) un bloque sólido toma ese bloque.
+     */
+    public static Map<Long, Integer> pull(Snapshot snap, int cx, int cy, int cz, int r, int[] dir, int passes, IntPredicate isAir) {
+        Map<Long, Integer> now = new LinkedHashMap<>();
+        double e = (r + 0.5) * (r + 0.5);
+        for (int pass = 0; pass < passes; pass++) {
+            Map<Long, Integer> add = new LinkedHashMap<>();
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dy = -r; dy <= r; dy++) {
+                    for (int dz = -r; dz <= r; dz++) {
+                        if (dx * dx + dy * dy + dz * dz > e) continue;
+                        int x = cx + dx, y = cy + dy, z = cz + dz;
+                        int here = get(snap, now, x, y, z);
+                        if (here < 0 || !isAir.test(here)) continue;
+                        int behind = get(snap, now, x - dir[0], y - dir[1], z - dir[2]);
+                        if (behind >= 0 && !isAir.test(behind)) add.put(PointsSource.pack(x, y, z), behind);
+                    }
+                }
+            }
+            if (add.isEmpty()) break;
+            now.putAll(add);
+        }
+        return now;
+    }
+
+    private static int get(Snapshot snap, Map<Long, Integer> over, int x, int y, int z) {
+        Integer v = over.get(PointsSource.pack(x, y, z));
+        return v != null ? v : snap.get(x, y, z);
+    }
+
+    /**
+     * shatter (H2 CA1): count semillas al azar en la esfera parten lo sólido en pedazos (el de la semilla más cercana);
+     * el borde es un sólido con un vecino sólido de un pedazo de número menor (una línea de un bloque de ancho).
+     */
+    public static long[] shatter(Snapshot snap, int cx, int cy, int cz, int r, int count, IntPredicate isAir, long seed) {
+        int n = Math.max(1, count);
+        double[][] seeds = new double[n][];
+        double e = (r + 0.5) * (r + 0.5);
+        Random rnd = new Random(seed);
+        for (int i = 0; i < n; i++) {
+            double x, y, z;
+            do {
+                x = (rnd.nextDouble() * 2 - 1) * r;
+                y = (rnd.nextDouble() * 2 - 1) * r;
+                z = (rnd.nextDouble() * 2 - 1) * r;
+            } while (x * x + y * y + z * z > e);
+            seeds[i] = new double[]{cx + x, cy + y, cz + z};
+        }
+        List<Long> out = new ArrayList<>();
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dy = -r; dy <= r; dy++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (dx * dx + dy * dy + dz * dz > e) continue;
+                    int x = cx + dx, y = cy + dy, z = cz + dz;
+                    int s = snap.get(x, y, z);
+                    if (s < 0 || isAir.test(s)) continue;
+                    int mine = nearest(seeds, x, y, z);
+                    for (int[] f : FACES) {
+                        int qx = x + f[0], qy = y + f[1], qz = z + f[2];
+                        int ddx = qx - cx, ddy = qy - cy, ddz = qz - cz;
+                        if (ddx * ddx + ddy * ddy + ddz * ddz > e) continue;
+                        int q = snap.get(qx, qy, qz);
+                        if (q < 0 || isAir.test(q)) continue;
+                        if (nearest(seeds, qx, qy, qz) < mine) {
+                            out.add(PointsSource.pack(x, y, z));
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        return toArray(out);
+    }
+
+    private static int nearest(double[][] seeds, int x, int y, int z) {
+        int best = 0;
+        double bd = Double.MAX_VALUE;
+        for (int i = 0; i < seeds.length; i++) {
+            double d = sqd(seeds[i][0] - x) + sqd(seeds[i][1] - y) + sqd(seeds[i][2] - z);
+            if (d < bd) {
+                bd = d;
+                best = i;
+            }
+        }
+        return best;
+    }
+
+    private static double sqd(double v) {
+        return v * v;
+    }
+
+    /** La cima de la columna (x, z) en la foto: el bloque más alto que no es aire; Integer.MIN_VALUE si no hay. */
+    public static int surfaceY(Snapshot snap, int x, int z, IntPredicate isAir) {
+        for (int y = snap.box.maxY(); y >= snap.box.minY(); y--) {
+            int s = snap.get(x, y, z);
+            if (s >= 0 && !isAir.test(s)) return y;
+        }
+        return Integer.MIN_VALUE;
+    }
+
+    /** El valor de la imagen (img[fila z][columna x], de 0 a 1) para (dx, dz) del círculo de radio r. */
+    public static double pixel(double[][] img, int dx, int dz, int r) {
+        int rows = img.length, cols = img[0].length;
+        int ix = r == 0 ? 0 : (int) Math.round((dx + r) * (cols - 1) / (2.0 * r));
+        int iz = r == 0 ? 0 : (int) Math.round((dz + r) * (rows - 1) / (2.0 * r));
+        return Math.max(0, Math.min(1, img[iz][ix]));
+    }
+
+    /**
+     * stencil (H2 CA2): las cimas del círculo donde la imagen es clara (más que ½; con white, solo blanca), para
+     * pintarlas con el patrón.
+     */
+    public static long[] stencil(Snapshot snap, int cx, int cz, int r, double[][] img, boolean white, IntPredicate isAir) {
+        List<Long> out = new ArrayList<>();
+        double e = (r + 0.5) * (r + 0.5);
+        for (int dz = -r; dz <= r; dz++) {
+            for (int dx = -r; dx <= r; dx++) {
+                if (dx * dx + dz * dz > e) continue;
+                double g = pixel(img, dx, dz, r);
+                if (white ? g < 0.99 : g <= 0.5) continue;
+                int top = surfaceY(snap, cx + dx, cz + dz, isAir);
+                if (top != Integer.MIN_VALUE) out.add(PointsSource.pack(cx + dx, top, cz + dz));
+            }
+        }
+        return toArray(out);
+    }
+
+    /** La imagen de fábrica de stencil y height: un cono (1 en el centro, 0 en el borde y las esquinas). */
+    public static double[][] cone(int side) {
+        double[][] out = new double[side][side];
+        double c = (side - 1) / 2.0;
+        for (int j = 0; j < side; j++) {
+            for (int i = 0; i < side; i++) {
+                double d = c == 0 ? 0 : Math.sqrt(sqd(i - c) + sqd(j - c)) / c;
+                out[j][i] = Math.max(0, 1 - d);
+            }
+        }
+        return out;
+    }
+
+    /** La imagen girada quarters cuartos de vuelta (--random-rotate). */
+    public static double[][] rotate(double[][] img, int quarters) {
+        double[][] out = img;
+        for (int q = 0; q < Math.floorMod(quarters, 4); q++) {
+            int rows = out.length, cols = out[0].length;
+            double[][] r = new double[cols][rows];
+            for (int j = 0; j < rows; j++) for (int i = 0; i < cols; i++) r[i][rows - 1 - j] = out[j][i];
+            out = r;
+        }
+        return out;
+    }
+
+    /**
+     * //fall (H4 CA2): en cada columna de la foto, lo de la selección (inRegion) que no es aire ni fijo cae hasta apoyarse;
+     * lo de fuera de la selección y lo fijo hacen de piso. Lo que deja queda con fill (el aire que ya era aire no cambia).
+     * Nada baja de yLo.
+     */
+    public static Map<Long, Integer> fall(Snapshot snap, dev.leo.worldcraft.edit.Flood.Bound inRegion, IntPredicate isAir,
+                                         IntPredicate fixed, int fill, int yLo) {
+        Map<Long, Integer> out = new LinkedHashMap<>();
+        var b = snap.box;
+        int lo = Math.max(yLo, b.minY()), n = b.maxY() - lo + 1;
+        if (n <= 0) return out;
+        final int vacated = Integer.MIN_VALUE;
+        int[] old = new int[n], neu = new int[n];
+        for (int z = b.minZ(); z <= b.maxZ(); z++) {
+            for (int x = b.minX(); x <= b.maxX(); x++) {
+                int free = -1;
+                boolean moved = false;
+                for (int i = 0; i < n; i++) {
+                    int y = lo + i, s = snap.get(x, y, z);
+                    old[i] = s;
+                    neu[i] = s;
+                    if (s < 0) {
+                        free = -1;
+                        continue;
+                    }
+                    if (isAir.test(s)) {
+                        if (free < 0) free = i;
+                        continue;
+                    }
+                    if (!inRegion.test(x, y, z) || fixed.test(s)) {
+                        free = -1;
+                        continue;
+                    }
+                    if (free >= 0 && free < i) {
+                        neu[i] = vacated;
+                        neu[free] = s;
+                        free++;
+                        moved = true;
+                    } else {
+                        free = -1;
+                    }
+                }
+                if (!moved) continue;
+                for (int i = 0; i < n; i++) {
+                    int v = neu[i] == vacated ? fill : neu[i];
+                    if (v != old[i]) out.put(PointsSource.pack(x, lo + i, z), v);
+                }
+            }
+        }
+        return out;
+    }
+
     // ------------------------------------------------------------------ azar
 
     /** Un número de 0 a 1 que depende solo de la posición y la semilla. */

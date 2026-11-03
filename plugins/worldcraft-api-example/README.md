@@ -22,10 +22,16 @@ protected:              # no Worldcraft edit may touch these areas (commands, br
     world: world
     from: [-50, -64, -50]
     to: [50, 319, 50]
+build_areas:            # since Worldcraft 0.16.0: /wc wer (//wer) selects the one the player stands in
+  plot1:
+    world: world
+    from: [100, -64, 100]
+    to: [131, 319, 131]
 log_edits: true         # write every finished Worldcraft edit to the console
 ```
 A player who runs `/wc set stone` inside a protected area sees "Another plugin stopped this edit: This area is
-protected by WorldcraftApiExample (spawn)".
+protected by WorldcraftApiExample (spawn)" (unless they turned on `/wc wea`: then it goes ahead and they are told).
+Standing in `plot1`, `/wc wer` selects it (the example answers `WorldcraftAllowedRegionEvent`).
 
 ## Using the API in your plugin
 1. `plugin.yml`: `depend: [Worldcraft]` (or `softdepend` and check that it is enabled).

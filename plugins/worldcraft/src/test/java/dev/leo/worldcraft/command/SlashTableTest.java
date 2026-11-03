@@ -103,6 +103,20 @@ class SlashTableTest {
     }
 
     @Test
+    void spec041_los_nombres_de_FAWE() throws Exception {
+        SlashTable t = table();
+        assertEquals("fall --inside", run(t, "/fall", "-m"));
+        assertEquals("place --origin --air --no-entities", run(t, "/place", "-o"), "como //paste: el aire y sin entidades de fábrica");
+        assertEquals("gsmask !air", run(t, "/globalsourcemask", "!air"));
+        assertEquals("fixblocks", run(t, "/fixconnect"));
+        assertEquals("nbtinfo", run(t, "/nbt"));
+        assertEquals("wea", run(t, "/worldeditanywhere"));
+        assertEquals("target face", run(t, "/tar", "face"));
+        for (String n : List.of("/gtexture", "/gtransform", "smask", "transform", "targetoffset", "scroll", "primary", "secondary", "/wer",
+                "/registry", "/fixlighting")) assertNotNull(t.get(n), n);
+    }
+
+    @Test
     void H3_CA1_banderas_cortas_juntas_o_separadas() throws Exception {
         SlashTable t = table();
         assertEquals("copy --entities --biomes", run(t, "/copy", "-eb"));

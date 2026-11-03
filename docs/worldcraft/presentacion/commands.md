@@ -1,20 +1,21 @@
 # Worldcraft commands, and how they compare with WorldEdit and FAWE
 
-Worldcraft 0.15.0 has **119 commands** under `/wc` (alias of `/worldcraft`), and every one also works the WorldEdit
+Worldcraft 0.16.0 has **138 commands** under `/wc` (alias of `/worldcraft`), and every one also works the WorldEdit
 way: `//set`, `//copy -e`, `//paste -a`, `/brush`, `//undo` (WorldEdit's names, aliases and short flags; spec 039). Counted the way WorldEdit counts its own
-(every brush, tool and sub-command on its own line), that is **168**.
+(every brush, tool and sub-command on its own line), that is **212**.
 
-It covers **157 of WorldEdit's 171 commands** (92 %) and **166 of FastAsyncWorldEdit's 244** (68 %), counting only the
+It covers **157 of WorldEdit's 171 commands** (92 %) and **205 of FastAsyncWorldEdit's 244** (84 %), counting only the
 ones Worldcraft does the same or better; a few more are there in part (below). Since 0.15.0 (spec 040) no WorldEdit
-command is left as "not yet": the 14 it does not have are in part, not needed or left out on purpose. The 171 and 244 come from the
+command is left as "not yet": the 14 it does not have are in part, not needed or left out on purpose. Since 0.16.0 (spec 041)
+only FAWE's five `//history` commands (rollback by area and time) are still "not yet". The 171 and 244 come from the
 `@Command` annotations in the bytecode of the WorldEdit 7.3.19 and FAWE 2.16.2 jars, sub-commands included; FAWE's
 21 `/anvil` commands are compiled into its jar but never registered, so they are not counted.
 
 | | Commands | Worldcraft has it | In part | Not yet | No, on purpose | Not needed |
 |---|---|---|---|---|---|---|
 | WorldEdit 7.3.19 | 171 | **157** | 5 | 0 | 4 | 5 |
-| FAWE 2.16.2 | 244 | **166** | 12 | 44 | 14 | 8 |
-| FAWE, only what it adds to WorldEdit | 79 | 14 | 8 | 44 | 10 | 3 |
+| FAWE 2.16.2 | 244 | **205** | 13 | 5 | 13 | 8 |
+| FAWE, only what it adds to WorldEdit | 79 | 53 | 9 | 5 | 9 | 3 |
 
 *Not needed* means Worldcraft has nothing to tune there (`//fast`, `//perf`, `//watchdog`: every edit already runs in
 batches inside a time budget). *No, on purpose* means it will not be added (scripts, commands run for the player,
@@ -27,35 +28,36 @@ Worldcraft is not affiliated with or endorsed by EngineHub (WorldEdit), Intellec
 `--preview` on every edit, `/wc jobs`, `/wc limits`, `/wc validate`, `/wc selftest`, `/wc schem import`, the terrain
 brush (`raise`, `lower`, `smooth`, `flatten`, `erode`, `paint`) on natural ground only, and undo that survives a restart.
 
-## The 119 commands of Worldcraft
+## The 138 commands of Worldcraft
 | Group | Commands |
 |---|---|
-| Select (15) | `/wc wand`, `/wc pos1`, `/wc pos2`, `/wc hpos1`, `/wc hpos2`, `/wc sel`, `/wc expand`, `/wc contract`, `/wc shift`, `/wc outset`, `/wc inset`, `/wc trim`, `/wc chunk`, `/wc count`, `/wc distr` |
-| Edit a selection (16) | `/wc set`, `/wc replace`, `/wc walls`, `/wc faces`, `/wc stack`, `/wc move`, `/wc overlay`, `/wc naturalize`, `/wc smooth`, `/wc hollow`, `/wc center`, `/wc line`, `/wc curve`, `/wc snowsmooth`, `/wc update`, `/wc gmask` |
+| Select (16) | `/wc wand`, `/wc pos1`, `/wc pos2`, `/wc hpos1`, `/wc hpos2`, `/wc sel`, `/wc expand`, `/wc contract`, `/wc shift`, `/wc outset`, `/wc inset`, `/wc trim`, `/wc chunk`, `/wc count`, `/wc distr`, `/wc wer` |
+| Edit a selection (21) | `/wc set`, `/wc replace`, `/wc walls`, `/wc faces`, `/wc stack`, `/wc move`, `/wc overlay`, `/wc naturalize`, `/wc smooth`, `/wc hollow`, `/wc center`, `/wc line`, `/wc curve`, `/wc snowsmooth`, `/wc update`, `/wc fixblocks`, `/wc fall`, `/wc gmask`, `/wc gsmask`, `/wc gtransform`, `/wc gtexture` |
 | Preview, undo and jobs (8) | `/wc confirm`, `/wc cancel`, `/wc undo`, `/wc redo`, `/wc history`, `/wc clearhistory`, `/wc jobs`, `/wc limits` |
-| Copy and schematics (8) | `/wc copy`, `/wc cut`, `/wc paste`, `/wc rotate`, `/wc flip`, `/wc clearclipboard`, `/wc schem`, `/wc structure` |
+| Copy and schematics (9) | `/wc copy`, `/wc cut`, `/wc paste`, `/wc place`, `/wc rotate`, `/wc flip`, `/wc clearclipboard`, `/wc schem`, `/wc structure` |
 | Shapes (7) | `/wc sphere`, `/wc hsphere`, `/wc cyl`, `/wc hcyl`, `/wc pyramid`, `/wc hpyramid`, `/wc cone` |
 | Terrain (4) | `/wc mountain`, `/wc island`, `/wc reroll`, `/wc styles` |
 | Biomes, trees, plants and the game's features (8) | `/wc biomelist`, `/wc biomeinfo`, `/wc setbiome`, `/wc forest`, `/wc forestgen`, `/wc flora`, `/wc pumpkins`, `/wc feature` |
 | Formulas (5) | `/wc generate`, `/wc generatebiome`, `/wc deform`, `/wc calc`, `/wc timeout` |
 | Caves, ores and pictures (4) | `/wc caves`, `/wc ore`, `/wc ores`, `/wc image` |
-| Fixes around you (13) | `/wc drain`, `/wc fixwater`, `/wc fixlava`, `/wc fill`, `/wc fillr`, `/wc removenear`, `/wc replacenear`, `/wc removeabove`, `/wc removebelow`, `/wc extinguish`, `/wc snow`, `/wc thaw`, `/wc green` |
+| Fixes around you (14) | `/wc drain`, `/wc fixwater`, `/wc fixlava`, `/wc fill`, `/wc fillr`, `/wc removenear`, `/wc replacenear`, `/wc removeabove`, `/wc removebelow`, `/wc extinguish`, `/wc snow`, `/wc thaw`, `/wc green`, `/wc fixlighting` |
 | Entities (2) | `/wc butcher`, `/wc remove` |
-| Brushes and tools (5) | `/wc brush`, `/wc tool`, `/wc superpickaxe`, `/wc range`, `/wc tracemask` |
+| Brushes and tools (12) | `/wc brush`, `/wc tool`, `/wc superpickaxe`, `/wc range`, `/wc tracemask`, `/wc target`, `/wc targetoffset`, `/wc scroll`, `/wc smask`, `/wc transform`, `/wc primary`, `/wc secondary` |
 | Where things go (3) | `/wc placement`, `/wc toggleplace`, `/wc toggleeditwand` |
 | Moving around (7) | `/wc unstuck`, `/wc ascend`, `/wc descend`, `/wc ceil`, `/wc thru`, `/wc jumpto`, `/wc up` |
 | Back to the original (3) | `/wc regen`, `/wc snapshot`, `/wc restore` |
-| Information (7) | `/wc chunkinfo`, `/wc listchunks`, `/wc searchitem`, `/wc version`, `/wc report`, `/wc trace`, `/wc tz` |
-| Admin (4) | `/wc help`, `/wc reload`, `/wc validate`, `/wc selftest` |
+| Information (10) | `/wc chunkinfo`, `/wc listchunks`, `/wc searchitem`, `/wc version`, `/wc report`, `/wc trace`, `/wc tz`, `/wc nbtinfo`, `/wc registry`, `/wc debugpaste` |
+| Admin (5) | `/wc help`, `/wc reload`, `/wc validate`, `/wc selftest`, `/wc wea` |
 
 Inside the groups:
-- **28 brushes** (`/wc brush …`): 21 for building (`sphere`, `cyl`, `set`, `clipboard`, `splatter`, `scatter`, `rock`,
+- **48 brushes** (`/wc brush …`): 38 for building (`sphere`, `cyl`, `set`, `clipboard`, `splatter`, `scatter`, `rock`,
   `gravity`, `extinguish`, `butcher`, `forest`, `deform`, `snow`, `snowsmooth`, `biome`, `morph`, `dilate`, `heightmap`,
-  `feature`, `apply … item`, `paint … item`), 6 terrain modes (`raise`, `lower`, `smooth`, `flatten`,
-  `erode`, `paint`) and `none`.
-- **11 tools** (`/wc tool …`): `repl`, `floodfill`, `info`, `cycler`, `deltree`, `farwand`, `lrbuild`, `navwand`, `tree`,
-  `stacker` and `none`.
-- **6 schematic commands** (`/wc schem save|load|list|delete|import|formats`), **5 backup commands** (`/wc snapshot
+  `feature`, `apply … item`, `paint … item`; from FAWE: `line`, `spline`, `surfacespline`, `sweep`, `catenary`, `circle`, `pull`,
+  `recursive`, `shatter`, `stencil`, `image`, `height`, `populateschematic`, `copypaste`), 6 terrain modes (`raise`, `lower`, `smooth`, `flatten`,
+  `erode`, `paint`), `none` and `savebrush`, `listbrush`, `loadbrush` (FAWE has no `loadbrush`).
+- **14 tools** (`/wc tool …`): `repl`, `floodfill`, `info`, `cycler`, `deltree`, `farwand`, `lrbuild`, `navwand`, `tree`,
+  `stacker`, `inspect`, `featureplacer`, `structureplacer` and `none`.
+- **8 schematic commands** (`/wc schem save|load|loadall|move|list|delete|import|formats`), **5 backup commands** (`/wc snapshot
   list|use|sel|before|after`) and **3 super pickaxe modes** (`single`, `area`, `recursive`).
 - **11 selection words** (`/wc sel cuboid|extend|poly|ellipsoid|sphere|cyl|convex|magic|clear|show|hide`; WorldEdit and
   FAWE's names `box`, `fuzzy`, `hull` and `polyhedral` work too).
@@ -265,55 +267,55 @@ FAWE has the WorldEdit commands above (except `//pos`, `//update`, `/placement`,
 | `//blob` | partly | `/wc brush rock` |
 | `//history info` | partly | `/wc history` |
 | `//lay` | partly | `/wc overlay` |
-| `/brush pull` | not yet |  |
-| `/brush circle` | not yet |  |
-| `/brush recursive` | not yet |  |
-| `/brush line` | not yet |  |
-| `/brush spline` | not yet |  |
-| `/brush sweep` | not yet |  |
-| `/brush catenary` | not yet |  |
-| `/brush surfacespline` | not yet |  |
-| `/brush shatter` | not yet |  |
-| `/brush stencil` | not yet |  |
-| `/brush image` | not yet |  |
-| `/brush populateschematic` | not yet |  |
-| `/brush height` | not yet |  |
-| `/brush copypaste` | not yet |  |
-| `/brush savebrush` | not yet |  |
-| `/brush /listbrush` | not yet |  |
-| `//place` | not yet |  |
-| `//gtexture` | not yet |  |
-| `//gsmask` | not yet |  |
-| `//gtransform` | not yet |  |
-| `//registry` | not yet |  |
+| `/brush pull` | yes | `/wc brush pull` |
+| `/brush circle` | yes | `/wc brush circle` |
+| `/brush recursive` | yes | `/wc brush recursive` |
+| `/brush line` | yes | `/wc brush line` |
+| `/brush spline` | yes | `/wc brush spline` (a curve of blocks through the points) |
+| `/brush sweep` | yes | `/wc brush sweep` |
+| `/brush catenary` | yes | `/wc brush catenary` |
+| `/brush surfacespline` | yes | `/wc brush surfacespline` |
+| `/brush shatter` | yes | `/wc brush shatter` |
+| `/brush stencil` | yes | `/wc brush stencil` (images from the images folder) |
+| `/brush image` | yes | `/wc brush image` (images from the images folder, not a link) |
+| `/brush populateschematic` | yes | `/wc brush populateschematic` |
+| `/brush height` | yes | `/wc brush height` |
+| `/brush copypaste` | yes | `/wc brush copypaste` |
+| `/brush savebrush` | yes | `/wc brush savebrush` (and `loadbrush`, which FAWE lacks) |
+| `/brush /listbrush` | yes | `/wc brush listbrush` |
+| `//place` | yes | `/wc place` |
+| `//gtexture` | yes | `/wc gtexture` |
+| `//gsmask` | yes | `/wc gsmask` |
+| `//gtransform` | yes | `/wc gtransform` |
+| `//registry` | yes | `/wc registry` |
 | `//history restore` | not yet |  |
 | `//history rollback` | not yet |  |
 | `//history import` | not yet |  |
 | `//history find` | not yet |  |
 | `//history distr` | not yet |  |
-| `//nbtinfo` | not yet |  |
-| `//wea` | not yet |  |
-| `//wer` | not yet |  |
-| `//fall` | not yet |  |
-| `//fixblocks` | not yet |  |
-| `/schem loadall` | not yet |  |
-| `/schem move` | not yet |  |
-| `/tool inspect` | not yet |  |
-| `/tool featureplacer` | not yet |  |
-| `/tool structureplacer` | not yet |  |
-| `/primary` | not yet |  |
-| `/secondary` | not yet |  |
-| `/target` | not yet |  |
-| `/targetoffset` | not yet |  |
-| `/scroll` | not yet |  |
-| `/smask` | not yet |  |
-| `/transform` | not yet |  |
-| `/worldedit debugpaste` | not yet |  |
+| `//nbtinfo` | yes | `/wc nbtinfo` |
+| `//wea` | yes | `/wc wea` (permission `worldcraft.bypass`) |
+| `//wer` | yes | `/wc wer` (the protection plugin answers through the API) |
+| `//fall` | yes | `/wc fall` |
+| `//fixblocks` | yes | `/wc fixblocks` |
+| `/schem loadall` | yes | `/wc schem loadall` |
+| `/schem move` | yes | `/wc schem move` |
+| `/tool inspect` | yes | `/wc tool inspect` (edits made with Worldcraft) |
+| `/tool featureplacer` | yes | `/wc tool featureplacer` |
+| `/tool structureplacer` | partly | `/wc tool structureplacer` (templates, not whole jigsaw structures) |
+| `/primary` | yes | `/wc primary` |
+| `/secondary` | yes | `/wc secondary` |
+| `/target` | yes | `/wc target` |
+| `/targetoffset` | yes | `/wc targetoffset` |
+| `/scroll` | yes | `/wc scroll` |
+| `/smask` | yes | `/wc smask` |
+| `/transform` | yes | `/wc transform` |
+| `/worldedit debugpaste` | yes | `/wc debugpaste` (writes a file, uploads nothing) |
 | `/brush scattercommand` | no (on purpose) | runs commands for the player (a permission escalation) |
 | `/brush command` | no (on purpose) | runs commands for the player (a permission escalation) |
 | `/download` | no (on purpose) | uploads to an outside service |
 | `//test` | no (on purpose) | FAWE's own debugging |
-| `//fixlighting` | no (on purpose) | needs server internals (NMS); Paper fixes the light itself |
+| `//fixlighting` | yes | `/wc fixlighting` (asks the game's light engine; spec 041) |
 | `//removelighting` | no (on purpose) | needs server internals (NMS); Paper fixes the light itself |
 | `//setblocklight` | no (on purpose) | needs server internals (NMS); Paper fixes the light itself |
 | `//setskylight` | no (on purpose) | needs server internals (NMS); Paper fixes the light itself |

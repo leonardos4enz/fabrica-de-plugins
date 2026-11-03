@@ -219,18 +219,36 @@ public final class Edits {
         var msg = plugin.messages();
         // Spec 029 H4: la máscara global deja fuera lo que no pasa, en la obra y en su vista previa; se dice siempre.
         Mask gmask = session(owner).gmask;
-        Op op = gmask == null ? requested : masked(requested, gmask);
+        Op masked = gmask == null ? requested : masked(requested, gmask);
         if (gmask != null) who.sendMessage(msg.get("gmask-applies", "mask", gmask.text()));
+        // Spec 041 H3 CA2, CA3: la máscara de origen y la transformación globales (no en copy: no pone nada).
+        Session own = session(owner);
+        if (masked.capture() == null && own.gsmask != null) {
+            masked = sourceMasked(masked, compile(own.gsmask, masked.world()), "gsmask " + own.gsmask.text());
+            who.sendMessage(msg.get("gsmask-applies", "mask", own.gsmask.text()));
+        }
+        if (masked.capture() == null && own.gtransform != null) {
+            masked = transformed(masked, own.gtransform);
+            who.sendMessage(msg.get("gtransform-applies", "transform", own.gtransform.text()));
+        }
+        Op op = masked;
         Component refused = refusal(op, lim, owner);
         if (refused != null) {
             who.sendMessage(refused);
             return;
         }
         // Spec 037 H4 CA1: otro plugin puede detenerla, después de los límites y antes de la vista previa.
-        WorldcraftEditEvent ev = fire(who, owner, who.getName(), null, op.kind(), op.detail(), op.world(), op.bounds(), op.volume());
+        boolean bypass = own.bypass && who.hasPermission(BYPASS);
+        WorldcraftEditEvent ev = fire(who, owner, who.getName(), null, op.kind(), op.detail(), op.world(), op.bounds(), op.volume(), bypass);
         if (ev.isCancelled()) {
-            who.sendMessage(stopped(ev));
-            return;
+            if (!bypass) {
+                who.sendMessage(stopped(ev));
+                return;
+            }
+            // Spec 041 H4 CA5: con /wc wea sigue, y se dice (y queda en la consola) quién la habría detenido.
+            String r = ev.getCancelReason();
+            who.sendMessage(msg.get("wea-bypassed", "reason", r.isBlank() ? "" : ": " + r));
+            plugin.getLogger().info(who.getName() + " bypassed a stopped edit (" + op.kind() + ")" + (r.isBlank() ? "" : ": " + r));
         }
         Session ses = session(owner);
         dropPending(ses);
@@ -331,9 +349,36 @@ public final class Edits {
     /** Spec 037 H4 CA1: WorldcraftEditEvent con lo que la obra puede tocar (box null = sin bloques: una caja vacía en 0). */
     private WorldcraftEditEvent fire(CommandSender who, UUID owner, String name, org.bukkit.plugin.Plugin from, String kind, String detail,
                                      World world, Box box, long volume) {
+        return fire(who, owner, name, from, kind, detail, world, box, volume, false);
+    }
+
+    private WorldcraftEditEvent fire(CommandSender who, UUID owner, String name, org.bukkit.plugin.Plugin from, String kind, String detail,
+                                     World world, Box box, long volume, boolean bypass) {
         WorldcraftEditEvent ev = new WorldcraftEditEvent(who, owner, name, from, kind, detail, world, min(box), max(box), volume);
+        ev.setBypassing(bypass);
         Bukkit.getPluginManager().callEvent(ev);
         return ev;
+    }
+
+    /** Spec 041 H4 CA5: el permiso de /wc wea. */
+    public static final String BYPASS = "worldcraft.bypass";
+
+    /** Spec 041 H3 CA2, CA4: la misma obra sin lo que pondría que no cumple la máscara (por estado). */
+    public Op sourceMasked(Op op, Mask.Compiled mc, String note) {
+        java.util.function.Function<Supplier<EditSource>, Supplier<EditSource>> wrap = sup -> sup == null ? null
+                : () -> new dev.leo.worldcraft.edit.SourceMaskedSource(sup.get(), mc::test);
+        return new Op(op.kind(), op.detail() + " (" + note + ")", op.world(), op.bounds(), op.volume(),
+                wrap.apply(op.source()), op.placed(), op.capture(), wrap.apply(op.preview()), op.note(), op.rerollable(), op.after(), op.entities(), op.biomes());
+    }
+
+    /** Spec 041 H3 CA3, CA4: la misma obra con sus bloques transformados; la caja y el volumen, ya transformados. */
+    public Op transformed(Op op, dev.leo.worldcraft.edit.Transforms t) {
+        long seed = java.util.concurrent.ThreadLocalRandom.current().nextLong();
+        java.util.function.Function<Supplier<EditSource>, Supplier<EditSource>> wrap = sup -> sup == null ? null
+                : () -> new dev.leo.worldcraft.edit.TransformSource(sup.get(), t, seed);
+        Box b = op.bounds() == null ? null : t.bounds(op.bounds());
+        return new Op(op.kind(), op.detail() + " (" + t.text() + ")", op.world(), b, op.volume() * t.factor(),
+                wrap.apply(op.source()), op.placed(), op.capture(), wrap.apply(op.preview()), op.note(), op.rerollable(), op.after(), op.entities(), op.biomes());
     }
 
     private void fireDone(CommandSender who, UUID owner, String name, org.bukkit.plugin.Plugin from, String kind, String detail,
@@ -798,9 +843,15 @@ public final class Edits {
                 return;
             }
             // Spec 037 H4 CA1: deshacer también es una obra que un plugin de protección puede detener.
+            // Spec 041 H4 CA5 (F-02): con /wc wea el deshacer también sigue.
+            boolean bypass = from == null && who != null && session(actor).bypass && who.hasPermission(BYPASS);
             WorldcraftEditEvent ev = fire(who, actor, actorName, from, kind, "#" + e.id() + " " + e.kind() + " " + e.detail(), world,
-                    e.bounds(), e.bounds() == null ? 0 : e.bounds().volume());
-            if (ev.isCancelled()) {
+                    e.bounds(), e.bounds() == null ? 0 : e.bounds().volume(), bypass);
+            if (ev.isCancelled() && bypass) {
+                String r = ev.getCancelReason();
+                who.sendMessage(plugin.messages().get("wea-bypassed", "reason", r.isBlank() ? "" : ": " + r));
+                plugin.getLogger().info(who.getName() + " bypassed a stopped edit (" + kind + ")" + (r.isBlank() ? "" : ": " + r));
+            } else if (ev.isCancelled()) {
                 Component m = stopped(ev);
                 say(who, m);
                 if (done != null) done.accept(EditResult.refused(kind, plain(m)));

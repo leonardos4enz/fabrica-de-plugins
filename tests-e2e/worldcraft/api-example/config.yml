@@ -6,3 +6,9 @@ protected:
     from: [1000, -64, 1000]
     to: [1010, 319, 1010]
 log_edits: true
+# Spec 041: la parcela de Ana para //wer (el punto de trabajo de la suite está en x, z = 40).
+build_areas:
+  e2e-plot:
+    world: world
+    from: [36, -64, 36]
+    to: [44, -40, 44]

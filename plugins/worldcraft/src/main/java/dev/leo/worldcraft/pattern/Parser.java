@@ -136,7 +136,26 @@ public final class Parser {
         return this;
     }
 
+    /**
+     * Spec 041 H3 CA1: la textura del jugador (/wc gtexture) mientras se lee lo que escribió: quien recibe el comando o
+     * el clic la pone y la quita; los patrones por color y la imagen eligen solo entre esos bloques.
+     */
+    public static final ThreadLocal<dev.leo.worldcraft.color.BlockColors> TEXTURE = new ThreadLocal<>();
+
+    /** La tabla de colores entera, sin la textura del jugador (para armar una textura). */
+    public dev.leo.worldcraft.color.BlockColors allColors() {
+        dev.leo.worldcraft.color.BlockColors t = TEXTURE.get();
+        TEXTURE.remove();
+        try {
+            return colors();
+        } finally {
+            if (t != null) TEXTURE.set(t);
+        }
+    }
+
     public dev.leo.worldcraft.color.BlockColors colors() {
+        dev.leo.worldcraft.color.BlockColors tex = TEXTURE.get();
+        if (tex != null) return tex;
         if (colors == null) {
             Map<String, Integer> t = new java.util.LinkedHashMap<>(dev.leo.worldcraft.color.BlockColors.builtin());
             t.keySet().retainAll(blockNames);
@@ -146,6 +165,15 @@ public final class Parser {
     }
 
     private Map<String, String> colorCanonical() {
+        dev.leo.worldcraft.color.BlockColors tex = TEXTURE.get();
+        if (tex != null) {
+            Map<String, String> m = new java.util.LinkedHashMap<>();
+            for (String id : tex.ids()) {
+                String c = canonicalOrNull(id, Map.of());
+                if (c != null) m.put(id, c);
+            }
+            return m;
+        }
         if (colorCanonical == null) {
             Map<String, String> m = new java.util.LinkedHashMap<>();
             for (String id : colors().ids()) {

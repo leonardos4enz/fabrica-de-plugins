@@ -9,17 +9,19 @@ import java.util.List;
 
 /** La sección tools de config.yml (plan 032 §2): pinceles de construcción, herramientas y superpico. */
 public record ToolSettings(String item, String navwandItem, int range, boolean show, int brushMaxRadius, int maxRange,
-                           int deltreeRange, int superpickaxeMaxRadius, String treeBlocks, String neverBreak) {
+                           int deltreeRange, int superpickaxeMaxRadius, String treeBlocks, String neverBreak,
+                           int maxTargetOffset, int maxSplinePoints, int fixlightingMaxChunks) {
     public static final ToolSettings DEFAULTS = new ToolSettings("minecraft:blaze_rod", "minecraft:compass", 200, true, 16, 32,
             24, 5, "#logs, #leaves, vine, cocoa, bee_nest, mangrove_roots",
             "bedrock, barrier, end_portal_frame, end_portal, end_gateway, nether_portal, command_block, chain_command_block, "
-                    + "repeating_command_block, structure_block, jigsaw");
+                    + "repeating_command_block, structure_block, jigsaw", 16, 64, 64);
 
     static final List<String> KEYS = List.of("item", "navwand_item", "range", "show", "brush_max_radius", "max_range",
-            "deltree_range", "superpickaxe_max_radius", "tree_blocks", "never_break");
+            "deltree_range", "superpickaxe_max_radius", "tree_blocks", "never_break", "max_target_offset", "max_spline_points",
+            "fixlighting_max_chunks");
 
     public ToolSpec.Caps caps() {
-        return new ToolSpec.Caps(brushMaxRadius, maxRange);
+        return new ToolSpec.Caps(brushMaxRadius, maxRange, 200, maxTargetOffset);
     }
 
     /** Un valor malo avisa y usa el de fábrica (constitución I.3); una sección que falta, todo de fábrica. */
@@ -38,7 +40,9 @@ public record ToolSettings(String item, String navwandItem, int range, boolean s
                 r.integer("tools.brush_max_radius", d.brushMaxRadius, 0, 64), r.integer("tools.max_range", d.maxRange, 1, 64),
                 r.integer("tools.deltree_range", d.deltreeRange, 4, 64),
                 r.integer("tools.superpickaxe_max_radius", d.superpickaxeMaxRadius, 1, 16),
-                mask(c, parser, issues, "tree_blocks", d.treeBlocks), mask(c, parser, issues, "never_break", d.neverBreak));
+                mask(c, parser, issues, "tree_blocks", d.treeBlocks), mask(c, parser, issues, "never_break", d.neverBreak),
+                r.integer("tools.max_target_offset", d.maxTargetOffset, 0, 64), r.integer("tools.max_spline_points", d.maxSplinePoints, 2, 256),
+                r.integer("tools.fixlighting_max_chunks", d.fixlightingMaxChunks, 1, 1024));
     }
 
     private static String mask(ConfigurationSection c, Parser parser, Issues issues, String key, String def) {

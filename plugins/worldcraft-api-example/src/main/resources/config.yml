@@ -8,5 +8,12 @@ protected: {}
 #    from: [-50, -64, -50]
 #    to: [50, 319, 50]
 
+# Since Worldcraft 0.16.0: areas where players may build. //wer (/wc wer) selects the one the player stands in.
+build_areas: {}
+#  plot1:
+#    world: world
+#    from: [100, -64, 100]
+#    to: [131, 319, 131]
+
 # Write every finished Worldcraft edit to the console.
 log_edits: true

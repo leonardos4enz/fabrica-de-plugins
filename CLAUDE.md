@@ -302,6 +302,15 @@ con `--release 21`.
   debajo. En la suite, `pide(jugador, '/x')` ya es `//x` (el bot pone la primera barra): `'//fillr'` llegaba como `///fillr`.
   El `//x` que se arma solo no tenía las banderas de `/x` (`//searchitem -b`, F-01: ahora las hereda). Una curva con grosor
   1 «hueca» no tiene cáscara donde uno cree (el bloque de encima de un punto es interior): se comprueba el de abajo.
+- **Spec 041 (lo que agrega FAWE):** el `javap` del jar extraído no siempre es lo que corre: en Paper 1.21.4 el motor de luz
+  (Moonrise/Starlight) tiene `starlight$serverRelightChunks(Collection, Consumer, IntConsumer)`, y `getLightEngine()` se
+  declara con el tipo de arriba (F-01: `getMethod` sobre el tipo de retorno no lo encontraba); en NMS buscar por nombre en
+  la clase cargada (`getDeclaredMethods` y los padres) y que el error liste los nombres parecidos. Todo camino que dispara
+  `WorldcraftEditEvent` (también `undo`) tiene que respetar `/wc wea` (F-02). Un círculo o un disco de radio 1 son 3 × 3
+  (la regla r + ½ de la 028 incluye las diagonales). mineflayer 4.39 no sigue el `facing` de un `tp`: se usa `tp x y z yaw
+  pitch` (lección 029). Un escenario que deja un bloque en una zona protegida (su undo lo detiene la zona) tumba la corrida
+  siguiente: lo limpia la consola con `forceload add` (lección 022). En Git Bash, `python` se colgó otra vez (lección del
+  arranque): para editar Java, las herramientas de edición; un `|` dentro de una celda de tabla Markdown la rompe.
 
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.

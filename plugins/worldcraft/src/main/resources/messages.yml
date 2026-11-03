@@ -42,12 +42,12 @@ help:
   mountain: { usage: "/wc mountain [small|medium|large|huge|radius] [style] [key=value...] [--now]", text: "A mountain where you look, shown first. Options: height, peaks, roughness, ridges, sharpness, crater, seed, style, at=x,y,z, world.", example: "/wc mountain large style=volcano seed=42" }
   island: { usage: "/wc island [small|medium|large|huge|radius] [style] [key=value...] [--now]", text: "A floating island in front of you, shown first. Options: depth, relief, spikes, roots, trees, seed, style, at=x,y,z, world.", example: "/wc island large trees=5 spikes=1" }
   reroll: { usage: "/wc reroll", text: "The last mountain or island again with another seed (a new preview).", example: "/wc reroll" }
-  brush: { usage: "/wc brush <sphere|cyl|set|clipboard|splatter|scatter|rock|gravity|extinguish|butcher|forest|deform|snow|snowsmooth|biome|morph|dilate|heightmap|feature|apply|none> ... | [raise|lower|smooth|flatten|erode|paint] [radius] [strength]", text: "Turn the item in your hand into a brush (only that item; an empty hand gets one): right click uses it where you look. Building brushes: sphere <blocks> [radius] [--hollow], cyl <blocks> [radius] [height], set <cube|sphere|cyl> [radius] <blocks>, clipboard [--air] [--origin], splatter <blocks> [radius] [decay], scatter <blocks> [radius] [points] [distance] [--overlay], rock <blocks> [radius] [sphericity] [frequency] [amplitude], gravity [radius] [--height], extinguish [radius], butcher [radius] [--animals...], forest [tree] [radius] [density], deform [radius] [formula] [--raw] [--offset], snow [radius] [--stack], snowsmooth [radius] [passes], biome [radius] <biome>, morph [radius] [erode faces] [erode passes] [dilate faces] [dilate passes], dilate [radius] [faces] [passes], heightmap <image> [radius] [height] [--erase] [--flatten], feature <feature> [radius] [density], apply [sphere|cube|cyl] [radius] item <item>, paint [shape] [radius] [density] item <item>; mask=.. and radius=.. change the brush in your hand; none makes it a normal item again. Terrain brushes (raise, lower, smooth, flatten, erode, paint) only move natural ground; left click picks the next mode.", example: "/wc brush sphere stone 4" }
-  tool: { usage: "/wc tool <repl|floodfill|info|cycler|deltree|farwand|lrbuild|navwand|tree|stacker|none> ...", text: "Turn the item in your hand into a one-click tool: repl <blocks> (right click places, left click picks), floodfill <blocks> [range], info, cycler (right click: next value, left click: next property), deltree (removes a floating tree), farwand (corners from far away), lrbuild <left> <right> (build from far away; air removes), navwand (left: jump to, right: through walls), tree [type] (right click grows a tree on the block), stacker [range] [mask] (repeats the block towards the face you click; left click, the other way). none makes it a normal item again.", example: "/wc tool repl oak_planks" }
+  brush: { usage: "/wc brush <sphere|cyl|set|clipboard|splatter|scatter|rock|gravity|extinguish|butcher|forest|deform|snow|snowsmooth|biome|morph|dilate|heightmap|feature|apply|line|spline|surfacespline|sweep|catenary|circle|pull|recursive|shatter|stencil|image|height|populateschematic|copypaste|savebrush|listbrush|loadbrush|none> ... | [raise|lower|smooth|flatten|erode|paint] [radius] [strength]", text: "Turn the item in your hand into a brush (only that item; an empty hand gets one): right click uses it where you look. Building brushes: sphere <blocks> [radius] [--hollow], cyl <blocks> [radius] [height], set <cube|sphere|cyl> [radius] <blocks>, clipboard [--air] [--origin], splatter <blocks> [radius] [decay], scatter <blocks> [radius] [points] [distance] [--overlay], rock <blocks> [radius] [sphericity] [frequency] [amplitude], gravity [radius] [--height], extinguish [radius], butcher [radius] [--animals...], forest [tree] [radius] [density], deform [radius] [formula] [--raw] [--offset], snow [radius] [--stack], snowsmooth [radius] [passes], biome [radius] <biome>, morph [radius] [erode faces] [erode passes] [dilate faces] [dilate passes], dilate [radius] [faces] [passes], heightmap <image> [radius] [height] [--erase] [--flatten], feature <feature> [radius] [density], apply [sphere|cube|cyl] [radius] item <item>, paint [shape] [radius] [density] item <item>. From FAWE (0.16.0): line <blocks> [thickness] [--shell] [--select] [--flat] (two clicks), spline <blocks> [thickness] and surfacespline (click points, click the last one again to draw), sweep [copies] (your clipboard along the curve), catenary <blocks> [length] [thickness] [--facing] (a hanging rope between two clicks), circle <blocks> [radius] [--fill], pull [radius] [passes], recursive <blocks> [radius], shatter <blocks> [radius] [pieces], stencil <blocks> [radius] [image], image <image> [radius] [--alpha] [--fade], height [radius] [image] [scale], populateschematic <mask> <schematic|folder> [radius] [density] [--rotate], copypaste [radius] [--random-rotate|--auto-rotate] (left click copies, right click pastes); savebrush <name> [--global], listbrush [page] and loadbrush <name> keep brushes; mask=.. and radius=.. change the brush in your hand; none makes it a normal item again. Terrain brushes (raise, lower, smooth, flatten, erode, paint) only move natural ground; left click picks the next mode.", example: "/wc brush sphere stone 4" }
+  tool: { usage: "/wc tool <repl|floodfill|info|cycler|deltree|farwand|lrbuild|navwand|tree|stacker|inspect|featureplacer|structureplacer|none> ...", text: "Turn the item in your hand into a one-click tool: repl <blocks> (right click places, left click picks), floodfill <blocks> [range], info, cycler (right click: next value, left click: next property), deltree (removes a floating tree), farwand (corners from far away), lrbuild <left> <right> (build from far away; air removes), navwand (left: jump to, right: through walls), tree [type] (right click grows a tree on the block), stacker [range] [mask] (repeats the block towards the face you click; left click, the other way), inspect (who changed the block you click with Worldcraft, and when), featureplacer <feature> and structureplacer <template> (right click puts one on the block). none makes it a normal item again.", example: "/wc tool repl oak_planks" }
   superpickaxe: { usage: "/wc superpickaxe [single|area <radius>|recursive <radius>|off]", text: "Break blocks instantly with any pickaxe (left click): single, area (the same block in a cube) or recursive (the same block, connected). Nothing is dropped and /wc undo brings them back. /wc sp alone turns it on or off.", example: "/wc sp area 2" }
   sp: { usage: "/wc sp [single|area <radius>|recursive <radius>|off]", text: "Short for /wc superpickaxe.", example: "/wc sp" }
   styles: { usage: "/wc styles", text: "The terrain styles in terrain.yml (which blocks go where).", example: "/wc styles" }
-  schem: { usage: "/wc schem list [page] [filter] | load <name> | save <name> [--overwrite] | delete <name> | import [--overwrite] | formats", text: "WorldEdit's .schem files (also /wc schematic): load one into your clipboard (then /wc paste --preview), save your clipboard, list or delete them. WorldEdit's folder is read too; import copies WorldEdit's and FAWE's into Worldcraft's folder; formats says what it reads and writes.", example: "/wc schem load castles/tower" }
+  schem: { usage: "/wc schem list [page] [filter] | load <name> | save <name> [--overwrite] | delete <name> | import [--overwrite] | formats | loadall <names or folder/> | move <folder>", text: "WorldEdit's .schem files (also /wc schematic): load one into your clipboard (then /wc paste --preview), save your clipboard, list or delete them. WorldEdit's folder is read too; import copies WorldEdit's and FAWE's into Worldcraft's folder; formats says what it reads and writes; loadall loads several (or a folder) and paste picks one at random each time; move puts the last one you loaded in another folder.", example: "/wc schem load castles/tower" }
   reload: { usage: "/wc reload", text: "Reload config.yml, messages.yml, presets.yml and terrain.yml.", example: "/wc reload" }
   validate: { usage: "/wc validate", text: "List the problems in the configuration.", example: "/wc validate" }
   selftest: { usage: "/wc selftest", text: "Edit, undo, redo and undo a small box near spawn and check every step.", example: "/wc selftest" }
@@ -139,6 +139,26 @@ help:
   report: { usage: "/wc report", text: "Write a report for a bug (versions, worlds, plugins, configuration, running edits) to plugins/Worldcraft/reports/. It is never uploaded anywhere.", example: "/wc report" }
   trace: { usage: "/wc trace [on|off]", text: "After each of your edits, say how many blocks it looked at, changed, found already like that and left out (mask, shape), and how long it took.", example: "/wc trace on" }
   tz: { usage: "/wc tz [zone]", text: "Your time zone for the dates of the backups (/wc snapshot list, before, after): Europe/Madrid, America/Bogota, UTC-5, or server.", example: "/wc tz America/Bogota" }
+  # Spec 041: what FastAsyncWorldEdit adds.
+  gtexture: { usage: "/wc gtexture [mask | #clipboard | off]", text: "The blocks the color patterns (#color[red], #darken...) and the image brush pick from, until 'off': the ones of the color table that match the mask, or the ones in your clipboard.", example: "/wc gtexture *_wool" }
+  gsmask: { usage: "/wc gsmask [mask | off]", text: "A source mask for all your edits until 'off': a block the edit would place and that doesn't match is left out (!air: pasting doesn't put the air).", example: "/wc gsmask !air" }
+  gtransform: { usage: "/wc gtransform [transform | off]", text: "All your edits put their blocks moved: #offset[x][y][z], #rotate[90] (around the middle of the edit), #flip[x], #spread[n] (each block moved up to n at random), #scale[n] (each block becomes an n×n×n cube); several, with spaces.", example: "/wc gtransform #offset[0][10][0]" }
+  smask: { usage: "/wc smask <mask> | off", text: "A source mask for the brush in your hand only (like /wc gsmask).", example: "/wc smask !air" }
+  transform: { usage: "/wc transform <transform> | off", text: "A transform for the brush in your hand only (like /wc gtransform).", example: "/wc transform #spread[3]" }
+  target: { usage: "/wc target [block|forward|height|face]", text: "Where the brush in your hand lands: the first block (block), the point /wc range blocks ahead even in the air (forward), the block under your aim at the height of your feet (height), or the block in front of the face you look at (face). Alone, the next one.", example: "/wc target face" }
+  targetoffset: { usage: "/wc targetoffset <blocks>", text: "Move where the brush in your hand lands that many blocks out of the face you look at (negative: into it), up to tools.max_target_offset.", example: "/wc targetoffset 2" }
+  scroll: { usage: "/wc scroll <none|size|range|targetoffset|target|mask|pattern|clipboard> [values...]", text: "With the brush in your hand, turning the mouse wheel (moving to the next hotbar slot) changes that instead of the item: the radius, the reach, the offset, the target mode, a mask or pattern from your list, or a schematic from /wc schem loadall. The number keys still change the item.", example: "/wc scroll pattern stone dirt glass" }
+  primary: { usage: "/wc primary <brush...>", text: "The right-click brush of the item in your hand (like /wc brush), keeping its left-click brush.", example: "/wc primary sphere stone 3" }
+  secondary: { usage: "/wc secondary <brush...>", text: "The left-click brush of the brush in your hand: one item, two brushes.", example: "/wc secondary sphere air 3" }
+  place: { usage: "/wc place [--air] [--origin] [--select] [--only-select] [--no-entities] [--remove-entities] [--biomes] [--preview]", text: "Paste your clipboard without the rotation or flip you gave it (like FAWE's //place); the options are the ones of /wc paste.", example: "/wc place --origin" }
+  fall: { usage: "/wc fall [fill] [--inside] [--preview]", text: "The blocks of your selection fall until they rest on something; what they leave becomes the fill (air if you write none). --inside (-m): they don't fall below the selection. Chests and other blocks with data stay.", example: "/wc fall" }
+  fixblocks: { usage: "/wc fixblocks [--preview]", text: "Like /wc update: fix the shape of fences, walls, panes and stairs of your selection to their neighbors (FAWE's //fixblocks, //fixconnect).", example: "/wc fixblocks" }
+  nbtinfo: { usage: "/wc nbtinfo", text: "The data (NBT) of the block you look at: a chest's items, a sign's text, a spawner's mob.", example: "/wc nbtinfo" }
+  wea: { usage: "/wc wea [on|off]", text: "Turn on or off going past protection plugins: an edit another plugin would stop still goes ahead, and you are told whose. Needs worldcraft.bypass.", example: "/wc wea" }
+  wer: { usage: "/wc wer", text: "Select the area where you may build here, as your protection plugin says (it has to support Worldcraft's API).", example: "/wc wer" }
+  registry: { usage: "/wc registry <block|item|biome|entity|enchantment|effect|sound|structure|particle|potion|game_event|feature> [text] [page]", text: "Search the server's registries by name.", example: "/wc registry biome forest" }
+  fixlighting: { usage: "/wc fixlighting", text: "Have the game work out the light again in the chunks of your selection (or the one you stand in): for dark spots or light left behind. Blocks don't change.", example: "/wc fixlighting" }
+  debugpaste: { usage: "/wc debugpaste", text: "Like /wc report, with the end of the server log and Worldcraft's files, to plugins/Worldcraft/reports/. It is never uploaded anywhere.", example: "/wc debugpaste" }
 
 wand-given: "{prefix}<green>Here is your wand: <white>left click</white> a block for corner 1, <white>right click</white> for corner 2."
 corner-set: "{prefix}Corner {which} at <white>{pos}</white>."
@@ -494,3 +514,60 @@ tz-set: "{prefix}Time zone for backups: <white>{zone}</white> (now {time})."
 tz-unknown: "{prefix}<red>There is no time zone '{input}'{hint}. Write one like Europe/Madrid, UTC-5 or server."
 selftest-game-ok: "{prefix}<green>Selftest game features passed: {count} features, captured without touching the world."
 selftest-game-off: "{prefix}<yellow>The game's features are not available on this server version ({reason}): //feature and //update are off, the rest works."
+# Spec 041: what FastAsyncWorldEdit adds
+gsmask-none: "{prefix}You have no global source mask. <gray>/wc gsmask <mask> to set one."
+gsmask-current: "{prefix}Your global source mask: <white>{mask}</white>. <gray>/wc gsmask off to remove it."
+gsmask-set: "{prefix}Global source mask <white>{mask}</white>: your edits only place blocks that match, until /wc gsmask off."
+gsmask-off: "{prefix}Global source mask removed."
+gsmask-applies: "{prefix}<yellow>With your global source mask {mask}.</yellow> <gray>/wc gsmask off to remove it."
+gtransform-none: "{prefix}You have no global transform. <gray>/wc gtransform <transform> to set one."
+gtransform-current: "{prefix}Your global transform: <white>{transform}</white>. <gray>/wc gtransform off to remove it."
+gtransform-set: "{prefix}Global transform <white>{transform}</white>: your edits put their blocks moved, until /wc gtransform off."
+gtransform-off: "{prefix}Global transform removed."
+gtransform-applies: "{prefix}<yellow>With your global transform {transform}.</yellow> <gray>/wc gtransform off to remove it."
+gtexture-none: "{prefix}Color patterns use the whole color table. <gray>/wc gtexture <mask> to pick fewer blocks."
+gtexture-current: "{prefix}Color patterns pick from <white>{count}</white> blocks ({texture}). <gray>/wc gtexture off to use them all."
+gtexture-set: "{prefix}Color patterns and the image brush now pick from <white>{count}</white> blocks ({texture}), until /wc gtexture off."
+gtexture-off: "{prefix}Color patterns use the whole color table again."
+gtexture-empty: "{prefix}<red>No block of the color table matches '{texture}'. <gray>See /wc colors or use #clipboard."
+wea-on: "{prefix}<yellow>Bypass on: your edits go ahead even if a protection plugin stops them.</yellow> <gray>/wc wea again to turn it off."
+wea-off: "{prefix}Bypass off: protection plugins can stop your edits again."
+wea-bypassed: "{prefix}<yellow>A plugin would have stopped this edit{reason}; it goes ahead (/wc wea).</yellow>"
+wer-none: "{prefix}<yellow>No protection plugin says where you may build here (it needs to support Worldcraft's API)."
+wer-selected: "{prefix}Selected the area where you may build{name} ({plugin}): <white>{size}</white>, {blocks} blocks."
+brush-hold: "{prefix}<red>Hold a brush first (/wc brush ...)."
+brush-primary: "{prefix}Right click: <white>{tool}</white>."
+brush-secondary: "{prefix}Left click: <white>{tool}</white>. <gray>/wc secondary <brush> again to change it."
+brush-saved: "{prefix}Saved the brush as <white>{name}</white> ({where}). <gray>/wc brush loadbrush {name} to use it again."
+brush-list-empty: "{prefix}No saved brushes. <gray>/wc brush savebrush <name> with a brush in your hand."
+brush-list-header: "{prefix}{count} saved brushes (page {page} of {pages}):"
+brush-list-line: "<gray> · <white>{name}</white> ({who})"
+brush-not-saved: "{prefix}<red>There is no saved brush '{name}'{hint}. <gray>/wc brush listbrush"
+brush-loaded: "{prefix}Loaded <white>{name}</white>: {tool}."
+line-point: "{prefix}Point at <white>{pos}</white>; click another block to draw."
+spline-point: "{prefix}Point {count}; click the same block again to finish."
+spline-full: "{prefix}<yellow>That's {max} points (tools.max_spline_points): click the last one again to finish."
+spline-few: "{prefix}<yellow>Not enough points: click two or more blocks, then the last one again."
+copypaste-copied: "{prefix}Copied {blocks} blocks ({size}); right click to paste."
+scroll-changed: "{prefix}{brush}"
+scroll-no-clipboards: "{prefix}<yellow>Load some schematics first: /wc schem loadall <names or folder/>"
+inspect-none: "{prefix}Nobody changed <white>{pos}</white> with Worldcraft (in the history kept on disk)."
+inspect-header: "{prefix}Changes at <white>{pos}</white>, newest first:"
+inspect-line: "<gray> · <white>{player}</white> changed {before} to <white>{after}</white> {ago} ago ({kind}){state}"
+nbtinfo-none: "{prefix}<white>{block}</white> at {pos} has no data."
+nbtinfo-header: "{prefix}Data of <white>{block}</white> at {pos}:"
+registry-list: "{prefix}Registries: <white>{registries}</white>. <gray>/wc registry <name> [text] [page]"
+registry-none: "{prefix}Nothing in {registry} has '{text}'."
+registry-header: "{prefix}{count} in {registry} (page {page} of {pages}):"
+registry-line: "<gray> · <white>{id}</white>"
+fixlighting-started: "{prefix}Working out the light of {chunks} chunks..."
+fixlighting-done: "{prefix}<green>Light worked out again in {chunks} chunks."
+fixlighting-none: "{prefix}<yellow>None of those chunks is loaded."
+fixlighting-too-many: "{prefix}<red>That's {chunks} chunks; /wc fixlighting does up to {max} at once (tools.fixlighting_max_chunks)."
+schem-loadall-done: "{prefix}Loaded <white>{count}</white> schematics{failed}: /wc paste puts one at random each time (/wc clearclipboard lets them go)."
+schem-loadall-too-many: "{prefix}<red>That's {count} schematics; loadall takes up to {max}."
+schem-move-nothing: "{prefix}<yellow>Load a schematic from Worldcraft's folder first (/wc schem load <name>)."
+schem-moved: "{prefix}Moved <white>{from}</white> to <white>{to}</white>."
+schem-move-exists: "{prefix}<red>There is already a {to}."
+selftest-light-ok: "{prefix}<green>Selftest light passed: {chunks} chunk(s) relit, no block changed."
+selftest-light-off: "{prefix}<yellow>Light and block data are not available on this server version ({reason}): //fixlighting and //nbtinfo are off, the rest works."

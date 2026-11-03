@@ -17,10 +17,23 @@ public class WorldcraftEditEvent extends EditEventBase implements Cancellable {
     private static final HandlerList HANDLERS = new HandlerList();
     private boolean cancelled;
     private String reason = "";
+    private boolean bypassing;
 
     public WorldcraftEditEvent(CommandSender actor, UUID actorId, String actorName, Plugin plugin, String kind, String detail,
                                World world, int[] min, int[] max, long volume) {
         super(actor, actorId, actorName, plugin, kind, detail, world, min, max, volume);
+    }
+
+    /**
+     * True when the one who asked turned on {@code /wc wea} (permission {@code worldcraft.bypass}): if you cancel, the edit
+     * still goes ahead and they are told your reason. Since 0.16.0.
+     */
+    public boolean isBypassing() {
+        return bypassing;
+    }
+
+    public void setBypassing(boolean bypassing) {
+        this.bypassing = bypassing;
     }
 
     @Override

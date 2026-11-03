@@ -88,6 +88,7 @@ public final class WorldcraftCommand implements TabExecutor {
         SUBS.put("sp", dev.leo.worldcraft.paper.Tools.SUPERPICKAXE);
         // Spec 040: lo que faltaba de WorldEdit 7.3.19 (report es de administración).
         for (String s : MoreCommands.SUBS) SUBS.put(s, MoreCommands.perm(s));
+        for (String s : FaweCommands.SUBS) SUBS.put(s, FaweCommands.perm(s));
         for (String s : List.of("reload", "validate", "selftest")) SUBS.put(s, ADMIN);
     }
 
@@ -106,6 +107,7 @@ public final class WorldcraftCommand implements TabExecutor {
     private final CreateCommands create;
     private final RestoreCommands restore;
     private final MoreCommands more;
+    private final FaweCommands fawe;
 
     public WorldcraftCommand(Worldcraft plugin) {
         this.plugin = plugin;
@@ -118,6 +120,7 @@ public final class WorldcraftCommand implements TabExecutor {
         this.create = new CreateCommands(plugin, this);
         this.restore = new RestoreCommands(plugin, this);
         this.more = new MoreCommands(plugin, this, build);
+        this.fawe = new FaweCommands(plugin, this, more);
     }
 
     /** Spec 040: los nombres de los features del juego (para el autocompletado del pincel). */
@@ -163,6 +166,8 @@ public final class WorldcraftCommand implements TabExecutor {
             s.sendMessage(msg().get("no-permission"));
             return true;
         }
+        // Spec 041 H3 CA1: la textura del jugador mientras se leen sus patrones.
+        dev.leo.worldcraft.pattern.Parser.TEXTURE.set(edits().session(Edits.owner(s)).texture);
         try {
             switch (sub) {
                 case "help" -> help(s, a);
@@ -175,7 +180,7 @@ public final class WorldcraftCommand implements TabExecutor {
                 case "faces" -> region(s, a, Shape.FACES, false);
                 case "replace" -> region(s, a, Shape.FILL, true);
                 case "copy", "cut" -> copy(s, a, sub.equals("cut"));
-                case "paste" -> paste(s, a);
+                case "paste" -> paste(s, a, false);
                 case "rotate" -> rotate(s, a);
                 case "flip" -> flip(s, a);
                 case "undo", "redo" -> undo(s, a, sub.equals("redo"));
@@ -203,6 +208,7 @@ public final class WorldcraftCommand implements TabExecutor {
                     else if (CreateCommands.handles(sub)) create.run(s, sub, a);
                     else if (RestoreCommands.handles(sub)) restore.run(s, sub, a);
                     else if (MoreCommands.SUBS.contains(sub)) more.run(s, sub, a);
+                    else if (FaweCommands.SUBS.contains(sub)) fawe.run(s, sub, a);
                     else if (BuildCommands.SHAPES.contains(sub) || BuildCommands.REGION.contains(sub)
                             || BuildCommands.UTILITIES.contains(sub) || BuildCommands.ENTITIES.contains(sub)) build.run(s, sub, a);
                     else help(s, a);
@@ -210,6 +216,8 @@ public final class WorldcraftCommand implements TabExecutor {
             }
         } catch (Usage u) {
             s.sendMessage(msg().get("usage", "usage", msg().raw("help." + helpKey(sub) + ".usage")));
+        } finally {
+            dev.leo.worldcraft.pattern.Parser.TEXTURE.remove();
         }
         return true;
     }
@@ -714,18 +722,32 @@ public final class WorldcraftCommand implements TabExecutor {
         return p1 != null ? p1 : new int[]{box.minX(), box.minY(), box.minZ()};
     }
 
-    private void paste(CommandSender s, String[] a) {
+    /** Spec 041 H4 CA1: //place pega sin el giro ni el espejo. */
+    void place(CommandSender s, String[] a) {
+        paste(s, a, true);
+    }
+
+    /** Spec 041 H3 CA7: para /wc primary y secondary. */
+    ToolCommands toolCommands() {
+        return tool;
+    }
+
+    private void paste(CommandSender s, String[] a, boolean untransformed) {
         Args args = Args.parse(a, 1, Set.of("preview", "air", "origin", "select", "only-select", "no-entities", "remove-entities", "biomes"));
         if (args.problem != null) {
             s.sendMessage(msg().get("error", "message", args.problem));
             return;
         }
         Session ses = edits().session(Edits.owner(s));
-        Clipboard clip = ses.clipboard();
-        if (clip == null) {
+        Clipboard held = ses.clipboard();
+        if (held == null) {
             s.sendMessage(msg().get("no-clipboard"));
             return;
         }
+        // Spec 041 H4 CA8: con schem loadall, uno al azar cada vez; con //place, sin la transformación.
+        Clipboard pick = ses.clipboards.isEmpty() ? held
+                : ses.clipboards.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(ses.clipboards.size())).withTransform(held.transform());
+        Clipboard clip = untransformed ? pick.withTransform(dev.leo.worldcraft.edit.Transform.IDENTITY) : pick;
         World world;
         int[] o;
         if (args.flags.contains("origin")) {
@@ -1138,6 +1160,25 @@ public final class WorldcraftCommand implements TabExecutor {
                 }
                 sch.importAll(s, overwrite);
             }
+            case "loadall" -> {
+                // Spec 041 H4 CA8: varios esquemas (o una carpeta): /wc paste pega uno al azar cada vez.
+                if (args.positional.isEmpty()) {
+                    s.sendMessage(msg().get("usage", "usage", msg().raw("help.schem.usage")));
+                    return;
+                }
+                sch.loadAll(s, args.positional);
+            }
+            case "move" -> {
+                if (args.positional.size() != 1) {
+                    s.sendMessage(msg().get("usage", "usage", msg().raw("help.schem.usage")));
+                    return;
+                }
+                if (!s.hasPermission(Schematics.PERM_SAVE)) {
+                    s.sendMessage(msg().get("no-permission"));
+                    return;
+                }
+                sch.move(s, args.positional.get(0));
+            }
             case "load", "save", "delete" -> {
                 if (args.positional.size() != 1) {
                     s.sendMessage(msg().get("usage", "usage", msg().raw("help.schem.usage")));
@@ -1151,7 +1192,7 @@ public final class WorldcraftCommand implements TabExecutor {
                 else sch.delete(s, name);
             }
             default -> s.sendMessage(msg().get(op.isEmpty() ? "usage" : "schem-unknown", "usage", msg().raw("help.schem.usage"),
-                    "input", op, "hint", hintText(Issues.closest(op, List.of("list", "load", "save", "delete", "import", "formats")))));
+                    "input", op, "hint", hintText(Issues.closest(op, List.of("list", "load", "loadall", "move", "save", "delete", "import", "formats")))));
         }
     }
 
@@ -1296,6 +1337,7 @@ public final class WorldcraftCommand implements TabExecutor {
             }
             case "schem", "schematic" -> Set.of("overwrite");
             case "curve", "snowsmooth", "feature", "update", "searchitem" -> MoreCommands.flags(sub);
+            case "place", "fall", "registry", "fixlighting" -> FaweCommands.flags(sub);
             default -> {
                 Set<String> f = new HashSet<>();
                 if (!NavigationCommands.SUBS.contains(sub) && !SelectionCommands.SUBS.contains(sub) && !NatureCommands.SUBS.contains(sub) && !FormulaCommands.handles(sub) && !CreateCommands.handles(sub) && !RestoreCommands.handles(sub)) for (String o : BuildCommands.flags(sub)) f.add(o);
@@ -1353,7 +1395,8 @@ public final class WorldcraftCommand implements TabExecutor {
             case "generate", "gen", "generatebiome", "genbiome", "timeout" -> formulas.complete(sub, a, last);
             case "caves", "ore", "ores", "image", "img" -> create.complete(sub, a, last);
             case "regen", "snapshot", "snap", "restore" -> restore.complete(s, sub, a, last);
-            default -> MoreCommands.SUBS.contains(sub) ? more.complete(s, sub, a, last) : buildSuggestions(sub, a, last);
+            default -> MoreCommands.SUBS.contains(sub) ? more.complete(s, sub, a, last)
+                    : FaweCommands.SUBS.contains(sub) ? fawe.complete(s, sub, a, last) : buildSuggestions(sub, a, last);
         };
     }
 

@@ -120,7 +120,7 @@ final class MoreCommands {
                 case "listchunks" -> listchunks(s, args);
                 case "searchitem" -> searchitem(s, args);
                 case "version" -> version(s);
-                case "report" -> report(s);
+                case "report" -> report(s, false);
                 case "trace" -> trace(s, args);
                 case "tz" -> tz(s, args);
                 default -> throw new WorldcraftCommand.Usage();
@@ -556,13 +556,20 @@ final class MoreCommands {
     }
 
     /** H4 CA5: /wc report escribe un archivo en reports/ (nunca lo sube a ningún lado). */
-    private void report(CommandSender s) {
+    /** Spec 041 H4 CA11: /wc debugpaste, el informe con el final del log y los .yml (tampoco se sube). */
+    void debugpaste(CommandSender s) {
+        report(s, true);
+    }
+
+    private void report(CommandSender s, boolean debug) {
         String[] v = versions();
         StringBuilder sb = new StringBuilder();
         sb.append("Worldcraft report, ").append(LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)).append("\n\n");
         sb.append("Worldcraft: ").append(v[0]).append("\nServer: ").append(v[1]).append("\nJava: ").append(v[2])
                 .append("\nOS: ").append(System.getProperty("os.name")).append(' ').append(System.getProperty("os.version"))
-                .append("\nGame features (//feature, //update): ").append(v[3]).append("\n\nWorlds:\n");
+                .append("\nGame features (//feature, //update): ").append(v[3])
+                .append("\nLight and NBT (//fixlighting, //nbtinfo): ").append(Nms.get().lightAvailable() ? "available" : "not available: " + Nms.get().lightProblem())
+                .append("\n\nWorlds:\n");
         for (World w : Bukkit.getWorlds()) {
             sb.append("  ").append(w.getName()).append(" (").append(w.getEnvironment()).append(", ").append(w.getMinHeight()).append("..")
                     .append(w.getMaxHeight() - 1).append(", ").append(w.getLoadedChunks().length).append(" chunks loaded)\n");
@@ -581,11 +588,23 @@ final class MoreCommands {
         for (var i : issues.all()) sb.append("  ").append(i).append('\n');
         Path folder = plugin.getDataFolder().toPath();
         String stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss", Locale.ROOT));
-        Path file = folder.resolve("reports").resolve("report-" + stamp + ".txt");
+        Path file = folder.resolve("reports").resolve((debug ? "debugpaste-" : "report-") + stamp + ".txt");
+        Path logs = plugin.getServer().getWorldContainer().toPath().resolve("logs").resolve("latest.log");
         CompletableFuture.runAsync(() -> {
             try {
                 Path cfg = folder.resolve("config.yml");
                 sb.append("\nconfig.yml:\n").append(Files.exists(cfg) ? Files.readString(cfg, StandardCharsets.UTF_8) : "(none: all defaults)\n");
+                if (debug) {
+                    for (String y : List.of("messages.yml", "item-uses.yml", "slash-commands.yml")) {
+                        Path f = folder.resolve(y);
+                        if (Files.exists(f)) sb.append('\n').append(y).append(":\n").append(Files.readString(f, StandardCharsets.UTF_8));
+                    }
+                    if (Files.exists(logs)) {
+                        List<String> lines = Files.readAllLines(logs, StandardCharsets.UTF_8);
+                        sb.append("\nlogs/latest.log (last ").append(Math.min(200, lines.size())).append(" lines):\n");
+                        for (String l : lines.subList(Math.max(0, lines.size() - 200), lines.size())) sb.append(l).append('\n');
+                    }
+                }
                 Files.createDirectories(file.getParent());
                 Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
                 Files.writeString(tmp, sb.toString(), StandardCharsets.UTF_8);
