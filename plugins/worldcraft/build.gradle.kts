@@ -1,7 +1,10 @@
-version = "0.14.0"
+version = "0.15.0"
 
 tasks.named<Jar>("jar") {
     archiveBaseName.set("Worldcraft")
+    // Spec 040 (ADR 0009): el puente con el juego busca por reflexión los nombres de Mojang, con los que corre Paper:
+    // así Paper no reescribe el jar.
+    manifest { attributes("paperweight-mappings-namespace" to "mojang") }
 }
 val sourceSets = project.extensions.getByType<SourceSetContainer>()
 

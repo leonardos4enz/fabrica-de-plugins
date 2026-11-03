@@ -91,11 +91,21 @@ final class RestoreCommands {
         return plugin.config().restore();
     }
 
-    private static ZoneId zone() {
-        return ZoneId.systemDefault();
+    /** Spec 040 H4 CA5: la zona de /wc tz de quien pregunta, o la del servidor. */
+    private ZoneId asking = ZoneId.systemDefault();
+
+    /** En el hilo principal (las lecturas en otro hilo reciben la zona ya tomada). */
+    private ZoneId zone() {
+        return asking;
+    }
+
+    private void zoneFor(CommandSender s) {
+        ZoneId z = edits().session(Edits.owner(s)).zone;
+        asking = z == null ? ZoneId.systemDefault() : z;
     }
 
     void run(CommandSender s, String sub, String[] a) {
+        zoneFor(s);
         String c = canonical(sub);
         // -b y -r de WorldEdit y FAWE.
         String[] in = new String[a.length];
@@ -216,9 +226,10 @@ final class RestoreCommands {
             return;
         }
         String world = w.getName();
+        ZoneId zone = zone();
         CompletableFuture.supplyAsync(() -> {
             try {
-                return SnapshotRepo.list(folder, world, zone());
+                return SnapshotRepo.list(folder, world, zone);
             } catch (java.io.IOException e) {
                 throw new java.io.UncheckedIOException(e);
             }
@@ -425,6 +436,7 @@ final class RestoreCommands {
     // ------------------------------------------------------------------ autocompletado
 
     List<String> complete(CommandSender s, String sub, String[] a, String last) {
+        zoneFor(s);
         String c = canonical(sub);
         long words = java.util.Arrays.stream(a).skip(1).filter(x -> !x.startsWith("-")).count();
         return switch (c) {
@@ -465,9 +477,10 @@ final class RestoreCommands {
         if (folder != null && (at == null || System.currentTimeMillis() - at > 30_000)) {
             cachedAt.put(w.getName(), System.currentTimeMillis());
             String world = w.getName();
+            ZoneId zone = zone();
             CompletableFuture.supplyAsync(() -> {
                 try {
-                    return SnapshotRepo.list(folder, world, zone());
+                    return SnapshotRepo.list(folder, world, zone);
                 } catch (java.io.IOException e) {
                     return List.<SnapshotRepo.Entry>of();
                 }

@@ -35,6 +35,16 @@ public final class ToolParser {
             case FOREST -> List.of("type", "radius", "density");
             case DEFORM -> List.of("radius");
             case TREE -> List.of("type");
+            // Spec 040
+            case SNOW -> List.of("radius");
+            case SNOWSMOOTH -> List.of("radius", "iterations");
+            case BIOME -> List.of("radius", "biome");
+            case MORPH -> List.of("radius", "erode_faces", "erode", "dilate_faces", "dilate");
+            case DILATE -> List.of("radius", "dilate_faces", "dilate");
+            case HEIGHTMAP -> List.of("image", "radius", "height");
+            case FEATURE -> List.of("feature", "radius", "density");
+            case APPLY -> List.of("shape", "radius", "density", "item");
+            case STACKER -> List.of("range", "mask");
             default -> List.<String>of();
         });
         if (k.placesBlocks()) out.add("mask");
@@ -50,6 +60,8 @@ public final class ToolParser {
             case GRAVITY -> List.of("height");
             case BUTCHER -> List.copyOf(new TreeSet<>(ToolSpec.BUTCHER_FLAGS));
             case DEFORM -> List.of("raw", "offset");
+            case SNOW -> List.of("stack");
+            case HEIGHTMAP -> List.of("erase", "flatten");
             default -> List.of();
         };
     }
@@ -63,6 +75,12 @@ public final class ToolParser {
             case ROCK -> List.of("radius", "sphericity", "frequency", "amplitude");
             case FLOODFILL -> List.of("range");
             case FOREST -> List.of("radius", "density");
+            case SNOW -> List.of("radius");
+            case SNOWSMOOTH -> List.of("radius", "iterations");
+            case MORPH -> List.of("radius", "erode_faces", "erode", "dilate_faces", "dilate");
+            case DILATE -> List.of("radius", "dilate_faces", "dilate");
+            case HEIGHTMAP -> List.of("radius", "height");
+            case FEATURE -> List.of("radius", "density");
             default -> List.of();
         };
     }
@@ -71,7 +89,9 @@ public final class ToolParser {
 
     public static ToolSpec parse(boolean brush, String type, List<String> words, Set<String> flags, Map<String, String> kv,
                                  ToolSpec.Caps caps) {
-        ToolKind kind = ToolKind.parse(type, brush);
+        // Spec 040: /wc brush paint … item <ítem> es apply con densidad (sin item, paint es del pincel de terreno).
+        boolean paint = brush && type.equalsIgnoreCase("paint");
+        ToolKind kind = paint ? ToolKind.APPLY : ToolKind.parse(type, brush);
         if (kind == null) {
             List<String> ids = ToolKind.ids(brush);
             throw new IllegalArgumentException("Unknown " + (brush ? "brush" : "tool") + " '" + type + "'" + Issues.hint(type.toLowerCase(Locale.ROOT), ids)
@@ -126,6 +146,59 @@ public final class ToolParser {
                 o.put("formula", ToolSpec.encodeText(text));
                 rest = new ArrayList<>();
             }
+            case BIOME -> {
+                // «biome [radio] <bioma>», como WorldEdit; el nombre se revisa con el registro del servidor.
+                if (!rest.isEmpty() && rest.get(0).matches("\\d+")) o.put("radius", rest.remove(0));
+                String b = kv.containsKey("biome") ? kv.get("biome") : rest.size() == 1 ? rest.remove(0) : null;
+                if (b == null || !rest.isEmpty()) throw new IllegalArgumentException("biome takes one biome: " + example(kind));
+                o.put("biome", b.toLowerCase(Locale.ROOT).replace("minecraft:", ""));
+                rest = new ArrayList<>();
+            }
+            case HEIGHTMAP, FEATURE -> {
+                // «heightmap <imagen> [radio] [alto]», «feature <nombre> [radio] [densidad]».
+                String key = kind == ToolKind.HEIGHTMAP ? "image" : "feature";
+                List<String> nums = numbers(kind);
+                int n = 0;
+                while (n < rest.size() && rest.get(rest.size() - 1 - n).matches("-?\\d+")) n++;
+                if (n > nums.size()) throw new IllegalArgumentException(kind.id() + " takes at most " + nums.size() + " numbers (" + String.join(", ", nums) + ")");
+                List<String> tail = new ArrayList<>(rest.subList(rest.size() - n, rest.size()));
+                for (int i = 0; i < tail.size(); i++) o.put(nums.get(i), tail.get(i));
+                List<String> names = rest.subList(0, rest.size() - n);
+                String name = kv.containsKey(key) ? kv.get(key) : names.size() == 1 ? names.get(0) : null;
+                if (name == null || names.size() > 1) throw new IllegalArgumentException(kind.id() + " needs one " + key + ": " + example(kind));
+                o.put(key, key.equals("feature") ? name.toLowerCase(Locale.ROOT).replace("minecraft:", "") : name);
+                rest = new ArrayList<>();
+            }
+            case APPLY -> {
+                // «apply [sphere|cube|cyl] [radio] item <ítem>», «paint [forma] [radio] [densidad] item <ítem>» (WorldEdit).
+                int at = -1;
+                for (int i = 0; i < rest.size(); i++) if (rest.get(i).equalsIgnoreCase("item")) at = i;
+                if (at < 0 || at != rest.size() - 2) {
+                    throw new IllegalArgumentException("Write the item after the word item: " + (paint ? "/wc brush paint sphere 5 20 item bone_meal" : example(kind)));
+                }
+                o.put("item", rest.get(at + 1).toLowerCase(Locale.ROOT).replace("minecraft:", ""));
+                List<String> head = new ArrayList<>(rest.subList(0, at));
+                String shape = "sphere";
+                if (!head.isEmpty() && !head.get(0).matches("\\d+")) {
+                    shape = head.remove(0).toLowerCase(Locale.ROOT);
+                    if (shape.equals("cylinder")) shape = "cyl";
+                    if (!SET_SHAPES.contains(shape)) throw new IllegalArgumentException("'" + shape + "' is not a shape" + Issues.hint(shape, SET_SHAPES) + ": cube, sphere or cyl");
+                }
+                o.put("shape", shape);
+                List<String> nums = paint ? List.of("radius", "density") : List.of("radius");
+                if (head.size() > nums.size() || !head.stream().allMatch(w -> w.matches("\\d+"))) {
+                    throw new IllegalArgumentException((paint ? "paint" : "apply") + " takes " + String.join(" and ", nums) + " before item");
+                }
+                for (int i = 0; i < head.size(); i++) o.put(nums.get(i), head.get(i));
+                o.put("density", o.getOrDefault("density", paint ? "10" : "100"));
+                rest = new ArrayList<>();
+            }
+            case STACKER -> {
+                // «stacker [alcance] [máscara]», como WorldEdit (de fábrica 10 y el aire).
+                if (!rest.isEmpty() && rest.get(0).matches("\\d+")) o.put("range", rest.remove(0));
+                if (!rest.isEmpty()) o.put("mask", String.join(" ", rest));
+                rest = new ArrayList<>();
+            }
             case TREE, FOREST -> {
                 // Spec 033: el tipo de árbol en vez de bloques («forest birch 6 10», «tree cherry»).
                 List<String> nums = numbers(kind);
@@ -158,7 +231,8 @@ public final class ToolParser {
         }
         for (Map.Entry<String, String> e : kv.entrySet()) {
             if (!e.getKey().equals("mask") && !e.getKey().equals("shape") && !e.getKey().equals("left") && !e.getKey().equals("right")
-                    && !e.getKey().equals("type")) o.put(e.getKey(), e.getValue());
+                    && !e.getKey().equals("type") && !e.getKey().equals("biome") && !e.getKey().equals("image") && !e.getKey().equals("feature")
+                    && !e.getKey().equals("item") && !(kind == ToolKind.APPLY && e.getKey().equals("shape"))) o.put(e.getKey(), e.getValue());
         }
         boolean takesPattern = allowed.contains("pattern");
         String pattern = kv.containsKey("pattern") ? kv.get("pattern") : String.join(" ", rest);
@@ -178,6 +252,11 @@ public final class ToolParser {
         range(o, "amplitude", 0, 100);
         range(o, "range", 1, caps.maxRange());
         range(o, "density", 0, 100);
+        range(o, "iterations", 1, 10);
+        range(o, "erode", 0, 10);
+        range(o, "dilate", 0, 10);
+        range(o, "erode_faces", 1, 6);
+        range(o, "dilate_faces", 1, 6);
         if (kv.containsKey("mask")) {
             String m = kv.get("mask");
             if (!m.isBlank() && !m.equals("*")) o.put("mask", m);
@@ -250,6 +329,15 @@ public final class ToolParser {
             case FOREST -> "/wc brush forest birch 6 10";
             case DEFORM -> "/wc brush deform 6 y-=0.2";
             case TREE -> "/wc tool tree cherry";
+            case SNOW -> "/wc brush snow 6 --stack";
+            case SNOWSMOOTH -> "/wc brush snowsmooth 6 2";
+            case BIOME -> "/wc brush biome 6 desert";
+            case MORPH -> "/wc brush morph 5 4 1 5 1";
+            case DILATE -> "/wc brush dilate 5";
+            case HEIGHTMAP -> "/wc brush heightmap hill.png 10 8";
+            case FEATURE -> "/wc brush feature mossy_rock 8 5";
+            case APPLY -> "/wc brush apply sphere 4 item iron_hoe";
+            case STACKER -> "/wc tool stacker 10 air";
         };
     }
 }

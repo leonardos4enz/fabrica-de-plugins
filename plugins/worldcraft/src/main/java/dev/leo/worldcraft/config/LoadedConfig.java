@@ -23,7 +23,8 @@ import java.util.Map;
 public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<String, String> patternPresets,
                            Map<String, String> maskPresets, TerrainSettings terrain, Issues issues, ToolSettings tools,
                            NatureSettings nature, FormulaSettings formulas, CreateSettings create,
-                           RestoreSettings restore, ApiSettings api, SlashSettings slash) {
+                           RestoreSettings restore, ApiSettings api, SlashSettings slash,
+                           dev.leo.worldcraft.tool.ItemUses itemUses) {
 
     public static LoadedConfig load(File folder, BlockRegistry registry, LoadedConfig previous) {
         Issues issues = new Issues();
@@ -102,8 +103,29 @@ public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<
         // Spec 039: los // de WorldEdit (skip se revisa contra la tabla del jar).
         SlashSettings slash = config == null && previous != null ? previous.slash
                 : SlashSettings.load(config, dev.leo.worldcraft.command.SlashTable.builtin().entries().keySet(), issues);
+        // Spec 040: lo que hace cada ítem en brush apply|paint (el del jar más el del dueño).
+        dev.leo.worldcraft.tool.ItemUses itemUses = dev.leo.worldcraft.tool.ItemUses.load(jarText(dev.leo.worldcraft.tool.ItemUses.FILE),
+                customText(new File(folder, dev.leo.worldcraft.tool.ItemUses.FILE), issues), parser, issues);
         return new LoadedConfig(settings, limits, parser, Map.copyOf(pat), Map.copyOf(msk), terrain, issues, tools, nature, formulas, create,
-                restore, api, slash);
+                restore, api, slash, itemUses);
+    }
+
+    private static String jarText(String name) {
+        try (java.io.InputStream in = LoadedConfig.class.getResourceAsStream("/" + name)) {
+            return in == null ? "" : new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            return "";
+        }
+    }
+
+    private static String customText(File f, Issues issues) {
+        if (!f.exists()) return null;
+        try {
+            return Files.readString(f.toPath(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            issues.error(f.getName(), "", "could not be read: " + e.getMessage());
+            return null;
+        }
     }
 
     private static Map<String, String> section(YamlConfiguration y, String name) {

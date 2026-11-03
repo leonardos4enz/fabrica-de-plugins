@@ -525,6 +525,14 @@ public final class Edits {
                 plugin.getLogger().info(net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(m));
                 if (em != null) plugin.getLogger().info(net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(em));
             }
+            // Spec 040 H4 CA5: /wc trace.
+            Session ses = sessions.get(owner);
+            if (ses != null && ses.trace) {
+                tell(owner, who, msg.get("trace-line", "id", String.valueOf(entry.id()), "kind", op.kind(), "visited", fmt(job.visited()),
+                        "changed", fmt(job.changed()), "same", fmt(job.same()), "kept", fmt(job.kept()), "skipped", fmt(job.skipped()),
+                        "ms", String.format(java.util.Locale.ROOT, "%.1f", job.nanos() / 1e6), "ticks", String.valueOf(job.steps()),
+                        "max", String.format(java.util.Locale.ROOT, "%.1f", job.maxStepNanos() / 1e6)));
+            }
             if (ok && op.after() != null) op.after().run();
             // Spec 037 H4 CA2 y H3 CA2: el evento de fin y el resultado de la API, ya fuera de la cola (F-01).
             long changed = job.changed();

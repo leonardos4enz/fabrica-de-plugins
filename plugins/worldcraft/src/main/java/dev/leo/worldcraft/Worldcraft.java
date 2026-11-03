@@ -145,6 +145,10 @@ public final class Worldcraft extends JavaPlugin {
             cmd.setExecutor(command);
             cmd.setTabCompleter(command);
         }
+        // Spec 040 (ADR 0009): el puente con el juego para //feature y //update; si no anda, solo esos se apagan.
+        dev.leo.worldcraft.paper.Nms nms = dev.leo.worldcraft.paper.Nms.get();
+        if (nms.available()) getLogger().info("Game features available (//feature, //update): " + nms.features().size() + " features");
+        else getLogger().warning("The game's features are not available on this server version (" + nms.problem() + "): //feature, /brush feature and //update are off; everything else works");
         slash = new dev.leo.worldcraft.paper.SlashCommands(this);
         getServer().getPluginManager().registerEvents(slash, this);
         getServer().getScheduler().runTask(this, () -> {

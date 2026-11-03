@@ -18,6 +18,14 @@ commands:
   "/outset": { flags: { h: horizontal, v: vertical } }
   "/inset": { flags: { h: horizontal, v: vertical } }
   "/size": { to: sel }
+  # Spec 040: placement, the wand and information
+  toggleplace: {}
+  placement: {}
+  toggleeditwand: {}
+  chunkinfo: {}
+  listchunks: {}
+  searchitem: { aliases: ["/l", "/search"], flags: { b: blocks, i: items } }
+  tz: {}
   "/distr": { flags: { c: clipboard, d: states } }
   "/desel": { to: sel clear, aliases: ["/deselect"] }
   gmask: {}
@@ -34,6 +42,8 @@ commands:
   "/stack": { defaults: [air], flags: { s: select, a: "!air", e: entities } }
   "/regen": { flags: { b: biomes, r: random } }
   "/deform": { flags: { r: raw, o: offset, c: center } }
+  "/curve": { flags: { h: hollow } }
+  "/snowsmooth": { flags: { m: mask } }
   # Shapes and formulas
   "/sphere": { flags: { h: "/hsphere", r: raised } }
   "/hsphere": { flags: { r: raised } }
@@ -85,6 +95,8 @@ commands:
   brush: { aliases: ["br", "/br"] }
   tool: {}
   lrbuild: { to: tool lrbuild, aliases: ["/lrbuild"] }
+  range: {}
+  tracemask: {}
   superpickaxe: { aliases: ["pickaxe", "sp"] }
   "/": { to: superpickaxe }
   # Backups

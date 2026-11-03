@@ -62,7 +62,7 @@ import java.util.logging.Level;
 final class BuildCommands {
     static final List<String> SHAPES = List.of("sphere", "hsphere", "cyl", "hcyl", "pyramid", "hpyramid", "cone");
     static final List<String> REGION = List.of("stack", "move", "overlay", "naturalize", "smooth", "hollow", "center", "line");
-    static final List<String> UTILITIES = List.of("drain", "fixwater", "fixlava", "fill", "removenear", "replacenear",
+    static final List<String> UTILITIES = List.of("drain", "fixwater", "fixlava", "fill", "fillr", "removenear", "replacenear",
             "removeabove", "removebelow", "extinguish", "snow", "thaw", "green");
     /** Spec 031: quitar entidades (cada uno con su permiso). */
     static final List<String> ENTITIES = List.of("butcher", "remove");
@@ -133,7 +133,7 @@ final class BuildCommands {
                 case "center" -> center(s, args);
                 case "line" -> line(s, args);
                 case "drain", "fixwater", "fixlava" -> liquid(s, sub, args);
-                case "fill" -> fill(s, args);
+                case "fill", "fillr" -> fill(s, args, sub.equals("fillr"));
                 case "removenear", "replacenear", "extinguish" -> near(s, sub, args);
                 case "removeabove", "removebelow" -> remove(s, sub, args);
                 case "snow" -> snow(s, args);
@@ -171,11 +171,44 @@ final class BuildCommands {
     }
 
     /** Un lugar: el mundo y {x, y, z}. */
-    private record Place(World world, int x, int y, int z) {
+    record Place(World world, int x, int y, int z) {
     }
 
-    /** Los pies del jugador, o --at x,y,z (con --world) desde la consola. */
-    private Place place(CommandSender s, Args args) {
+    /**
+     * Los pies del jugador, o --at x,y,z (con --world) desde la consola. Spec 040 H3 CA1: sin --at, lo que diga
+     * /wc placement (la esquina 1 o 2, el centro de la selección) más su desplazamiento.
+     */
+    Place place(CommandSender s, Args args) {
+        if (!args.values.containsKey("at")) {
+            Session ses = edits().session(Edits.owner(s));
+            int[] off = ses.placementOffset;
+            if (!ses.placement.equals("player")) {
+                int[] at = switch (ses.placement) {
+                    case "pos1" -> ses.corner1();
+                    case "pos2" -> ses.corner2();
+                    default -> {
+                        Region r = ses.region();
+                        if (r == null) yield null;
+                        Box c = r.bounds().center();
+                        yield new int[]{c.minX(), c.minY(), c.minZ()};
+                    }
+                };
+                World w = ses.world() == null ? null : Bukkit.getWorld(ses.world());
+                if (at == null || w == null) {
+                    s.sendMessage(msg().get("placement-missing", "placement", ses.placement));
+                    return null;
+                }
+                return new Place(w, at[0] + off[0], at[1] + off[1], at[2] + off[2]);
+            }
+            if (s instanceof Player p && (off[0] | off[1] | off[2]) != 0) {
+                Location l = p.getLocation();
+                return new Place(p.getWorld(), l.getBlockX() + off[0], l.getBlockY() + off[1], l.getBlockZ() + off[2]);
+            }
+        }
+        return placeAt(s, args);
+    }
+
+    private Place placeAt(CommandSender s, Args args) {
         Player p = s instanceof Player pl ? pl : null;
         if (args.values.containsKey("at")) {
             String[] c = args.values.get("at").split(",");
@@ -664,7 +697,8 @@ final class BuildCommands {
         }));
     }
 
-    private void fill(CommandSender s, Args args) throws ParseException {
+    /** fill (028) y fillr (spec 040 H1 CA3: la misma inundación, dentro de una esfera en vez de un cilindro). */
+    private void fill(CommandSender s, Args args, boolean sphere) throws ParseException {
         List<String> pos = new ArrayList<>(args.positional);
         List<int[]> nums = trailingNumbers(pos, 2);
         if (nums.isEmpty()) throw new WorldcraftCommand.Usage();
@@ -680,14 +714,16 @@ final class BuildCommands {
         Pattern.Compiled pc = p.compile(table());
         long seed = ThreadLocalRandom.current().nextLong();
         double e = (r + 0.5) * (r + 0.5);
-        Flood.Bound bound = (x, y, z) -> y <= at.y && y > at.y - depth && (double) (x - at.x) * (x - at.x) + (double) (z - at.z) * (z - at.z) <= e;
+        String kind = sphere ? "fillr" : "fill";
+        Flood.Bound bound = (x, y, z) -> y <= at.y && y > at.y - depth && (double) (x - at.x) * (x - at.x) + (double) (z - at.z) * (z - at.z)
+                + (sphere ? (double) (y - at.y) * (y - at.y) : 0) <= e;
         Snapshot snap = new Snapshot(box);
-        edits().read(s, at.world, box, "fill", snap, () -> compute(s, () -> Flood.connected(snap, at.x, at.y, at.z, bound, isAir), pts -> {
+        edits().read(s, at.world, box, kind, snap, () -> compute(s, () -> Flood.connected(snap, at.x, at.y, at.z, bound, isAir), pts -> {
             if (pts.length == 0) {
-                s.sendMessage(msg().get("nothing-found", "kind", "fill"));
+                s.sendMessage(msg().get("nothing-found", "kind", kind));
                 return;
             }
-            request(s, at.world, "fill", p.text() + " radius " + r, () -> new PointsSource(pts,
+            request(s, at.world, kind, p.text() + " radius " + r, () -> new PointsSource(pts,
                     (x, y, z, c) -> isAir.test(c) ? pc.apply(x, y, z, c, seed) : EditSource.KEEP), states(p), args);
         }));
     }

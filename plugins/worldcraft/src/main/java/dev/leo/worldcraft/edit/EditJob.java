@@ -50,6 +50,8 @@ public final class EditJob implements Scheduler.Job {
     private boolean pending;
     private long chunk = NO_CHUNK;
     private long visited, changed, nanos, maxStepNanos;
+    /** Spec 040 (/wc trace): los que ya eran así, los que dejó la fuente (máscara, forma) y los pasos (ticks). */
+    private long same, kept, steps;
     private boolean truncated;
     private State state = State.WAITING;
     /** Spec 031: lo que se hace con las entidades antes de los bloques (quitar) y después (crear); o null. */
@@ -102,6 +104,7 @@ public final class EditJob implements Scheduler.Job {
     @Override
     public boolean step(long deadlineNanos, int maxBlocks) {
         long t0 = clock.getAsLong();
+        steps++;
         try {
             return doStep(deadlineNanos, maxBlocks);
         } finally {
@@ -177,9 +180,15 @@ public final class EditJob implements Scheduler.Job {
         if (capture != null) capture.take(x, y, z, current, world.tile(x, y, z));
         if (mode == Mode.READ) return;
         int t = source.target(x, y, z, current);
-        if (t == EditSource.KEEP) return;
+        if (t == EditSource.KEEP) {
+            kept++;
+            return;
+        }
         byte[] tileAfter = source.tile();
-        if (t == current && tileAfter == null) return;
+        if (t == current && tileAfter == null) {
+            same++;
+            return;
+        }
         if (mode == Mode.APPLY) {
             byte[] tileBefore = world.tile(x, y, z);
             sink.changed(x, y, z, current, t, tileBefore, tileAfter);
@@ -247,6 +256,18 @@ public final class EditJob implements Scheduler.Job {
 
     public long changed() {
         return changed;
+    }
+
+    public long same() {
+        return same;
+    }
+
+    public long kept() {
+        return kept;
+    }
+
+    public long steps() {
+        return steps;
     }
 
     public long skipped() {

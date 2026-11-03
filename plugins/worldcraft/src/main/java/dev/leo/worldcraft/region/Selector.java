@@ -240,6 +240,14 @@ public final class Selector {
     }
 
     /** ¿Se agranda como una caja (expand, contract, outset de lado)? */
+    /** Spec 040 H1 CA1: los puntos de poly y convex en el orden en que se marcaron (vacío en las otras formas). */
+    public List<int[]> points() {
+        if (kind != Kind.POLY && kind != Kind.CONVEX) return List.of();
+        List<int[]> out = new ArrayList<>();
+        for (int[] p : points) out.add(p.clone());
+        return out;
+    }
+
     public boolean boxLike() {
         return kind == Kind.CUBOID || kind == Kind.EXTEND;
     }

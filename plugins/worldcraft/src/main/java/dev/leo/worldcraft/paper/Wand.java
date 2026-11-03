@@ -67,8 +67,10 @@ public final class Wand implements Listener {
         if (e.getHand() != EquipmentSlot.HAND || !isWand(e.getItem())) return;
         Action a = e.getAction();
         if (a != Action.LEFT_CLICK_BLOCK && a != Action.RIGHT_CLICK_BLOCK) return;
-        e.setCancelled(true);
         Player p = e.getPlayer();
+        // Spec 040 H3 CA2: /wc toggleeditwand, la varita es un hacha más.
+        if (plugin.edits().session(p.getUniqueId()).wandOff) return;
+        e.setCancelled(true);
         if (!p.hasPermission(WorldcraftCommand.USE)) return;
         Block b = e.getClickedBlock();
         if (b == null) return;
@@ -78,7 +80,7 @@ public final class Wand implements Listener {
     /** En creativo un clic rompe el bloque antes de que importe lo demás: con la varita nunca se rompe nada. */
     @EventHandler(priority = EventPriority.LOW)
     public void onBreak(BlockBreakEvent e) {
-        if (isWand(e.getPlayer().getInventory().getItemInMainHand())) e.setCancelled(true);
+        if (isWand(e.getPlayer().getInventory().getItemInMainHand()) && !plugin.edits().session(e.getPlayer().getUniqueId()).wandOff) e.setCancelled(true);
     }
 
     @EventHandler

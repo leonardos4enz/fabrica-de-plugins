@@ -98,10 +98,79 @@ class PresentacionTest {
         }
     }
 
+    /** La sección de commands.md que empieza con ese título, hasta el siguiente «## ». */
+    static String seccion(String md, String titulo) {
+        int desde = md.indexOf(titulo);
+        assertTrue(desde >= 0, "commands.md sin «" + titulo + "»");
+        int hasta = md.indexOf("\n## ", desde + 5);
+        return md.substring(desde, hasta < 0 ? md.length() : hasta);
+    }
+
+    static final Pattern FILA = Pattern.compile("\\n\\| `([^`]+)` \\| (yes|partly|not yet|no \\(on purpose\\)|not needed) \\|");
+
+    /** Comando → estado de cada fila de una tabla de commands.md. */
+    static java.util.Map<String, String> estados(String seccion) {
+        java.util.Map<String, String> out = new java.util.LinkedHashMap<>();
+        Matcher m = FILA.matcher(seccion);
+        while (m.find()) assertEquals(null, out.put(m.group(1), m.group(2)), "fila repetida: " + m.group(1));
+        return out;
+    }
+
+    static long contar(java.util.Map<String, String> filas, String estado) {
+        return filas.values().stream().filter(estado::equals).count();
+    }
+
+    /**
+     * Spec 040 H5 CA2: lo que se anuncia frente a WorldEdit y FAWE (cuántos tiene, el porcentaje y la fila de cada estado)
+     * sale de contar las filas de commands.md, y las descripciones y el póster dicen lo mismo.
+     */
+    @Test
+    void H5_CA2_las_cifras_frente_a_worldedit_y_fawe_salen_de_la_tabla() throws Exception {
+        String md = leer("commands.md");
+        var we = estados(seccion(md, "## Every WorldEdit 7.3.19 command"));
+        var soloFawe = estados(seccion(md, "## What FAWE 2.16.2 adds to WorldEdit"));
+        assertEquals(171, we.size(), "WorldEdit 7.3.19 tiene 171 comandos");
+        assertEquals(79, soloFawe.size(), "FAWE agrega 79");
+        // FAWE no tiene estos de WorldEdit (lo dice commands.md antes de su tabla).
+        List<String> faltanEnFawe = List.of("//pos", "//update", "/placement", "/brush none", "/brush heightmap", "/worldedit report");
+        java.util.Map<String, String> fawe = new java.util.LinkedHashMap<>(we);
+        for (String c : faltanEnFawe) assertTrue(fawe.remove(c) != null, "commands.md sin la fila " + c);
+        fawe.putAll(soloFawe);
+        assertEquals(244, fawe.size(), "FAWE 2.16.2 tiene 244 comandos");
+        String[] cols = {"yes", "partly", "not yet", "no (on purpose)", "not needed"};
+        for (var t : List.of(java.util.Map.entry("WorldEdit 7.3.19", we), java.util.Map.entry("FAWE 2.16.2", fawe),
+                java.util.Map.entry("FAWE, only what it adds to WorldEdit", soloFawe))) {
+            String b = t.getKey().startsWith("FAWE,") ? "" : "**"; // la fila de lo propio de FAWE va sin negrita
+            StringBuilder fila = new StringBuilder("| " + t.getKey() + " | " + t.getValue().size() + " | " + b + contar(t.getValue(), "yes") + b);
+            for (int i = 1; i < cols.length; i++) fila.append(" | ").append(contar(t.getValue(), cols[i]));
+            assertTrue(md.contains(fila + " |"), "commands.md debe decir: " + fila + " |");
+        }
+        long sWe = contar(we, "yes"), sFawe = contar(fawe, "yes");
+        long pWe = Math.round(100.0 * sWe / 171), pFawe = Math.round(100.0 * sFawe / 244);
+        long partWe = contar(we, "partly"), partFawe = contar(fawe, "partly");
+        assertTrue(md.contains("**" + sWe + " of WorldEdit's 171 commands** (" + pWe + " %)"), "commands.md: " + sWe + " de 171");
+        assertTrue(md.contains("**" + sFawe + " of FastAsyncWorldEdit's 244** (" + pFawe + " %)"), "commands.md: " + sFawe + " de 244");
+        String modrinth = leer("modrinth-hangar.md"), spigot = leer("spigotmc.bbcode");
+        assertTrue(modrinth.contains("| **" + sWe + "** (" + pWe + " %), " + partWe + " more in part |"), "modrinth-hangar.md: " + sWe);
+        assertTrue(modrinth.contains("| **" + sFawe + "** (" + pFawe + " %), " + partFawe + " more in part |"), "modrinth-hangar.md: " + sFawe);
+        assertTrue(spigot.contains("Worldcraft has [B]" + sWe + "[/B] (" + pWe + " %), " + partWe + " more in part."), "spigotmc.bbcode: " + sWe);
+        assertTrue(spigot.contains("Worldcraft has [B]" + sFawe + "[/B] (" + pFawe + " %), " + partFawe + " more in part."), "spigotmc.bbcode: " + sFawe);
+        for (String d : List.of(modrinth, spigot)) {
+            assertTrue(d.replaceAll("\\s+", " ").contains(sWe + " of WorldEdit's 171: the same or better (" + pWe + " %), " + partWe + " more in part. "
+                    + sFawe + " of FAWE's 244: the same or better (" + pFawe + " %), " + partFawe + " more in part."), "la pregunta «How many commands?»");
+        }
+        String poster = Files.readString(RAIZ.resolve("docs/site/assets-src/worldcraft.html"));
+        assertTrue(poster.contains("<b>" + sWe + "</b><span>of WorldEdit's 171</span><small>the same or better (" + pWe + " %); " + partWe + " more in part"), "póster: " + sWe);
+        assertTrue(poster.contains("<b>" + sFawe + "</b><span>of FAWE's 244</span><small>the same or better (" + pFawe + " %); " + partFawe + " more in part"), "póster: " + sFawe);
+        String readme = Files.readString(Path.of("README.md"));
+        assertTrue(readme.contains("**" + sWe + " of\nWorldEdit's 171 commands** and **" + sFawe + " of FAWE's 244**")
+                || readme.contains("**" + sWe + " of WorldEdit's 171 commands** and **" + sFawe + " of FAWE's 244**"), "README de Worldcraft: " + sWe + " y " + sFawe);
+    }
+
     @Test
     void H1_CA5_la_cantidad_de_comandos_anunciada_es_la_del_codigo() throws Exception {
         int n = comandos().size();
-        assertEquals(102, n, "cambió la cantidad de comandos de /wc: actualizar las descripciones, commands.md y el póster");
+        assertEquals(119, n, "cambió la cantidad de comandos de /wc: actualizar las descripciones, commands.md y el póster");
         for (String d : List.of("spigotmc.bbcode", "modrinth-hangar.md", "commands.md")) {
             assertTrue(leer(d).contains(n + " commands"), d + " no dice «" + n + " commands»");
         }
@@ -112,7 +181,7 @@ class PresentacionTest {
     @Test
     void H1_CA4_la_tabla_de_commands_md_es_exactamente_la_lista_de_comandos() throws Exception {
         String texto = leer("commands.md");
-        int desde = texto.indexOf("## The 102 commands of Worldcraft");
+        int desde = texto.indexOf("## The " + comandos().size() + " commands of Worldcraft");
         int hasta = texto.indexOf("Inside the groups:", desde);
         assertTrue(desde >= 0 && hasta > desde, "commands.md sin la sección de los comandos");
         Set<String> tabla = new TreeSet<>();

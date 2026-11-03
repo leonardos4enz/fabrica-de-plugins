@@ -463,6 +463,7 @@ public final class SelfTest {
             }
             s.sendMessage(plugin.messages().get("selftest-api-ok", "version", String.valueOf(api.apiVersion()), "blocks", "27"));
             slash(s);
+            game(s, w, box);
         });
     }
 
@@ -479,6 +480,71 @@ public final class SelfTest {
         }
         s.sendMessage(plugin.messages().get("selftest-slash-ok", "count", String.valueOf(Math.max(0, plugin.slash().count() - 1))));
     }
+    /**
+     * Spec 040 (compuerta 2, ADR 0009): el puente con el juego. Unos features capturados sin tocar el mundo (la zona queda
+     * igual bloque por bloque), uno de minerales cortado y la forma de una valla junto a un bloque sólido.
+     */
+    private void game(CommandSender s, World w, Box box) {
+        Nms nms = Nms.get();
+        if (!nms.available()) {
+            s.sendMessage(plugin.messages().get("selftest-game-off", "reason", nms.problem()));
+            return;
+        }
+        int x = box.minX() + 40, z = box.minZ() + 40, y = w.getHighestBlockYAt(x, z) + 1;
+        Box around = new Box(x - 12, y - 12, z - 12, x + 12, y + 24, z + 12).clampY(w.getMinHeight(), w.getMaxHeight() - 1);
+        List<String> before = read(w, around);
+        List<String> got = new ArrayList<>();
+        for (String id : List.of("minecraft:forest_rock", "minecraft:huge_red_mushroom", "minecraft:amethyst_geode", "minecraft:patch_grass")) {
+            if (!nms.hasFeature(id)) continue;
+            try {
+                var m = nms.capture(w, id, x, y, z, 42);
+                if (m != null) got.add(id.replace("minecraft:", "") + " " + m.size());
+            } catch (Nms.Direct d) {
+                got.add(id.replace("minecraft:", "") + " direct");
+            }
+        }
+        String ore;
+        try {
+            ore = nms.capture(w, "minecraft:ore_diamond_small", x, Math.max(w.getMinHeight() + 1, y - 3), z, 7) == null ? "nothing" : "captured";
+        } catch (Nms.Direct d) {
+            ore = "stopped (" + d.getMessage() + ")";
+        }
+        if (!before.equals(read(w, around))) {
+            fail(s, "a game feature changed the world");
+            return;
+        }
+        if (got.isEmpty()) {
+            fail(s, "no game feature could be captured at " + x + " " + y + " " + z);
+            return;
+        }
+        // Una valla rodeada de suelo sólido (la forma se calcula sin ponerla) se une al bloque del este.
+        String fence = "no solid block found";
+        search:
+        for (int dx = -8; dx <= 8; dx++) {
+            for (int dz = -8; dz <= 8; dz++) {
+                for (int dy = -4; dy <= 4; dy++) {
+                    int px = x + dx, py = y + dy, pz = z + dz;
+                    var east = w.getBlockAt(px + 1, py, pz);
+                    if (!east.getBlockData().isFaceSturdy(org.bukkit.block.BlockFace.WEST, org.bukkit.block.BlockSupport.FULL)) continue;
+                    var shaped = nms.shape(w, px, py, pz, org.bukkit.Bukkit.createBlockData("minecraft:oak_fence"));
+                    if (!shaped.getAsString().contains("east=true")) {
+                        fail(s, "a fence next to " + east.getType().getKey() + " does not connect: " + shaped.getAsString());
+                        return;
+                    }
+                    fence = "a fence next to " + east.getType().getKey().getKey() + " connects";
+                    break search;
+                }
+            }
+        }
+        if (fence.startsWith("no ")) {
+            fail(s, "//update: " + fence + " near " + x + " " + y + " " + z);
+            return;
+        }
+        plugin.getLogger().info("Selftest game features passed: " + nms.features().size() + " features; captured without touching the world: "
+                + String.join(", ", got) + "; ore_diamond_small " + ore + "; " + fence);
+        s.sendMessage(plugin.messages().get("selftest-game-ok", "count", String.valueOf(nms.features().size())));
+    }
+
     /** Lo que da fromCopy, en la forma que lee toCopy (Pos como double[], como al leer un archivo). */
     private static java.util.Map<String, Object> normalized(java.util.Map<String, Object> m) {
         java.util.Map<String, Object> out = new java.util.LinkedHashMap<>(m);

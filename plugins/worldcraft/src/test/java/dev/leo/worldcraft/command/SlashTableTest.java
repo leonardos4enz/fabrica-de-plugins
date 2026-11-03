@@ -87,6 +87,21 @@ class SlashTableTest {
         assertEquals("[]", missing.toString());
     }
 
+    /** Spec 040: los nombres de una barra de WorldEdit y sus banderas. */
+    @Test
+    void spec040_los_nombres_nuevos_y_sus_banderas() throws Exception {
+        SlashTable t = table();
+        assertEquals("searchitem diamond --blocks", run(t, "searchitem", "diamond", "-b"));
+        assertEquals("searchitem diamond --items", run(t, "/l", "diamond", "-i"));
+        // F-01: //searchitem (el //x que se arma solo) tiene las banderas de /searchitem, como en WorldEdit.
+        assertEquals("searchitem diamond --blocks", run(t, "/searchitem", "diamond", "-b"));
+        assertEquals("tool navwand", run(t, "/wand", "-n"), "una entrada //x de la tabla no cambia");
+        assertEquals("curve --hollow stone 1", run(t, "/curve", "-h", "stone", "1"));
+        assertEquals("snowsmooth 2 --mask stone", run(t, "/snowsmooth", "2", "-m", "stone"));
+        for (String n : List.of("toggleplace", "placement", "toggleeditwand", "range", "tracemask", "chunkinfo", "listchunks", "tz",
+                "/fillr", "/feature", "/update")) assertNotNull(t.get(n), n);
+    }
+
     @Test
     void H3_CA1_banderas_cortas_juntas_o_separadas() throws Exception {
         SlashTable t = table();

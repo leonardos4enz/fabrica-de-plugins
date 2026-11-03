@@ -138,16 +138,12 @@ final class NavigationCommands {
     }
 
     /**
-     * up y ceil dejan al jugador en el aire: si puede volar, vuela; si no, un vidrio bajo los pies como una obra de un
-     * bloque (con límites e historial) y se lo sube cuando el vidrio está puesto.
+     * up y ceil dejan al jugador en el aire con un vidrio bajo los pies como una obra de un bloque (con límites e
+     * historial) y lo suben cuando el vidrio está puesto. Spec 040 (pedido del dueño): también si puede volar (en
+     * creativo), como /up de WorldEdit: el vidrio sirve de piso.
      */
     private void hover(Player p, int x, int y, int z, String kind) {
         World w = p.getWorld();
-        if (p.getAllowFlight()) {
-            p.setFlying(true);
-            teleport(p, x, y, z);
-            return;
-        }
         Box glass = new Box(x, y - 1, z, x, y - 1, z);
         if (!w.getBlockAt(x, y - 1, z).isPassable()) {
             teleport(p, x, y, z);

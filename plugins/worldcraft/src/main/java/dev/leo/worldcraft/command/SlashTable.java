@@ -108,6 +108,14 @@ public final class SlashTable {
             out.put(label, entry);
             for (String alias : e.getStringList("aliases")) out.put(alias, new Entry(alias, to, defaults, entry.flags()));
         }
+        // Spec 040 F-01: en WorldEdit /x y //x son el mismo comando; el //x que se arma solo toma las banderas de /x
+        // (//searchitem -b), salvo que la tabla diga otra cosa para //x.
+        for (String label : c.getKeys(false)) {
+            if (label.startsWith("/") || c.contains("/" + label)) continue;
+            Entry one = out.get(label), two = out.get("/" + label);
+            if (one == null || two == null || !two.to().equals(List.of(label))) continue;
+            out.put("/" + label, new Entry("/" + label, one.to(), one.defaults(), one.flags()));
+        }
         return new SlashTable(out);
     }
 

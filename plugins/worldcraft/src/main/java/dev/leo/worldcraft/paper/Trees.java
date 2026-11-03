@@ -61,6 +61,11 @@ public final class Trees {
      * Captura los árboles de una lista de lugares por tandas (H5): espera sin bloquear a que estén cargados los 3×3 chunks
      * de alrededor de cada uno (un árbol grande se sale del suyo) y mira el reloj después de cada árbol.
      */
+    /** Spec 040: lo que se captura en un lugar (un árbol, un feature); null si no cabe. */
+    public interface Capturer {
+        Map<Long, Integer> capture(int x, int y, int z, Random r);
+    }
+
     public static final class Planter implements Scheduler.Job {
         private static final int MAX_WAIT = 200;
         private final int id;
@@ -69,7 +74,7 @@ public final class Trees {
         private final World world;
         private final PaperBlocks blocks;
         private final long[] spots;
-        private final TreeKind kind;
+        private final Capturer capturer;
         private final long seed;
         private final IntPredicate isLog;
         private final java.util.function.Consumer<Result> done;
@@ -87,8 +92,24 @@ public final class Trees {
             this.world = world;
             this.blocks = blocks;
             this.spots = spots;
-            this.kind = kind;
+            this.capturer = (x, y, z, r) -> capture(world, blocks, x, y, z, kind.pick(r), r);
             this.seed = seed;
+            this.isLog = isLog;
+            this.done = done;
+            this.onCancel = onCancel;
+        }
+
+        /** Spec 040: con otra captura (los features del juego). */
+        public Planter(int id, UUID owner, Plugin plugin, World world, long[] spots, long seed, Capturer capturer, IntPredicate isLog,
+                       java.util.function.Consumer<Result> done, Runnable onCancel) {
+            this.id = id;
+            this.owner = owner;
+            this.plugin = plugin;
+            this.world = world;
+            this.blocks = null;
+            this.spots = spots;
+            this.seed = seed;
+            this.capturer = capturer;
             this.isLog = isLog;
             this.done = done;
             this.onCancel = onCancel;
@@ -109,7 +130,7 @@ public final class Trees {
                 }
                 waited = 0;
                 Random r = new Random(seed ^ (next * 0x9E3779B97F4A7C15L));
-                Map<Long, Integer> t = capture(world, blocks, x, y, z, kind.pick(r), r);
+                Map<Long, Integer> t = capturer.capture(x, y, z, r);
                 next++;
                 if (t == null) failed++;
                 else trees.add(t);

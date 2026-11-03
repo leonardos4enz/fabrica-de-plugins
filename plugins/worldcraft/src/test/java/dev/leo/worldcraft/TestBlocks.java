@@ -62,6 +62,30 @@ public final class TestBlocks {
         BLOCKS.put("minecraft:oak_log", Map.of("axis", List.of("y", "x", "z")));
         BLOCKS.put("minecraft:birch_log", Map.of("axis", List.of("y", "x", "z")));
         for (String b : List.of("spruce_log", "basalt", "deepslate")) BLOCKS.put("minecraft:" + b, Map.of("axis", List.of("y", "x", "z")));
+        // spec 040: lo que usan los ítems de item-uses.yml y la nieve en capas
+        for (String b : List.of("dirt_path", "soul_sand", "soul_soil", "bamboo_block", "stripped_bamboo_block")) BLOCKS.put("minecraft:" + b, Map.of());
+        BLOCKS.put("minecraft:farmland", Map.of("moisture", List.of("0", "1", "2", "3", "4", "5", "6", "7")));
+        BLOCKS.put("minecraft:snow", Map.of("layers", List.of("1", "2", "3", "4", "5", "6", "7", "8")));
+        BLOCKS.put("minecraft:carved_pumpkin", Map.of("facing", List.of("north", "south", "west", "east")));
+        for (String w : List.of("oak", "spruce", "birch", "jungle", "acacia", "dark_oak", "mangrove", "cherry", "pale_oak")) {
+            for (String part : List.of("_log", "_wood")) {
+                BLOCKS.putIfAbsent("minecraft:" + w + part, Map.of("axis", List.of("y", "x", "z")));
+                BLOCKS.put("minecraft:stripped_" + w + part, Map.of("axis", List.of("y", "x", "z")));
+            }
+        }
+        for (String w : List.of("crimson", "warped")) {
+            for (String part : List.of("_stem", "_hyphae")) {
+                BLOCKS.put("minecraft:" + w + part, Map.of("axis", List.of("y", "x", "z")));
+                BLOCKS.put("minecraft:stripped_" + w + part, Map.of("axis", List.of("y", "x", "z")));
+            }
+        }
+        for (String age : List.of("", "exposed_", "weathered_", "oxidized_")) {
+            for (String c : List.of("copper", "cut_copper")) {
+                String id = age.isEmpty() && c.equals("copper") ? "copper_block" : age + c;
+                BLOCKS.put("minecraft:" + id, Map.of());
+                BLOCKS.put("minecraft:waxed_" + id, Map.of());
+            }
+        }
         for (String b : List.of("oak_leaves", "spruce_leaves")) {
             Map<String, List<String>> leaves = new LinkedHashMap<>();
             leaves.put("distance", List.of("7", "1", "2", "3", "4", "5", "6"));

@@ -209,6 +209,124 @@ public final class BrushMath {
         return toArray(out);
     }
 
+    // ------------------------------------------------------------------ spec 040: morph, dilate, heightmap
+
+    private static final int[][] FACES = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+
+    /**
+     * morph y dilate (H2 CA4, como los de WorldEdit): primero erodeIter pasadas en las que lo sólido de la esfera con al
+     * menos erodeFaces caras al aire se vuelve aire; después dilateIter pasadas en las que el aire con al menos
+     * dilateFaces caras sólidas se llena con el bloque más común de esas caras (empate: el de menor id). Cada pasada mira
+     * el resultado de la anterior. Lo que queda fuera de la foto cuenta como nada (ni aire ni sólido).
+     */
+    public static Map<Long, Integer> morph(Snapshot snap, int cx, int cy, int cz, int r, int erodeFaces, int erodeIter,
+                                           int dilateFaces, int dilateIter, IntPredicate isAir, int air) {
+        Map<Long, Integer> now = new LinkedHashMap<>();
+        java.util.function.LongToIntFunction at = p -> {
+            Integer v = now.get(p);
+            return v != null ? v : snap.get(PointsSource.unpackX(p), PointsSource.unpackY(p), PointsSource.unpackZ(p));
+        };
+        List<int[]> ball = new ArrayList<>();
+        double e = (r + 0.5) * (r + 0.5);
+        for (int dy = -r; dy <= r; dy++)
+            for (int dz = -r; dz <= r; dz++)
+                for (int dx = -r; dx <= r; dx++)
+                    if (dx * dx + dy * dy + dz * dz <= e && snap.get(cx + dx, cy + dy, cz + dz) >= 0) ball.add(new int[]{cx + dx, cy + dy, cz + dz});
+        for (int it = 0; it < erodeIter; it++) {
+            List<Long> gone = new ArrayList<>();
+            for (int[] q : ball) {
+                long p = PointsSource.pack(q[0], q[1], q[2]);
+                int s = at.applyAsInt(p);
+                if (s < 0 || isAir.test(s)) continue;
+                int open = 0;
+                for (int[] f : FACES) {
+                    int n = at.applyAsInt(PointsSource.pack(q[0] + f[0], q[1] + f[1], q[2] + f[2]));
+                    if (n >= 0 && isAir.test(n)) open++;
+                }
+                if (open >= erodeFaces) gone.add(p);
+            }
+            for (long p : gone) now.put(p, air);
+        }
+        for (int it = 0; it < dilateIter; it++) {
+            Map<Long, Integer> fill = new LinkedHashMap<>();
+            for (int[] q : ball) {
+                long p = PointsSource.pack(q[0], q[1], q[2]);
+                int s = at.applyAsInt(p);
+                if (s < 0 || !isAir.test(s)) continue;
+                Map<Integer, Integer> count = new java.util.TreeMap<>();
+                int solid = 0;
+                for (int[] f : FACES) {
+                    int n = at.applyAsInt(PointsSource.pack(q[0] + f[0], q[1] + f[1], q[2] + f[2]));
+                    if (n < 0 || isAir.test(n)) continue;
+                    solid++;
+                    count.merge(n, 1, Integer::sum);
+                }
+                if (solid < dilateFaces) continue;
+                int best = -1, most = 0;
+                for (var c : count.entrySet()) {
+                    if (c.getValue() > most) {
+                        best = c.getKey();
+                        most = c.getValue();
+                    }
+                }
+                fill.put(p, best);
+            }
+            now.putAll(fill);
+        }
+        // Solo lo que de verdad cambió.
+        now.entrySet().removeIf(en -> snap.get(PointsSource.unpackX(en.getKey()), PointsSource.unpackY(en.getKey()),
+                PointsSource.unpackZ(en.getKey())) == en.getValue());
+        return now;
+    }
+
+    /**
+     * heightmap (H2 CA5): una imagen gris (0 negro, 1 blanco; img[fila z][columna x]) estirada sobre el círculo de radio
+     * r alrededor de (cx, cz). Cada columna sube (o baja, con erase) gris × height bloques desde su cima; con flatten,
+     * termina en cy + gris × height. La cima se busca en la foto; arriba queda el bloque de la cima (el pasto) y lo que
+     * se agrega debajo copia el de abajo.
+     */
+    public static Map<Long, Integer> heightmap(Snapshot snap, int cx, int cy, int cz, int r, double[][] img, int height,
+                                               boolean erase, boolean flatten, IntPredicate isAir, int air) {
+        Map<Long, Integer> out = new LinkedHashMap<>();
+        int rows = img.length, cols = img[0].length;
+        double e = (r + 0.5) * (r + 0.5);
+        var b = snap.box;
+        for (int dz = -r; dz <= r; dz++) {
+            for (int dx = -r; dx <= r; dx++) {
+                if (dx * dx + dz * dz > e) continue;
+                int x = cx + dx, z = cz + dz;
+                int ix = r == 0 ? 0 : (int) Math.round((dx + r) * (cols - 1) / (2.0 * r));
+                int iz = r == 0 ? 0 : (int) Math.round((dz + r) * (rows - 1) / (2.0 * r));
+                int add = (int) Math.round(Math.max(0, Math.min(1, img[iz][ix])) * height);
+                int top = Integer.MIN_VALUE;
+                for (int y = b.maxY(); y >= b.minY(); y--) {
+                    int s = snap.get(x, y, z);
+                    if (s >= 0 && !isAir.test(s)) {
+                        top = y;
+                        break;
+                    }
+                }
+                if (top == Integer.MIN_VALUE) continue;
+                int target = flatten ? cy + add : erase ? top - add : top + add;
+                target = Math.max(b.minY(), Math.min(b.maxY(), target));
+                if (target == top) continue;
+                int topState = snap.get(x, top, z);
+                if (target > top) {
+                    int under = top > b.minY() ? snap.get(x, top - 1, z) : topState;
+                    if (under < 0 || isAir.test(under)) under = topState;
+                    for (int y = top; y < target; y++) out.put(PointsSource.pack(x, y, z), under);
+                    out.put(PointsSource.pack(x, target, z), topState);
+                } else {
+                    for (int y = target + 1; y <= top; y++) out.put(PointsSource.pack(x, y, z), air);
+                    out.put(PointsSource.pack(x, target, z), topState);
+                }
+            }
+        }
+        out.entrySet().removeIf(en -> snap.get(PointsSource.unpackX(en.getKey()), PointsSource.unpackY(en.getKey()),
+                PointsSource.unpackZ(en.getKey())) == en.getValue());
+        return out;
+    }
+
     // ------------------------------------------------------------------ azar
 
     /** Un número de 0 a 1 que depende solo de la posición y la semilla. */

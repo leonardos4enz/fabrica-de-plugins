@@ -294,6 +294,15 @@ con `--release 21`.
   `commands.yml` se queda con el nombre (no es de WorldEdit: no se toca). En la suite de Worldcraft, WorldEdit se llama
   con `worldedit:/pos1`, `worldedit:/schem`… Se repitió la 026/036: un heredoc de Bash con los escenarios cortó el script.
 
+- **Spec 040 (lo que faltaba de WorldEdit):** la única excepción a «sin NMS» es `paper/Nms` de Worldcraft ([ADR 0009](docs/adr/0009-nms-aislado.md),
+  pedido del dueño): reflexión con los nombres de Mojang (el jar declara `paperweight-mappings-namespace: mojang`), un
+  `Proxy` de `WorldGenLevel` que guarda lo que el juego pondría y nunca escribe, `getChunk` corta el *feature* (los de
+  minerales escriben directo) y, si algo no está, solo esos comandos se apagan. En 1.21.4 los *features* de diamante son
+  `ore_diamond_small|medium|large|buried` (no hay `ore_diamond`), un geodo en el aire no cabe y un hongo gigante pide tierra
+  debajo. En la suite, `pide(jugador, '/x')` ya es `//x` (el bot pone la primera barra): `'//fillr'` llegaba como `///fillr`.
+  El `//x` que se arma solo no tenía las banderas de `/x` (`//searchitem -b`, F-01: ahora las hereda). Una curva con grosor
+  1 «hueca» no tiene cáscara donde uno cree (el bloque de encima de un punto es interior): se comprueba el de abajo.
+
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.
 - **README del plugin** (`plugins/<nombre>/README.md`): cada capacidad nueva o cambiada con su ejemplo, y la sección

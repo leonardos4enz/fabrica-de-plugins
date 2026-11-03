@@ -82,9 +82,35 @@ public final class ToolActions {
         busy.remove(id);
     }
 
-    /** El bloque que mira (con la cara), hasta tools.range; null si no hay (lo dice en la barra de acción). */
-    private RayTraceResult target(Player p) {
-        int range = plugin.config().tools().range();
+    /**
+     * El bloque que mira (con la cara), hasta tools.range; null si no hay (lo dice en la barra de acción). Spec 040: con
+     * /wc range, hasta ese alcance; con /wc tracemask, el primer bloque que cumple la máscara.
+     */
+    private RayTraceResult target(Player p, ToolSpec s) {
+        int max = plugin.config().tools().range();
+        int range = s != null && s.text("reach") != null ? Math.min(max, s.number("reach")) : max;
+        String trace = s == null ? null : s.trace();
+        if (trace != null) {
+            Mask.Compiled m;
+            try {
+                m = plugin.config().parser().mask(trace).compile(blocks().table());
+            } catch (ParseException e) {
+                p.sendMessage(msg().get("error", "message", e.getMessage()));
+                return null;
+            }
+            org.bukkit.util.BlockIterator it = new org.bukkit.util.BlockIterator(p, range);
+            Block prev = null;
+            while (it.hasNext()) {
+                Block b = it.next();
+                if (m.test(blocks().id(b.getBlockData()))) {
+                    BlockFace face = prev == null ? BlockFace.UP : b.getFace(prev);
+                    return new RayTraceResult(b.getLocation().toVector(), b, face == null ? BlockFace.UP : face);
+                }
+                prev = b;
+            }
+            p.sendActionBar(msg().get("tool-no-target", "range", String.valueOf(range)));
+            return null;
+        }
         RayTraceResult hit = Terrain.look(p, range);
         if (hit == null || hit.getHitBlock() == null) {
             p.sendActionBar(msg().get("tool-no-target", "range", String.valueOf(range)));
@@ -98,7 +124,7 @@ public final class ToolActions {
     /** Un clic derecho con un pincel. */
     public void brush(Player p, ToolSpec s) {
         if (!ready(p)) return;
-        RayTraceResult hit = target(p);
+        RayTraceResult hit = target(p, s);
         if (hit == null) return;
         Block b = hit.getHitBlock();
         World w = b.getWorld();
@@ -175,6 +201,54 @@ public final class ToolActions {
                         busy.remove(id);
                         request(p, w, kind, s.describe(), prep.source(), prep.bounds(), prep.volume(), prep.placed(), s);
                     }, () -> busy.remove(id));
+                }
+                // Spec 040 H2: los pinceles de WorldEdit que faltaban.
+                case SNOW, SNOWSMOOTH -> {
+                    Box box = clamp(w, new Box(x - r, y - r, z - r, x + r, y + r + 1, z + r));
+                    if (box == null) return;
+                    boolean stack = s.flag("stack");
+                    int passes = s.number("iterations");
+                    double e = (r + 0.5) * (r + 0.5);
+                    read(p, w, box, kind, snap -> {
+                        dev.leo.worldcraft.edit.SnowMath.Rules rules = snowRules(snap, null);
+                        return () -> s.kind() == ToolKind.SNOW ? dev.leo.worldcraft.edit.SnowMath.fall(snap, x, y, z, r, stack, rules)
+                                : dev.leo.worldcraft.edit.SnowMath.smooth(snap, (cx, cz) -> (double) (cx - x) * (cx - x) + (double) (cz - z) * (cz - z) <= e, passes, rules);
+                    }, changes -> changes(p, s, w, kind, changes));
+                }
+                case BIOME -> {
+                    var sphere = new dev.leo.worldcraft.region.Ellipsoid(x, y, z, r, r, r, true).clampY(w.getMinHeight(), w.getMaxHeight() - 1);
+                    if (sphere == null) return;
+                    plugin.command().biomeAt(p, w, sphere, s.text("biome"), s.describe());
+                }
+                case MORPH, DILATE -> {
+                    Box box = clamp(w, new Box(x - r - 1, y - r - 1, z - r - 1, x + r + 1, y + r + 1, z + r + 1));
+                    if (box == null) return;
+                    int air = blocks().air();
+                    read(p, w, box, kind, snap -> {
+                        // Lo que tiene datos (cofres, carteles) no se toca: cuenta como sólido pero no se borra ni se copia.
+                        IntPredicate isAir = ids(snap, blocks()::isAir), tile = ids(snap, blocks()::hasTile);
+                        return () -> {
+                            var out = BrushMath.morph(snap, x, y, z, r, s.number("erode_faces"), s.number("erode"), s.number("dilate_faces"),
+                                    s.number("dilate"), isAir, air);
+                            out.entrySet().removeIf(en -> tile.test(en.getValue()) || tile.test(snap.get(PointsSource.unpackX(en.getKey()),
+                                    PointsSource.unpackY(en.getKey()), PointsSource.unpackZ(en.getKey()))));
+                            return out;
+                        };
+                    }, changes -> changes(p, s, w, kind, changes));
+                }
+                case HEIGHTMAP -> heightmap(p, s, w, x, y, z, kind);
+                case APPLY -> apply(p, s, w, x, y, z, kind);
+                case FEATURE -> {
+                    Nms nms = Nms.get();
+                    if (!nms.available()) {
+                        p.sendMessage(msg().get("nms-unavailable", "reason", nms.problem()));
+                        return;
+                    }
+                    int lo = Math.max(w.getMinHeight(), y - r), hi = Math.min(w.getMaxHeight() - 2, y + r);
+                    var region = new dev.leo.worldcraft.region.Cylinder(x, z, r, r, lo, hi);
+                    UUID id = p.getUniqueId();
+                    busy.add(id);
+                    new Nature(plugin).featureField(p, w, region, s.text("feature"), s.number("density"), kind, () -> busy.remove(id));
                 }
                 case BUTCHER -> {
                     if (!p.hasPermission("worldcraft.butcher")) {
@@ -255,7 +329,7 @@ public final class ToolActions {
             return;
         }
         if (!ready(p)) return;
-        RayTraceResult hit = target(p);
+        RayTraceResult hit = target(p, s);
         if (hit == null) return;
         Block b = hit.getHitBlock();
         World w = b.getWorld();
@@ -310,6 +384,18 @@ public final class ToolActions {
                     });
                 }
                 case FARWAND -> plugin.command().setCorner(p, p.getUniqueId(), right ? 2 : 1, w, x, y, z);
+                case STACKER -> {
+                    // Spec 040 H3 CA5: el bloque se repite hacia la cara tocada (clic derecho) o hacia el otro lado (izquierdo).
+                    BlockFace face = hit.getHitBlockFace() == null ? BlockFace.UP : hit.getHitBlockFace();
+                    if (!right) face = face.getOppositeFace();
+                    int n = Math.min(s.number("range"), plugin.config().tools().maxRange());
+                    Mask.Compiled into = plugin.config().parser().mask(s.mask() == null ? "air" : s.mask()).compile(blocks().table());
+                    int lo = w.getMinHeight(), hi = w.getMaxHeight() - 1;
+                    long[] pts = dev.leo.worldcraft.tool.Stacker.points(x, y, z, face.getModX(), face.getModY(), face.getModZ(), n, into::test,
+                            (px, py, pz) -> py < lo || py > hi ? -1 : blocks().id(w.getBlockData(px, py, pz)));
+                    int state = blocks().id(b.getBlockData());
+                    points(p, s.with("mask", null), w, kind, pts, (px, py, pz, c) -> state, List.of(state), s.describe());
+                }
                 case TREE -> {
                     // Spec 033 H5 CA4: un árbol sobre el bloque que mira (si encima hay lugar).
                     if (!right) return;
@@ -413,6 +499,141 @@ public final class ToolActions {
             Flood.Bound ball = (px, py, pz) -> (double) (px - x) * (px - x) + (double) (py - y) * (py - y) + (double) (pz - z) * (pz - z) <= e;
             return () -> sp.mode().equals("area") ? BrushMath.cube(snap, x, y, z, r, same) : Flood.connected(snap, x, y, z, ball, same);
         }, pts -> points(p, null, w, kind, pts, (px, py, pz, c) -> blocks().air(), List.of(blocks().air()), sp.mode() + " " + r));
+    }
+
+    // ------------------------------------------------------------------ spec 040
+
+    private final Map<Integer, Boolean> sturdy = new HashMap<>();
+
+    /** ¿Aguanta una capa de nieve encima? (necesita el registro del servidor). */
+    private boolean sturdy(int st) {
+        return sturdy.computeIfAbsent(st, k -> blocks().data(k).isFaceSturdy(BlockFace.UP, org.bukkit.block.BlockSupport.FULL));
+    }
+
+    /**
+     * Las reglas de la nieve con los estados de la foto, armadas en el hilo principal (lección 032); ground (o null) es lo
+     * que cuenta como suelo además de aguantar la nieve (--mask de //snowsmooth).
+     */
+    public dev.leo.worldcraft.edit.SnowMath.Rules snowRules(Snapshot snap, Mask.Compiled ground) {
+        PaperBlocks b = blocks();
+        int[] snow = new int[9];
+        for (int i = 1; i <= 8; i++) snow[i] = b.id(Bukkit.createBlockData("minecraft:snow[layers=" + i + "]"));
+        Map<Integer, Integer> layers = new HashMap<>();
+        for (int i = 1; i <= 8; i++) layers.put(snow[i], i);
+        IntPredicate air = ids(snap, b::isAir), holds = ids(snap, st -> !b.isAir(st) && !layers.containsKey(st) && sturdy(st)
+                && (ground == null || ground.test(st)));
+        int water = b.id(Bukkit.createBlockData("minecraft:water")), ice = b.id(org.bukkit.Material.ICE.createBlockData());
+        return new dev.leo.worldcraft.edit.SnowMath.Rules(air, st -> layers.getOrDefault(st, 0), holds, snow, b.air(), st -> st == water, ice);
+    }
+
+    /** La obra de unos cambios ya calculados (posición → estado). */
+    private void changes(Player p, ToolSpec s, World w, String kind, Map<Long, Integer> changes) {
+        long[] pts = changes.keySet().stream().mapToLong(Long::longValue).toArray();
+        points(p, s, w, kind, pts, (px, py, pz, c) -> changes.get(PointsSource.pack(px, py, pz)), new HashSet<>(changes.values()));
+    }
+
+    /** H2 CA5: la imagen gris (leída en el hilo de cálculo) estirada sobre el círculo donde mira. */
+    private void heightmap(Player p, ToolSpec s, World w, int x, int y, int z, String kind) {
+        int r = s.radius(), h = s.number("height");
+        java.nio.file.Path file;
+        try {
+            file = plugin.images().file(s.text("image"));
+        } catch (RuntimeException e) {
+            p.sendMessage(msg().get("error", "message", "There is no image '" + s.text("image") + "' in the images folder"));
+            return;
+        }
+        int lo = Math.max(w.getMinHeight(), y - h - r), hi = Math.min(w.getMaxHeight() - 1, y + h + r);
+        Box box = new Box(x - r, lo, z - r, x + r, hi, z + r);
+        boolean erase = s.flag("erase"), flatten = s.flag("flatten");
+        int air = blocks().air(), side = 2 * r + 1;
+        read(p, w, box, kind, snap -> {
+            IntPredicate isAir = ids(snap, st -> blocks().isAir(st) || isCover(st));
+            return () -> BrushMath.heightmap(snap, x, y, z, r, gray(file, side), h, erase, flatten, isAir, air);
+        }, changes -> changes(p, s, w, kind, changes));
+    }
+
+    /** El pasto corto y las flores no son la cima (como en el pincel de terreno). */
+    private boolean isCover(int st) {
+        return plugin.terrain().masksForCommands().cover().test(st);
+    }
+
+    /** La imagen en gris (0..1) de side × side, leída del disco en el hilo de cálculo. */
+    private static double[][] gray(java.nio.file.Path file, int side) {
+        try {
+            java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(file.toFile());
+            if (img == null) throw new IllegalArgumentException("not an image: " + file.getFileName());
+            double[][] out = new double[side][side];
+            for (int j = 0; j < side; j++) {
+                for (int i = 0; i < side; i++) {
+                    int px = Math.min(img.getWidth() - 1, i * img.getWidth() / side), py = Math.min(img.getHeight() - 1, j * img.getHeight() / side);
+                    int argb = img.getRGB(px, py);
+                    double a = ((argb >>> 24) & 255) / 255.0;
+                    double l = (0.299 * ((argb >> 16) & 255) + 0.587 * ((argb >> 8) & 255) + 0.114 * (argb & 255)) / 255.0;
+                    out[j][i] = l * a;
+                }
+            }
+            return out;
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException(e);
+        }
+    }
+
+    /** H2 CA6: usar el ítem en cada bloque de la forma (o en density % al azar), con las reglas de item-uses.yml. */
+    private void apply(Player p, ToolSpec s, World w, int x, int y, int z, String kind) {
+        var rules = plugin.config().itemUses().rules(s.text("item"));
+        if (rules == null) {
+            p.sendMessage(msg().get("error", "message", "Worldcraft does not know what '" + s.text("item") + "' does (item-uses.yml)"));
+            return;
+        }
+        int r = s.radius(), density = s.number("density");
+        String shape = s.text("shape") == null ? "sphere" : s.text("shape");
+        Box box = clamp(w, new Box(x - r, y - r, z - r, x + r, y + r + 1, z + r));
+        if (box == null) return;
+        Solid solid = shape.equals("cube") ? null : shape.equals("cyl") ? Solid.cylinder(x, y - r, z, r, r, 2 * r + 1) : Solid.sphere(x, y, z, r, r, r);
+        long seed = ThreadLocalRandom.current().nextLong();
+        List<Mask.Compiled> masks = new ArrayList<>();
+        List<Pattern.Compiled> pats = new ArrayList<>();
+        for (var rule : rules) {
+            masks.add(rule.mask().compile(blocks().table()));
+            pats.add(rule.pattern().compile(blocks().table()));
+        }
+        read(p, w, box, kind, snap -> {
+            IntPredicate isAir = ids(snap, blocks()::isAir);
+            // Qué regla cumple cada estado de la foto (la tabla se mira aquí, en el hilo principal).
+            Map<Integer, Integer> which = new HashMap<>();
+            for (int st : snap.distinct()) {
+                for (int i = 0; i < rules.size(); i++) {
+                    if (masks.get(i).test(st)) {
+                        which.put(st, i);
+                        break;
+                    }
+                }
+            }
+            return () -> {
+                Map<Long, Integer> out = new java.util.LinkedHashMap<>();
+                for (int py = y - r; py <= y + r; py++) {
+                    for (int pz = z - r; pz <= z + r; pz++) {
+                        for (int px = x - r; px <= x + r; px++) {
+                            if (solid != null && !solid.contains(px, py, pz)) continue;
+                            int st = snap.get(px, py, pz);
+                            Integer i = st < 0 ? null : which.get(st);
+                            if (i == null) continue;
+                            if (density < 100 && BrushMath.hash01(px, py, pz, seed) * 100 >= density) continue;
+                            if (rules.get(i).above()) {
+                                int up = snap.get(px, py + 1, pz);
+                                if (up < 0 || !isAir.test(up)) continue;
+                                int t = pats.get(i).apply(px, py + 1, pz, up, seed);
+                                if (t >= 0 && t != up) out.put(PointsSource.pack(px, py + 1, pz), t);
+                            } else {
+                                int t = pats.get(i).apply(px, py, pz, st, seed);
+                                if (t >= 0 && t != st) out.put(PointsSource.pack(px, py, pz), t);
+                            }
+                        }
+                    }
+                }
+                return out;
+            };
+        }, changes -> changes(p, s, w, kind, changes));
     }
 
     // ------------------------------------------------------------------ utilidades

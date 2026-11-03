@@ -42,12 +42,12 @@ help:
   mountain: { usage: "/wc mountain [small|medium|large|huge|radius] [style] [key=value...] [--now]", text: "A mountain where you look, shown first. Options: height, peaks, roughness, ridges, sharpness, crater, seed, style, at=x,y,z, world.", example: "/wc mountain large style=volcano seed=42" }
   island: { usage: "/wc island [small|medium|large|huge|radius] [style] [key=value...] [--now]", text: "A floating island in front of you, shown first. Options: depth, relief, spikes, roots, trees, seed, style, at=x,y,z, world.", example: "/wc island large trees=5 spikes=1" }
   reroll: { usage: "/wc reroll", text: "The last mountain or island again with another seed (a new preview).", example: "/wc reroll" }
-  brush: { usage: "/wc brush <sphere|cyl|set|clipboard|splatter|scatter|rock|gravity|extinguish|butcher|forest|deform|none> ... | [raise|lower|smooth|flatten|erode|paint] [radius] [strength]", text: "Turn the item in your hand into a brush (only that item; an empty hand gets one): right click uses it where you look. Building brushes: sphere <blocks> [radius] [--hollow], cyl <blocks> [radius] [height], set <cube|sphere|cyl> [radius] <blocks>, clipboard [--air] [--origin], splatter <blocks> [radius] [decay], scatter <blocks> [radius] [points] [distance] [--overlay], rock <blocks> [radius] [sphericity] [frequency] [amplitude], gravity [radius] [--height], extinguish [radius], butcher [radius] [--animals...], forest [tree] [radius] [density], deform [radius] [formula] [--raw] [--offset]; mask=.. and radius=.. change the brush in your hand; none makes it a normal item again. Terrain brushes (raise, lower, smooth, flatten, erode, paint) only move natural ground; left click picks the next mode.", example: "/wc brush sphere stone 4" }
-  tool: { usage: "/wc tool <repl|floodfill|info|cycler|deltree|farwand|lrbuild|navwand|tree|none> ...", text: "Turn the item in your hand into a one-click tool: repl <blocks> (right click places, left click picks), floodfill <blocks> [range], info, cycler (right click: next value, left click: next property), deltree (removes a floating tree), farwand (corners from far away), lrbuild <left> <right> (build from far away; air removes), navwand (left: jump to, right: through walls), tree [type] (right click grows a tree on the block). none makes it a normal item again.", example: "/wc tool repl oak_planks" }
+  brush: { usage: "/wc brush <sphere|cyl|set|clipboard|splatter|scatter|rock|gravity|extinguish|butcher|forest|deform|snow|snowsmooth|biome|morph|dilate|heightmap|feature|apply|none> ... | [raise|lower|smooth|flatten|erode|paint] [radius] [strength]", text: "Turn the item in your hand into a brush (only that item; an empty hand gets one): right click uses it where you look. Building brushes: sphere <blocks> [radius] [--hollow], cyl <blocks> [radius] [height], set <cube|sphere|cyl> [radius] <blocks>, clipboard [--air] [--origin], splatter <blocks> [radius] [decay], scatter <blocks> [radius] [points] [distance] [--overlay], rock <blocks> [radius] [sphericity] [frequency] [amplitude], gravity [radius] [--height], extinguish [radius], butcher [radius] [--animals...], forest [tree] [radius] [density], deform [radius] [formula] [--raw] [--offset], snow [radius] [--stack], snowsmooth [radius] [passes], biome [radius] <biome>, morph [radius] [erode faces] [erode passes] [dilate faces] [dilate passes], dilate [radius] [faces] [passes], heightmap <image> [radius] [height] [--erase] [--flatten], feature <feature> [radius] [density], apply [sphere|cube|cyl] [radius] item <item>, paint [shape] [radius] [density] item <item>; mask=.. and radius=.. change the brush in your hand; none makes it a normal item again. Terrain brushes (raise, lower, smooth, flatten, erode, paint) only move natural ground; left click picks the next mode.", example: "/wc brush sphere stone 4" }
+  tool: { usage: "/wc tool <repl|floodfill|info|cycler|deltree|farwand|lrbuild|navwand|tree|stacker|none> ...", text: "Turn the item in your hand into a one-click tool: repl <blocks> (right click places, left click picks), floodfill <blocks> [range], info, cycler (right click: next value, left click: next property), deltree (removes a floating tree), farwand (corners from far away), lrbuild <left> <right> (build from far away; air removes), navwand (left: jump to, right: through walls), tree [type] (right click grows a tree on the block), stacker [range] [mask] (repeats the block towards the face you click; left click, the other way). none makes it a normal item again.", example: "/wc tool repl oak_planks" }
   superpickaxe: { usage: "/wc superpickaxe [single|area <radius>|recursive <radius>|off]", text: "Break blocks instantly with any pickaxe (left click): single, area (the same block in a cube) or recursive (the same block, connected). Nothing is dropped and /wc undo brings them back. /wc sp alone turns it on or off.", example: "/wc sp area 2" }
   sp: { usage: "/wc sp [single|area <radius>|recursive <radius>|off]", text: "Short for /wc superpickaxe.", example: "/wc sp" }
   styles: { usage: "/wc styles", text: "The terrain styles in terrain.yml (which blocks go where).", example: "/wc styles" }
-  schem: { usage: "/wc schem list [page] [filter] | load <name> | save <name> [--overwrite] | delete <name> | import [--overwrite]", text: "WorldEdit's .schem files (also /wc schematic): load one into your clipboard (then /wc paste --preview), save your clipboard, list or delete them. WorldEdit's folder is read too; import copies WorldEdit's and FAWE's into Worldcraft's folder.", example: "/wc schem load castles/tower" }
+  schem: { usage: "/wc schem list [page] [filter] | load <name> | save <name> [--overwrite] | delete <name> | import [--overwrite] | formats", text: "WorldEdit's .schem files (also /wc schematic): load one into your clipboard (then /wc paste --preview), save your clipboard, list or delete them. WorldEdit's folder is read too; import copies WorldEdit's and FAWE's into Worldcraft's folder; formats says what it reads and writes.", example: "/wc schem load castles/tower" }
   reload: { usage: "/wc reload", text: "Reload config.yml, messages.yml, presets.yml and terrain.yml.", example: "/wc reload" }
   validate: { usage: "/wc validate", text: "List the problems in the configuration.", example: "/wc validate" }
   selftest: { usage: "/wc selftest", text: "Edit, undo, redo and undo a small box near spawn and check every step.", example: "/wc selftest" }
@@ -87,7 +87,7 @@ help:
   ceil: { usage: "/wc ceil [space]", text: "Go up right under the ceiling.", example: "/wc ceil" }
   thru: { usage: "/wc thru", text: "Go through the wall (or floor, or ceiling) you look at.", example: "/wc thru" }
   jumpto: { usage: "/wc jumpto", text: "Go to the block you look at.", example: "/wc jumpto" }
-  up: { usage: "/wc up <blocks>", text: "Go straight up; if you cannot fly, a glass block is put under your feet (/wc undo removes it).", example: "/wc up 10" }
+  up: { usage: "/wc up <blocks>", text: "Go straight up with a glass block under your feet as a floor, also in creative (/wc undo removes it).", example: "/wc up 10" }
   # Spec 029: selección, información y máscara global
   hpos1: { usage: "/wc hpos1", text: "Corner 1 at the block you look at, far away too.", example: "/wc hpos1" }
   hpos2: { usage: "/wc hpos2", text: "Corner 2 at the block you look at, far away too.", example: "/wc hpos2" }
@@ -120,6 +120,25 @@ help:
   regen: { usage: "/wc regen [seed | random] [biome] [--biomes] [--preview]", text: "Put your selection back the way the world generator made it (WorldEdit's //regen): the blocks, and the loot chests of structures. With the world's seed by default; random (-r) another seed, or write one; a biome makes everything with that biome. --biomes (-b) puts the biomes back too. Mobs are not touched. The terrain is made in a temporary world that is deleted afterwards.", example: "/wc regen --biomes" }
   snapshot: { usage: "/wc snapshot list [page] | use <name | latest> | sel <number> | before <date> | after <date>", text: "Choose one of the server's backups for /wc restore (alias snap). The backups are in the folder snapshots.folder of config.yml. A date is 2026-11-02 or 2026-11-02 14:30 (server time). Without choosing, /wc restore uses the newest.", example: "/wc snapshot before 2026-11-02 14:30" }
   restore: { usage: "/wc restore [backup] [--biomes] [--preview]", text: "Put your selection back the way it was in a backup (WorldEdit's //restore): the blocks, chests and signs with what they had, and other block data; --biomes (-b) the biomes too. What the backup does not have is left as it is.", example: "/wc restore --preview" }
+
+  # Spec 040: what was missing from WorldEdit 7.3.19
+  curve: { usage: "/wc curve <pattern> [thickness] [--hollow] [--preview]", text: "A smooth curve through the points of a convex or poly selection, in the order you clicked them (like WorldEdit's //curve). --hollow (-h) leaves only the shell of a thick curve.", example: "/wc curve stone_bricks 1" }
+  snowsmooth: { usage: "/wc snowsmooth [passes] [--mask <mask>] [--preview]", text: "Smooth the snow of your selection: snow layers count as eighths of a block, so hills of snow become slopes. Only snow layers change, never the ground. --mask (-m): which blocks count as ground.", example: "/wc snowsmooth 3" }
+  fillr: { usage: "/wc fillr <pattern> <radius> [depth] [--preview]", text: "Fill the hole you stand in, sideways and down, inside a sphere (like WorldEdit's //fillr; /wc fill uses a cylinder).", example: "/wc fillr water 10" }
+  feature: { usage: "/wc feature <feature> [--preview]", text: "One of the game's features (a mossy rock, an amethyst geode, a huge mushroom, a patch of flowers...) at your feet (or where /wc placement says), with preview and undo. Ore features are refused: use /wc ore.", example: "/wc feature amethyst_geode" }
+  update: { usage: "/wc update [--preview]", text: "Fix the shape of the blocks of your selection to match their neighbors (fences, walls, panes, stairs, redstone that don't connect after a paste), with undo.", example: "/wc update" }
+  placement: { usage: "/wc placement [player|pos1|pos2|center] [x,y,z]", text: "Where shapes (sphere, cyl...), the fixes around you (fill, drain, snow...) and features go: your feet, a corner or the middle of your selection, plus an offset. Without words, it says the current one.", example: "/wc placement pos1 0,1,0" }
+  toggleplace: { usage: "/wc toggleplace", text: "Switch between placing at your feet and at corner 1 (like WorldEdit's //toggleplace).", example: "/wc toggleplace" }
+  toggleeditwand: { usage: "/wc toggleeditwand", text: "Make the wand a normal axe until you use this again (or back).", example: "/wc toggleeditwand" }
+  range: { usage: "/wc range <blocks>", text: "How far the brush or tool in your hand reaches where you look (up to tools.range).", example: "/wc range 60" }
+  tracemask: { usage: "/wc tracemask <mask> | off", text: "The brush or tool in your hand aims at the first block that matches the mask (water, !air, #leaves...) instead of the first solid one.", example: "/wc tracemask water" }
+  chunkinfo: { usage: "/wc chunkinfo", text: "The chunk you stand in, its region file and where you are inside it.", example: "/wc chunkinfo" }
+  listchunks: { usage: "/wc listchunks [page]", text: "The chunks your selection touches, with their region files.", example: "/wc listchunks" }
+  searchitem: { usage: "/wc searchitem <text> [page] [--blocks|--items]", text: "Find items and blocks by name (-b only blocks, -i only items).", example: "/wc searchitem stone brick" }
+  version: { usage: "/wc version", text: "The versions of Worldcraft, the server and Java, and whether the game's features work here.", example: "/wc version" }
+  report: { usage: "/wc report", text: "Write a report for a bug (versions, worlds, plugins, configuration, running edits) to plugins/Worldcraft/reports/. It is never uploaded anywhere.", example: "/wc report" }
+  trace: { usage: "/wc trace [on|off]", text: "After each of your edits, say how many blocks it looked at, changed, found already like that and left out (mask, shape), and how long it took.", example: "/wc trace on" }
+  tz: { usage: "/wc tz [zone]", text: "Your time zone for the dates of the backups (/wc snapshot list, before, after): Europe/Madrid, America/Bogota, UTC-5, or server.", example: "/wc tz America/Bogota" }
 
 wand-given: "{prefix}<green>Here is your wand: <white>left click</white> a block for corner 1, <white>right click</white> for corner 2."
 corner-set: "{prefix}Corner {which} at <white>{pos}</white>."
@@ -438,3 +457,40 @@ restore-why-broken: "{count} damaged ({reason})"
 restore-why-unsupported: "{count} saved with {what} compression, which Worldcraft can't read"
 restore-unknown-blocks: "{prefix}<yellow>{count} block(s) of the backup don't exist on this server and are left as they are: {names}."
 restore-nothing: "{prefix}<yellow>Nothing of your selection is in this backup: nothing to change."
+
+# Spec 040
+trace-line: "{prefix}<gray>Trace #{id} {kind}: {visited} looked at, <white>{changed}</white> changed, {same} already like that, {kept} left out (mask or shape), {skipped} skipped (changed after). {ms} ms of server time in {ticks} tick(s), the longest {max} ms."
+trace-on: "{prefix}Trace on: after each of your edits you'll see its numbers. /wc trace off stops it."
+trace-off: "{prefix}Trace off."
+curve-needs-points: "{prefix}<red>A curve goes through the points of a convex or poly selection (yours is {kind}): /wc sel convex, then click the points in order."
+feature-unknown: "{prefix}<red>There is no feature '{input}'{hint}. <gray>Tab shows them all."
+feature-none: "{prefix}<yellow>The feature {feature} doesn't fit there (the game needs the right ground or room)."
+feature-direct: "{prefix}<red>The feature {feature} writes straight into the world, so Worldcraft can't preview or undo it. For ores use /wc ore."
+features-all: "{prefix}<green>{planted} feature(s) placed."
+features-some: "{prefix}<yellow>{planted} feature(s) placed; {failed} didn't fit."
+nms-unavailable: "{prefix}<red>The game's features are not available on this server version ({reason}). Everything else in Worldcraft works."
+placement-now: "{prefix}Shapes and fixes go at: <white>{placement}</white>{offset}. <gray>/wc placement player|pos1|pos2|center [x,y,z]"
+placement-set: "{prefix}Shapes and fixes now go at: <white>{placement}</white>{offset}."
+placement-missing: "{prefix}<red>Your placement is {placement}, but that point isn't set: select it, or /wc placement player."
+wand-off: "{prefix}The wand is a normal axe now. /wc toggleeditwand turns it back on."
+wand-on: "{prefix}The wand selects again."
+no-brush-in-hand: "{prefix}<red>Hold a brush or a tool (/wc brush, /wc tool) first."
+range-terrain: "{prefix}<red>The terrain brush reaches terrain.brush.range blocks (config.yml); /wc range is for building brushes and tools."
+chunk-info: "{prefix}Chunk <white>{chunk}</white> in {world} · region file <white>{region}</white> · you are at {inside} inside it."
+chunks-header: "{prefix}Your selection touches <white>{count}</white> chunk(s) (page {page} of {pages}):"
+chunks-line: "<gray> · <white>{chunk}</white> in {region}"
+chunks-more: "<gray>More: /wc listchunks {next}"
+search-header: "{prefix}{count} result(s) for '{text}' (page {page} of {pages}):"
+search-line: "<gray> · <white>{id}</white> ({kind})"
+search-none: "{prefix}<yellow>No item or block is called anything like '{text}'."
+schem-formats: "{prefix}Schematic formats (WorldEdit's .schem):"
+schem-format-line: "<gray> · <white>{format}</white>: {can}"
+schem-formats-folders: "<gray>Worldcraft also reads WorldEdit's and FAWE's schematics folders where they are."
+version: "{prefix}Worldcraft <white>{version}</white> · {server} · Java {java} · game features: {features}"
+report-written: "{prefix}<green>Report written to <white>{file}</white>. It was not uploaded anywhere: share it yourself if you want help."
+report-failed: "{prefix}<red>Could not write the report (see the console)."
+tz-now: "{prefix}Your time zone for backups: <white>{zone}</white> (now {time})."
+tz-set: "{prefix}Time zone for backups: <white>{zone}</white> (now {time})."
+tz-unknown: "{prefix}<red>There is no time zone '{input}'{hint}. Write one like Europe/Madrid, UTC-5 or server."
+selftest-game-ok: "{prefix}<green>Selftest game features passed: {count} features, captured without touching the world."
+selftest-game-off: "{prefix}<yellow>The game's features are not available on this server version ({reason}): //feature and //update are off, the rest works."

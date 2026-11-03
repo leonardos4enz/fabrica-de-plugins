@@ -22,6 +22,15 @@ public final class Session {
     public int formulaTimeout = -1;
     /** Spec 036: la copia de seguridad elegida con /wc snapshot (su nombre), o null = la más nueva. */
     public String snapshot;
+    /** Spec 040 H3 CA1: dónde ponen las formas y utilidades (player, pos1, pos2, center) y cuánto se corre. */
+    public String placement = "player";
+    public int[] placementOffset = {0, 0, 0};
+    /** Spec 040 H3 CA2: la varita no selecciona (/wc toggleeditwand). */
+    public boolean wandOff;
+    /** Spec 040 H4 CA5: la zona horaria de las fechas de las copias (/wc tz); null = la del servidor. */
+    public java.time.ZoneId zone;
+    /** Spec 040 H4 CA5: tras cada obra propia, sus números (/wc trace). */
+    public boolean trace;
 
     /** La caja seleccionada o null si falta una esquina o la forma no es una caja (spec 030: ver region()). */
     public Box box() {

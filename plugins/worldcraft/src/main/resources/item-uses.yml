@@ -1,0 +1,54 @@
+# What an item does to a block, for /wc brush apply ... item <item> and /wc brush paint ... item <item> (spec 040).
+# This file is read from the plugin jar. To add or change an item, write an item-uses.yml in plugins/Worldcraft/ with
+# only your items: they are added to these, and an item you write replaces the one here.
+#
+# Each rule is "<mask> -> <pattern>" (the block itself changes) or "above <mask> -> <pattern>" (something goes in the
+# air on top of the block). Masks and patterns are the usual ones: "70% air, 30% short_grass", "^stripped_oak_log"
+# (the ^ keeps the block's states: a log keeps its axis). The first rule that matches a block is used.
+# Item names can use * ("*_hoe" is every hoe).
+uses:
+  "*_hoe":
+    - "grass_block, dirt, dirt_path -> farmland"
+    - "coarse_dirt, rooted_dirt -> dirt"
+  "*_shovel":
+    - "grass_block, dirt, podzol, coarse_dirt, mycelium, rooted_dirt -> dirt_path"
+  "*_axe":
+    - "oak_log -> ^stripped_oak_log"
+    - "spruce_log -> ^stripped_spruce_log"
+    - "birch_log -> ^stripped_birch_log"
+    - "jungle_log -> ^stripped_jungle_log"
+    - "acacia_log -> ^stripped_acacia_log"
+    - "dark_oak_log -> ^stripped_dark_oak_log"
+    - "mangrove_log -> ^stripped_mangrove_log"
+    - "cherry_log -> ^stripped_cherry_log"
+    - "pale_oak_log -> ^stripped_pale_oak_log"
+    - "oak_wood -> ^stripped_oak_wood"
+    - "spruce_wood -> ^stripped_spruce_wood"
+    - "birch_wood -> ^stripped_birch_wood"
+    - "jungle_wood -> ^stripped_jungle_wood"
+    - "acacia_wood -> ^stripped_acacia_wood"
+    - "dark_oak_wood -> ^stripped_dark_oak_wood"
+    - "mangrove_wood -> ^stripped_mangrove_wood"
+    - "cherry_wood -> ^stripped_cherry_wood"
+    - "pale_oak_wood -> ^stripped_pale_oak_wood"
+    - "crimson_stem -> ^stripped_crimson_stem"
+    - "warped_stem -> ^stripped_warped_stem"
+    - "crimson_hyphae -> ^stripped_crimson_hyphae"
+    - "warped_hyphae -> ^stripped_warped_hyphae"
+    - "bamboo_block -> stripped_bamboo_block"
+  honeycomb:
+    - "copper_block -> waxed_copper_block"
+    - "exposed_copper -> waxed_exposed_copper"
+    - "weathered_copper -> waxed_weathered_copper"
+    - "oxidized_copper -> waxed_oxidized_copper"
+    - "cut_copper -> waxed_cut_copper"
+    - "exposed_cut_copper -> waxed_exposed_cut_copper"
+    - "weathered_cut_copper -> waxed_weathered_cut_copper"
+    - "oxidized_cut_copper -> waxed_oxidized_cut_copper"
+  bone_meal:
+    - "above grass_block -> 70% air, 24% short_grass, 3% dandelion, 3% poppy"
+  shears:
+    - "pumpkin -> carved_pumpkin"
+  flint_and_steel:
+    - "above soul_sand, soul_soil -> soul_fire"
+    - "above netherrack -> fire"

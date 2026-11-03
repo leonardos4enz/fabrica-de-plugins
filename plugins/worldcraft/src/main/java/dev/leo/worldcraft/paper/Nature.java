@@ -120,6 +120,85 @@ public final class Nature {
         who.sendMessage(msg().get("trees-growing", "count", String.valueOf(spots.length)));
     }
 
+    // ------------------------------------------------------------------ spec 040: features del juego (ADR 0009)
+
+    /** H1 CA4: un *feature* en ese lugar (los pies o la esquina 1). */
+    public void feature(CommandSender who, World w, int x, int y, int z, String id, boolean preview, Runnable finished) {
+        features(who, w, new long[]{PointsSource.pack(x, y, z)}, id, ThreadLocalRandom.current().nextLong(), "feature", id, preview, finished);
+    }
+
+    /** H2 CA7: *features* sobre el suelo de la región (como el bosque: un lugar libre sobre lo que no es aire ni líquido). */
+    public void featureField(CommandSender who, World w, Region region, String id, double density, String label, Runnable finished) {
+        Box read = readBox(w, region);
+        if (read == null || !fits(who, read)) {
+            finished.run();
+            return;
+        }
+        long seed = ThreadLocalRandom.current().nextLong();
+        Snapshot snap = new Snapshot(read);
+        PaperBlocks b = blocks();
+        edits().readOrCancel(who, w, read, label, snap, () -> {
+            IntPredicate free = ids(snap, free()), soil = ids(snap, s -> !b.isAir(s) && !free().test(s) && !liquid(s));
+            compute(who, () -> NatureMath.spots(snap, region, soil, free, density, seed, settings().maxTrees()), spots -> {
+                if (spots.length == 0) {
+                    who.sendMessage(msg().get("trees-no-ground"));
+                    finished.run();
+                    return;
+                }
+                features(who, w, spots, id, seed, label, id, false, finished);
+            }, finished);
+        }, finished);
+    }
+
+    private boolean liquid(int s) {
+        String m = blocks().table().material(s);
+        return m.equals("minecraft:water") || m.equals("minecraft:lava");
+    }
+
+    private void features(CommandSender who, World w, long[] spots, String id, long seed, String label, String detail, boolean preview,
+                          Runnable finished) {
+        java.util.UUID owner = Edits.owner(who);
+        PaperBlocks blocks = blocks();
+        Nms nms = Nms.get();
+        boolean[] direct = {false};
+        Trees.Capturer cap = (x, y, z, r) -> {
+            try {
+                var got = nms.capture(w, id, x, y, z, r.nextLong());
+                if (got == null) return null;
+                Map<Long, Integer> out = new LinkedHashMap<>();
+                for (var e : got.entrySet()) out.put(e.getKey(), blocks.id(e.getValue()));
+                return out;
+            } catch (Nms.Direct d) {
+                direct[0] = true;
+                return null;
+            } catch (RuntimeException e) {
+                plugin.getLogger().log(Level.WARNING, "The feature " + id + " failed", e);
+                return null;
+            }
+        };
+        edits().submitTask(jid -> new Trees.Planter(jid, owner, plugin, w, spots, seed, cap, s -> false, r -> {
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                try {
+                    if (direct[0]) {
+                        who.sendMessage(msg().get("feature-direct", "feature", id));
+                        return;
+                    }
+                    if (r.planted() == 0) {
+                        who.sendMessage(msg().get("feature-none", "feature", id));
+                        return;
+                    }
+                    if (spots.length > 1) {
+                        who.sendMessage(msg().get(r.failed() > 0 ? "features-some" : "features-all", "planted", String.valueOf(r.planted()),
+                                "failed", String.valueOf(r.failed())));
+                    }
+                    request(who, w, label, detail, r.blocks(), preview);
+                } finally {
+                    finished.run();
+                }
+            });
+        }, finished));
+    }
+
     /** H6 CA1: plantas sobre el pasto y la arena de la región. */
     public void flora(CommandSender who, World w, Region region, double density, boolean preview) {
         Box read = readBox(w, region);

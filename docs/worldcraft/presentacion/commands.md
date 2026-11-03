@@ -1,18 +1,19 @@
 # Worldcraft commands, and how they compare with WorldEdit and FAWE
 
-Worldcraft 0.14.0 has **102 commands** under `/wc` (alias of `/worldcraft`), and every one also works the WorldEdit
+Worldcraft 0.15.0 has **119 commands** under `/wc` (alias of `/worldcraft`), and every one also works the WorldEdit
 way: `//set`, `//copy -e`, `//paste -a`, `/brush`, `//undo` (WorldEdit's names, aliases and short flags; spec 039). Counted the way WorldEdit counts its own
-(every brush, tool and sub-command on its own line), that is **140**.
+(every brush, tool and sub-command on its own line), that is **168**.
 
-It covers **129 of WorldEdit's 171 commands** (75 %) and **142 of FastAsyncWorldEdit's 244** (58 %), counting only the
-ones Worldcraft does the same or better; a few more are there in part (below). The 171 and 244 come from the
+It covers **157 of WorldEdit's 171 commands** (92 %) and **166 of FastAsyncWorldEdit's 244** (68 %), counting only the
+ones Worldcraft does the same or better; a few more are there in part (below). Since 0.15.0 (spec 040) no WorldEdit
+command is left as "not yet": the 14 it does not have are in part, not needed or left out on purpose. The 171 and 244 come from the
 `@Command` annotations in the bytecode of the WorldEdit 7.3.19 and FAWE 2.16.2 jars, sub-commands included; FAWE's
 21 `/anvil` commands are compiled into its jar but never registered, so they are not counted.
 
 | | Commands | Worldcraft has it | In part | Not yet | No, on purpose | Not needed |
 |---|---|---|---|---|---|---|
-| WorldEdit 7.3.19 | 171 | **129** | 5 | 28 | 4 | 5 |
-| FAWE 2.16.2 | 244 | **142** | 12 | 68 | 14 | 8 |
+| WorldEdit 7.3.19 | 171 | **157** | 5 | 0 | 4 | 5 |
+| FAWE 2.16.2 | 244 | **166** | 12 | 44 | 14 | 8 |
 | FAWE, only what it adds to WorldEdit | 79 | 14 | 8 | 44 | 10 | 3 |
 
 *Not needed* means Worldcraft has nothing to tune there (`//fast`, `//perf`, `//watchdog`: every edit already runs in
@@ -26,32 +27,35 @@ Worldcraft is not affiliated with or endorsed by EngineHub (WorldEdit), Intellec
 `--preview` on every edit, `/wc jobs`, `/wc limits`, `/wc validate`, `/wc selftest`, `/wc schem import`, the terrain
 brush (`raise`, `lower`, `smooth`, `flatten`, `erode`, `paint`) on natural ground only, and undo that survives a restart.
 
-## The 102 commands of Worldcraft
+## The 119 commands of Worldcraft
 | Group | Commands |
 |---|---|
 | Select (15) | `/wc wand`, `/wc pos1`, `/wc pos2`, `/wc hpos1`, `/wc hpos2`, `/wc sel`, `/wc expand`, `/wc contract`, `/wc shift`, `/wc outset`, `/wc inset`, `/wc trim`, `/wc chunk`, `/wc count`, `/wc distr` |
-| Edit a selection (13) | `/wc set`, `/wc replace`, `/wc walls`, `/wc faces`, `/wc stack`, `/wc move`, `/wc overlay`, `/wc naturalize`, `/wc smooth`, `/wc hollow`, `/wc center`, `/wc line`, `/wc gmask` |
+| Edit a selection (16) | `/wc set`, `/wc replace`, `/wc walls`, `/wc faces`, `/wc stack`, `/wc move`, `/wc overlay`, `/wc naturalize`, `/wc smooth`, `/wc hollow`, `/wc center`, `/wc line`, `/wc curve`, `/wc snowsmooth`, `/wc update`, `/wc gmask` |
 | Preview, undo and jobs (8) | `/wc confirm`, `/wc cancel`, `/wc undo`, `/wc redo`, `/wc history`, `/wc clearhistory`, `/wc jobs`, `/wc limits` |
 | Copy and schematics (8) | `/wc copy`, `/wc cut`, `/wc paste`, `/wc rotate`, `/wc flip`, `/wc clearclipboard`, `/wc schem`, `/wc structure` |
 | Shapes (7) | `/wc sphere`, `/wc hsphere`, `/wc cyl`, `/wc hcyl`, `/wc pyramid`, `/wc hpyramid`, `/wc cone` |
 | Terrain (4) | `/wc mountain`, `/wc island`, `/wc reroll`, `/wc styles` |
-| Biomes, trees and plants (7) | `/wc biomelist`, `/wc biomeinfo`, `/wc setbiome`, `/wc forest`, `/wc forestgen`, `/wc flora`, `/wc pumpkins` |
+| Biomes, trees, plants and the game's features (8) | `/wc biomelist`, `/wc biomeinfo`, `/wc setbiome`, `/wc forest`, `/wc forestgen`, `/wc flora`, `/wc pumpkins`, `/wc feature` |
 | Formulas (5) | `/wc generate`, `/wc generatebiome`, `/wc deform`, `/wc calc`, `/wc timeout` |
 | Caves, ores and pictures (4) | `/wc caves`, `/wc ore`, `/wc ores`, `/wc image` |
-| Fixes around you (12) | `/wc drain`, `/wc fixwater`, `/wc fixlava`, `/wc fill`, `/wc removenear`, `/wc replacenear`, `/wc removeabove`, `/wc removebelow`, `/wc extinguish`, `/wc snow`, `/wc thaw`, `/wc green` |
+| Fixes around you (13) | `/wc drain`, `/wc fixwater`, `/wc fixlava`, `/wc fill`, `/wc fillr`, `/wc removenear`, `/wc replacenear`, `/wc removeabove`, `/wc removebelow`, `/wc extinguish`, `/wc snow`, `/wc thaw`, `/wc green` |
 | Entities (2) | `/wc butcher`, `/wc remove` |
-| Brushes and tools (3) | `/wc brush`, `/wc tool`, `/wc superpickaxe` |
+| Brushes and tools (5) | `/wc brush`, `/wc tool`, `/wc superpickaxe`, `/wc range`, `/wc tracemask` |
+| Where things go (3) | `/wc placement`, `/wc toggleplace`, `/wc toggleeditwand` |
 | Moving around (7) | `/wc unstuck`, `/wc ascend`, `/wc descend`, `/wc ceil`, `/wc thru`, `/wc jumpto`, `/wc up` |
 | Back to the original (3) | `/wc regen`, `/wc snapshot`, `/wc restore` |
+| Information (7) | `/wc chunkinfo`, `/wc listchunks`, `/wc searchitem`, `/wc version`, `/wc report`, `/wc trace`, `/wc tz` |
 | Admin (4) | `/wc help`, `/wc reload`, `/wc validate`, `/wc selftest` |
 
 Inside the groups:
-- **19 brushes** (`/wc brush …`): 12 for building (`sphere`, `cyl`, `set`, `clipboard`, `splatter`, `scatter`, `rock`,
-  `gravity`, `extinguish`, `butcher`, `forest`, `deform`), 6 terrain modes (`raise`, `lower`, `smooth`, `flatten`,
+- **28 brushes** (`/wc brush …`): 21 for building (`sphere`, `cyl`, `set`, `clipboard`, `splatter`, `scatter`, `rock`,
+  `gravity`, `extinguish`, `butcher`, `forest`, `deform`, `snow`, `snowsmooth`, `biome`, `morph`, `dilate`, `heightmap`,
+  `feature`, `apply … item`, `paint … item`), 6 terrain modes (`raise`, `lower`, `smooth`, `flatten`,
   `erode`, `paint`) and `none`.
-- **10 tools** (`/wc tool …`): `repl`, `floodfill`, `info`, `cycler`, `deltree`, `farwand`, `lrbuild`, `navwand`, `tree`
-  and `none`.
-- **5 schematic commands** (`/wc schem save|load|list|delete|import`), **5 backup commands** (`/wc snapshot
+- **11 tools** (`/wc tool …`): `repl`, `floodfill`, `info`, `cycler`, `deltree`, `farwand`, `lrbuild`, `navwand`, `tree`,
+  `stacker` and `none`.
+- **6 schematic commands** (`/wc schem save|load|list|delete|import|formats`), **5 backup commands** (`/wc snapshot
   list|use|sel|before|after`) and **3 super pickaxe modes** (`single`, `area`, `recursive`).
 - **11 selection words** (`/wc sel cuboid|extend|poly|ellipsoid|sphere|cyl|convex|magic|clear|show|hide`; WorldEdit and
   FAWE's names `box`, `fuzzy`, `hull` and `polyhedral` work too).
@@ -195,34 +199,34 @@ Every command: `/wc help <command>` in the game. Full guide: [the README](../../
 | `//structure` | partly | `/wc structure load` + `/wc paste` (templates, not whole jigsaw structures) |
 | `//pos` | partly | `/wc pos1` and `/wc pos2` |
 | `/material` | partly | write the brush again with the new pattern |
-| `/brush apply … item` | not yet |  |
-| `/brush snowsmooth` | not yet |  |
-| `/brush heightmap` | not yet |  |
-| `/brush feature` | not yet |  |
-| `/brush snow` | not yet |  |
-| `/brush biome` | not yet |  |
-| `/brush morph` | not yet |  |
-| `/brush dilate` | not yet |  |
-| `/chunkinfo` | not yet |  |
-| `/listchunks` | not yet |  |
-| `/toggleplace` | not yet |  |
-| `/placement` | not yet |  |
-| `/searchitem` | not yet |  |
-| `//feature` | not yet |  |
-| `/brush paint … item` | not yet |  |
-| `//curve` | not yet |  |
-| `//snowsmooth` | not yet |  |
-| `//update` | not yet |  |
-| `/schem formats` | not yet |  |
-| `/toggleeditwand` | not yet |  |
-| `/tool stacker` | not yet |  |
-| `/range` | not yet |  |
-| `/tracemask` | not yet |  |
-| `//fillr` | not yet |  |
-| `/worldedit version` | not yet |  |
-| `/worldedit report` | not yet |  |
-| `/worldedit trace` | not yet |  |
-| `/worldedit tz` | not yet |  |
+| `/brush apply … item` | yes | `/wc brush apply … item <item>` |
+| `/brush snowsmooth` | yes | `/wc brush snowsmooth` |
+| `/brush heightmap` | yes | `/wc brush heightmap` |
+| `/brush feature` | yes | `/wc brush feature` |
+| `/brush snow` | yes | `/wc brush snow` |
+| `/brush biome` | yes | `/wc brush biome` |
+| `/brush morph` | yes | `/wc brush morph` |
+| `/brush dilate` | yes | `/wc brush dilate` |
+| `/chunkinfo` | yes | `/wc chunkinfo` |
+| `/listchunks` | yes | `/wc listchunks` |
+| `/toggleplace` | yes | `/wc toggleplace` |
+| `/placement` | yes | `/wc placement` |
+| `/searchitem` | yes | `/wc searchitem` |
+| `//feature` | yes | `/wc feature` |
+| `/brush paint … item` | yes | `/wc brush paint … item <item>` |
+| `//curve` | yes | `/wc curve` |
+| `//snowsmooth` | yes | `/wc snowsmooth` |
+| `//update` | yes | `/wc update` |
+| `/schem formats` | yes | `/wc schem formats` |
+| `/toggleeditwand` | yes | `/wc toggleeditwand` |
+| `/tool stacker` | yes | `/wc tool stacker` |
+| `/range` | yes | `/wc range` |
+| `/tracemask` | yes | `/wc tracemask` |
+| `//fillr` | yes | `/wc fillr` |
+| `/worldedit version` | yes | `/wc version` |
+| `/worldedit report` | yes | `/wc report` (written to a file, never uploaded) |
+| `/worldedit trace` | yes | `/wc trace` |
+| `/worldedit tz` | yes | `/wc tz` |
 | `/delchunks` | no (on purpose) | deletes region files with the server stopped; outside the safe, undoable model |
 | `/schem share` | no (on purpose) | uploads to an outside service |
 | `/cs` | no (on purpose) | runs JavaScript on the server |

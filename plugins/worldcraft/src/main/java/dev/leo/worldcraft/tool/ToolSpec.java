@@ -15,8 +15,12 @@ import java.util.TreeSet;
  */
 public record ToolSpec(ToolKind kind, Map<String, String> opts) {
     /** Los topes del momento (config.yml): un ítem armado a mano no pasa de aquí (plan 032 §3). */
-    public record Caps(int brushMaxRadius, int maxRange) {
-        public static final Caps DEFAULTS = new Caps(16, 32);
+    public record Caps(int brushMaxRadius, int maxRange, int maxReach) {
+        public static final Caps DEFAULTS = new Caps(16, 32, 200);
+
+        public Caps(int brushMaxRadius, int maxRange) {
+            this(brushMaxRadius, maxRange, DEFAULTS.maxReach);
+        }
     }
 
     /** Las opciones de butcher que acepta el pincel (las de /wc butcher, spec 031). */
@@ -49,6 +53,17 @@ public record ToolSpec(ToolKind kind, Map<String, String> opts) {
             return new String(java.util.Base64.getUrlDecoder().decode(v), java.nio.charset.StandardCharsets.UTF_8);
         } catch (IllegalArgumentException e) {
             return DEFAULT_DEFORM;
+        }
+    }
+
+    /** Spec 040 H3 CA4: la máscara de /wc tracemask (viaja en Base64: puede tener «;»), o null. */
+    public String trace() {
+        String v = opts.get("trace");
+        if (v == null) return null;
+        try {
+            return new String(java.util.Base64.getUrlDecoder().decode(v), java.nio.charset.StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            return null;
         }
     }
 
@@ -87,13 +102,19 @@ public record ToolSpec(ToolKind kind, Map<String, String> opts) {
                 case ROCK -> 10;
                 default -> 5;
             };
-            case "height", "decay", "distance" -> 1;
+            // Spec 040: morph y dilate como WorldEdit; heightmap sube 5 de fábrica.
+            case "erode_faces" -> 4;
+            case "erode" -> kind == ToolKind.DILATE ? 0 : 1;
+            case "dilate_faces" -> kind == ToolKind.DILATE ? 3 : 5;
+            case "dilate", "iterations" -> 1;
+            case "height" -> kind == ToolKind.HEIGHTMAP ? 5 : 1;
+            case "decay", "distance" -> 1;
             case "points" -> 5;
             case "sphericity" -> 100;
             case "frequency" -> 30;
             case "amplitude" -> 50;
-            case "range" -> 5;
-            case "density" -> 5;
+            case "range" -> kind == ToolKind.STACKER ? 10 : 5;
+            case "density" -> kind == ToolKind.APPLY ? 100 : 5;
             default -> 0;
         };
     }
@@ -145,6 +166,12 @@ public record ToolSpec(ToolKind kind, Map<String, String> opts) {
         clamp(opts, "frequency", 1, 100);
         clamp(opts, "amplitude", 0, 100);
         clamp(opts, "density", 0, 100);
+        clamp(opts, "reach", 1, caps.maxReach());
+        clamp(opts, "iterations", 1, 10);
+        clamp(opts, "erode", 0, 10);
+        clamp(opts, "dilate", 0, 10);
+        clamp(opts, "erode_faces", 1, 6);
+        clamp(opts, "dilate_faces", 1, 6);
         return new ToolSpec(kind, opts);
     }
 
@@ -180,6 +207,10 @@ public record ToolSpec(ToolKind kind, Map<String, String> opts) {
                 if (opts.containsKey("property")) sb.append(" · ").append(opts.get("property"));
             }
             case TREE, FOREST -> sb.append(" · ").append(opts.getOrDefault("type", "oak"));
+            case BIOME -> sb.append(" · ").append(opts.get("biome"));
+            case FEATURE -> sb.append(" · ").append(opts.get("feature"));
+            case HEIGHTMAP -> sb.append(" · ").append(opts.get("image"));
+            case APPLY -> sb.append(" · ").append(opts.getOrDefault("shape", "sphere")).append(" · item ").append(opts.get("item"));
             case DEFORM -> sb.append(" · ").append(formula());
             default -> {
                 if (pattern() != null) sb.append(" · ").append(pattern());
@@ -193,15 +224,26 @@ public record ToolSpec(ToolKind kind, Map<String, String> opts) {
             case ROCK -> sb.append(" · sphericity ").append(number("sphericity")).append(" · frequency ").append(number("frequency"))
                     .append(" · amplitude ").append(number("amplitude"));
             case FLOODFILL -> sb.append(" · range ").append(number("range"));
-            case FOREST -> sb.append(" · density ").append(number("density")).append("%");
+            case FOREST, FEATURE -> sb.append(" · density ").append(number("density")).append("%");
+            case APPLY -> {
+                if (number("density") < 100) sb.append(" · ").append(number("density")).append("% of the blocks");
+            }
+            case SNOWSMOOTH -> sb.append(" · ").append(number("iterations")).append(" passes");
+            case MORPH, DILATE -> sb.append(" · erode ").append(number("erode_faces")).append(" faces x").append(number("erode"))
+                    .append(" · dilate ").append(number("dilate_faces")).append(" faces x").append(number("dilate"));
+            case HEIGHTMAP -> sb.append(" · height ").append(number("height"));
+            case STACKER -> sb.append(" · range ").append(number("range"));
             default -> {
             }
         }
-        for (String f : new String[]{"hollow", "air", "origin", "overlay", "full", "raw", "offset"}) {
+        for (String f : new String[]{"hollow", "air", "origin", "overlay", "full", "raw", "offset", "stack", "erase", "flatten"}) {
             if (flag(f)) sb.append(" · ").append(f.equals("full") ? "to the top" : f.equals("air") ? "with air" : f);
         }
         if (kind == ToolKind.BUTCHER && !butcherFlags().isEmpty()) sb.append(" · ").append(String.join(", ", butcherFlags()));
-        if (mask() != null) sb.append(" · only on ").append(mask());
+        if (mask() != null) sb.append(kind == ToolKind.STACKER ? " · into " : " · only on ").append(mask());
+        // Spec 040 H3 CA3, CA4: /wc range y /wc tracemask.
+        if (opts.containsKey("reach")) sb.append(" · reach ").append(number("reach"));
+        if (trace() != null) sb.append(" · aims at ").append(trace());
         return sb.toString();
     }
 }

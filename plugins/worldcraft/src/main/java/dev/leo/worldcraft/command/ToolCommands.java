@@ -83,6 +83,11 @@ final class ToolCommands {
                 return true;
             }
             // «spere stone»: un nombre parecido a un pincel (y que no es un modo de terreno ni un bloque) se avisa aquí.
+            // Spec 040 H2 CA6: «paint … item <ítem>» es el pincel apply (sin item, paint sigue siendo del terreno).
+            if (first.equals("paint") && java.util.Arrays.stream(a).anyMatch(w -> w.equalsIgnoreCase("item"))) {
+                bind(p, true, a);
+                return true;
+            }
             boolean terrain = BrushSettings.Mode.parse(first) != null || first.contains("=") || first.matches("[\\d.%]+");
             boolean block = plugin.edits().blocks().blocks().contains("minecraft:" + first);
             if (terrain || block || Issues.closest(first, ToolKind.ids(true)) == null) return false;
@@ -134,6 +139,40 @@ final class ToolCommands {
         var parser = plugin.config().parser();
         for (String k : List.of("pattern", "left", "right")) if (s.text(k) != null) parser.pattern(s.text(k));
         if (s.mask() != null) parser.mask(s.mask());
+        // Spec 040: el ítem, el bioma, el feature y la imagen existen.
+        switch (s.kind()) {
+            case APPLY -> {
+                if (plugin.config().itemUses().rules(s.text("item")) == null) {
+                    List<String> items = plugin.config().itemUses().items();
+                    throw new IllegalArgumentException("Worldcraft does not know what '" + s.text("item") + "' does" + Issues.hint(s.text("item"), items)
+                            + ". It knows: " + String.join(", ", items) + " (add more in item-uses.yml)");
+                }
+            }
+            case BIOME -> {
+                List<String> names = new ArrayList<>();
+                for (String b : plugin.edits().blocks().biomes()) names.add(b.replace("minecraft:", ""));
+                if (!names.contains(s.text("biome"))) {
+                    throw new IllegalArgumentException("There is no biome '" + s.text("biome") + "'" + Issues.hint(s.text("biome"), names) + "; see /wc biomelist");
+                }
+            }
+            case FEATURE -> {
+                var nms = dev.leo.worldcraft.paper.Nms.get();
+                if (!nms.available()) throw new IllegalArgumentException("The game's features are not available on this server version: " + nms.problem());
+                if (!nms.hasFeature(s.text("feature"))) {
+                    List<String> names = new ArrayList<>();
+                    for (String f : nms.features()) names.add(f.replace("minecraft:", ""));
+                    throw new IllegalArgumentException("There is no feature '" + s.text("feature") + "'" + Issues.hint(s.text("feature"), names));
+                }
+            }
+            case HEIGHTMAP -> {
+                if (!plugin.images().files().contains(s.text("image"))) {
+                    throw new IllegalArgumentException("There is no image '" + s.text("image") + "' in plugins/Worldcraft/images/"
+                            + Issues.hint(s.text("image"), plugin.images().files()));
+                }
+            }
+            default -> {
+            }
+        }
     }
 
     private void update(Player p, ToolSpec held, Map<String, String> kv) {

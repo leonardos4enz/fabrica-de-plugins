@@ -86,6 +86,8 @@ public final class WorldcraftCommand implements TabExecutor {
         // Spec 032: el superpico, con su propio permiso (los pinceles y herramientas van con worldcraft.use).
         SUBS.put("superpickaxe", dev.leo.worldcraft.paper.Tools.SUPERPICKAXE);
         SUBS.put("sp", dev.leo.worldcraft.paper.Tools.SUPERPICKAXE);
+        // Spec 040: lo que faltaba de WorldEdit 7.3.19 (report es de administración).
+        for (String s : MoreCommands.SUBS) SUBS.put(s, MoreCommands.perm(s));
         for (String s : List.of("reload", "validate", "selftest")) SUBS.put(s, ADMIN);
     }
 
@@ -103,6 +105,7 @@ public final class WorldcraftCommand implements TabExecutor {
     private final FormulaCommands formulas;
     private final CreateCommands create;
     private final RestoreCommands restore;
+    private final MoreCommands more;
 
     public WorldcraftCommand(Worldcraft plugin) {
         this.plugin = plugin;
@@ -114,11 +117,24 @@ public final class WorldcraftCommand implements TabExecutor {
         this.formulas = new FormulaCommands(plugin, this, nature);
         this.create = new CreateCommands(plugin, this);
         this.restore = new RestoreCommands(plugin, this);
+        this.more = new MoreCommands(plugin, this, build);
+    }
+
+    /** Spec 040: los nombres de los features del juego (para el autocompletado del pincel). */
+    List<String> featureSuggestions(String last) {
+        return more.featureSuggestions(last);
     }
 
     /** Spec 032 H4 CA3: el pincel butcher (la obra de /wc butcher en otro punto). */
     public void butcherAt(Player p, World w, int x, int y, int z, int r, Set<String> flags) {
         build.butcherAt(p, w, x, y, z, r, flags);
+    }
+
+    /** Spec 040 H2 CA3: el pincel biome (la obra de setbiome sobre la esfera donde mira). */
+    public void biomeAt(Player p, World w, Region region, String biome, String detail) {
+        String id = biome.contains(":") ? biome : "minecraft:" + biome;
+        long[] cells = dev.leo.worldcraft.biome.Cells.of(region);
+        edits().request(p, nature.biomeOp(p, w, region, cells, id, "brush biome", detail), false);
     }
 
     /** Spec 032 H5 CA8: la brújula (jumpto con el clic izquierdo, thru con el derecho). */
@@ -186,6 +202,7 @@ public final class WorldcraftCommand implements TabExecutor {
                     else if (FormulaCommands.handles(sub)) formulas.run(s, sub, a);
                     else if (CreateCommands.handles(sub)) create.run(s, sub, a);
                     else if (RestoreCommands.handles(sub)) restore.run(s, sub, a);
+                    else if (MoreCommands.SUBS.contains(sub)) more.run(s, sub, a);
                     else if (BuildCommands.SHAPES.contains(sub) || BuildCommands.REGION.contains(sub)
                             || BuildCommands.UTILITIES.contains(sub) || BuildCommands.ENTITIES.contains(sub)) build.run(s, sub, a);
                     else help(s, a);
@@ -1091,6 +1108,14 @@ public final class WorldcraftCommand implements TabExecutor {
         }
         Schematics sch = plugin.schematics();
         switch (op) {
+            case "formats" -> {
+                // Spec 040 H4 CA4: lo que lee y escribe (como //schem formats de WorldEdit).
+                s.sendMessage(msg().get("schem-formats"));
+                for (String f : List.of("sponge.3", "sponge.2", "sponge.1")) {
+                    s.sendMessage(msg().get("schem-format-line", "format", f, "can", f.equals("sponge.3") ? "read and write" : "read"));
+                }
+                s.sendMessage(msg().get("schem-formats-folders"));
+            }
             case "list" -> {
                 int page = 1;
                 String filter = null;
@@ -1126,7 +1151,7 @@ public final class WorldcraftCommand implements TabExecutor {
                 else sch.delete(s, name);
             }
             default -> s.sendMessage(msg().get(op.isEmpty() ? "usage" : "schem-unknown", "usage", msg().raw("help.schem.usage"),
-                    "input", op, "hint", hintText(Issues.closest(op, List.of("list", "load", "save", "delete", "import")))));
+                    "input", op, "hint", hintText(Issues.closest(op, List.of("list", "load", "save", "delete", "import", "formats")))));
         }
     }
 
@@ -1168,6 +1193,32 @@ public final class WorldcraftCommand implements TabExecutor {
             return out;
         }
         if (last.startsWith("-")) return filter(ToolCommands.optionWords(kind), last);
+        // Spec 040: el nombre que va en cada pincel nuevo.
+        switch (kind) {
+            case FEATURE -> {
+                return a.length == 3 ? featureSuggestions(last) : filter(RADII, last);
+            }
+            case BIOME -> {
+                List<String> out = new ArrayList<>(a.length == 3 ? filter(RADII, last) : List.of());
+                for (String b : edits().blocks().biomes()) if (b.replace("minecraft:", "").startsWith(last.toLowerCase(Locale.ROOT))) out.add(b.replace("minecraft:", ""));
+                return out;
+            }
+            case HEIGHTMAP -> {
+                return a.length == 3 ? filter(plugin.images().files(), last) : filter(RADII, last);
+            }
+            case APPLY -> {
+                boolean afterItem = a.length >= 3 && a[a.length - 2].equalsIgnoreCase("item");
+                if (afterItem) {
+                    List<String> out = new ArrayList<>();
+                    for (String i : plugin.config().itemUses().items()) if (!i.contains("*") && i.startsWith(last.toLowerCase(Locale.ROOT))) out.add(i);
+                    for (String i : List.of("iron_hoe", "iron_shovel", "iron_axe")) if (i.startsWith(last.toLowerCase(Locale.ROOT))) out.add(i);
+                    return out;
+                }
+                return filter(a.length == 3 ? List.of("sphere", "cube", "cyl", "item") : List.of("3", "5", "item"), last);
+            }
+            default -> {
+            }
+        }
         if (kind == dev.leo.worldcraft.tool.ToolKind.SET && a.length == 3) return filter(dev.leo.worldcraft.tool.ToolParser.SET_SHAPES, last);
         boolean number = !last.isEmpty() && Character.isDigit(last.charAt(0));
         boolean blocks = switch (kind) {
@@ -1244,6 +1295,7 @@ public final class WorldcraftCommand implements TabExecutor {
                 yield f;
             }
             case "schem", "schematic" -> Set.of("overwrite");
+            case "curve", "snowsmooth", "feature", "update", "searchitem" -> MoreCommands.flags(sub);
             default -> {
                 Set<String> f = new HashSet<>();
                 if (!NavigationCommands.SUBS.contains(sub) && !SelectionCommands.SUBS.contains(sub) && !NatureCommands.SUBS.contains(sub) && !FormulaCommands.handles(sub) && !CreateCommands.handles(sub) && !RestoreCommands.handles(sub)) for (String o : BuildCommands.flags(sub)) f.add(o);
@@ -1301,7 +1353,7 @@ public final class WorldcraftCommand implements TabExecutor {
             case "generate", "gen", "generatebiome", "genbiome", "timeout" -> formulas.complete(sub, a, last);
             case "caves", "ore", "ores", "image", "img" -> create.complete(sub, a, last);
             case "regen", "snapshot", "snap", "restore" -> restore.complete(s, sub, a, last);
-            default -> buildSuggestions(sub, a, last);
+            default -> MoreCommands.SUBS.contains(sub) ? more.complete(s, sub, a, last) : buildSuggestions(sub, a, last);
         };
     }
 
@@ -1317,7 +1369,7 @@ public final class WorldcraftCommand implements TabExecutor {
             case "overlay", "center", "line" -> blockSuggestions(last, false);
             case "hollow" -> a.length == 2 ? filter(List.of("1", "2", "3"), last) : blockSuggestions(last, false);
             case "smooth" -> a.length == 2 ? filter(List.of("1", "2", "3", "5"), last) : List.of();
-            case "fill" -> a.length > 2 && number ? filter(RADII, last) : blockSuggestions(last, false);
+            case "fill", "fillr" -> a.length > 2 && number ? filter(RADII, last) : blockSuggestions(last, false);
             case "removenear" -> a.length > 2 && number ? filter(RADII, last) : blockSuggestions(last, true);
             case "replacenear" -> a.length == 2 ? filter(RADII, last) : blockSuggestions(last, !hasWith(a));
             case "removeabove", "removebelow" -> a.length <= 3 ? filter(List.of("1", "3", "5"), last) : List.of();
@@ -1342,7 +1394,7 @@ public final class WorldcraftCommand implements TabExecutor {
 
     private List<String> schemSuggestions(CommandSender s, String[] a, String last) {
         if (a.length == 2) {
-            List<String> ops = new ArrayList<>(List.of("list", "load"));
+            List<String> ops = new ArrayList<>(List.of("list", "load", "formats"));
             // Spec 029 H5: guardar e importar escriben en el disco: permiso aparte.
             if (s.hasPermission(Schematics.PERM_SAVE)) ops.addAll(List.of("save", "import"));
             if (s.hasPermission(Schematics.PERM_DELETE)) ops.add("delete");

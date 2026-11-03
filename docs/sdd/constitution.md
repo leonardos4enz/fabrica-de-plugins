@@ -55,7 +55,7 @@
 
 ## VI. Plataforma
 1. Objetivo: **Paper 1.21.4+**, Java 21. Spigot no se soporta (API Adventure nativa).
-2. Sin NMS ni código dependiente de la versión del servidor. Integraciones con otros plugins (PlaceholderAPI,
+2. Sin NMS ni código dependiente de la versión del servidor (única excepción: el puente aislado de Worldcraft, [ADR 0009](../adr/0009-nms-aislado.md)). Integraciones con otros plugins (PlaceholderAPI,
    Vault, WorldGuard…) son **opcionales** (`softdepend`) y se detectan en tiempo de ejecución.
 
 ## Gobernanza

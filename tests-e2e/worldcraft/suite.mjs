@@ -158,6 +158,27 @@ function picar (jugador, x, y, z) {
   jugador.bot.dig(b, true).catch(() => {})
 }
 
+// ---------------------------------------------------------------- spec 040: lo que faltaba de WorldEdit
+/**
+ * Un piso de vidrio en el aire (y = -51, de X-6 a X+6 y de Z-2 a Z+14) con Ana encima mirando al sur y 12° abajo: la mira
+ * cae en el vidrio de (X, -51, Z + 8). Nada toca el pasto del mundo plano (lección 035).
+ */
+async function mirarVidrio ({ srv, bots }) {
+  await srv.consola(`fill ${X - 6} -51 ${Z - 2} ${X + 6} -51 ${Z + 14} glass`)
+  await srv.consola(`tp ${ANA} ${X + 0.5} -50 ${Z + 0.5} 0 12`)
+  await srv.sincronizar()
+  await bots[ANA].hasta('mirar el vidrio', b => Math.abs(b.entity.position.y + 50) < 0.1 && b.entity.onGround &&
+    Math.abs(Math.abs(b.entity.pitch) - 12 * Math.PI / 180) < 0.05)
+}
+
+/** Un clic derecho con lo que tiene en la mano y espera el «Done» de ese tipo de obra. */
+async function clic (jugador, tipo, timeoutMs = 20000) {
+  const m = jugador.marca()
+  jugador.bot.activateItem()
+  const r = await jugador.esperar('chat', new RegExp(`Done: ${tipo} changed ([\\d,]+) (blocks|biome cell)`), { desde: m, timeoutMs })
+  return Number(r.texto.match(/changed ([\d,]+)/)[1].replace(/,/g, ''))
+}
+
 // ---------------------------------------------------------------- spec 035: imagen (carpeta y link)
 /** Colores de la tabla (medidos por SkinStatues): cada píxel es exactamente un bloque. */
 const LANA = { roja: [0xA0, 0x27, 0x22, 255], azul: [0x35, 0x39, 0x9D, 255], blanca: [0xE9, 0xEC, 0xEC, 255],
@@ -2454,6 +2475,282 @@ export default {
           for (const c of [`gamemode creative ${BETO}`, `tp ${BETO} ${X + 0.5} -60 ${Z - 6.5} 0 0`]) await srv.consola(c)
           await srv.consola(`fill ${B} -55 ${Z} ${B + 1} -55 ${Z + 1} air`)
         }
+      }
+    },
+    {
+      id: '040 H1 CA1 · H1 CA3 · H1 CA5 · H1 CA2',
+      nombre: 'curve pasa por los puntos de la convexa y //curve -h deja la cáscara; fillr llena dentro de la esfera; update une las vallas; snowsmooth alisa la nieve; undo',
+      timeoutMs: 150000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        const C = X + 10
+        try {
+          // curve: con una caja dice qué falta; con la convexa, por los tres puntos en orden.
+          await seleccionar(ana, [C, -50, Z + 10], [C + 1, -50, Z + 10])
+          await pide(ana, 'wc curve glass', /A curve goes through the points of a convex or poly selection \(yours is cuboid\)/)
+          await pide(ana, 'wc sel convex', /convex/i)
+          await pide(ana, `wc pos1 ${C} -50 ${Z + 10}`, /Point 1/)
+          await pide(ana, `wc pos2 ${C + 5} -46 ${Z + 10}`, /Point 2/)
+          await pide(ana, `wc pos2 ${C + 10} -50 ${Z + 14}`, /Point 3/)
+          let r = await obra(ana, 'wc curve glass')
+          for (const [x, y, z] of [[C, -50, Z + 10], [C + 5, -46, Z + 10], [C + 10, -50, Z + 14]]) await comprobar(srv, `block ${x} ${y} ${z} glass`)
+          await pide(ana, 'wc undo', new RegExp(`Undone #${r.id} \\(curve`))
+          // Con dos barras y -h de WorldEdit: grosor 1 hueco, el centro de la curva queda vacío y la cáscara no.
+          r = await obra(ana, '/curve -h stone 1')
+          await comprobar(srv, `block ${C} -50 ${Z + 10} air`)
+          await comprobar(srv, `block ${C} -51 ${Z + 10} stone`)
+          await pide(ana, 'wc undo', new RegExp(`Undone #${r.id}`))
+          await comprobar(srv, `block ${C} -51 ${Z + 10} air`)
+        } finally {
+          await pide(ana, 'wc sel cuboid', /cuboid/i)
+        }
+        // fillr: un pozo de vidrio de 5 × 5 × 3; con radio 2 la esfera deja la esquina de abajo que el cilindro de fill llenaría.
+        const P = X + 30
+        await srv.consola(`fill ${P} -54 ${Z + 10} ${P + 6} -51 ${Z + 16} glass`)
+        await srv.consola(`fill ${P + 1} -53 ${Z + 11} ${P + 5} -51 ${Z + 15} air`)
+        let r = await obra(ana, `/fillr white_wool 2 3 --at ${P + 3},-51,${Z + 13}`)
+        await comprobar(srv, `block ${P + 3} -53 ${Z + 13} white_wool`)
+        await comprobar(srv, `block ${P + 5} -51 ${Z + 13} white_wool`)
+        await comprobar(srv, `block ${P + 5} -53 ${Z + 13} air`)
+        await pide(ana, 'wc undo', new RegExp(`Undone #${r.id} \\(fillr`))
+        // update: tres vallas puestas por el motor (sin física) no se unen; update las une y undo las separa.
+        const V = X + 40
+        await seleccionar(ana, [V, -50, Z + 10], [V + 2, -50, Z + 10])
+        await obra(ana, 'wc set oak_fence')
+        await comprobar(srv, `block ${V + 1} -50 ${Z + 10} oak_fence[east=false,west=false]`)
+        r = await obra(ana, 'wc update')
+        if (r.cambiados !== 3) throw new Error(`update cambió ${r.cambiados} (3 vallas)`)
+        await comprobar(srv, `block ${V + 1} -50 ${Z + 10} oak_fence[east=true,west=true]`)
+        await comprobar(srv, `block ${V} -50 ${Z + 10} oak_fence[east=true,west=false]`)
+        await pide(ana, 'wc undo', new RegExp(`Undone #${r.id} \\(update`))
+        await comprobar(srv, `block ${V + 1} -50 ${Z + 10} oak_fence[east=false,west=false]`)
+        await srv.consola(`fill ${V} -50 ${Z + 10} ${V + 2} -50 ${Z + 10} air`)
+        // snowsmooth: un montón de 8 capas sobre un piso de vidrio queda en 1 y los vecinos reciben una capa; el vidrio no cambia.
+        const N = X + 47
+        await srv.consola(`fill ${N - 3} -51 ${Z + 10} ${N + 3} -51 ${Z + 16} glass`)
+        await srv.consola(`setblock ${N} -50 ${Z + 13} snow[layers=8]`)
+        await seleccionar(ana, [N - 3, -51, Z + 10], [N + 3, -50, Z + 16])
+        r = await obra(ana, 'wc snowsmooth')
+        await comprobar(srv, `block ${N} -50 ${Z + 13} snow[layers=1]`)
+        await comprobar(srv, `block ${N + 1} -50 ${Z + 13} snow[layers=1]`)
+        await comprobar(srv, `block ${N} -51 ${Z + 13} glass`)
+        await pide(ana, 'wc undo', new RegExp(`Undone #${r.id} \\(snowsmooth`))
+        await comprobar(srv, `block ${N} -50 ${Z + 13} snow[layers=8]`)
+        await comprobar(srv, `block ${N + 1} -50 ${Z + 13} air`)
+        await srv.consola(`fill ${N - 3} -51 ${Z + 10} ${N + 3} -50 ${Z + 16} air`)
+        await srv.consola(`fill ${P} -54 ${Z + 10} ${P + 6} -51 ${Z + 16} air`)
+      }
+    },
+    {
+      id: '040 H1 CA4 · H1 CA6 · H2 CA7 · H4 CA5',
+      nombre: 'feature pone un hongo gigante del juego sobre la tierra con vista previa y undo (sin tierra no cabe); un nombre mal escrito sugiere; el de minerales se rechaza; brush feature pone pasto; version dice que están',
+      timeoutMs: 150000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        await pide(ana, 'wc version', /Worldcraft 0\.15\.0 .* game features: available \(\d+ features\)/)
+        await pide(ana, `wc feature amethist_geode --at ${X + 20},-48,${Z + 20}`, /There is no feature 'amethist_geode' \(did you mean 'amethyst_geode'\?\)/)
+        await pide(ana, `wc feature ore_diamond_small --at ${X + 20},-62,${Z + 20}`, /writes straight into the world|doesn't fit there/)
+        // Un hongo rojo gigante del juego sobre un bloque de tierra en el aire (el juego pide tierra debajo; en el aire
+        // solo no cabe). Con vista previa: cancel no cambia nada; después de verdad, y undo.
+        const H = X + 20
+        await srv.consola(`setblock ${H} -49 ${Z + 20} dirt`)
+        await pide(ana, `wc feature huge_red_mushroom --at ${H + 3},-48,${Z + 20}`, /doesn't fit there/)
+        await pide(ana, `wc feature huge_red_mushroom --preview --at ${H},-48,${Z + 20}`, /Preview (ready|shows)/, 30000)
+        await pide(ana, 'wc cancel', /Dropped: nothing was changed/)
+        await comprobar(srv, `block ${H} -47 ${Z + 20} air`)
+        const r = await obra(ana, `/feature huge_red_mushroom --at ${H},-48,${Z + 20}`, 60000)
+        if (r.cambiados < 20) throw new Error(`el hongo puso ${r.cambiados} bloques`)
+        await comprobar(srv, `block ${H} -47 ${Z + 20} mushroom_stem`)
+        await pide(ana, 'wc undo', new RegExp(`Undone #${r.id} \\(feature`), 60000)
+        await ana.hasta('ver el aire otra vez', b => contar(b, [H - 4, H + 4], [-48, -36], [Z + 16, Z + 24]) === 0)
+        await srv.consola(`setblock ${H} -49 ${Z + 20} air`)
+        // brush feature: pasto del juego (patch_grass) en el círculo donde mira (el pasto corto no tapa el suelo).
+        await mirarSuelo(ctx)
+        await pide(ana, 'wc brush feature patch_grass 3 100', /brush \(feature · patch_grass · radius 3/)
+        const n = await clic(ana, 'brush feature', 60000)
+        if (n < 1) throw new Error('brush feature no puso nada')
+        await pide(ana, 'wc undo', /Undone .*brush feature/)
+        await pide(ana, 'wc brush none', /normal item/)
+        await srv.consola(`clear ${ANA}`)
+      }
+    },
+    {
+      id: '040 H2 CA1 · CA3 · CA4 · CA5 · CA6 · H3 CA3 · CA4',
+      nombre: 'pinceles sobre un piso de vidrio: snow (y --stack), biome, morph quita una punta, dilate llena un pozo, heightmap sube con una imagen, apply hoe hace cultivo, paint item encera el cobre; range y tracemask',
+      timeoutMs: 180000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        const carpeta = path.join(srv.run, 'plugins', 'Worldcraft', 'images')
+        fs.mkdirSync(carpeta, { recursive: true })
+        fs.writeFileSync(path.join(carpeta, 'e2e-blanca.png'), png(5, 5, () => [255, 255, 255, 255]))
+        try {
+          await mirarVidrio(ctx)
+          // snow y --stack
+          await pide(ana, 'wc brush snow 1', /brush \(snow · radius 1\)/)
+          await clic(ana, 'brush snow')
+          await comprobar(srv, `block ${X} -50 ${Z + 8} snow[layers=1]`)
+          await pide(ana, 'wc brush snow 1 --stack', /snow · radius 1 · stack/)
+          await clic(ana, 'brush snow')
+          await comprobar(srv, `block ${X} -50 ${Z + 8} snow[layers=2]`)
+          await pide(ana, 'wc undo 2', /Undone/)
+          await comprobar(srv, `block ${X} -50 ${Z + 8} air`)
+          // biome: las celdas de la esfera pasan a desierto y undo las devuelve.
+          await pide(ana, 'wc brush biome 2 desert', /biome · desert · radius 2/)
+          await clic(ana, 'brush biome')
+          await pide(ana, 'wc undo', /Undone .*brush biome/)
+          await pide(ana, 'wc brush biome 2 desrt', /There is no biome 'desrt' \(did you mean 'desert'\?\)/)
+          // morph: una punta de piedra sobre el vidrio (5 caras al aire) se va; el vidrio queda.
+          await srv.consola(`setblock ${X} -50 ${Z + 8} stone`)
+          await pide(ana, 'wc brush morph 2', /morph · radius 2 · erode 4 faces x1 · dilate 5 faces x1/)
+          await clic(ana, 'brush morph')
+          await comprobar(srv, `block ${X} -50 ${Z + 8} air`)
+          await comprobar(srv, `block ${X} -51 ${Z + 8} glass`)
+          // dilate: un pozo en el vidrio (4 caras de vidrio) se llena con vidrio.
+          await srv.consola(`setblock ${X} -51 ${Z + 8} air`)
+          await pide(ana, 'wc brush dilate 2', /dilate · radius 2 · erode 4 faces x0 · dilate 3 faces x1/)
+          await clic(ana, 'brush dilate')
+          await comprobar(srv, `block ${X} -51 ${Z + 8} glass`)
+          // heightmap: una imagen blanca sube 2 cada columna del círculo, con el vidrio arriba.
+          await pide(ana, 'wc brush heightmap e2e-blanca.png 1 2', /heightmap · e2e-blanca\.png · radius 1 · height 2/)
+          await clic(ana, 'brush heightmap')
+          await comprobar(srv, `block ${X} -49 ${Z + 8} glass`)
+          await comprobar(srv, `block ${X + 1} -49 ${Z + 8} glass`)
+          await pide(ana, 'wc undo', /Undone .*brush heightmap/)
+          await comprobar(srv, `block ${X} -49 ${Z + 8} air`)
+          await pide(ana, 'wc brush heightmap nada.png 2', /There is no image 'nada\.png'/)
+          // apply … item: la azada vuelve cultivo la tierra; paint … item con el panal encera el cobre.
+          await srv.consola(`setblock ${X} -51 ${Z + 8} dirt`)
+          await pide(ana, 'wc brush apply cube 0 item iron_hoe', /apply · cube · item iron_hoe/)
+          await clic(ana, 'brush apply')
+          await comprobar(srv, `block ${X} -51 ${Z + 8} farmland`)
+          await srv.consola(`setblock ${X} -51 ${Z + 8} copper_block`)
+          await pide(ana, 'wc brush paint cube 0 100 item honeycomb', /apply · cube · item honeycomb/)
+          await clic(ana, 'brush apply')
+          await comprobar(srv, `block ${X} -51 ${Z + 8} waxed_copper_block`)
+          await pide(ana, 'wc brush apply 1 item stick', /does not know what 'stick' does/)
+          await srv.consola(`setblock ${X} -51 ${Z + 8} glass`)
+          // range: con 3 bloques no llega al vidrio (a ~8); tracemask: apunta a la lana detrás del vidrio.
+          await pide(ana, 'wc brush sphere stone 0', /sphere · stone · radius 0/)
+          await pide(ana, 'wc range 3', /reach 3/)
+          let m = ana.marca()
+          ana.bot.activateItem()
+          await ana.esperar('actionbar', /Nothing in reach \(up to 3 blocks\)/, { desde: m })
+          await pide(ana, 'wc range 60', /reach 60/)
+          await srv.consola(`fill ${X - 6} -51 ${Z + 11} ${X + 6} -51 ${Z + 11} white_wool`)
+          await pide(ana, 'wc tracemask white_wool', /aims at white_wool/)
+          await clic(ana, 'brush sphere')
+          await comprobar(srv, `block ${X} -51 ${Z + 11} stone`)
+          await comprobar(srv, `block ${X} -51 ${Z + 8} glass`)
+          await pide(ana, 'wc undo', /Undone .*brush sphere/)
+          await pide(ana, 'wc tracemask off', /radius 0 · reach 60(?! · aims)/)
+          await clic(ana, 'brush sphere')
+          await comprobar(srv, `block ${X} -51 ${Z + 8} stone`)
+          await pide(ana, 'wc undo', /Undone .*brush sphere/)
+          await pide(ana, 'wc brush none', /normal item/)
+          await pide(ana, 'wc range 5', /Hold a brush or a tool/)
+        } finally {
+          fs.rmSync(path.join(carpeta, 'e2e-blanca.png'), { force: true })
+          await srv.consola(`clear ${ANA}`)
+          await srv.consola(`fill ${X - 6} -51 ${Z - 2} ${X + 6} -48 ${Z + 14} air`)
+        }
+      }
+    },
+    {
+      id: '040 H3 CA1 · CA2 · CA5 · H3 CA6',
+      nombre: 'up en creativo también pone el vidrio de piso; placement pos1 con desplazamiento pone la esfera ahí, toggleplace vuelve a los pies; toggleeditwand apaga y prende la varita; el apilador repite el vidrio hacia arriba y undo',
+      timeoutMs: 120000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        // Pedido del dueño: en creativo (puede volar) /wc up también pone el vidrio bajo los pies, y undo lo quita.
+        const u = await obra(ana, 'wc up 4')
+        if (u.cambiados !== 1) throw new Error(`up en creativo cambió ${u.cambiados}`)
+        await comprobar(srv, `block ${X} -57 ${Z} glass`)
+        await ana.hasta('estar sobre el vidrio', b => Math.floor(b.entity.position.y) === -56)
+        await pide(ana, 'wc undo', new RegExp(`Undone #${u.id} \\(up`))
+        await comprobar(srv, `block ${X} -57 ${Z} air`)
+        await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 0.5} 0 0`)
+        const S = X + 15
+        try {
+          await pide(ana, `wc pos1 ${S} -55 ${Z + 30}`, /Corner 1 at/)
+          await pide(ana, '/placement pos1 0,2,0', /now go at: pos1 \+ 0,2,0/)
+          let r = await obra(ana, 'wc sphere glass 0')
+          await comprobar(srv, `block ${S} -53 ${Z + 30} glass`)
+          await pide(ana, 'wc undo', new RegExp(`Undone #${r.id}`))
+          await pide(ana, 'wc toggleplace', /now go at: player/)
+          await pide(ana, 'wc placement center', /now go at: center/)
+          await pide(ana, 'wc placement player', /now go at: player/)
+        } finally {
+          await pide(ana, 'wc placement player', /player/)
+        }
+        // La varita apagada no marca esquinas; prendida otra vez, sí.
+        await pide(ana, 'wc wand', /Here is your wand/)
+        await pide(ana, 'wc toggleeditwand', /The wand is a normal axe now/)
+        let m = ana.marca()
+        await ana.bot.activateBlock(ana.bot.blockAt(v3(ana.bot, X + 2, -61, Z + 2)))
+        await ana.nunca('chat', /Corner 2 at/, { desde: m, ms: 1500 })
+        await pide(ana, '/toggleeditwand', /The wand selects again/)
+        m = ana.marca()
+        await ana.bot.activateBlock(ana.bot.blockAt(v3(ana.bot, X + 2, -61, Z + 2)))
+        await ana.esperar('chat', /Corner 2 at/, { desde: m })
+        await srv.consola(`clear ${ANA}`)
+        // stacker: clic derecho en la cara de arriba del vidrio que mira: 4 vidrios hacia arriba.
+        try {
+          await mirarVidrio(ctx)
+          await pide(ana, 'wc tool stacker 4', /tool \(stacker · range 4\)/)
+          const n = await clic(ana, 'tool stacker')
+          if (n !== 4) throw new Error(`stacker puso ${n}`)
+          await comprobar(srv, `block ${X} -47 ${Z + 8} glass`)
+          await comprobar(srv, `block ${X} -46 ${Z + 8} air`)
+          await pide(ana, 'wc undo', /Undone .*tool stacker/)
+          await comprobar(srv, `block ${X} -50 ${Z + 8} air`)
+        } finally {
+          await srv.consola(`clear ${ANA}`)
+          await srv.consola(`fill ${X - 6} -51 ${Z - 2} ${X + 6} -46 ${Z + 14} air`)
+        }
+      }
+    },
+    {
+      id: '040 H4 CA1 · CA2 · CA3 · CA4 · CA5',
+      nombre: 'chunkinfo y listchunks con el archivo de región; searchitem (y -b); schem formats; report escribe un archivo; trace da los números de una obra; tz cambia la zona y sugiere',
+      timeoutMs: 90000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        await pide(ana, '/chunkinfo', /Chunk 2, 2 in world · region file r\.0\.0\.mca · you are at 8 -60 8 inside it/)
+        await seleccionar(ana, [X, -60, Z], [X + 20, -60, Z])
+        await pide(ana, 'wc listchunks', /Your selection touches 2 chunk\(s\)/)
+        await pide(ana, 'wc searchitem stone brick', /result\(s\) for 'stone brick'/)
+        await pide(ana, '/searchitem diamond -b', /diamond_block \(block and item\)|diamond_ore/)
+        await pide(ana, 'wc schem formats', /sponge\.3: read and write/)
+        const r = await srv.consola('wc report', { espera: /Report written to plugins\/Worldcraft\/reports\/(report-[\d-]+\.txt)/ })
+        const nombre = (r.texto ?? String(r)).match(/(report-[\d-]+\.txt)/)[1]
+        const archivo = path.join(srv.run, 'plugins', 'Worldcraft', 'reports', nombre)
+        await esperarArchivo(archivo)
+        const texto = fs.readFileSync(archivo, 'utf8')
+        if (!/Worldcraft: 0\.15\.0/.test(texto) || !/Plugins:/.test(texto) || !/config\.yml:/.test(texto)) throw new Error(`informe: ${texto.slice(0, 300)}`)
+        fs.rmSync(archivo, { force: true })
+        // trace: tras la obra, sus números.
+        await pide(ana, 'wc trace on', /Trace on/)
+        await seleccionar(ana, [X + 3, -55, Z + 3], [X + 4, -55, Z + 4])
+        const m = ana.marca()
+        ana.comando('wc set glass')
+        await ana.esperar('chat', /Trace #\d+ set: 4 looked at, 4 changed, 0 already like that/, { desde: m, timeoutMs: 20000 })
+        await pide(ana, 'wc trace off', /Trace off/)
+        await pide(ana, 'wc undo', /Undone/)
+        // tz
+        await pide(ana, 'wc tz America/Bogota', /Time zone for backups: America\/Bogota/)
+        await pide(ana, 'wc tz', /Your time zone for backups: America\/Bogota/)
+        await pide(ana, 'wc tz Amerca/Bogota', /There is no time zone 'Amerca\/Bogota' \(did you mean 'America\/Bogota'\?\)/)
+        await pide(ana, 'wc tz server', /Time zone for backups/)
       }
     }
   ]
