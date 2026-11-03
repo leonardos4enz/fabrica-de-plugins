@@ -23,7 +23,7 @@ import java.util.Map;
 public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<String, String> patternPresets,
                            Map<String, String> maskPresets, TerrainSettings terrain, Issues issues, ToolSettings tools,
                            NatureSettings nature, FormulaSettings formulas, CreateSettings create,
-                           RestoreSettings restore, ApiSettings api) {
+                           RestoreSettings restore, ApiSettings api, SlashSettings slash) {
 
     public static LoadedConfig load(File folder, BlockRegistry registry, LoadedConfig previous) {
         Issues issues = new Issues();
@@ -99,8 +99,11 @@ public record LoadedConfig(Settings settings, Limits limits, Parser parser, Map<
                 : RestoreSettings.load(config, java.nio.file.Path.of("").toAbsolutePath(), issues);
         // Spec 037: la API para otros plugins (los grupos de un plugin se revisan contra los de limits).
         ApiSettings api = config == null && previous != null ? previous.api : ApiSettings.load(config, limits, issues);
+        // Spec 039: los // de WorldEdit (skip se revisa contra la tabla del jar).
+        SlashSettings slash = config == null && previous != null ? previous.slash
+                : SlashSettings.load(config, dev.leo.worldcraft.command.SlashTable.builtin().entries().keySet(), issues);
         return new LoadedConfig(settings, limits, parser, Map.copyOf(pat), Map.copyOf(msk), terrain, issues, tools, nature, formulas, create,
-                restore, api);
+                restore, api, slash);
     }
 
     private static Map<String, String> section(YamlConfiguration y, String name) {

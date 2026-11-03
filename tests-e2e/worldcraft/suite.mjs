@@ -714,11 +714,11 @@ export default {
         for (const f of ['e2e_we.schem', 'e2e_we2.schem']) fs.rmSync(path.join(we, f), { force: true })
         await construirMuestra(srv)
         // WorldEdit copia relativo a Ana (en X, Z) y guarda en su carpeta, en su formato de fábrica y en v2.
-        await pide(ana, `/pos1 ${X + 20},-60,${Z + 20}`, /First position set/)
-        await pide(ana, `/pos2 ${X + 22},-59,${Z + 20}`, /Second position set/)
-        await pide(ana, '/copy', /were copied|blocks affected/)
-        await pide(ana, '/schem save e2e_we', /saved/i, 30000)
-        await pide(ana, '/schem save e2e_we2 sponge.2', /saved/i, 30000)
+        await pide(ana, `worldedit:/pos1 ${X + 20},-60,${Z + 20}`, /First position set/)
+        await pide(ana, `worldedit:/pos2 ${X + 22},-59,${Z + 20}`, /Second position set/)
+        await pide(ana, 'worldedit:/copy', /were copied|blocks affected/)
+        await pide(ana, 'worldedit:/schem save e2e_we', /saved/i, 30000)
+        await pide(ana, 'worldedit:/schem save e2e_we2 sponge.2', /saved/i, 30000)
         await esperarArchivo(path.join(we, 'e2e_we.schem'))
         await esperarArchivo(path.join(we, 'e2e_we2.schem'))
         await pide(ana, 'wc schem list e2e_we', /e2e_we2 \[WorldEdit\]/)
@@ -754,17 +754,17 @@ export default {
         for (const n of ['e2e_wc', 'e2e_wc_g']) fs.copyFileSync(path.join(srv.run, 'plugins', 'Worldcraft', 'schematics', `${n}.schem`), path.join(we, `${n}.schem`))
         await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 18.5}`)
         await ana.hasta('llegar', b => Math.abs(b.entity.position.z - (Z + 18.5)) < 0.6)
-        await pide(ana, '/schem load e2e_wc', /loaded/i, 30000)
-        await pide(ana, '/paste', /pasted/i, 30000)
+        await pide(ana, 'worldedit:/schem load e2e_wc', /loaded/i, 30000)
+        await pide(ana, 'worldedit:/paste', /pasted/i, 30000)
         await revisarMuestra(srv, X + 20, Z + 38)
-        await pide(ana, '/undo', /Undo successful|undid|undone/i)
-        await pide(ana, '/schem load e2e_wc_g', /loaded/i, 30000)
-        await pide(ana, '/paste', /pasted/i, 30000)
+        await pide(ana, 'worldedit:/undo', /Undo successful|undid|undone/i)
+        await pide(ana, 'worldedit:/schem load e2e_wc_g', /loaded/i, 30000)
+        await pide(ana, 'worldedit:/paste', /pasted/i, 30000)
         // (dx, dz) = (20..22, 20) desde Ana gira a (-20, 20..22): el cofre en (X-20, Z+38), la escalera mira al este.
         await comprobar(srv, `block ${X - 20} -60 ${Z + 38} chest`)
         await comprobar(srv, `block ${X - 20} -60 ${Z + 39} oak_stairs[facing=east]`)
         await srv.consola(`data get block ${X - 20} -60 ${Z + 38} Items[0].count`, { espera: /has the following block data: 5/ })
-        await pide(ana, '/undo', /Undo successful|undid|undone/i)
+        await pide(ana, 'worldedit:/undo', /Undo successful|undid|undone/i)
         for (const n of ['e2e_wc', 'e2e_wc_g']) fs.rmSync(path.join(we, `${n}.schem`), { force: true })
       }
     },
@@ -1291,22 +1291,22 @@ export default {
           // WorldEdit lo pega 20 al sur (relativo a Ana, como Worldcraft): la vaca y el soporte donde corresponde.
           await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 20.5}`)
           await ana.hasta('llegar', b => Math.abs(b.entity.position.z - (Z + 20.5)) < 0.6)
-          await pide(ana, '/schem load e2e_ent', /loaded/i, 30000)
-          await pide(ana, '/paste -e', /pasted/i, 30000)
+          await pide(ana, 'worldedit:/schem load e2e_ent', /loaded/i, 30000)
+          await pide(ana, 'worldedit:/paste -e', /pasted/i, 30000)
           await comprobar(srv, `entity ${en('cow', X + 4, -60, Z + 22)}`)
           await comprobar(srv, `entity ${en('armor_stand', X + 2, -60, Z + 22)}`)
           await srv.consola(`data get entity ${en1('armor_stand', X + 2, -60, Z + 22)} ArmorItems[3].id`, { espera: /minecraft:diamond_helmet/ })
-          await pide(ana, '/undo', /Undo successful|undid|undone/i)
+          await pide(ana, 'worldedit:/undo', /Undo successful|undid|undone/i)
           await borrarEntidades(srv)
           // Al revés: WorldEdit copia con -e y guarda; Worldcraft lo carga y lo pega con las entidades.
           await construirSala(srv)
           await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 0.5}`)
           await ana.hasta('volver', b => Math.abs(b.entity.position.z - (Z + 0.5)) < 0.6)
           fs.rmSync(path.join(we, 'e2e_ent_we.schem'), { force: true })
-          await pide(ana, `/pos1 ${X + 2},-60,${Z + 2}`, /First position set/)
-          await pide(ana, `/pos2 ${X + 4},-59,${Z + 4}`, /Second position set/)
-          await pide(ana, '/copy -e', /were copied|blocks affected/)
-          await pide(ana, '/schem save e2e_ent_we', /saved/i, 30000)
+          await pide(ana, `worldedit:/pos1 ${X + 2},-60,${Z + 2}`, /First position set/)
+          await pide(ana, `worldedit:/pos2 ${X + 4},-59,${Z + 4}`, /Second position set/)
+          await pide(ana, 'worldedit:/copy -e', /were copied|blocks affected/)
+          await pide(ana, 'worldedit:/schem save e2e_ent_we', /saved/i, 30000)
           await esperarArchivo(path.join(we, 'e2e_ent_we.schem'))
           await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 30.5}`)
           await ana.hasta('llegar', b => Math.abs(b.entity.position.z - (Z + 30.5)) < 0.6)
@@ -1696,11 +1696,11 @@ export default {
           // WorldEdit 7.3.19 lee los biomas del esquema de Worldcraft.
           fs.mkdirSync(we, { recursive: true })
           fs.copyFileSync(path.join(srv.run, 'plugins', 'Worldcraft', 'schematics', 'e2e_bio.schem'), path.join(we, 'e2e_bio.schem'))
-          await pide(ana, '/schem load e2e_bio', /loaded/i, 30000)
-          await pide(ana, '/paste -b', /pasted/i, 30000)
+          await pide(ana, 'worldedit:/schem load e2e_bio', /loaded/i, 30000)
+          await pide(ana, 'worldedit:/paste -b', /pasted/i, 30000)
           await comprobar(srv, `block ${X + 62} -60 ${Z + 22} gold_block`)
           await comprobar(srv, `biome ${X + 62} -59 ${Z + 22} minecraft:desert`)
-          await pide(ana, '/undo', /Undo successful|undid|undone/i)
+          await pide(ana, 'worldedit:/undo', /Undo successful|undid|undone/i)
         } finally {
           fs.rmSync(path.join(we, 'e2e_bio.schem'), { force: true })
           await srv.consola(`fillbiome ${X + 12} -64 ${Z + 12} ${X + 72} -50 ${Z + 32} minecraft:plains`)
@@ -1841,12 +1841,12 @@ export default {
           await comprobar(srv, `block ${X} -60 ${Z} air`)
           await pide(ana, 'wc undo', /Undone .*generate/)
           // WorldEdit, en la misma caja y con la misma fórmula, crea los mismos bloques.
-          await pide(ana, `/pos1 ${X},-60,${Z}`, /First position set/)
-          await pide(ana, `/pos2 ${X + 10},-50,${Z + 10}`, /Second position set/)
-          const we = await pide(ana, '/g stone x^2+y^2+z^2<1', /([\d,]+) blocks? (?:have|has) been created/, 30000)
+          await pide(ana, `worldedit:/pos1 ${X},-60,${Z}`, /First position set/)
+          await pide(ana, `worldedit:/pos2 ${X + 10},-50,${Z + 10}`, /Second position set/)
+          const we = await pide(ana, 'worldedit:/g stone x^2+y^2+z^2<1', /([\d,]+) blocks? (?:have|has) been created/, 30000)
           const deWe = Number(we.texto.match(/([\d,]+) blocks?/)[1].replace(/,/g, ''))
           if (deWe !== esperados) throw new Error(`WorldEdit creó ${deWe}, Worldcraft ${esperados}`)
-          await pide(ana, '/undo', /Undo successful|undid|undone/i)
+          await pide(ana, 'worldedit:/undo', /Undo successful|undid|undone/i)
           // Hueca: la cáscara, sin el centro.
           const h = await obra(ana, 'wc generate --hollow glass x^2+y^2+z^2<1')
           if (!(h.cambiados > 0 && h.cambiados < esperados / 2)) throw new Error(`la cáscara tiene ${h.cambiados} de ${esperados}`)
@@ -2342,6 +2342,116 @@ export default {
         } finally {
           fs.writeFileSync(ejemplo, antes)
           await srv.consola('wcx reload')
+          await srv.consola(`fill ${B} -55 ${Z} ${B + 1} -55 ${Z + 1} air`)
+        }
+      }
+    },
+    // ---------------------------------------------------------------- spec 039: los comandos de WorldEdit con dos barras
+    {
+      id: '039 H1 CA1 · H1 CA2 · H2 CA1 · H3 CA1 · H3 CA2',
+      nombre: 'con WorldEdit instalado, //pos1, //set, //re, //undo, //copy -e y //paste (con y sin -a) son de Worldcraft; WorldEdit sigue en /worldedit:/pos1; //sel completa magic',
+      timeoutMs: 90000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        const B = X + 45
+        // Al arrancar, Worldcraft dice cuántos tomó de WorldEdit.
+        const linea = await srv.esperarLog(/WorldEdit-style commands .* run Worldcraft; \d+ taken from WorldEdit/, { desde: 0 })
+        if (Number(linea.match(/(\d+) taken/)[1]) < 100) throw new Error(linea)
+        try {
+          await pide(ana, `/pos1 ${B} -55 ${Z}`, /Corner 1 at/)
+          await pide(ana, `/pos2 ${B + 2} -55 ${Z + 2}`, /Corner 2 at .* selection/)
+          const set = await obra(ana, '/set dirt')
+          if (set.cambiados !== 9) throw new Error(`//set cambió ${set.cambiados}`)
+          // //re es //replace; sin «with», como en WorldEdit.
+          const re = await obra(ana, '/re dirt stone')
+          if (re.cambiados !== 9) throw new Error(`//re cambió ${re.cambiados}`)
+          await comprobar(srv, `block ${B + 1} -55 ${Z + 1} stone`)
+          await pide(ana, '/undo', new RegExp(`Undone #${re.id} \\(replace`))
+          await pide(ana, '/undo', new RegExp(`Undone #${set.id} \\(set dirt\\)`))
+          await comprobar(srv, `block ${B + 1} -55 ${Z + 1} air`)
+          // El autocompletado es el de Worldcraft (magic no es de WorldEdit 7.3.19).
+          const formas = (await ana.bot.tabComplete('//sel ')).map(x => x.match ?? x)
+          if (!formas.includes('magic') || !formas.includes('cuboid')) throw new Error(`//sel completó ${formas}`)
+          await pide(ana, '/limit', /Groups: /)
+          // //copy -e y //paste: como WorldEdit, pega también el aire (y con -a, no).
+          await srv.consola(`setblock ${B + 1} -55 ${Z + 1} glass`)
+          await srv.sincronizar()
+          await pide(ana, '/copy -e', /Copied 3×1×3 \(9 blocks\)/)
+          await srv.consola(`fill ${B} -55 ${Z + 10} ${B + 2} -55 ${Z + 12} stone`)
+          await srv.consola(`tp ${ANA} ${X + 0.5} -60 ${Z + 10.5}`)
+          await ana.hasta('llegar', b => Math.abs(b.entity.position.z - (Z + 10.5)) < 0.6)
+          const p = await obra(ana, '/paste')
+          if (p.cambiados !== 9) throw new Error(`//paste cambió ${p.cambiados} (con el aire son 9)`)
+          await comprobar(srv, `block ${B} -55 ${Z + 10} air`)
+          await comprobar(srv, `block ${B + 1} -55 ${Z + 11} glass`)
+          await pide(ana, '/undo', new RegExp(`Undone #${p.id} \\(paste`))
+          const pa = await obra(ana, '/paste -a')
+          if (pa.cambiados !== 1) throw new Error(`//paste -a cambió ${pa.cambiados} (sin el aire, 1)`)
+          await comprobar(srv, `block ${B} -55 ${Z + 10} stone`)
+          await pide(ana, '/undo', new RegExp(`Undone #${pa.id} \\(paste`))
+          // WorldEdit sigue ahí con su espacio de nombres.
+          await pide(ana, `worldedit:/pos1 ${B},-55,${Z}`, /First position set/)
+        } finally {
+          await srv.consola(`fill ${B} -55 ${Z} ${B + 2} -55 ${Z + 12} air`)
+        }
+      }
+    },
+    {
+      id: '039 H2 CA2 · H2 CA4 · H4 CA1',
+      nombre: 'con worldedit: leave y /wc reload, //pos1 vuelve a ser de WorldEdit y //limits sigue en Worldcraft; con take, otra vez de Worldcraft',
+      timeoutMs: 60000,
+      async fn (ctx) {
+        const { srv, bots } = ctx
+        await preparar(ctx)
+        const ana = bots[ANA]
+        const config = path.join(srv.run, 'plugins', 'Worldcraft', 'config.yml')
+        const antes = fs.readFileSync(config, 'utf8')
+        try {
+          if (!antes.includes('  worldedit: take ')) throw new Error('config.yml sin «worldedit: take»')
+          fs.writeFileSync(config, antes.replace('  worldedit: take ', '  worldedit: leave'))
+          const ml = srv.marca()
+          await srv.consola('wc reload', { espera: /Reloaded: 0 error\(s\)/ })
+          await srv.esperarLog(/WorldEdit-style commands .* run Worldcraft; \d+ left to WorldEdit/, { desde: ml })
+          await pide(ana, `/pos1 ${X},-60,${Z}`, /First position set/)
+          await pide(ana, '/limits', /Groups: /)
+        } finally {
+          fs.writeFileSync(config, antes)
+          await srv.consola('wc reload', { espera: /Reloaded/ })
+        }
+        await pide(ana, `/pos1 ${X} -60 ${Z}`, /Corner 1 at/)
+      }
+    },
+    {
+      id: '039 H2 CA3 · H1 CA2',
+      nombre: 'Beto, con worldcraft.use y sin los permisos de WorldEdit, recibe //set en el árbol de comandos y lo usa',
+      timeoutMs: 90000,
+      async fn (ctx) {
+        const { srv } = ctx
+        await preparar(ctx)
+        const B = X + 45
+        const permisos = path.join(srv.run, 'permissions.yml')
+        const antes = fs.existsSync(permisos) ? fs.readFileSync(permisos, 'utf8') : null
+        try {
+          fs.writeFileSync(permisos, ['e2e.editor:', '  default: true', '  children:', '    worldcraft.use: true', ''].join('\n'))
+          await srv.consola('bukkit:reload permissions', { espera: /Permissions successfully reloaded/i })
+          const beto = await ctx.entrar(BETO)
+          for (const c of [`gamemode creative ${BETO}`, `tp ${BETO} ${X + 0.5} -60 ${Z - 6.5} 0 0`]) await srv.consola(c)
+          // WorldEdit quita del árbol del cliente lo que cree suyo; Worldcraft vuelve a poner lo que Beto puede usar.
+          const arbol = await beto.esperar('comandos', / \/set /, { desde: 0, timeoutMs: 10000 })
+          if (!/ \/pos1 /.test(arbol.texto) || / \/regen /.test(arbol.texto)) throw new Error(`árbol de Beto: ${arbol.texto.slice(0, 300)}`)
+          await pide(beto, `/pos1 ${B} -55 ${Z}`, /Corner 1 at/)
+          await pide(beto, `/pos2 ${B + 1} -55 ${Z + 1}`, /Corner 2 at .* selection/)
+          const o = await obra(beto, '/set glass')
+          if (o.cambiados !== 4) throw new Error(`//set de Beto cambió ${o.cambiados}`)
+          await pide(beto, '/undo', new RegExp(`Undone #${o.id} \\(set glass\\)`))
+        } finally {
+          if (antes == null) fs.rmSync(permisos, { force: true })
+          else fs.writeFileSync(permisos, antes)
+          await srv.consola('bukkit:reload permissions')
+          await ctx.entrar(BETO)
+          for (const c of [`gamemode creative ${BETO}`, `tp ${BETO} ${X + 0.5} -60 ${Z - 6.5} 0 0`]) await srv.consola(c)
           await srv.consola(`fill ${B} -55 ${Z} ${B + 1} -55 ${Z + 1} air`)
         }
       }

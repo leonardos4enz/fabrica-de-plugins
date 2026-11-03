@@ -462,7 +462,22 @@ public final class SelfTest {
                 return;
             }
             s.sendMessage(plugin.messages().get("selftest-api-ok", "version", String.valueOf(api.apiVersion()), "blocks", "27"));
+            slash(s);
         });
+    }
+
+    /** Spec 039 (compuerta 2): con los // prendidos, //set es de Worldcraft (o quién lo tiene). */
+    private void slash(CommandSender s) {
+        if (!plugin.config().slash().enabled()) {
+            s.sendMessage(plugin.messages().get("selftest-slash-off"));
+            return;
+        }
+        String owner = plugin.slash().setOwner();
+        if (owner != null && !plugin.config().slash().skip().contains("/set")) {
+            fail(s, "//set belongs to " + owner + ", not to Worldcraft");
+            return;
+        }
+        s.sendMessage(plugin.messages().get("selftest-slash-ok", "count", String.valueOf(Math.max(0, plugin.slash().count() - 1))));
     }
     /** Lo que da fromCopy, en la forma que lee toCopy (Pos como double[], como al leer un archivo). */
     private static java.util.Map<String, Object> normalized(java.util.Map<String, Object> m) {

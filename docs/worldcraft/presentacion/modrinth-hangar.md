@@ -16,7 +16,8 @@
 batches inside a time budget shared by the whole plugin. Preview it before it happens, undo it even after a restart
 (without erasing what others built since), write patterns the way you would say them, and make a mountain or a
 floating island with one word. You do not need WorldEdit: Worldcraft has its own engine, its own `.schem` reader and
-writer, and **102 commands** under `/wc`.
+writer, and **102 commands** under `/wc`, which also work the WorldEdit way: `//set`, `//copy -e`, `/brush`,
+`//undo`.
 
 *Worldcraft is not affiliated with or endorsed by EngineHub (WorldEdit), IntellectualSites (FastAsyncWorldEdit) or Mojang.*
 
@@ -28,7 +29,7 @@ counting only what Worldcraft does the same or better:
 |---|---|---|
 | WorldEdit 7.3.19 | 171 | **129** (75 %), 5 more in part |
 | FastAsyncWorldEdit 2.16.2 | 244 | **142** (58 %), 12 more in part |
-| Worldcraft 0.13.0 | **102** under `/wc` (140 counted like WorldEdit counts its own) | |
+| Worldcraft 0.14.0 | **102** under `/wc` (140 counted like WorldEdit counts its own) | |
 
 Every command, one by one, with its Worldcraft equivalent:
 [commands.md](https://github.com/leonardos4enz/fabrica-de-plugins/blob/main/docs/worldcraft/presentacion/commands.md).
@@ -135,7 +136,7 @@ island with trees over a generated plain. Shown first: [Build] [Another] [Cancel
 `/wc confirm`. `/wc sphere orange_concrete 9`, `/wc hcyl light_blue_concrete 8 16`: a sphere, a hollow cylinder, a
 pyramid and a cone. `/wc image logo.png 48`, `/wc generate stone x^2+y^2+z^2<1`: the Worldcraft logo built with blocks.
 
-**Worldcraft vs WorldEdit vs FAWE.** The same table as above. Worldcraft 0.13.0, WorldEdit 7.3.19, FAWE 2.16.2
+**Worldcraft vs WorldEdit vs FAWE.** The same table as above. Worldcraft 0.14.0, WorldEdit 7.3.19, FAWE 2.16.2
 (November 2026).
 
 **How many commands?** 102 commands under `/wc` (140 counted like WorldEdit counts its own). 129 of WorldEdit's 171:

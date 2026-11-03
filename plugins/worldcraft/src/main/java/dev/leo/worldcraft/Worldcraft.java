@@ -53,6 +53,9 @@ public final class Worldcraft extends JavaPlugin {
     /** Spec 036: las copias de seguridad se leen en un hilo propio; regen usa un mundo temporal. */
     private ExecutorService snapshotThread;
     private dev.leo.worldcraft.paper.Regen regen;
+    /** Spec 039: //set, /brush… como comandos de Worldcraft (desde el primer tick, cuando ya cargó WorldEdit). */
+    private dev.leo.worldcraft.paper.SlashCommands slash;
+    private boolean slashReady;
 
     @Override
     public void onEnable() {
@@ -142,11 +145,19 @@ public final class Worldcraft extends JavaPlugin {
             cmd.setExecutor(command);
             cmd.setTabCompleter(command);
         }
+        slash = new dev.leo.worldcraft.paper.SlashCommands(this);
+        getServer().getPluginManager().registerEvents(slash, this);
+        getServer().getScheduler().runTask(this, () -> {
+            slashReady = true;
+            slash.apply(config.slash());
+        });
     }
 
     @Override
     public void onDisable() {
         try {
+            // Spec 039: los de WorldEdit vuelven a WorldEdit.
+            if (slash != null) slash.unregisterAll();
             if (wand != null) wand.stop();
             if (brush != null) brush.stop();
             if (tools != null) tools.stop();
@@ -190,6 +201,7 @@ public final class Worldcraft extends JavaPlugin {
         if (wand != null) wand.startOutline();
         if (brush != null) brush.start();
         if (tools != null) tools.start();
+        if (slash != null && slashReady) slash.apply(cfg.slash());
         return cfg;
     }
 
@@ -243,6 +255,10 @@ public final class Worldcraft extends JavaPlugin {
 
     public dev.leo.worldcraft.paper.Formulas formulas() {
         return formulas;
+    }
+
+    public dev.leo.worldcraft.paper.SlashCommands slash() {
+        return slash;
     }
 
     public WorldcraftCommand command() {

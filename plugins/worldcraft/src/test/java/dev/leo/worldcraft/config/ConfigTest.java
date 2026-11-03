@@ -359,4 +359,33 @@ class ConfigTest {
         assertTrue(all.contains("did you mean 'plugin_groups'"), all);
         assertEquals(900, c.api().limits(c.limits()).maxBlocks());
     }
+
+    @Test
+    void spec039_H4_CA1_seccion_slash_commands() throws Exception {
+        LoadedConfig old = load("history: { keep_days: 3 }\n", "");
+        assertEquals("[]", old.issues().all().stream().filter(i -> i.file().equals("config.yml")).toList().toString(), "un config.yml de la 0.13.0 carga sin avisos");
+        assertEquals(SlashSettings.DEFAULTS, old.slash());
+        assertTrue(old.slash().enabled(), "los // vienen prendidos");
+        assertTrue(old.slash().takeFromWorldEdit(), "y se los quitan a WorldEdit");
+        LoadedConfig c = load("""
+                slash_commands:
+                  enabled: yes please
+                  worldedit: leeve
+                  skip: ["//up", "/remove", "remove", "//nope"]
+                  skipp: []
+                """, "");
+        assertTrue(c.slash().enabled(), "un valor que no es true ni false: el de fábrica");
+        assertTrue(c.slash().takeFromWorldEdit(), "ni take ni leave: take");
+        assertEquals(Set.of("/up", "remove"), c.slash().skip(), "como se escriben, sin la primera barra; lo desconocido se salta");
+        String all = c.issues().all().toString();
+        for (String path : new String[]{"slash_commands.enabled", "slash_commands.worldedit", "slash_commands.skip", "slash_commands.skipp"}) {
+            assertTrue(all.contains(path), path + " en " + all);
+        }
+        assertTrue(all.contains("did you mean 'leave'"), all);
+        assertTrue(all.contains("'remove' needs its slash"), all);
+        assertTrue(all.contains("'//nope' is not one of Worldcraft's commands"), all);
+        LoadedConfig l = load("slash_commands: { enabled: false, worldedit: leave }\n", "");
+        assertFalse(l.slash().enabled());
+        assertFalse(l.slash().takeFromWorldEdit());
+    }
 }

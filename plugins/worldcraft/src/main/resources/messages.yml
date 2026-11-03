@@ -11,7 +11,7 @@ unknown-direction: "{prefix}<red>'{input}' is not a direction{hint}: up, down, n
 
 help-header: "<gold>Worldcraft</gold> <gray>- /wc help <command> shows an example"
 help-line: " <yellow>{usage}</yellow> <dark_gray>-</dark_gray> <gray>{text}"
-help-footer: "<gray>Patterns: <white>stone</white>, <white>70% stone, 30% andesite</white>, <white>oak_stairs[facing=north]</white>, <white>$preset</white>. Masks: <white>dirt, grass_block</white>, <white>*_wool</white>, <white>#logs</white>, <white>!air</white>. Formulas: mask <white>=y>=64</white>, pattern <white>=(x+z)%2 -> white_wool, black_wool</white>. Colors: <white>#color[red]</white>, <white>#darken</white>, <white>#lighten</white>."
+help-footer: "<gray>Patterns: <white>stone</white>, <white>70% stone, 30% andesite</white>, <white>oak_stairs[facing=north]</white>, <white>$preset</white>. Masks: <white>dirt, grass_block</white>, <white>*_wool</white>, <white>#logs</white>, <white>!air</white>. Formulas: mask <white>=y>=64</white>, pattern <white>=(x+z)%2 -> white_wool, black_wool</white>. Colors: <white>#color[red]</white>, <white>#darken</white>, <white>#lighten</white>. Every command also works like in WorldEdit: <white>//set</white>, <white>//copy -e</white>, <white>/brush</white>."
 help-detail: "<yellow>{usage}</yellow>\n<gray>{text}\n<gray>Example: <white>{example}"
 
 help:
@@ -243,6 +243,8 @@ selftest-failed: "{prefix}<red>Selftest failed: {reason}"
 selftest-entities-ok: "{prefix}<green>Selftest entities passed: an armor stand, an item frame (turned) and a pig with a rider were copied and created again whole."
 selftest-restore-ok: "{prefix}<green>Selftest backups passed: the spawn chunk read from the region file is the world, block by block ({blocks} blocks, {tiles} with data, {biomes} biome(s)); a temporary world for regen was made in {ms} ms with the same bottom layer, and deleted."
 selftest-api-ok: "{prefix}<green>Selftest API passed: the service is registered (API {version}), a plugin edit of {blocks} blocks was made and undone, and one stopped by a listener changed nothing."
+selftest-slash-ok: "{prefix}<green>Selftest commands passed: //set and {count} more WorldEdit-style commands run Worldcraft."
+selftest-slash-off: "{prefix}<gray>Selftest commands: the WorldEdit-style commands are off (slash_commands.enabled)."
 selftest-tools-ok: "{prefix}<green>Selftest tools passed: the cycler finds every facing, half and shape of a stair on this server."
 
 # Terrain (/wc mountain, /wc island, /wc brush)

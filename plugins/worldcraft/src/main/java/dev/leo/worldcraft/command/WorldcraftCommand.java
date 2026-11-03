@@ -1201,6 +1201,57 @@ public final class WorldcraftCommand implements TabExecutor {
         return filter(out, last);
     }
 
+    /** Spec 039: los subcomandos de /wc (también los alias), en el orden de la ayuda. */
+    public static Set<String> subcommands() {
+        return java.util.Collections.unmodifiableSet(SUBS.keySet());
+    }
+
+    /** El permiso de un subcomando (null si no existe). */
+    public static String permission(String sub) {
+        return SUBS.get(sub);
+    }
+
+    /** Las opciones «--x» (sin las rayas) de un subcomando; las de brush y tool dependen del tipo (ToolParser). */
+    static Set<String> options(String sub) {
+        return switch (sub) {
+            case "set", "replace", "walls", "faces" -> Set.of("preview");
+            case "cut" -> Set.of("preview", "mask", "entities", "biomes");
+            case "copy" -> Set.of("mask", "entities", "biomes");
+            case "paste" -> Set.of("preview", "air", "origin", "select", "only-select", "no-entities", "remove-entities", "biomes");
+            case "chunk" -> Set.of("expand", "chunk-coords");
+            case "outset", "inset" -> Set.of("horizontal", "vertical");
+            case "distr" -> Set.of("states", "clipboard");
+            case "undo", "redo" -> Set.of("player");
+            case "pos1", "pos2" -> Set.of("world");
+            case "mountain", "island", "floating_island" -> Set.of("now");
+            case "biomeinfo" -> Set.of("target", "here");
+            case "setbiome" -> Set.of("here");
+            case "forest", "forestgen", "flora", "pumpkins" -> Set.of("preview");
+            case "structure" -> Set.of("palette");
+            case "caves", "ore", "ores", "image", "img" -> {
+                Set<String> f = new HashSet<>();
+                for (String o : CreateCommands.flags(sub)) f.add(o);
+                yield f;
+            }
+            case "regen", "restore" -> {
+                Set<String> f = new HashSet<>();
+                for (String o : RestoreCommands.flags(sub)) f.add(o);
+                yield f;
+            }
+            case "generate", "gen", "generatebiome", "genbiome", "deform" -> {
+                Set<String> f = new HashSet<>();
+                for (String o : FormulaCommands.flags(sub)) f.add(o);
+                yield f;
+            }
+            case "schem", "schematic" -> Set.of("overwrite");
+            default -> {
+                Set<String> f = new HashSet<>();
+                if (!NavigationCommands.SUBS.contains(sub) && !SelectionCommands.SUBS.contains(sub) && !NatureCommands.SUBS.contains(sub) && !FormulaCommands.handles(sub) && !CreateCommands.handles(sub) && !RestoreCommands.handles(sub)) for (String o : BuildCommands.flags(sub)) f.add(o);
+                yield f;
+            }
+        };
+    }
+
     @Override
     public List<String> onTabComplete(CommandSender s, Command cmd, String label, String[] a) {
         if (a.length <= 1) return filter(visible(s), a.length == 0 ? "" : a[0]);
@@ -1209,51 +1260,19 @@ public final class WorldcraftCommand implements TabExecutor {
         if (perm == null || !s.hasPermission(perm)) return List.of();
         String last = a[a.length - 1];
         if (last.startsWith("--")) {
-            Set<String> opts = switch (sub) {
-                case "set", "replace", "walls", "faces" -> Set.of("--preview");
-                case "cut" -> Set.of("--preview", "--mask", "--entities", "--biomes");
-                case "copy" -> Set.of("--mask", "--entities", "--biomes");
-                case "paste" -> Set.of("--preview", "--air", "--origin", "--select", "--only-select", "--no-entities", "--remove-entities", "--biomes");
-                case "chunk" -> Set.of("--expand", "--chunk-coords");
-                case "outset", "inset" -> Set.of("--horizontal", "--vertical");
-                case "distr" -> Set.of("--states", "--clipboard");
-                case "undo", "redo" -> Set.of("--player");
-                case "pos1", "pos2" -> Set.of("--world");
-                case "mountain", "island", "floating_island" -> Set.of("--now");
-                case "biomeinfo" -> Set.of("--target", "--here");
-                case "setbiome" -> Set.of("--here");
-                case "forest", "forestgen", "flora", "pumpkins" -> Set.of("--preview");
-                case "structure" -> Set.of("--palette");
-                case "caves", "ore", "ores", "image", "img" -> {
-                    Set<String> f = new HashSet<>();
-                    for (String o : CreateCommands.flags(sub)) f.add("--" + o);
-                    yield f;
-                }
-                case "regen", "restore" -> {
-                    Set<String> f = new HashSet<>();
-                    for (String o : RestoreCommands.flags(sub)) f.add("--" + o);
-                    yield f;
-                }
-                case "generate", "gen", "generatebiome", "genbiome", "deform" -> {
-                    Set<String> f = new HashSet<>();
-                    for (String o : FormulaCommands.flags(sub)) f.add("--" + o);
-                    yield f;
-                }
-                case "brush", "tool" -> {
-                    var k = a.length > 2 ? dev.leo.worldcraft.tool.ToolKind.parse(a[1], sub.equals("brush")) : null;
-                    Set<String> f = new HashSet<>();
-                    if (k != null) for (String o : dev.leo.worldcraft.tool.ToolParser.flags(k)) f.add("--" + o);
-                    yield f;
-                }
-                case "schem", "schematic" -> a.length > 1 && (a[1].equalsIgnoreCase("save") || a[1].equalsIgnoreCase("import")) && s.hasPermission(Schematics.PERM_DELETE)
-                        ? Set.of("--overwrite") : Set.of();
-                default -> {
-                    Set<String> f = new HashSet<>();
-                    if (!NavigationCommands.SUBS.contains(sub) && !SelectionCommands.SUBS.contains(sub) && !NatureCommands.SUBS.contains(sub) && !FormulaCommands.handles(sub) && !CreateCommands.handles(sub) && !RestoreCommands.handles(sub)) for (String o : BuildCommands.flags(sub)) f.add("--" + o);
-                    yield f;
-                }
-            };
-            return filter(new ArrayList<>(opts), last);
+            Set<String> opts;
+            if (sub.equals("brush") || sub.equals("tool")) {
+                var k = a.length > 2 ? dev.leo.worldcraft.tool.ToolKind.parse(a[1], sub.equals("brush")) : null;
+                opts = k == null ? Set.of() : Set.copyOf(dev.leo.worldcraft.tool.ToolParser.flags(k));
+            } else if (sub.equals("schem") || sub.equals("schematic")) {
+                opts = a.length > 1 && (a[1].equalsIgnoreCase("save") || a[1].equalsIgnoreCase("import")) && s.hasPermission(Schematics.PERM_DELETE)
+                        ? options(sub) : Set.of();
+            } else {
+                opts = options(sub);
+            }
+            List<String> dashed = new ArrayList<>();
+            for (String o : opts) dashed.add("--" + o);
+            return filter(dashed, last);
         }
         return switch (sub) {
             case "help" -> a.length == 2 ? filter(visible(s), last) : List.of();

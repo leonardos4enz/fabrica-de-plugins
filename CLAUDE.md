@@ -284,6 +284,16 @@ con `--release 21`.
   (`.CodeMirror.CodeMirror.setValue`) y SpigotMC pasa a BBCode con `redactor_btn_switchmode`; en SpigotMC el ícono se sube
   **después** de guardar (la casilla «Upload resource icon»); el otro `input[type=file]` es de adjuntos de la descripción.
 
+- **Spec 039 (los `//` de WorldEdit en Worldcraft):** un comando con dos barras es un `Command` de Bukkit llamado `/set`
+  (y `//` solo, `/`). Para quitarle un nombre a WorldEdit: en el primer tick (`runTask` en `onEnable`: WorldEdit ya
+  registró), `getKnownCommands().remove("/set")` (queda `worldedit:/set`, y WorldEdit quita el espacio de nombres en
+  `rebuildArguments`: `/worldedit:/pos1` funciona), registrar el propio y **un** `syncCommands()`. El oyente de
+  autocompletado de WorldEdit mira el dueño del comando: el propio implementa `PluginIdentifiableCommand`. **WorldEdit
+  escucha `PlayerCommandSendEvent` y borra del árbol del cliente los nombres que su gestor conoce si el jugador no tiene
+  su permiso**, aunque el comando ya sea de otro: un oyente en `HIGHEST` los vuelve a poner (F-01). Un alias de
+  `commands.yml` se queda con el nombre (no es de WorldEdit: no se toca). En la suite de Worldcraft, WorldEdit se llama
+  con `worldedit:/pos1`, `worldedit:/schem`… Se repitió la 026/036: un heredoc de Bash con los escenarios cortó el script.
+
 ## Al cerrar cada spec: actualizar los README (siempre, antes del commit)
 Los README son lo que lee el dueño de un servidor; si no dicen algo, para él no existe.
 - **README del plugin** (`plugins/<nombre>/README.md`): cada capacidad nueva o cambiada con su ejemplo, y la sección

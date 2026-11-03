@@ -1,6 +1,7 @@
 # Worldcraft commands, and how they compare with WorldEdit and FAWE
 
-Worldcraft 0.13.0 has **102 commands** under `/wc` (alias of `/worldcraft`). Counted the way WorldEdit counts its own
+Worldcraft 0.14.0 has **102 commands** under `/wc` (alias of `/worldcraft`), and every one also works the WorldEdit
+way: `//set`, `//copy -e`, `//paste -a`, `/brush`, `//undo` (WorldEdit's names, aliases and short flags; spec 039). Counted the way WorldEdit counts its own
 (every brush, tool and sub-command on its own line), that is **140**.
 
 It covers **129 of WorldEdit's 171 commands** (75 %) and **142 of FastAsyncWorldEdit's 244** (58 %), counting only the

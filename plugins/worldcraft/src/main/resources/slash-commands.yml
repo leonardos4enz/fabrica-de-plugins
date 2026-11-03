@@ -1,0 +1,92 @@
+# Spec 039: WorldEdit's command names for Worldcraft. Read from the jar (this file is not copied to the plugin folder):
+# turn them off or skip some in config.yml (slash_commands).
+#
+# Each key is the name as you type it without the first slash: "/set" is //set, "brush" is /brush, "/" is //.
+#   to:       the /wc command it runs, with its first words ("sel clear"); the key without slashes if left out
+#   aliases:  other names for the same thing
+#   flags:    WorldEdit's short flag -> Worldcraft's option ("entities" is --entities); "!air" takes away a default;
+#             "/hsphere" runs another command; "" is accepted and does nothing (Worldcraft already does that)
+#   defaults: options WorldEdit uses when you write no flag (//paste puts the air, like in WorldEdit)
+# Besides these, every /wc command also works as //command (//mountain, //styles...), except reload, validate, selftest.
+# Taken from the @Command annotations in the bytecode of WorldEdit 7.3.19 and FastAsyncWorldEdit 2.16.2.
+commands:
+  # Select
+  "/wand": { flags: { n: "/tool navwand" } }
+  selwand: { to: wand, aliases: ["/selwand"] }
+  navwand: { to: tool navwand, aliases: ["/navwand"] }
+  "/chunk": { flags: { s: expand, c: chunk-coords } }
+  "/outset": { flags: { h: horizontal, v: vertical } }
+  "/inset": { flags: { h: horizontal, v: vertical } }
+  "/size": { to: sel }
+  "/distr": { flags: { c: clipboard, d: states } }
+  "/desel": { to: sel clear, aliases: ["/deselect"] }
+  gmask: {}
+  clearclipboard: { aliases: ["/cc", "/clearclip"] }
+  clearhistory: {}
+  undo: {}
+  redo: {}
+  # Edit a selection
+  "/air": { to: set air, aliases: ["/0"] }
+  "/replace": { aliases: ["/re", "/rep"] }
+  "/center": { aliases: ["/middle"] }
+  "/faces": { aliases: ["/outline"] }
+  "/move": { aliases: ["/mv"], flags: { s: select, a: "", e: entities } }
+  "/stack": { defaults: [air], flags: { s: select, a: "!air", e: entities } }
+  "/regen": { flags: { b: biomes, r: random } }
+  "/deform": { flags: { r: raw, o: offset, c: center } }
+  # Shapes and formulas
+  "/sphere": { flags: { h: "/hsphere", r: raised } }
+  "/hsphere": { flags: { r: raised } }
+  "/cyl": { flags: { h: "/hcyl" } }
+  "/pyramid": { flags: { h: "/hpyramid" } }
+  "/generate": { aliases: ["/gen", "/g"], flags: { h: hollow, r: raw, o: offset, c: center } }
+  "/generatebiome": { aliases: ["/genbiome", "/gb"], flags: { h: hollow, r: raw, o: offset, c: center } }
+  "/calc": { aliases: ["/calculate", "/eval", "/evaluate", "/solve"] }
+  forestgen: {}
+  pumpkins: {}
+  # Copy and schematics
+  "/copy": { aliases: ["/cp"], flags: { e: entities, b: biomes, m: mask } }
+  "/cut": { flags: { e: entities, b: biomes, m: mask } }
+  "/paste": { aliases: ["/p", "/pa"], defaults: [air, no-entities],
+              flags: { a: "!air", o: origin, s: select, n: only-select, e: "!no-entities", b: biomes, x: remove-entities } }
+  "/flip": { aliases: ["/mirror"] }
+  schematic: { to: schem, aliases: ["schem"] }
+  # Biomes
+  biomelist: { aliases: ["biomels"] }
+  biomeinfo: { flags: { t: target, p: here } }
+  "/setbiome": { flags: { p: here } }
+  # Fixes around you and entities
+  "/drain": { flags: { w: waterlogged } }
+  fixlava: {}
+  fixwater: {}
+  removeabove: {}
+  removebelow: {}
+  removenear: {}
+  replacenear: {}
+  snow: {}
+  thaw: {}
+  green: {}
+  extinguish: { aliases: ["ex", "ext", "/ex", "/ext"] }
+  butcher: { flags: { p: pets, n: npcs, g: golems, a: animals, b: ambient, t: named, f: friendly, r: armorstands, w: water } }
+  remove: { aliases: ["rem", "rement"] }
+  "/limit": { to: limits }
+  # FAWE: caves, ores, pictures
+  "/ores": { flags: { d: "", b: "" } }
+  "/image": { aliases: ["image"] }
+  # Moving around
+  unstuck: { aliases: ["!"] }
+  ascend: { aliases: ["asc"] }
+  descend: { aliases: ["desc"] }
+  ceil: {}
+  thru: {}
+  jumpto: { aliases: ["j"] }
+  up: {}
+  # Brushes and tools
+  brush: { aliases: ["br", "/br"] }
+  tool: {}
+  lrbuild: { to: tool lrbuild, aliases: ["/lrbuild"] }
+  superpickaxe: { aliases: ["pickaxe", "sp"] }
+  "/": { to: superpickaxe }
+  # Backups
+  snapshot: { aliases: ["snap"] }
+  restore: {}

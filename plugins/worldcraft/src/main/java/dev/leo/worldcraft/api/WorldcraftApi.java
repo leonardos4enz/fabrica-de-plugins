@@ -41,7 +41,7 @@ public interface WorldcraftApi {
     /** {@link #API_VERSION} of the running Worldcraft. */
     int apiVersion();
 
-    /** Worldcraft's version, like "0.13.0". */
+    /** Worldcraft's version, like "0.14.0". */
     String pluginVersion();
 
     /** The player's selection (any shape), or empty if it is not complete. Main thread only. */
